@@ -1,0 +1,199 @@
+Bug-001: Next player turn modal is not rendering as a proper modal
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Player turn order and turn feedback UI
+
+Bug Summary
+
+* The next player turn message is not appearing as a proper modal.
+* It should appear centred on the screen with a transparent black overlay behind it.
+* The user should not be able to interact with anything behind the modal until the modal is closed.
+
+Repro Steps
+
+* Start a game with players configured.
+* Go to the gameplay page.
+* Click the `Roll Dice` button to advance to the next player’s turn.
+* Observe the next player turn message.
+
+Expected Behaviour
+
+* A modal appears when the turn changes to the next player.
+* The modal is centred on the screen.
+* A transparent black overlay appears behind the modal.
+* The overlay blocks interaction with the rest of the page.
+* The modal clearly says whose turn it is now.
+* The modal has an `OK` button.
+* Clicking `OK` closes the modal.
+* The game remains on the correct current player after the modal closes.
+
+Actual Behaviour
+
+* The next player turn message does not appear as a proper modal.
+* The message is not correctly centred with a blocking overlay.
+* The page behind it may still be interactable.
+
+Required Fix
+
+* Create a reusable modal component for the game.
+* Use this reusable modal component for the next player turn modal.
+* The modal component should support:
+
+  * A centred modal panel.
+  * A transparent black full-screen overlay.
+  * Blocking interaction with page content behind the overlay.
+  * Simple content passed into the modal.
+  * An `OK` button or close action for this use case.
+* Replace the current next-player turn message implementation with the new reusable modal component.
+* Keep the modal lo-fi and functional.
+* Add only the styling needed for the requested modal behaviour.
+* Use `.jsx` for the modal component file.
+
+Out Of Scope
+
+* No modal animations.
+* No decorative modal styling.
+* No multiple modal variants unless required for this bug.
+* No icon buttons.
+* No custom theme.
+* No broader UI redesign.
+* No changes to turn order logic unless required to correctly show/close the modal.
+* No dice rolling changes.
+* No player movement changes.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The current turn feedback is likely being rendered as normal page content or a non-blocking element instead of a true modal overlay.
+
+Attempted Fixes
+
+* Added a reusable `Modal` component with a fixed full-screen overlay and centred panel.
+* Replaced the inline turn-change message in gameplay with the reusable modal component.
+* Disabled the `Roll Dice` button while the modal is open so gameplay controls behind the overlay cannot be used until the modal closes.
+
+Final Fix
+
+* The turn-change feedback now uses `src/components/Modal.jsx`.
+* The modal renders with a transparent black full-screen overlay and a centred panel.
+* The modal still shows the correct current-player text and closes with `OK` without advancing the turn again.
+
+Testing Required
+
+* Confirm the modal appears when the turn advances.
+* Confirm the modal is centred on the screen.
+* Confirm the transparent black overlay covers the screen behind the modal.
+* Confirm page content behind the overlay cannot be clicked while the modal is open.
+* Confirm the modal text shows the correct new current player.
+* Confirm clicking `OK` closes the modal.
+* Confirm closing the modal does not advance the turn again.
+* Confirm the current player display remains correct after closing the modal.
+* Confirm the reusable modal component is used for the next player turn modal.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-002: Legal move highlights use wrong colour and include current square
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-005: Dice roll, player movement, and gameplay screen layout
+
+Bug Summary
+
+* Legal move highlights are not clear enough because they are not using the current player’s piece colour.
+* The player may also be able to select or highlight the square they are currently standing on.
+* The current square should never be a valid movement destination.
+
+Repro Steps
+
+* Start a game with players configured.
+* Go to the gameplay page.
+* Roll the dice for the current player.
+* Observe the highlighted legal movement squares.
+* Check whether the highlighted squares use the current player’s colour.
+* Check whether the player’s current square is highlighted or selectable.
+
+Expected Behaviour
+
+* Legal move highlights should use the current player’s piece colour.
+* Legal move highlights should use opacity `0.5`.
+* The highlighted destination squares should make it clear which player is moving.
+* The player’s current square should not be highlighted.
+* The player’s current square should not be selectable.
+* The player should not be able to move back to, or remain on, their current square as their movement destination.
+
+Actual Behaviour
+
+* Legal move highlights do not clearly match the current player’s piece colour.
+* The player’s current square may be included as a legal destination.
+* The player may be able to select their current square as a movement destination.
+
+Required Fix
+
+* Update the legal move highlight styling so each highlighted destination uses the current player’s colour with opacity `0.5`.
+* Ensure this uses the current player’s configured colour from game context.
+* Add a check so the current player’s current position is excluded from legal move destinations.
+* Ensure the player’s current square is not highlighted.
+* Ensure clicking the player’s current square does not move the player or end the turn.
+* Keep the fix focused on legal move highlighting and current-square exclusion only.
+* Keep the UI lo-fi and functional.
+* Do not make broader design changes.
+
+Out Of Scope
+
+* No new movement rules beyond excluding the current square.
+* No movement animation.
+* No path preview.
+* No player collision rules.
+* No changes to dice rolling.
+* No changes to turn order unless required to prevent the current-square move bug.
+* No changes to board generation.
+* No battle logic.
+* No visual design beyond the requested highlight colour and opacity.
+* No decorative board styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The legal move highlight is likely using a fixed highlight colour instead of the current player’s colour.
+* The reachable-destination calculation may not be filtering out the current player’s current position.
+* If grouped areas are involved, the current movement node may also need to be excluded from reachable destinations.
+
+Attempted Fixes
+
+* Updated board highlighting so each highlighted destination renders a lo-fi overlay using the active player's configured colour at opacity `0.5`.
+* Updated the movement-node helper to filter out the current movement node from reachable destinations so the active square is never highlighted as a destination.
+* Reused the existing click guard in gameplay so excluding the current node also prevents current-square turn ending.
+
+Final Fix
+
+* `src/features/gameBoard/movement.js` now removes the starting movement node from the returned legal destination list.
+* `src/features/gameBoard/BoardGrid.jsx` now renders highlighted destinations with the current player's configured colour and stores simple highlight metadata for regression tests.
+* `src/features/gameBoard/BoardGrid.css` now uses a dedicated overlay element for highlight rendering instead of the old fixed blue background.
+
+Testing Required
+
+* Confirm rolling the dice highlights legal destinations using the current player’s colour.
+* Confirm highlighted destinations have opacity `0.5`.
+* Confirm the current player’s square is not highlighted.
+* Confirm clicking the current player’s square does not move the player.
+* Confirm clicking the current player’s square does not end the turn.
+* Confirm valid highlighted squares can still be clicked.
+* Confirm moving to a valid highlighted square still updates the player’s position.
+* Confirm moving to a valid highlighted square still ends the turn.
+* Confirm the next player’s legal move highlights use that next player’s colour.
+* Confirm grouped area movement still works correctly.
+* Confirm grouped areas do not allow the current movement node to be selected as a destination.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

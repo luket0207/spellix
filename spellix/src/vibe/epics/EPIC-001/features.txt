@@ -1,0 +1,976 @@
+Feature-001: Base routing and core pages
+
+Status
+
+* done
+
+Goal
+
+* Set up the initial app routes and core pages needed for the game flow.
+* Use `react-router-dom` for app routing.
+
+Scope
+
+* Set up routing using `react-router-dom`.
+
+* Install `react-router-dom` if it is not already installed.
+
+* Create a start page.
+
+* Create a game setup page.
+
+* Create a gameplay page.
+
+* Add navigation flow between:
+
+  * Start page
+  * Game setup page
+  * Gameplay page
+
+* Use `react-router-dom` components/patterns such as `BrowserRouter`, `Routes`, `Route`, `Link`, `NavLink`, or `useNavigate` where appropriate.
+
+* Keep pages plain and lo-fi.
+
+* Use simple text, buttons, and basic layout only.
+
+* Use `.jsx` for all React page/component files.
+
+Expected Behaviour
+
+* User can open the app and see the start page.
+* User can navigate from the start page to the game setup page using `react-router-dom`.
+* User can navigate from the game setup page to the gameplay page using `react-router-dom`.
+* Direct route loading works for the core pages where supported by the local dev setup.
+* Gameplay page can render as a placeholder page for now.
+* Routes should be clear and easy to extend later.
+
+Out Of Scope
+
+* No visual design.
+* No colour system.
+* No game board implementation.
+* No player setup logic.
+* No game rules.
+* No game state/context unless required only for routing.
+* No save/load functionality.
+* No animations.
+* No extra routes beyond the requested core pages.
+* No custom routing system.
+* No manual browser-history routing.
+
+Stop Point
+
+* Stop once the three pages exist and the user can move through the basic route flow using `react-router-dom`.
+
+Testing Checkpoints
+
+* Confirm `react-router-dom` is installed and used for routing.
+* Confirm the start page loads without console errors.
+* Confirm the setup page route loads without console errors.
+* Confirm the gameplay page route loads without console errors.
+* Confirm navigation from start page to setup page works.
+* Confirm navigation from setup page to gameplay page works.
+* Confirm routes are handled through `react-router-dom`, not manual browser-history logic.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Installed `react-router-dom` and used `BrowserRouter`, `Routes`, `Route`, and `useNavigate` for the three core pages.
+* Added plain start, setup, and gameplay pages under `src/pages/`.
+* Reuse check: reviewed the existing CRA app shell, app entry, and test setup; reused the existing app entry file and test tooling, but there were no existing routing helpers or page components to reuse after the earlier undo.
+* Intentionally left out game setup logic, game context, gameplay systems, and any extra routes.
+
+
+---
+
+Feature-002: Game setup player count, player colours, and game context
+
+Status
+
+* done
+
+Goal
+
+* Build the game setup page properly enough to choose the number of players and each player’s colour.
+* Store the selected setup data in a game context so it can be used elsewhere in the app.
+
+Scope
+
+* Add a `gameContext` using the project’s existing context/provider pattern if one exists.
+* If no existing pattern exists, create the smallest simple React context needed for this feature.
+* Allow the user to choose the number of players.
+* Player count must be between 2 and 6.
+* Generate the correct number of player setup entries based on the chosen player count.
+* Allow each player to choose a colour.
+* Store the selected player count and player colours in game context.
+* Make the gameplay page able to read and display the current player setup from game context in a plain functional way.
+* Keep the setup UI lo-fi and functional.
+* Use simple form controls.
+* Use `.jsx` for all React component/page/context files that contain JSX.
+
+Suggested Data Shape
+
+* Keep the data shape small for now.
+* Store only what this feature needs now.
+
+Example shape:
+
+```js
+{
+  playerCount: 2,
+  players: [
+    {
+      id: "player-1",
+      colour: "red"
+    },
+    {
+      id: "player-2",
+      colour: "blue"
+    }
+  ]
+}
+```
+
+Expected Behaviour
+
+* User can choose between 2 and 6 players.
+* Setup page shows the correct number of player colour selectors.
+* User can choose a colour for each player.
+* Selected player count is stored in game context.
+* Selected player colours are stored in game context.
+* Gameplay page can access and display the stored player setup.
+* Data should reset or update clearly when the player count changes.
+
+Out Of Scope
+
+* No save/load game functionality.
+* No localStorage, sessionStorage, IndexedDB, or backend persistence.
+* No health tracking yet.
+* No board position tracking yet.
+* No player inventory/resources yet.
+* No turn order yet.
+* No board logic yet.
+* No scoring yet.
+* No validation beyond what is needed for player count and colour selection.
+* No design work.
+* No custom colour palette styling unless explicitly requested.
+* No animations.
+* No extra game setup fields.
+
+Assumptions
+
+* Player colours can be stored as simple string values for now.
+* Player names are not required unless requested later.
+* Health, board position, and other player data will be added in later features when their rules are known.
+* Saving games will be handled later and should not be built during this feature.
+
+Stop Point
+
+* Stop once the setup page can save player count and player colours into game context, and the gameplay page can read/display that data.
+
+Testing Checkpoints
+
+* Confirm the setup page defaults to a valid player count.
+* Confirm the player count cannot go below 2.
+* Confirm the player count cannot go above 6.
+* Confirm changing the player count updates the number of player colour selectors.
+* Confirm each player colour can be changed.
+* Confirm starting/continuing to gameplay preserves the selected player count in context.
+* Confirm starting/continuing to gameplay preserves the selected player colours in context.
+* Confirm the gameplay page displays the current setup data from context.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added a small `GameSetupProvider` React context to store `playerCount` and `players`.
+* Updated the setup page to manage player count and player colours with plain select controls.
+* Updated the gameplay page to read and display the stored setup data from context.
+* Reuse check: reviewed the existing router setup, pages, and test file; reused the existing routing/pages structure from Feature-001, but there was no existing context/provider or game setup helper to reuse.
+* Intentionally left out player names, persistence, turn order, board state, health, scoring, and any other game systems.
+
+Domain Notes
+
+* `gameSetup` represents the current player configuration for a new game.
+* Required fields:
+  * `playerCount`
+  * `players`
+* Required player fields:
+  * `id`
+  * `colour`
+* Optional fields:
+  * None for this feature.
+* Stored in:
+  * React context via `src/features/gameSetup/GameSetupContext.jsx`
+* Current features using it:
+  * `Feature-002` setup form
+  * `Feature-002` gameplay placeholder display
+
+---
+
+Feature-003: Player turn order and turn feedback UI
+
+Status
+
+* done
+
+Goal
+
+* Set up player turn order for the game.
+* Show clear feedback for whose turn it currently is.
+* Add a temporary “Roll Dice” button that advances to the next player for testing.
+
+Scope
+
+* Use the existing game context from Feature-002.
+* Add turn state to the game context.
+* At the start of gameplay, create a random player order from the configured players.
+* Store this randomised order so it stays fixed for the rest of the game.
+* Cycle through the fixed player order one turn at a time.
+* Add a section at the top of the gameplay screen that shows which colour player’s turn it currently is.
+* Add a `Roll Dice` button.
+* For now, clicking `Roll Dice` should not roll dice.
+* For now, clicking `Roll Dice` should immediately advance to the next player’s turn.
+* When the turn changes, show a modal saying whose turn it is becoming now.
+* The modal should have only one `OK` button.
+* Closing the modal should leave the game on the new player’s turn.
+* Keep UI lo-fi and functional.
+* Use simple text, buttons, and a basic modal only.
+* Use `.jsx` for all React component/page/context files that contain JSX.
+
+Suggested Context Data
+
+```js
+{
+  playerCount: 2,
+  players: [
+    {
+      id: "player-1",
+      colour: "red"
+    },
+    {
+      id: "player-2",
+      colour: "blue"
+    }
+  ],
+  turnOrder: ["player-2", "player-1"],
+  currentTurnIndex: 0
+}
+```
+
+Expected Behaviour
+
+* When gameplay starts, the players are shuffled into a random order.
+* The random turn order is saved in game context.
+* The random turn order does not change on every render.
+* The random turn order does not change every time the current player changes.
+* The gameplay page shows which colour player’s turn it currently is.
+* The `Roll Dice` button is visible and active when the player starts their turn.
+* Clicking `Roll Dice` moves immediately to the next player in the fixed turn order.
+* After the final player in the turn order, the next turn cycles back to the first player.
+* When the turn changes, a modal appears saying which colour player’s turn it is now.
+* The modal can be closed with an `OK` button.
+* After closing the modal, the current turn display still shows the correct player.
+
+Out Of Scope
+
+* No real dice rolling yet.
+* No dice result display.
+* No player movement.
+* No board position changes.
+* No health changes.
+* No scoring.
+* No turn actions beyond advancing to the next player.
+* No round counter unless required for the smallest implementation.
+* No save/load functionality.
+* No persistence.
+* No animations.
+* No visual design.
+* No custom styling beyond basic functional usability.
+* No game board implementation.
+
+Assumptions
+
+* Player colours already exist in game context from Feature-002.
+* Player IDs should be used internally for turn order rather than relying only on colour names.
+* The random turn order should be created once when gameplay begins if no turn order already exists.
+* The current player can be derived from `turnOrder[currentTurnIndex]`.
+* The modal text can be simple, such as `It is now red player's turn.`
+
+Stop Point
+
+* Stop once gameplay can create a fixed random turn order, show the current player, advance turns with the temporary `Roll Dice` button, and display an OK modal on turn change.
+
+Testing Checkpoints
+
+* Confirm gameplay creates a random turn order from the configured players.
+* Confirm the turn order contains each player once.
+* Confirm the turn order does not change when the page re-renders.
+* Confirm the current turn display shows the correct player colour.
+* Confirm the `Roll Dice` button is visible and clickable.
+* Confirm clicking `Roll Dice` advances to the next player.
+* Confirm clicking `Roll Dice` after the final player cycles back to the first player.
+* Confirm the turn-change modal appears after the turn advances.
+* Confirm the modal text names the new current player colour.
+* Confirm clicking `OK` closes the modal.
+* Confirm closing the modal does not change the turn again.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Extended the existing game setup context with `turnOrder`, `currentTurnIndex`, and turn actions.
+* Gameplay now initializes a fixed shuffled turn order once, shows the current player's colour, and advances with the temporary `Roll Dice` button.
+* Added a plain modal with a single `OK` button that appears after advancing to the next player's turn.
+* Reuse check: reviewed the existing game setup context, gameplay page, and route/test setup; reused the existing context and gameplay page instead of creating a separate turn system.
+* Intentionally left out real dice rolling, board movement, round tracking, scoring, persistence, and visual polish.
+
+Domain Notes
+
+* Added turn fields to `gameSetup`.
+* Required turn fields:
+  * `turnOrder`
+  * `currentTurnIndex`
+* `turnOrder` stores player IDs in a fixed shuffled order for the current game.
+* `currentTurnIndex` stores the active position inside `turnOrder`.
+* Stored in:
+  * React context via `src/features/gameSetup/GameSetupContext.jsx`
+* Current features using it:
+  * `Feature-003` gameplay turn display
+  * `Feature-003` temporary turn advance flow
+
+---
+
+Feature-004: Initial fixed game board and starting player positions
+
+Status
+
+* done
+
+Goal
+
+* Set up the initial 31x31 game board.
+* Save the board structure into game context.
+* Add the fixed board areas needed at the start of every game.
+* Place each player’s piece in the start area when gameplay begins.
+
+Scope
+
+* Use the existing game context.
+* Add board state to the game context.
+* Create a 31x31 board.
+* Each board square should be 30x30px.
+* The full board should always be 930x930px.
+* Store the generated board data in game context.
+* Use a clear coordinate system for board squares.
+* Add a fixed 3x3 start area at the bottom left of the board.
+* Mark the start area as grey.
+* Label or identify this area as the `Start Area`.
+* Place all player pieces in the start area at the beginning of the game.
+* Avoid overlapping player pieces where possible.
+* Since there can be 2 to 6 players and the start area has 9 squares, each player should start on a different square.
+* Add a fixed 2x2 elite battle area at the top left of the board.
+* Mark the top-left elite battle area as red.
+* Add a fixed 2x2 elite battle area at the bottom right of the board.
+* Mark the bottom-right elite battle area as red.
+* Add a fixed 2x2 boss battle area at the top right of the board.
+* Mark the boss battle area as black.
+* Display the board on the gameplay page.
+* Display player pieces in their starting positions.
+* Keep the UI lo-fi and functional.
+* Use only the requested board colours for the requested board areas.
+* Use `.jsx` for all React component/page/context files that contain JSX.
+* Use `.js` for pure board generation helpers if no JSX is needed.
+
+Suggested Coordinate System
+
+* Use zero-based coordinates.
+* `x` increases from left to right.
+* `y` increases from top to bottom.
+* Top-left square is `{ x: 0, y: 0 }`.
+* Bottom-right square is `{ x: 30, y: 30 }`.
+
+Fixed Area Coordinates
+
+* Start Area:
+
+  * Bottom left
+  * 3x3 squares
+  * `x: 0-2`
+  * `y: 28-30`
+  * Marked grey
+
+* Top-left Elite Battle Area:
+
+  * Top left
+  * 2x2 squares
+  * `x: 0-1`
+  * `y: 0-1`
+  * Marked red
+
+* Bottom-right Elite Battle Area:
+
+  * Bottom right
+  * 2x2 squares
+  * `x: 29-30`
+  * `y: 29-30`
+  * Marked red
+
+* Boss Battle Area:
+
+  * Top right
+  * 2x2 squares
+  * `x: 29-30`
+  * `y: 0-1`
+  * Marked black
+
+Suggested Board Data Shape
+
+```js
+{
+  width: 31,
+  height: 31,
+  squareSize: 30,
+  squares: [
+    {
+      id: "square-0-0",
+      x: 0,
+      y: 0,
+      areaType: "elite-battle"
+    }
+  ]
+}
+```
+
+Suggested Player Position Data Shape
+
+```js
+{
+  players: [
+    {
+      id: "player-1",
+      colour: "red",
+      position: {
+        x: 0,
+        y: 28
+      }
+    },
+    {
+      id: "player-2",
+      colour: "blue",
+      position: {
+        x: 1,
+        y: 28
+      }
+    }
+  ]
+}
+```
+
+Expected Behaviour
+
+* When gameplay begins, a 31x31 board is created if one does not already exist in game context.
+* The board is saved in game context.
+* The board renders as 31 columns by 31 rows.
+* Each square is 30x30px.
+* The full board is 930x930px.
+* The bottom-left 3x3 start area is marked grey.
+* The top-left 2x2 elite battle area is marked red.
+* The bottom-right 2x2 elite battle area is marked red.
+* The top-right 2x2 boss battle area is marked black.
+* Each player starts inside the start area.
+* Player pieces do not overlap at game start.
+* Player pieces use the colours selected during setup.
+* The board does not regenerate on every render.
+* The board does not reset when turns change.
+* The board remains available from game context.
+
+Out Of Scope
+
+* No procedurally generated board areas yet.
+* No player movement.
+* No dice movement.
+* No pathfinding.
+* No board interaction.
+* No battle logic.
+* No elite battle behaviour.
+* No boss battle behaviour.
+* No health changes.
+* No collision rules beyond initial non-overlapping placement.
+* No save/load functionality.
+* No persistence.
+* No animations.
+* No visual design beyond the explicitly requested board square colours.
+* No decorative board styling.
+* No custom artwork.
+* No responsive scaling unless needed for basic usability.
+
+Assumptions
+
+* The board should be generated once when gameplay starts if no board exists in context.
+* The board should not be regenerated if it already exists in context.
+* Player positions should be stored with the player data in game context.
+* Player pieces can be displayed as simple lo-fi markers.
+* The requested grey, red, and black board markings are functional area indicators, not a broader design system.
+* The start area has enough squares for the current maximum of 6 players, so unique starting positions should always be possible.
+* Procedural generation will be added in a later feature.
+
+Stop Point
+
+* Stop once the gameplay page displays a 31x31 board, saves that board in game context, marks the fixed areas, and places each player piece on a unique square inside the start area.
+
+Testing Checkpoints
+
+* Confirm the gameplay page creates a board if no board exists in context.
+* Confirm the board is stored in game context.
+* Confirm the board has 31 rows and 31 columns.
+* Confirm each square is 30x30px.
+* Confirm the full board is 930x930px.
+* Confirm the start area appears at the bottom left.
+* Confirm the start area covers exactly 3x3 squares.
+* Confirm the start area is marked grey.
+* Confirm the top-left elite battle area appears at the top left.
+* Confirm the top-left elite battle area covers exactly 2x2 squares.
+* Confirm the top-left elite battle area is marked red.
+* Confirm the bottom-right elite battle area appears at the bottom right.
+* Confirm the bottom-right elite battle area covers exactly 2x2 squares.
+* Confirm the bottom-right elite battle area is marked red.
+* Confirm the boss battle area appears at the top right.
+* Confirm the boss battle area covers exactly 2x2 squares.
+* Confirm the boss battle area is marked black.
+* Confirm every player piece appears inside the start area.
+* Confirm no player pieces overlap at game start.
+* Confirm player pieces use the colours selected during setup.
+* Confirm changing turns does not regenerate the board.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added board state to the existing game context and initialize it once when gameplay begins.
+* Added a pure board helper to build the fixed 31x31 board and assign unique starting positions in the start area.
+* Gameplay now renders the fixed board, the required coloured areas, and simple player markers in unique starting squares.
+* Reuse check: reviewed the existing game setup context, gameplay page, and modal/turn flow; reused the existing context and gameplay page, but there was no existing board helper or board renderer to reuse.
+* Intentionally left out movement, interaction, pathfinding, dice-based board actions, persistence, and any decorative board styling.
+
+Domain Notes
+
+* Added `board` to `gameSetup`.
+* Required board fields:
+  * `width`
+  * `height`
+  * `squareSize`
+  * `squares`
+* Required square fields:
+  * `id`
+  * `x`
+  * `y`
+  * `areaType`
+* Added player `position` for starting board placement.
+* Stored in:
+  * React context via `src/features/gameSetup/GameSetupContext.jsx`
+* Current features using it:
+  * `Feature-004` board rendering
+  * `Feature-004` starting player placement
+
+---
+
+Feature-005: Dice roll, player movement, and gameplay screen layout
+
+Status
+
+* done
+
+Goal
+
+* Implement dice rolling for the current player.
+* Highlight the board spaces the current player can legally move to.
+* Allow the current player to click a valid destination and move there.
+* End the current player’s turn after they move.
+* Split the gameplay screen into a board panel and a gameplay controls/info panel.
+
+Scope
+
+* Use the existing game context.
+
+* Use the existing player turn system from Feature-003.
+
+* Use the existing board and player position data from Feature-004.
+
+* Update the gameplay screen layout so it has two main panels:
+
+  * Left panel: the game board.
+  * Right panel: current turn info, dice controls, modals/triggers, and any other non-board gameplay UI.
+
+* Move the current turn display into the right-side panel.
+
+* Move the `Roll Dice` button into the right-side panel.
+
+* Remove the visible titles `Board` and `Gameplay`.
+
+* Update the `Roll Dice` button so it rolls a real dice value from 1 to 6.
+
+* When the current player clicks `Roll Dice`, show a modal with the dice result.
+
+* Store the current dice result in game context or local gameplay state, whichever is smallest and clearest.
+
+* After the dice result is known, calculate all legal destination spaces for the current player.
+
+* Highlight legal destination spaces on the board with the requested opaque blue selection highlight.
+
+* The highlight should be functional and lo-fi.
+
+* The player moves by clicking one highlighted destination space.
+
+* When the player clicks a valid highlighted destination, update that player’s position.
+
+* After the player moves, clear the dice result and legal move highlights.
+
+* After the player moves, end the current player’s turn.
+
+* Turn ending should use the existing next-turn behaviour from Feature-003.
+
+* Players cannot move diagonally.
+
+* Movement must be orthogonal only:
+
+  * up
+  * down
+  * left
+  * right
+
+* The dice value is the number of movement steps the player may use.
+
+* Grouped board areas count as one movement space even though they contain multiple board squares.
+
+* Grouped board areas include:
+
+  * Start Area
+  * Elite Battle areas
+  * Boss Battle area
+
+* Use `.jsx` for all React component/page/context files that contain JSX.
+
+* Use `.js` for pure movement or dice helper logic if no JSX is needed.
+
+Movement Rules
+
+* A dice roll produces a value from 1 to 6.
+* The current player may move exactly that many movement steps.
+* Movement cannot be diagonal.
+* A normal board square counts as one movement space.
+* A grouped area counts as one movement space.
+* Moving into a grouped area costs 1 movement step.
+* Moving out of a grouped area costs 1 movement step.
+* Moving through a grouped area should not cost extra because of its internal square size.
+* A grouped area is adjacent to another movement space if any square in the grouped area shares an edge with that movement space.
+* The board should calculate reachable destinations using movement spaces, not just raw visual squares.
+* For grouped destinations, the whole grouped area may be highlighted.
+* Clicking any highlighted square inside a grouped area should count as selecting that grouped area.
+
+Suggested Movement Model
+
+* Treat the board as movement nodes.
+* A normal square is one movement node.
+* Each grouped area is one movement node.
+* Each node can connect to adjacent nodes through shared edges.
+* Reachable destinations can be calculated from the current player’s node using the dice roll value.
+* This keeps grouped areas working as one movement space.
+
+Suggested Dice State
+
+```js
+{
+  currentDiceRoll: 4,
+  hasRolledThisTurn: true,
+  legalMoveDestinations: [
+    {
+      type: "square",
+      x: 4,
+      y: 28
+    },
+    {
+      type: "area",
+      areaType: "start-area"
+    }
+  ]
+}
+```
+
+Expected Behaviour
+
+* The gameplay screen has two main panels.
+* The left panel contains the board.
+* The right panel contains the current turn display, `Roll Dice` button, and gameplay controls/info.
+* The visible titles `Board` and `Gameplay` are removed.
+* At the start of the current player’s turn, the `Roll Dice` button is active.
+* When the current player clicks `Roll Dice`, a dice result from 1 to 6 is generated.
+* A modal appears showing the dice result.
+* After the dice result is available, the board highlights all legal destinations for that current player.
+* Legal destinations are calculated from the current player’s current position.
+* Legal destinations do not require diagonal movement.
+* Legal destinations respect the dice roll value.
+* Grouped areas count as one movement space.
+* The current player can click a highlighted destination.
+* Clicking a highlighted destination moves the current player’s piece there.
+* Clicking a non-highlighted square does not move the player.
+* After the player moves, the current player’s turn ends.
+* After the player moves, the dice result is cleared.
+* After the player moves, legal move highlights are cleared.
+* After the turn ends, the next player turn modal from Feature-003 appears.
+* The next player can then roll dice on their turn.
+* The board does not regenerate when the player moves.
+* The fixed turn order does not change when the player moves.
+
+Out Of Scope
+
+* No dice animation.
+* No custom dice visual design.
+* No movement animation.
+* No path preview.
+* No selecting an exact path step-by-step.
+* No diagonal movement.
+* No battle logic.
+* No elite battle behaviour.
+* No boss battle behaviour.
+* No start area behaviour beyond movement counting.
+* No health changes.
+* No damage.
+* No scoring.
+* No player collision rules beyond what already exists.
+* No blocking movement through other players unless explicitly requested later.
+* No terrain effects.
+* No procedural board generation.
+* No save/load functionality.
+* No persistence.
+* No visual design beyond the requested blue legal-move highlight and basic two-panel layout.
+* No decorative board styling.
+
+Assumptions
+
+* The dice result should be a random integer between 1 and 6.
+* The `Roll Dice` button should only be used once per turn.
+* Once a player has rolled, they should move before the turn advances.
+* The player’s turn ends immediately after choosing a valid destination.
+* The existing next-turn modal from Feature-003 should still be used after movement ends the turn.
+* Grouped areas should be handled as movement nodes so their internal square count does not affect movement distance.
+* Player pieces can remain simple lo-fi markers.
+* The two-panel gameplay layout is functional structure, not a visual design pass.
+* If multiple players end up on the same destination later, collision handling is out of scope unless required to prevent broken rendering.
+
+Stop Point
+
+* Stop once the gameplay screen is split into board and controls panels, the current player can roll a dice, see legal destination highlights, click a valid destination, move there, and automatically end their turn.
+
+Testing Checkpoints
+
+* Confirm the gameplay screen has a left board panel.
+* Confirm the gameplay screen has a right gameplay controls/info panel.
+* Confirm the current turn display appears in the right panel.
+* Confirm the `Roll Dice` button appears in the right panel.
+* Confirm the visible titles `Board` and `Gameplay` have been removed.
+* Confirm the `Roll Dice` button is active at the start of the current player’s turn.
+* Confirm clicking `Roll Dice` generates a number from 1 to 6.
+* Confirm a dice result modal appears after rolling.
+* Confirm the dice result modal displays the rolled value.
+* Confirm legal destination spaces are highlighted after rolling.
+* Confirm highlighted destinations are based on the current player’s position.
+* Confirm highlighted destinations respect the dice roll value.
+* Confirm highlighted destinations do not require diagonal movement.
+* Confirm grouped areas count as one movement space.
+* Confirm the Start Area counts as one movement space.
+* Confirm Elite Battle areas count as one movement space.
+* Confirm the Boss Battle area counts as one movement space.
+* Confirm clicking a highlighted normal square moves the current player there.
+* Confirm clicking a highlighted grouped area moves the current player to that grouped area.
+* Confirm clicking a non-highlighted square does not move the current player.
+* Confirm the player’s position updates in game context after movement.
+* Confirm the dice result clears after movement.
+* Confirm legal move highlights clear after movement.
+* Confirm the current player’s turn ends after movement.
+* Confirm the next player turn modal appears after movement.
+* Confirm the next player can roll dice on their turn.
+* Confirm the board does not regenerate after movement.
+* Confirm the fixed turn order does not change after movement.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Split the gameplay page into a plain two-panel layout with the board on the left and gameplay info/actions on the right.
+* Reused the existing shared modal for both the dice result and next-turn feedback.
+* Added a small pure movement helper that treats grouped areas as single movement nodes and highlights exact-step legal destinations.
+* Extended the existing game setup context with a focused `setPlayerPosition` update so movement can change only the active player's coordinates.
+* Reuse check: reviewed the existing gameplay page, board renderer, modal, board helper, and game setup context; reused the gameplay page, board renderer, modal, and context, and created one new pure movement helper because no movement utility existed yet.
+* Assumption: exact-step movement can revisit previously visited movement spaces because the feature did not request path locking or a no-backtracking rule.
+* Intentionally left out battle logic, collision rules, path previews, movement animation, persistence, and extra board interactions.
+
+---
+
+Feature-006: Settings modal, grouped board area cleanup, and player piece positioning
+
+Status
+
+* done
+
+Goal
+
+* Add a persistent settings button.
+* Add a settings modal with an `End Game` action.
+* Clean up the board grid display for grouped areas.
+* Improve player piece sizing and overlapping display when multiple players are on the same square.
+
+Scope
+
+* Add a floating settings button in the top right of the screen.
+* The settings button should always be visible while using the app.
+* Install Font Awesome if it is not already installed.
+* Use a Font Awesome cog/settings icon inside the settings button.
+* Clicking the settings button should open a modal.
+* Reuse the existing reusable modal component if one exists.
+* If no reusable modal exists, create the smallest reusable modal component needed.
+* The settings modal should have two actions:
+
+  * `End Game`
+  * `Close`
+* `End Game` should:
+
+  * Reset the game context state.
+  * Clear player setup.
+  * Clear turn order.
+  * Clear current turn state.
+  * Clear board state.
+  * Clear dice/movement state.
+  * Navigate the user back to the start page.
+* `Close` should:
+
+  * Close the modal.
+  * Take no other action.
+* Clean up the board grid so grouped board areas look like one continuous area.
+* Grouped board areas should not show the internal grey borders between their own squares.
+* Grouped board areas include:
+
+  * Start Area
+  * Top-left Elite Battle area
+  * Bottom-right Elite Battle area
+  * Boss Battle area
+* Keep outer edges of grouped areas understandable on the board.
+* Make player pieces 14x14px.
+* Update player piece positioning so multiple players on the same square remain at least partially visible.
+* A square must be able to handle up to 6 player pieces on the same square.
+* If multiple pieces share a square, pieces may overlap each other.
+* If needed, pieces may slightly overlap into adjacent squares.
+* Pieces should remain mainly and clearly associated with the square they are on.
+* Keep the UI lo-fi and functional.
+* Do not add decorative styling beyond what is required for the settings button, modal behaviour, grouped-area grid cleanup, and player visibility.
+* Use `.jsx` for React component/page/context files that contain JSX.
+* Use `.js` for pure helper logic if no JSX is needed.
+
+Expected Behaviour
+
+* A settings button is visible in the top right of the screen.
+* The settings button remains visible across the app.
+* The settings button uses a Font Awesome cog/settings icon.
+* Clicking the settings button opens a modal.
+* The modal appears centred with a blocking overlay if the reusable modal supports that behaviour.
+* The modal shows an `End Game` option.
+* The modal shows a `Close` option.
+* Clicking `Close` closes the modal without changing game state.
+* Clicking `End Game` resets the game state and returns the user to the start page.
+* After ending the game, old player setup data is no longer active.
+* After ending the game, old board data is no longer active.
+* After ending the game, old turn/dice/movement data is no longer active.
+* Grouped board areas look like continuous areas rather than separate bordered squares.
+* The Start Area appears as one continuous 3x3 area.
+* Each Elite Battle area appears as one continuous 2x2 area.
+* The Boss Battle area appears as one continuous 2x2 area.
+* Player pieces render as 14x14px.
+* If 2 players are on the same square, both pieces are at least partially visible.
+* If 3 players are on the same square, all pieces are at least partially visible.
+* If 4 players are on the same square, all pieces are at least partially visible.
+* If 5 players are on the same square, all pieces are at least partially visible.
+* If 6 players are on the same square, all pieces are at least partially visible.
+* Pieces remain mainly associated with their actual square even when overlapping slightly.
+* Existing movement, turn order, and board behaviour continue to work.
+
+Out Of Scope
+
+* No extra settings options.
+* No settings persistence.
+* No audio settings.
+* No visual settings.
+* No save game option.
+* No confirm-end-game flow unless already required by an existing destructive-action pattern.
+* No custom settings page.
+* No menu animation.
+* No decorative settings modal styling.
+* No broader board redesign.
+* No new board areas.
+* No changes to board generation logic beyond grouped-area border display.
+* No changes to movement rules.
+* No changes to dice rules.
+* No player collision rules beyond visual positioning when pieces share a square.
+* No health, battle, scoring, inventory, or resource logic.
+* No procedural board generation.
+* No save/load functionality.
+
+Assumptions
+
+* “Always there” means the settings button should be app-level rather than only on the gameplay page.
+* `End Game` should fully reset the current in-memory game context.
+* No persistence needs to be cleared unless persistence was already introduced elsewhere.
+* The existing reusable modal should be reused for the settings modal if available.
+* The Font Awesome dependency is allowed because it is explicitly requested for this feature.
+* Player pieces can overlap in a simple fixed offset pattern based on how many players are on the same square.
+* Player piece overlap is visual only and should not change player position data.
+* Grouped-area border cleanup is a board rendering concern and should not change movement node behaviour.
+
+Stop Point
+
+* Stop once the settings button opens a modal, `End Game` resets context and returns to the start page, grouped board areas render without internal borders, and up to 6 player pieces on one square remain at least partially visible.
+
+Testing Checkpoints
+
+* Confirm Font Awesome is installed or already available.
+* Confirm the settings button appears in the top right of the screen.
+* Confirm the settings button remains visible across the relevant app pages.
+* Confirm the settings button displays a cog/settings icon.
+* Confirm clicking the settings button opens the settings modal.
+* Confirm the settings modal displays `End Game`.
+* Confirm the settings modal displays `Close`.
+* Confirm clicking `Close` closes the modal.
+* Confirm clicking `Close` does not reset game state.
+* Confirm clicking `End Game` resets player setup data.
+* Confirm clicking `End Game` resets turn order and current turn state.
+* Confirm clicking `End Game` resets board state.
+* Confirm clicking `End Game` resets dice and movement state.
+* Confirm clicking `End Game` navigates back to the start page.
+* Confirm starting a new game after `End Game` does not reuse old player, board, turn, dice, or movement data.
+* Confirm the Start Area has no internal grey borders between its 3x3 squares.
+* Confirm the top-left Elite Battle area has no internal grey borders between its 2x2 squares.
+* Confirm the bottom-right Elite Battle area has no internal grey borders between its 2x2 squares.
+* Confirm the Boss Battle area has no internal grey borders between its 2x2 squares.
+* Confirm grouped areas still occupy the correct board coordinates.
+* Confirm grouped areas still count correctly for movement.
+* Confirm player pieces are 14x14px.
+* Confirm 2 player pieces on one square are both at least partially visible.
+* Confirm 3 player pieces on one square are all at least partially visible.
+* Confirm 4 player pieces on one square are all at least partially visible.
+* Confirm 5 player pieces on one square are all at least partially visible.
+* Confirm 6 player pieces on one square are all at least partially visible.
+* Confirm overlapping pieces remain mainly associated with their actual square.
+* Confirm normal movement still works after the visual positioning change.
+* Confirm turn changes still work after the settings modal is added.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added a fixed app-level settings button that uses a Font Awesome gear icon and stays visible across the app.
+* Reused the existing shared modal for the settings dialog and added `End Game` plus `Close` actions without changing the existing dice or turn modals.
+* Added a focused `resetGame` action to the existing game setup context so ending a game clears player setup, turn order, board state, and current game progress before navigating back to the start page.
+* Updated board rendering so grouped areas hide their internal borders while keeping outer edges visible.
+* Updated square rendering so multiple players on the same square render as separate 14x14 markers with fixed overlap offsets that support up to 6 players.
+* Reuse check: reviewed the existing app routes, shared modal, game setup context, and board renderer; reused the shared modal, routing structure, and existing context, and created no new shared systems beyond the required reset action and board rendering updates.
+* Assumption: ending the game only needs to reset in-memory React state because no persistence layer exists in this epic.
+* Intentionally left out extra settings options, end-game confirmation, board logic changes beyond grouped-area borders, and any decorative styling beyond the requested settings control and player visibility updates.

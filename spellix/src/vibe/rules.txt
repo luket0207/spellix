@@ -1,0 +1,742 @@
+BOARD GAME REACT AGENT RULES
+
+Purpose
+- Build a functional React board game style webapp without making design decisions unless the user explicitly asks for design work.
+- Keep the app as lo-fi as possible by default.
+- Prioritise gameplay logic, state flow, user actions, routing, and testable behaviour.
+- Avoid visual polish, styling systems, branding, animation, decorative UI, or theme decisions unless specifically requested.
+- Keep every coding pass small, controlled, and directly tied to the exact instruction given.
+- Prevent the coding agent from adding extra features, extra abstractions, speculative improvements, or unrequested design work.
+- Keep features easy to review, debug, extend, and redesign later.
+
+Project Default
+- This is a React project for a board game style game.
+- The default implementation style is functional, plain, and low fidelity.
+- The app should work before it looks good.
+- Visual quality is not part of the task unless the prompt explicitly says so.
+- Do not infer a finished board game theme from the concept of the game.
+- Do not choose a visual identity, palette, typography style, layout style, animation style, illustration style, icon style, card style, or board style unless the user explicitly provides it.
+- When UI is required, use the simplest functional layout that makes the feature usable.
+- Default browser styling is acceptable unless the user asks for more.
+- Temporary lo-fi UI is acceptable if it clearly supports the required behaviour.
+
+Core Principles
+- Functionality first.
+- Reuse first: always check existing components, layouts, hooks, utilities, data files, and styles before creating new ones.
+- Small focused files: avoid large multi-purpose files.
+- Single responsibility: each file should do one clear job.
+- Consistent style: follow existing project patterns and naming.
+- No hidden magic: keep logic explicit and traceable.
+- Prefer simple, readable code over clever abstractions.
+- Build features in small shippable increments.
+- Do not introduce new dependencies unless there is a clear reason and the existing stack cannot solve the problem cleanly.
+- Do exactly what was requested, no more and no less.
+- Treat the user's prompt as the scope boundary for the current coding pass.
+- Do not expand the task based on assumptions about future features.
+- Do not improve unrelated areas of the app while completing a requested feature.
+- Do not add "nice to have" functionality unless it was explicitly requested.
+- If something seems useful but was not requested, note it as a follow-up instead of implementing it.
+
+No Design Decision Rules
+- Do not make design decisions unless explicitly instructed.
+- Do not choose colours.
+- Do not choose fonts.
+- Do not choose spacing scales.
+- Do not choose visual themes.
+- Do not choose board game art direction.
+- Do not choose card visual styles.
+- Do not choose token visual styles.
+- Do not choose icon sets.
+- Do not choose animation styles.
+- Do not choose decorative layouts.
+- Do not choose gradients, shadows, borders, rounded corners, textures, backgrounds, or other polish.
+- Do not create a design system.
+- Do not create design tokens unless explicitly requested.
+- Do not create a theme file unless explicitly requested.
+- Do not add visual variants unless explicitly requested.
+- Do not improve visual appearance as a side effect of functional work.
+- Do not redesign existing UI unless the prompt explicitly asks for a redesign.
+- Do not infer that "board game style" means decorative board game styling.
+- Treat "board game style" as a functional product category unless the user provides visual direction.
+- If the user asks for a board, card, player area, score area, or game screen, implement the minimum functional structure needed to interact with it.
+- If visual decisions are unavoidable, choose the plainest possible option and document the assumption.
+
+Lo-Fi UI Rules
+- UI should be plain, readable, and functional.
+- Prefer simple HTML elements where they are enough.
+- Use existing components if they already exist.
+- Keep layout simple: vertical stacks, basic sections, plain buttons, plain tables, plain lists, plain forms.
+- Avoid decorative UI.
+- Avoid unnecessary responsive complexity.
+- Avoid animations unless required for gameplay or explicitly requested.
+- Avoid custom styling unless required for usability.
+- Avoid adding images, icons, or artwork unless explicitly requested.
+- Avoid placeholder artwork.
+- Avoid fake board game visuals.
+- Avoid polished card layouts unless specifically requested.
+- Use text labels instead of icons by default.
+- Use visible basic controls instead of hidden gestures or clever interactions.
+- Keep user-facing text clear and practical.
+- Do not spend effort making the UI attractive unless the prompt asks for design.
+
+Hard Scope Control Rules
+- The coding agent must only implement the specific feature, fix, or change requested in the current prompt.
+- Do not add additional features, screens, flows, data models, styling systems, helper layers, or abstractions unless explicitly requested.
+- Do not perform opportunistic refactors outside the files required for the current task.
+- Do not redesign existing UI unless the prompt explicitly asks for a redesign.
+- Do not change app structure unless the prompt explicitly asks for structure changes or the task cannot work without the smallest possible structure change.
+- Do not introduce new architecture in anticipation of future requirements.
+- Do not add placeholder features for later unless specifically requested.
+- Do not add demo content, example screens, fake navigation, or sample flows unless the prompt asks for them.
+- Do not add extra validation, extra states, extra settings, or extra controls beyond what was requested.
+- Do not create generic systems when a small feature-level implementation is enough.
+- Do not create "just in case" utilities, hooks, context providers, constants files, config files, or data models.
+- Do not modify unrelated files to make the app "cleaner" during a feature pass.
+- Do not rename files, components, props, routes, or folders unless the prompt asks for it or it is strictly required to complete the task.
+- Do not change existing behaviour unless the current task explicitly requires that behaviour to change.
+- If the requested change reveals a possible improvement outside scope, record it as a follow-up instead of implementing it.
+- If the prompt is ambiguous, choose the smallest reasonable interpretation and document the assumption.
+- When in doubt, implement less and report what remains.
+
+Incremental Delivery Rules
+- Each prompt should result in one small, reviewable change.
+- Prefer the smallest working implementation that satisfies the prompt.
+- Finish the requested increment before touching anything else.
+- Stop once the requested behaviour works.
+- Do not continue into the next logical feature unless the prompt explicitly asks for it.
+- Do not combine multiple unrelated improvements into one pass.
+- Keep changes easy to inspect in a diff.
+- Avoid large rewrites unless the prompt explicitly asks for a rewrite.
+- If a task seems large, split the work into the smallest useful slice and complete only the slice requested.
+- If a future step is obvious, mention it in notes rather than implementing it.
+- If a feature requires setup and implementation, do the minimum setup needed for the current feature only.
+- A coding pass is successful when the requested change works, not when the surrounding area has been fully improved.
+- A coding pass is not successful if it adds unrequested design, polish, or extra scope.
+
+Stop Rules For The Coding Agent
+- Stop coding when the requested change is complete.
+- Stop coding before starting any adjacent feature.
+- Stop coding before performing broad cleanup outside the touched area.
+- Stop coding before adding optional enhancements.
+- Stop coding before introducing a new dependency.
+- Stop coding before creating a new shared abstraction unless explicitly required.
+- Stop coding before making styling or design improvements unless explicitly requested.
+- Stop coding if the next step would require guessing user intent.
+- Stop coding if the next step belongs in a different feature or epic.
+- Report back with:
+  - What was changed
+  - Files changed
+  - What was intentionally not changed
+  - Any assumptions made
+  - Any follow-up work that should be handled separately
+  - Any checks run
+  - Any checks not run and why
+
+Technology Rules
+- This project uses React.
+- This project uses JavaScript, not TypeScript, unless explicitly changed by the user.
+- All React component files must use the `.jsx` extension.
+- All React page files must use the `.jsx` extension.
+- All React hook files must use the `.jsx` extension if they contain JSX, otherwise `.js` is allowed for pure non-JSX logic.
+- All feature entry files that export React components must use `index.jsx`.
+- Do not create `.tsx` files.
+- Do not create `.ts` files.
+- Do not create React component files with the `.js` extension.
+- Plain utility files that contain no JSX may use `.js`.
+- Plain mock data files that contain no JSX may use `.js`.
+- Plain constants files that contain no JSX may use `.js`.
+- Use the project's existing package manager, scripts, router setup, styling setup, and folder conventions.
+- Do not add or change core technology choices unless the prompt explicitly asks for it.
+- Do not introduce another UI library unless explicitly approved.
+- Do not introduce a state management library unless explicitly approved.
+- Do not introduce an animation library unless explicitly approved.
+- Do not introduce a styling framework unless explicitly approved.
+
+File Extension Rules
+- Use `.jsx` for:
+  - React components
+  - React pages
+  - React layouts
+  - React route components
+  - React context providers that render JSX
+  - Feature entry files that export React components
+  - Any file containing JSX syntax
+- Use `.js` only for:
+  - Pure utilities
+  - Pure data files
+  - Constants
+  - Configuration helpers
+  - Non-JSX hooks
+  - Non-JSX validation helpers
+  - Game logic helpers that contain no JSX
+- Do not create `.tsx` or `.ts` files.
+- Do not convert existing `.jsx` files to `.js`.
+- If editing an existing React component that is currently `.js`, rename it to `.jsx` only if doing so is directly related to the requested task or required by the current instruction.
+- When creating imports, use paths that match the actual files and the project's existing import style.
+- Keep file naming consistent with existing project conventions.
+
+Component Reuse Rules
+- Before building a new component, check whether an existing component can be reused or extended.
+- Prefer reusable existing components for common UI patterns such as:
+  - Page layouts
+  - Buttons
+  - Forms
+  - Dialogs/modals
+  - Tables/lists
+  - Empty states
+  - Loading states
+  - Error messages
+  - Navigation elements
+- If a component is likely to be used in more than one feature, place it in a shared/common component area only when reuse is immediate or explicitly requested.
+- If a component is specific to one feature, keep it inside that feature folder.
+- Do not duplicate components with only minor wording or styling differences.
+- When creating a reusable component, keep it flexible but not over-engineered.
+- Prefer composition over large configurable components with too many props.
+- Do not promote a feature component to shared just because it might be reused later.
+- Do not build a component library during a feature pass unless explicitly requested.
+- Do not create styled wrapper components just to make the UI look better.
+
+Shared Component Promotion Rules
+- Start components inside the feature that needs them.
+- Promote a component to `src/components/` only when it is reused now or clearly required by the current task.
+- Do not over-generalise a component before it has a second real use case.
+- Do not promote components based only on possible future reuse.
+- When promoting a component, update imports and remove duplicate feature-level versions.
+- Document the promotion in the relevant `features.txt` or `testing.txt` only if it materially affects the current feature.
+- If promotion is not required for the current prompt, keep the component feature-local.
+
+Folder Structure Rules
+- Keep app-level setup in `src/app/` where appropriate, or follow the project’s existing structure.
+- Keep routes/pages in `src/pages/` or the project's established route folder.
+- Keep shared reusable components in `src/components/`.
+- Keep feature-specific code in `src/features/<feature>/`.
+- Keep shared hooks in `src/hooks/`.
+- Keep shared utilities/helpers in `src/utils/`.
+- Keep game logic in a clear feature-level or utility location only when needed by the current task.
+- Keep global styles in the project's established global style folder.
+- Put feature-specific styles next to the feature/component they style only when styling is required.
+- Keep vibe process files under `src/vibe/`.
+- Do not create random top-level folders under `src/` without a clear reason.
+- Do not create new folders unless they are needed for the current requested task.
+- Do not reorganise folders during feature work unless explicitly requested.
+- For new larger features, use this shape only where useful for the current task:
+  - `src/features/<feature>/components/`
+  - `src/features/<feature>/hooks/`
+  - `src/features/<feature>/utils/`
+  - `src/features/<feature>/state/` if needed now
+  - `src/features/<feature>/data/` if needed now
+  - `src/features/<feature>/index.jsx` as the feature entry/export file if useful now
+
+Code Quality Rules
+- Prefer composition over monolithic components.
+- Soft file-size limits:
+  - Components: target <= 250 lines
+  - Utilities/helpers: target <= 150 lines
+  - Hooks: target <= 150 lines
+  - Game logic files: target <= 200 lines
+- If bigger, split into smaller files.
+- Keep gameplay and business logic out of JSX markup where practical.
+- Extract repeated logic to shared helpers/hooks only when repetition exists now.
+- Do not create helper functions for hypothetical future reuse.
+- Do not duplicate utility logic that already exists.
+- Use clear names. Avoid vague names like `data2`, `temp`, `stuff`, `thing`, or `misc`.
+- Remove dead code and stale comments in files directly touched by the task.
+- Do not clean unrelated files.
+- Leave concise comments only where logic is genuinely non-obvious.
+- Keep imports tidy and remove unused imports in touched files.
+- Avoid deeply nested JSX where smaller components would be clearer.
+- Avoid deeply nested conditionals where helper functions would be clearer.
+- Do not add comments explaining obvious code.
+- Do not add speculative TODOs unless they relate directly to a known follow-up from the current prompt.
+
+State and Data Flow
+- Keep state as local as possible.
+- Lift state only when needed by multiple children now.
+- Keep derived values computed, not duplicated in state.
+- Prefer pure functions in `utils` for deterministic gameplay logic.
+- Side effects should be isolated and predictable.
+- Keep API/data access logic away from presentational components.
+- Do not store the same source of truth in multiple places.
+- Use clear naming for loading, error, empty, and success states.
+- Forms should have clear initial values, submit handling, and reset/cancel behaviour where relevant.
+- Do not introduce global state unless the prompt requires shared state across distant parts of the app.
+- Do not introduce context providers unless the current feature genuinely needs them.
+- Do not add persistence unless explicitly requested.
+- Do not add multiplayer, network sync, accounts, rooms, timers, AI opponents, scoring systems, or save systems unless explicitly requested.
+
+Board Game Domain Rules
+- Keep board game concepts clearly named and consistent.
+- Use the same terms across code, UI, route names, state, data files, and vibe files.
+- Do not invent game rules.
+- Do not infer missing game rules.
+- Do not rebalance the game.
+- Do not add extra mechanics.
+- Do not add extra phases.
+- Do not add extra player actions.
+- Do not add extra scoring rules.
+- Do not add extra win/loss conditions.
+- Do not add extra card/token/board behaviour.
+- If the user provides a rule, implement that rule as directly as possible.
+- If a rule is ambiguous, choose the smallest reasonable interpretation and document the assumption.
+- Important board game concepts may include:
+  - Players
+  - Turns
+  - Rounds
+  - Phases
+  - Cards
+  - Decks
+  - Hands
+  - Discards
+  - Boards
+  - Spaces
+  - Tokens
+  - Resources
+  - Dice
+  - Scores
+  - Actions
+  - Effects
+  - Win conditions
+- Define shared data shapes before building features that depend on them, but only for concepts required by the current task.
+- Avoid creating slightly different versions of the same concept in different features.
+- When adding a new domain concept required by the current task, document briefly in `features.txt`:
+  - What it represents
+  - Required fields
+  - Optional fields
+  - Where it is stored
+  - Which current features use it
+- Do not add domain concepts that are not required by the current task.
+- If a domain model changes, update only the affected mock data, utilities, components, and tests.
+
+Game Logic Rules
+- Keep gameplay logic explicit and testable.
+- Prefer pure functions for deterministic game rules.
+- Keep randomisation isolated so it can be tested or replaced later.
+- Do not hide rule logic inside JSX.
+- Do not mix display formatting with game state mutation.
+- Do not mutate state directly.
+- Keep turn progression clear.
+- Keep scoring logic clear.
+- Keep player action handling clear.
+- Keep card/deck/token/resource logic clear.
+- Avoid clever abstractions for game rules unless repeated patterns exist now.
+- Do not add rule engines, event buses, reducers, state machines, or command systems unless the current task clearly requires them.
+- Do not build a generic board game framework.
+- Build the requested game feature, not a reusable engine for future games.
+
+Mock Data and Real Data Rules
+- Early features may use mock data to move quickly.
+- Mock data must be clearly separated from real app logic.
+- Keep mock data in obvious files such as:
+  - `src/features/<feature>/data/mock<Thing>.js`
+  - `src/data/mock/`
+- Do not hard-code mock data directly inside components unless the component is a temporary spike explicitly requested by the user.
+- Components should receive data through props, hooks, or clear data helpers.
+- When replacing mock data with real data, remove stale mock imports.
+- If mock data is still used intentionally, make this clear in `features.txt` or `testing.txt`.
+- Mock data should follow the same shape expected from real data where possible.
+- Do not let mock data define hidden behaviour that is not documented elsewhere.
+- Do not add mock data for future features.
+- Add only the minimum mock data needed to demonstrate or test the current requested feature.
+
+Persistence and Storage Rules
+- Be clear about where data is stored.
+- Do not introduce persistence without explicit instruction or a direct need from the current task.
+- If using localStorage, sessionStorage, IndexedDB, backend APIs, or another storage method, document briefly in `features.txt`:
+  - What is stored
+  - Why it is stored
+  - Where it is read
+  - Where it is updated
+  - How it can be reset or migrated
+- Keep persistence logic out of presentational components.
+- Avoid saving derived values that can be recalculated.
+- Do not mix multiple persistence approaches for the same data without a clear reason.
+- Do not add persistence as a convenience if the requested task only needs temporary local UI state.
+
+Routing Rules
+- Use the project’s existing routing approach.
+- Keep route definitions clear and easy to scan.
+- Do not hard-code navigation behaviour in unrelated components.
+- Use route constants/helpers only if routes are already reused or the current task needs them.
+- Pages should compose feature/components rather than containing all logic directly.
+- Route names and paths should be human-readable and consistent.
+- Avoid adding routes without updating navigation if the page should be reachable by users.
+- Do not add routes for future pages unless explicitly requested.
+- Keep fallback/not-found behaviour clean and intentional.
+- Do not add decorative landing pages, menu screens, or setup flows unless requested.
+
+Styling Rules
+- Styling is not part of the default task unless explicitly requested.
+- Keep styling minimal and functional.
+- Use existing styling patterns if they already exist.
+- Do not create new visual systems.
+- Do not create a global theme.
+- Do not add new colours, fonts, shadows, gradients, backgrounds, icons, textures, spacing scales, or visual variants unless explicitly requested.
+- Do not make the UI look more like a board game unless explicitly requested.
+- Do not add CSS resets or global styling changes unless required by the current task.
+- Component styles should be added only when needed for basic usability.
+- Avoid inline styles unless they are genuinely dynamic or the smallest practical solution.
+- Do not redesign global styling during feature work unless explicitly requested.
+- If the prompt asks for styling, implement only the styling requested.
+- If the prompt does not ask for styling, use the least styled functional UI possible.
+
+Responsive Layout Rules
+- Build layouts that remain usable on common screen sizes.
+- Do not create complex responsive behaviour unless the requested feature needs it.
+- Avoid fixed widths unless there is a clear functional reason.
+- Forms and controls should remain usable on mobile.
+- Tables/lists should remain readable or scrollable if needed.
+- Do not add breakpoints, mobile-specific designs, or desktop-specific designs unless required.
+- Do not turn responsive behaviour into a design task.
+
+Accessibility and UX Rules
+- Forms must have clear labels.
+- Buttons and actions must have clear text.
+- Do not rely on colour alone to communicate meaning.
+- Loading, empty, and error states should be visible to the user where relevant to the current task.
+- Interactive elements should be keyboard usable where practical.
+- Dialogs/modals should have clear close/cancel actions if used.
+- Destructive actions should require confirmation where appropriate.
+- User-facing wording should be clear, calm, and practical.
+- Avoid placeholder text as the only label for an input.
+- Do not add new UX flows that were not requested.
+- Keep UX changes limited to the current requested behaviour.
+- Accessibility improvements are allowed when they support basic usability, but should not become broad redesign work.
+
+Naming and Copy Rules
+- Use clear, user-friendly wording in the UI.
+- Keep labels consistent across the app.
+- Do not use different names for the same game concept.
+- Button text should describe the action.
+- Good button examples:
+  - `Start game`
+  - `Add player`
+  - `End turn`
+  - `Draw card`
+  - `Discard card`
+  - `Roll dice`
+  - `Reset game`
+- Avoid vague button text such as:
+  - `Submit`
+  - `OK`
+  - `Click here`
+  - `Do it`
+- Empty states should explain what the user can do next.
+- Error messages should explain the problem and the next action where possible.
+- Do not rewrite existing copy outside the current feature unless requested.
+- Do not invent flavour text unless requested.
+- Do not invent card text, rulebook text, character names, faction names, or lore unless requested.
+
+Form and Validation Rules
+- Forms must have clear initial values.
+- Forms must have submit, cancel, and reset behaviour where appropriate.
+- Validation rules should be explicit and easy to find.
+- Do not hide validation logic deep inside JSX.
+- Reuse existing form components and validation helpers before creating new ones.
+- Show validation errors near the relevant field.
+- Disable submit actions only when the reason is clear to the user.
+- Required fields should be visibly marked where relevant.
+- Form state should not be duplicated unnecessarily.
+- Form components should be split when the form becomes hard to scan.
+- Form submission success and failure should be visible to the user when relevant.
+- Do not add validation rules that were not requested unless they are necessary to prevent broken behaviour.
+- Do not add extra form fields beyond the prompt.
+
+Error Handling Rules
+- Every feature that loads, saves, deletes, or updates data must handle errors clearly.
+- Error states should be visible to the user.
+- Do not fail silently.
+- Use existing error display patterns where available.
+- Keep technical error details out of normal user-facing messages unless useful.
+- Log enough information during development to debug the issue.
+- If an error reveals a missing app-level pattern, create a reusable pattern only if needed by the current task.
+- Do not add broad error-handling architecture unless explicitly requested.
+
+Delete and Destructive Action Rules
+- Destructive actions must be deliberate.
+- Use confirmation for deleting or resetting important game data where appropriate.
+- Confirmation wording should clearly state what will be deleted or reset.
+- Prefer soft delete or undo patterns only where requested or already established.
+- Do not place destructive buttons where they can be clicked accidentally.
+- Destructive actions should have clear success and failure feedback.
+- Do not add destructive actions unless they are requested.
+
+Feature Planning Rules
+- Each feature should have a clear goal before implementation starts.
+- Each feature should be small enough to implement in one focused pass.
+- Do not start broad rewrites unless the epic specifically asks for it.
+- If a feature requires a shared component now, build the smallest useful shared component first and then use it in the feature.
+- If a feature reveals missing structure, add the smallest useful structure rather than redesigning everything.
+- For larger features, separate only the parts needed now:
+  - UI components
+  - State/data logic
+  - Utility functions
+  - Route/page composition
+  - Styles only if required
+- Do not break a feature into extra subfeatures during implementation unless the prompt asks for that planning work.
+- Do not add extra features to make an epic feel more complete.
+- Do not plan visual design unless the prompt asks for visual design.
+
+Refactor Rules
+- Refactors should have a clear reason.
+- Avoid mixing large refactors with unrelated feature work.
+- If a refactor is needed during feature work, keep it as small as possible.
+- Record meaningful refactors in `features.txt` or `testing.txt` only where relevant to the current task.
+- After refactoring, run the relevant manual tests again.
+- Do not change behaviour during a refactor unless the behaviour change is explicitly part of the feature.
+- Do not rename or move files without updating imports and documentation.
+- Prefer incremental refactors over risky rewrites.
+- Do not refactor unrelated code because it looks messy.
+- Do not refactor for future flexibility unless explicitly requested.
+- If a refactor would be useful but is outside scope, record it as a follow-up.
+
+Command Shortcut Rules
+- Command shortcuts live in `src/vibe/commands.txt`.
+- Before carrying out any command shortcut, the AI agent must reread the main rules file.
+- The AI agent must then reread `src/vibe/commands.txt`.
+- The main rules file always takes priority if there is any conflict.
+- Commands must not override scope control, lo-fi UI rules, testing rules, file extension rules, or vibe workflow rules.
+- Commands are shortcuts only. They are not permission to implement extra features, make design decisions, skip testing notes, or update unrelated files.
+- Commands should be treated as case-insensitive.
+- If a command targets an epic, resolve the epic folder using the existing project naming convention.
+- If a command would require broad work, complete only the next smallest useful unit and stop.
+- If a command is unclear or does not match a supported command in `src/vibe/commands.txt`, do not guess. Report that the command is unknown.
+
+AI Agent Instruction Rules
+- Prompts given to the coding agent should be explicit and scoped.
+- Each implementation prompt should include:
+  - Feature goal
+  - Exact scope for this pass
+  - Files likely to change
+  - Files or areas that should not be changed
+  - Existing components/patterns to check first
+  - Expected behaviour
+  - Styling requirements, normally "no styling beyond basic functional usability"
+  - Testing requirements
+  - Documentation updates required
+  - Clear stop point
+- Tell the agent when to stop and report back.
+- Do not ask the agent to implement multiple unrelated features in one pass.
+- If the agent makes assumptions, those assumptions must be recorded in the relevant vibe file or in the final report.
+- Coding agent prompts should remind the agent to check existing components before creating new ones.
+- Coding agent prompts should remind the agent that all React component files must be `.jsx`.
+- Coding agent prompts should explicitly say not to add extra features beyond the requested scope.
+- Coding agent prompts should explicitly say not to do unrelated refactors.
+- Coding agent prompts should explicitly say not to make design decisions.
+- Coding agent prompts should explicitly say to keep UI lo-fi unless the prompt asks otherwise.
+- Coding agent prompts should remind the agent to update only the relevant documentation files.
+- Coding agent prompts should remind the agent to update:
+  - `features.txt`
+  - `testing.txt`
+  - `bugs.txt` if relevant
+- Coding agent prompts should not refer to `implementation.txt`.
+- Coding agent prompts should ask for a summary of intentionally skipped out-of-scope work.
+
+Mandatory Agent Behaviour For Every Prompt
+- Read the user's prompt carefully and identify the smallest requested change.
+- Check relevant existing files before creating new files.
+- Reuse existing patterns where practical.
+- Implement only the requested change.
+- Keep React files as `.jsx`.
+- Keep pure utilities and mock data as `.js` where appropriate.
+- Avoid new dependencies.
+- Avoid unrelated refactors.
+- Avoid future-proofing.
+- Avoid broad architecture changes.
+- Avoid extra UI.
+- Avoid extra routes.
+- Avoid extra data models.
+- Avoid extra styling systems.
+- Avoid visual polish unless requested.
+- Avoid design decisions unless requested.
+- Run relevant checks where possible.
+- Update only relevant vibe files.
+- Stop and report back when the requested task is complete.
+
+Reuse Checklist Mandatory Before New Code
+- Before implementing any feature, review and decide if these can be reused:
+  - Existing page layouts
+  - Existing shared components
+  - Existing feature components
+  - Existing hooks
+  - Existing utilities/helpers
+  - Existing game logic helpers
+  - Existing data/mock data files
+  - Existing route patterns
+  - Existing form patterns
+  - Existing table/list/card patterns
+  - Existing loading, empty, and error state patterns
+  - Existing styling only if styling is required
+- In the final report or relevant vibe note, briefly record:
+  - Which existing parts were considered
+  - Which were reused
+  - Which new parts were created
+  - Why reuse was not possible where new code was needed
+- Keep this checklist short and relevant to the files touched.
+- Do not use the checklist as permission to inspect or refactor unrelated app areas.
+
+Definition of Done Per Feature
+- Feature behaviour works as requested.
+- No extra features were added beyond the prompt.
+- No unrelated refactors were performed.
+- No unrequested design decisions were made.
+- No unrequested visual polish was added.
+- All new React component/page/layout files use `.jsx`.
+- All files containing JSX use `.jsx`.
+- Reuse checklist completed and documented briefly.
+- Code follows folder and file-size rules.
+- Styling is absent or minimal unless explicitly requested.
+- Forms include validation where relevant.
+- Loading, empty, error, and success states are handled where relevant to the task.
+- Destructive actions use confirmation where appropriate.
+- Mobile/basic responsive usability has been considered where relevant.
+- No obvious console errors.
+- No unused imports or dead code in touched files.
+- `features.txt` updated where relevant with:
+  - Feature status
+  - Small scope note
+  - Any assumptions or follow-ups
+- `testing.txt` updated with:
+  - How to manually test the feature
+  - Expected results
+  - Any automated tests that exist or should be added
+- `bugs.txt` updated if a bug was found, investigated, or fixed.
+- Run quality checks before marking complete where possible:
+  - `npm run lint`
+  - `npm run build`
+- If checks are not available or not run, report that clearly.
+
+Vibe Workflow Rules
+- All vibe process files live under `src/vibe/`.
+- The vibe process now uses only these three epic files:
+  - `features.txt`
+  - `bugs.txt`
+  - `testing.txt`
+- Do not create, update, or reference `implementation.txt`.
+- Do not create, update, or reference implementation files anywhere in `src/vibe/`.
+- If old implementation files exist, do not use them.
+- If asked to clean the vibe folder, remove implementation files only when explicitly requested.
+- Keep workflow updates tied to the current feature only.
+- Do not create new epic folders unless the prompt asks for a new epic or the current work belongs to a clearly specified epic.
+- Do not update unrelated epic files.
+- Keep the three-file workflow simple:
+  - `features.txt` tracks planned and completed feature scope.
+  - `bugs.txt` tracks bugs, investigation, and fixes.
+  - `testing.txt` tracks manual and automated testing.
+
+Epic Tracking Structure
+- Each epic should use this structure:
+  - `src/vibe/epics/<epic-name>/features.txt`
+  - `src/vibe/epics/<epic-name>/bugs.txt`
+  - `src/vibe/epics/<epic-name>/testing.txt`
+- Do not add an `implementation.txt` file.
+- Do not add extra process files unless the user explicitly requests them.
+- Do not create project memory/index files unless the user explicitly requests them.
+- If the project already has an older overview or implementation file, ignore it unless the user asks to migrate or delete it.
+
+features.txt
+- List every feature/sub-feature needed to complete the epic.
+- Keep items small enough to implement in one focused pass.
+- Include status markers:
+  - `not started`
+  - `in progress`
+  - `done`
+  - `blocked`
+- Include notes on when to stop implementation and start testing.
+- Include basic testing checkpoints where useful.
+- Include brief completion notes when a feature is done.
+- Include assumptions when they affect the feature.
+- Include follow-up notes only when they are clearly outside the current scope.
+- Do not mark a feature done until testing notes are updated.
+- Do not add new features to `features.txt` unless the user has requested them or they are required to break down the current epic.
+- Do not use `features.txt` as a place to invent extra scope.
+- Do not use `features.txt` as a design document unless the user explicitly asks for design planning.
+- Do not document unrequested visual design decisions.
+
+bugs.txt
+- Track bugs related to the epic only.
+- Each bug entry should include:
+  - Bug title
+  - Repro steps
+  - Expected behaviour
+  - Actual behaviour
+  - Suspected cause
+  - Attempted fixes
+  - Final fix if solved
+  - Status:
+    - `not started`
+    - `investigating`
+    - `attempted`
+    - `fixed`
+    - `blocked`
+- Do not fix unrelated bugs unless the current prompt asks for it.
+- If an unrelated bug is discovered, record it as a follow-up or bug entry only if relevant.
+- Do not redesign UI while fixing bugs unless the bug is specifically a UI/design bug.
+- Bug fixes should use the smallest safe change.
+
+testing.txt
+- Must be updated after every feature implementation.
+- For each feature, include:
+  - Manual test steps written for a non-developer to follow
+  - Expected result for each step
+  - Automated tests completed where relevant
+  - Automated tests still needed to fully prove behaviour
+  - Test status:
+    - `not started`
+    - `in progress`
+    - `passed`
+    - `failed`
+    - `blocked`
+- Testing notes should cover the requested feature only.
+- Do not add broad regression plans unless the prompt asks for regression testing or the epic is being completed.
+- Testing should confirm behaviour, not visual polish, unless visual polish was explicitly requested.
+- If the UI is intentionally lo-fi, do not mark that as a test failure.
+
+Epic Completion Gate
+- An epic is only done when its testing has been run and documented.
+- At the end of every epic, execute and record in `testing.txt`:
+  - Full manual regression flow for that epic
+  - Relevant automated tests proving the epic works as intended
+  - Any remaining gaps, with clear next actions
+- Do not mark an epic done just because the current feature is done.
+- Do not complete adjacent epic work unless the prompt explicitly asks for epic completion.
+- Do not create a separate implementation summary file when completing an epic.
+
+Working Agreement While Vibe Coding
+- Build in small increments and log progress in epic files continuously.
+- Do not jump to new features until current feature notes and testing notes are updated.
+- If blocked, log the blocker and next best option instead of guessing silently.
+- Prefer shippable progress over large risky rewrites.
+- When changing shared systems, note potential impact on other epics.
+- Reuse existing components before creating new ones.
+- Keep all React component files as `.jsx`.
+- Keep the app structure simple until the project genuinely needs more abstraction.
+- Keep UI lo-fi unless the user asks otherwise.
+- Do not over-engineer early board game features before the real requirements are known.
+- Do not let the agent continue working after the requested scope is complete.
+- Do not let the agent turn a small prompt into a larger product design exercise.
+- Do not let the agent add features just because they seem obvious or helpful.
+- Do not let the agent make art direction or design decisions.
+- When the current prompt is complete, stop, summarize, and wait for the next instruction.
+
+Standard Prompt Footer For Coding Agent
+
+Add this footer to implementation prompts when using the coding agent:
+
+Scope control:
+- Only implement what is explicitly requested in this prompt.
+- Do not add extra features, extra screens, extra fields, extra routes, or extra abstractions.
+- Do not do unrelated refactors or cleanup.
+- Do not future-proof the code beyond the current requirement.
+- Do not make design decisions.
+- Keep the UI lo-fi and functional unless styling is explicitly requested.
+- Do not add colours, fonts, animations, icons, decorative layouts, themes, or visual polish unless explicitly requested.
+- Use existing components, hooks, utilities, styles, and patterns before creating new ones.
+- All React files must use `.jsx`.
+- Pure non-JSX utilities, constants, and mock data may use `.js`.
+- Update only the relevant vibe files:
+  - `features.txt`
+  - `testing.txt`
+  - `bugs.txt` if relevant
+- Do not create or update `implementation.txt`.
+- Stop when the requested change works.
+- Report back with files changed, behaviour added, assumptions made, checks run, and anything intentionally left for a future prompt.

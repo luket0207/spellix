@@ -1,0 +1,387 @@
+Feature-001: Base routing and core pages
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Run the app and open `/`.
+Expected result: The start page shows the `Spellix` heading and a `Go to game setup` button.
+
+2. Click `Go to game setup`.
+Expected result: The app moves to `/setup` and shows the `Game setup` page.
+
+3. Click `Start game`.
+Expected result: The app moves to `/gameplay` and shows the `Gameplay` placeholder page.
+
+4. Open `/setup` directly in the browser.
+Expected result: The setup page loads without errors.
+
+5. Open `/gameplay` directly in the browser.
+Expected result: The gameplay page loads without errors.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies the default start page, navigation from start to setup to gameplay, direct loading of `/setup`, and direct loading of `/gameplay`.
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Browser-level verification that direct route loading works under the local dev server setup outside the test environment.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Feature-005: Dice roll, player movement, and gameplay screen layout
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game and open `/gameplay`.
+Expected result: The page shows a board panel on the left, a gameplay panel on the right, and no visible `Board` or `Gameplay` page titles.
+
+2. Check the gameplay panel before rolling.
+Expected result: The current turn text and the `Roll Dice` button are both shown in the right-side gameplay panel.
+
+3. Click `Roll Dice`.
+Expected result: A dice result modal appears and shows a random whole number from `1` to `6`.
+
+4. Close the dice result modal and inspect the board.
+Expected result: Legal exact-step destinations for the current player are highlighted in opaque blue, including grouped-area destinations when they are reachable as one movement space.
+
+5. Click one highlighted destination square.
+Expected result: The current player's position updates to the clicked destination, the dice result and highlights clear, and the next-turn modal appears for the next player.
+
+6. Close the next-turn modal and continue play.
+Expected result: The next player can roll again, the fixed board is still present, and the turn order has not changed unexpectedly.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * gameplay route rendering with separate board and gameplay panels
+  * removal of visible `Board` and `Gameplay` headings
+  * dice result modal display after rolling
+  * legal move highlighting for exact-step movement
+  * player movement to a highlighted destination
+  * turn-ending modal after movement
+  * board stability while movement and turn changes occur
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Broader movement coverage for grouped-area destinations near the elite battle areas and boss battle area.
+* Coverage for additional dice values and larger player counts to confirm movement stays correct across more board states.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Feature-006: Settings modal, grouped board area cleanup, and player piece positioning
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the app on `/`, `/setup`, and `/gameplay`.
+Expected result: A settings button with a gear icon is visible in the top right on each page.
+
+2. Click the settings button.
+Expected result: A settings modal opens with `End Game` and `Close` actions.
+
+3. Click `Close`.
+Expected result: The settings modal closes and the current page state does not change.
+
+4. Start a game, then click `End Game` from the settings modal.
+Expected result: The app returns to the start page and the previous player setup, turn state, board state, and in-progress game state are cleared.
+
+5. Start a new game after ending the previous one.
+Expected result: The setup page returns to its default player configuration instead of reusing the previous game's player count, colours, board, or turn state.
+
+6. Inspect the grouped board areas on gameplay.
+Expected result: The Start Area, both Elite Battle areas, and the Boss Battle area render as continuous grouped areas without internal borders between their own squares.
+
+7. Check a square that contains multiple player pieces.
+Expected result: Player markers render as 14x14 pieces and remain at least partially visible when up to 6 players share the same square.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * the settings button stays visible across app pages
+  * the settings modal opens and closes
+  * `End Game` resets state and returns the user to the start page
+  * grouped board area squares remove their internal border classes
+  * shared-square player markers render with overlapping positions
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Browser-level verification that the fixed settings button placement is comfortable across common viewport sizes.
+* Broader gameplay regression coverage for multiple players converging on the same square through normal movement rather than direct renderer setup.
+
+Notes
+
+* Installed Font Awesome packages required for the settings gear icon.
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Feature-004: Initial fixed game board and starting player positions
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: A board appears on the gameplay page without console errors.
+
+2. Check the board dimensions.
+Expected result: The board shows 31 rows by 31 columns, each square is 30x30px, and the full board is 930x930px.
+
+3. Check the fixed board areas.
+Expected result: The bottom-left 3x3 start area is grey, the top-left 2x2 elite battle area is red, the bottom-right 2x2 elite battle area is red, and the top-right 2x2 boss battle area is black.
+
+4. Check the player pieces at game start.
+Expected result: Every player piece appears inside the start area on a different square and uses the configured player colour.
+
+5. Advance turns with `Roll Dice`.
+Expected result: The board stays in place and the player starting positions do not regenerate or shift when turns change.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * board rendering on `/gameplay`
+  * 31x31 square count
+  * required area types at representative coordinates
+  * starting player positions and player markers
+  * board stability across turn changes
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Browser-level manual verification of the exact rendered square dimensions and full board size in the live app.
+* Broader coverage for starting positions with larger player counts such as 5 and 6 players.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Bug-001: Next player turn modal is not rendering as a proper modal
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The gameplay page shows the current turn and the `Roll Dice` button.
+
+2. Click `Roll Dice`.
+Expected result: A centred modal appears with a transparent black overlay covering the screen behind it.
+
+3. While the modal is open, try to use the gameplay controls behind it.
+Expected result: The content behind the modal is blocked from normal interaction until the modal closes.
+
+4. Check the modal text.
+Expected result: The modal says whose turn it is now and matches the current player display.
+
+5. Click `OK`.
+Expected result: The modal closes, the overlay disappears, and the game remains on the same current player shown by the modal.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * the turn-change dialog appears after `Roll Dice`
+  * the reusable modal overlay is present while open
+  * the gameplay `Roll Dice` button is disabled while the modal is open
+  * the overlay and dialog disappear after clicking `OK`
+  * the turn still cycles correctly after the modal closes
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Browser-level manual verification that pointer interaction is blocked across the whole gameplay screen, not just the `Roll Dice` button.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Bug-002: Legal move highlights use wrong colour and include current square
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The gameplay page shows the board and the right-side gameplay panel without console errors.
+
+2. Roll the dice for the current player and close the dice result modal.
+Expected result: Legal destination highlights appear using the current player's configured colour at opacity `0.5`.
+
+3. Check the active player's current square.
+Expected result: The current square is not highlighted as a legal destination.
+
+4. Click the active player's current square.
+Expected result: The player does not move and the turn does not end.
+
+5. Click a valid highlighted destination square.
+Expected result: The player moves to that destination and the turn-change modal appears for the next player.
+
+6. Close the turn-change modal and roll for the next player.
+Expected result: The next player's legal destination highlights use that next player's configured colour instead of the previous player's colour.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * the current square is not highlighted after rolling
+  * highlighted destinations record the active player's colour and opacity
+  * clicking the current square does not move the player or open the turn-change modal
+  * moving to a valid highlighted destination still works
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Broader regression coverage for grouped-area destinations to confirm the active grouped movement node is never returned as a legal destination.
+* Browser-level verification that the highlight overlay looks correct for every configured player colour.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Feature-003: Player turn order and turn feedback UI
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game and reach `/gameplay`.
+Expected result: The gameplay page shows which colour player's turn it currently is and a visible `Roll Dice` button.
+
+2. Click `Roll Dice`.
+Expected result: The current turn advances immediately to the next player in the fixed order and a modal appears naming the new current player's colour.
+
+3. Click `OK` in the modal.
+Expected result: The modal closes and the current turn display still shows the same player.
+
+4. Keep clicking `Roll Dice` until the final player has advanced.
+Expected result: The turn order cycles back to the first player instead of changing order or getting stuck.
+
+5. Refresh gameplay manually during the same run.
+Expected result: The current turn display remains usable and there are no console errors.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * gameplay route rendering with current turn text and `Roll Dice`
+  * turn advancement after clicking `Roll Dice`
+  * turn-change modal display
+  * modal dismissal with `OK`
+  * cycling back to the original player in a two-player game
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Deterministic test coverage that inspects the shuffled turn order contents directly for a larger player count.
+* Browser-level manual verification that turn order stays fixed across gameplay re-renders after setup changes.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Feature-002: Game setup player count, player colours, and game context
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Run the app and open `/setup`.
+Expected result: The page shows a valid default player count of `2` and two player colour selectors.
+
+2. Change the number of players to `6`.
+Expected result: The page updates to show six player colour selectors and does not allow values below `2` or above `6`.
+
+3. Change one or more player colours.
+Expected result: Each selected colour updates immediately in the setup form.
+
+4. Click `Start game`.
+Expected result: The app moves to `/gameplay` and shows the current player count plus each player's stored colour.
+
+5. Return to `/setup`, change the player count again, and start the game again.
+Expected result: The number of player colour selectors updates clearly and the gameplay page shows the latest stored setup data.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * default setup values on `/setup`
+  * navigation from start to setup to gameplay
+  * stored player setup rendering on the gameplay page
+  * direct route loading for `/setup` and `/gameplay`
+  * player colour selector count updates when player count changes
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Browser-level manual verification that changing setup values and then using browser navigation still shows the expected current context state.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.

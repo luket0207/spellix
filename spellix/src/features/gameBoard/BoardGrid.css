@@ -1,0 +1,68 @@
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(31, 30px);
+  grid-template-rows: repeat(31, 30px);
+  width: 930px;
+  height: 930px;
+}
+
+.board-panel {
+  flex: 0 0 auto;
+}
+
+.board-square {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #c0c0c0;
+  position: relative;
+}
+
+.board-square--hide-top-border {
+  border-top-color: transparent;
+}
+
+.board-square--hide-right-border {
+  border-right-color: transparent;
+}
+
+.board-square--hide-bottom-border {
+  border-bottom-color: transparent;
+}
+
+.board-square--hide-left-border {
+  border-left-color: transparent;
+}
+
+.board-square--normal {
+  background: #ffffff;
+}
+
+.board-square--start-area {
+  background: grey;
+}
+
+.board-square--elite-battle {
+  background: red;
+}
+
+.board-square--boss-battle {
+  background: black;
+}
+
+.board-square--highlighted {
+  cursor: pointer;
+}
+
+.board-square-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.board-player-marker {
+  border: 1px solid #000000;
+  border-radius: 999px;
+  position: absolute;
+  z-index: 1;
+}

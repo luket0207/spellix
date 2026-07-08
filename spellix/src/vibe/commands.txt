@@ -1,0 +1,418 @@
+VIBE COMMANDS
+
+Purpose
+- Provide short command prompts for common vibe workflow actions.
+- Keep commands consistent with the main AI agent rules file.
+- Reduce repeated typing while preserving strict scope control.
+- Commands are prompt shortcuts, not permission to ignore the rules.
+
+Important Usage Note
+- These commands only work if the AI agent reads and follows this file.
+- They are not guaranteed to become native IDE slash commands unless the IDE or agent supports custom commands.
+- Treat each command as shorthand for the expanded instruction written in this file.
+- If the IDE has a custom command feature, copy the relevant command behaviour into that feature.
+
+Mandatory Rule Before Every Command
+- Before carrying out any command in this file, the AI agent must reread the main rules file.
+- The agent must then reread this commands file.
+- The agent must follow the main rules file first if there is any conflict.
+- The command must not override scope control, lo-fi UI rules, file extension rules, testing rules, or vibe workflow rules.
+- If the command would require guessing user intent, the agent must choose the smallest safe interpretation and document the assumption.
+- If the command would require broad implementation, the agent must complete only the next smallest useful unit and stop.
+
+Command Format
+- Commands are written by the user as plain text.
+- Commands should be treated as case-insensitive.
+- Epic folder names should use the existing project convention:
+  - `EPIC-001`
+  - `EPIC-002`
+  - `EPIC-003`
+- Command examples may use lowercase, such as `//epic-002Feature`, but folders should still be created and referenced using the existing uppercase epic naming convention.
+
+Supported Commands
+
+//nextEpic
+
+Goal
+- Create the next epic folder under `src/vibe/epics/`.
+
+Expanded Instruction
+- Reread the main rules file.
+- Reread `src/vibe/commands.txt`.
+- Inspect `src/vibe/epics/`.
+- Find the highest existing epic number.
+- Create the next epic folder using the next number in sequence.
+- Use three-digit numbering.
+- Example:
+  - If `EPIC-001` and `EPIC-002` exist, create `EPIC-003`.
+
+Files To Create
+- `src/vibe/epics/EPIC-XXX/features.txt`
+- `src/vibe/epics/EPIC-XXX/bugs.txt`
+- `src/vibe/epics/EPIC-XXX/testing.txt`
+
+File Contents
+- Create the three files empty unless the user explicitly asks for starter text.
+- Do not create `implementation.txt`.
+- Do not create extra process files.
+- Do not create feature plans unless the user explicitly provides or requests them.
+
+Scope Limits
+- Do not modify existing epic folders.
+- Do not update unrelated files.
+- Do not infer the epic title or purpose unless the user provides it.
+- Do not add placeholder features, bugs, or tests.
+- Stop after the folder and three empty files are created.
+
+Report Back With
+- New epic folder created.
+- Files created.
+- Confirmation that no implementation file was created.
+- Any assumptions made.
+
+------------------------------------------------------------
+
+//epic-XXXFeature
+
+Examples
+- `//epic-001Feature`
+- `//epic-002Feature`
+- `//EPIC-003Feature`
+
+Goal
+- Read the selected epic's `features.txt`.
+- Implement the next eligible feature only.
+- Keep the implementation small and scoped.
+
+Expanded Instruction
+- Reread the main rules file.
+- Reread `src/vibe/commands.txt`.
+- Resolve `XXX` to the matching epic folder.
+- Read:
+  - `src/vibe/epics/EPIC-XXX/features.txt`
+  - `src/vibe/epics/EPIC-XXX/testing.txt`
+  - `src/vibe/epics/EPIC-XXX/bugs.txt` only if relevant
+- Identify the next eligible feature in `features.txt`.
+
+Eligible Feature Selection
+- Prefer the first feature marked `in progress`.
+- If none are marked `in progress`, choose the first feature marked `not started`.
+- Ignore features marked `done`.
+- Ignore features marked `blocked` unless the user explicitly asks to investigate the blocker.
+- If multiple features appear new, implement only the first eligible feature unless the user explicitly says to implement all.
+- If the feature is too large, implement the smallest useful slice of that feature and document the remaining work.
+
+Implementation Rules
+- Follow the main rules file completely.
+- Implement only the selected feature or selected feature slice.
+- Do not add extra features.
+- Do not do unrelated refactors.
+- Do not make design decisions.
+- Keep UI lo-fi and functional unless the feature explicitly asks for styling.
+- Check existing files and reuse existing patterns before creating new code.
+- Keep React component files as `.jsx`.
+- Keep pure non-JSX utilities, constants, and mock data as `.js`.
+- Do not create or update `implementation.txt`.
+
+Documentation Updates
+- Update the selected epic's `features.txt` with the feature status and brief notes.
+- Update the selected epic's `testing.txt` with manual testing steps and expected results.
+- Update the selected epic's `bugs.txt` only if a bug is discovered, investigated, or fixed.
+- Do not update unrelated epic files.
+
+Testing
+- Run relevant checks where possible.
+- Prefer:
+  - `npm run lint`
+  - `npm run build`
+- If checks are unavailable or not run, report this clearly.
+- Do not mark the feature `done` unless testing notes have been updated.
+
+Stop Point
+- Stop when the selected feature or smallest useful feature slice works.
+- Do not continue to the next feature.
+- Do not start bug fixing unless the feature requires it or the user asks.
+
+Report Back With
+- Feature selected.
+- What was changed.
+- Files changed.
+- What was reused.
+- What was newly created.
+- Testing performed.
+- What was intentionally not changed.
+- Any assumptions made.
+- Any follow-up work.
+
+------------------------------------------------------------
+
+//epic-XXXBugs
+
+Examples
+- `//epic-001Bugs`
+- `//epic-002Bugs`
+- `//EPIC-003Bugs`
+
+Goal
+- Read the selected epic's `bugs.txt`.
+- Fix the next eligible bug only.
+- Keep the fix small and scoped.
+
+Expanded Instruction
+- Reread the main rules file.
+- Reread `src/vibe/commands.txt`.
+- Resolve `XXX` to the matching epic folder.
+- Read:
+  - `src/vibe/epics/EPIC-XXX/bugs.txt`
+  - `src/vibe/epics/EPIC-XXX/testing.txt`
+  - `src/vibe/epics/EPIC-XXX/features.txt` only if needed for context
+- Identify the next eligible bug in `bugs.txt`.
+
+Eligible Bug Selection
+- Prefer the first bug marked `investigating`.
+- If none are marked `investigating`, choose the first bug marked `attempted`.
+- If none are marked `attempted`, choose the first bug marked `not started`.
+- Ignore bugs marked `fixed`.
+- Ignore bugs marked `blocked` unless the user explicitly asks to investigate the blocker.
+- If multiple bugs are open, fix only the first eligible bug unless the user explicitly says to fix all.
+- If the bug is too large or unclear, investigate the smallest useful part and document what remains.
+
+Bug Fix Rules
+- Follow the main rules file completely.
+- Fix only the selected bug.
+- Do not add extra features.
+- Do not do unrelated refactors.
+- Do not make design decisions.
+- Keep UI lo-fi and functional unless the bug is specifically about requested styling.
+- Check existing files and reuse existing patterns before creating new code.
+- Keep React component files as `.jsx`.
+- Keep pure non-JSX utilities, constants, and mock data as `.js`.
+- Do not create or update `implementation.txt`.
+
+Documentation Updates
+- Update the selected epic's `bugs.txt` with:
+  - Attempted fixes
+  - Final fix if solved
+  - Current status
+- Update the selected epic's `testing.txt` with manual regression steps and expected results for the bug.
+- Update `features.txt` only if the bug fix changes feature status or reveals a feature follow-up.
+- Do not update unrelated epic files.
+
+Testing
+- Reproduce the bug where possible before fixing it.
+- Verify the bug is fixed where possible.
+- Run relevant checks where possible.
+- Prefer:
+  - `npm run lint`
+  - `npm run build`
+- If checks are unavailable or not run, report this clearly.
+- Do not mark the bug `fixed` unless testing notes have been updated.
+
+Stop Point
+- Stop when the selected bug is fixed or when the investigation reaches a clear blocker.
+- Do not continue to the next bug.
+- Do not start feature work unless required to fix the selected bug and still within scope.
+
+Report Back With
+- Bug selected.
+- Repro result.
+- What was changed.
+- Files changed.
+- Testing performed.
+- Whether the bug is fixed, still blocked, or needs follow-up.
+- What was intentionally not changed.
+- Any assumptions made.
+
+------------------------------------------------------------
+
+Optional Future Commands
+- Do not implement these unless the user explicitly asks to add them.
+- Possible future shortcuts:
+  - `//epic-XXXTest` to run or update testing for one epic.
+  - `//epic-XXXReview` to review feature, bug, and testing notes without changing code.
+  - `//epic-XXXComplete` to run the epic completion gate.
+  - `//vibeAudit` to check whether vibe files follow the three-file structure.
+
+General Command Safety
+- A command does not grant permission to make broad changes.
+- A command does not grant permission to design the app.
+- A command does not grant permission to implement multiple unrelated items.
+- A command does not grant permission to skip testing notes.
+- A command does not grant permission to create implementation files.
+- Main rules always win over command convenience.
+
+---
+
+//undoLastFeature
+
+Goal
+
+* Undo the most recently completed feature implementation.
+* Revert only the code and vibe file changes related to that feature.
+* Keep the undo small, safe, and reviewable.
+
+Expanded Instruction
+
+* Reread the main rules file.
+* Reread `src/vibe/commands.txt`.
+* Identify the most recently completed feature using the best available evidence:
+
+  * Recent edits in `src/vibe/epics/*/features.txt`
+  * Recent edits in `src/vibe/epics/*/testing.txt`
+  * Git history or Git diff if available
+  * The previous agent report if available in the current conversation or IDE context
+* Determine which feature was last marked `done` or most recently implemented.
+* Determine which files were changed for that feature.
+* Revert only the files and code related to that feature.
+* Update the relevant `features.txt` entry back from `done` to `not started` or `in progress`, depending on what best reflects the reverted state.
+* Update the relevant `testing.txt` entry to show that the feature is no longer passed after the undo.
+* Update `bugs.txt` only if the undo affects a bug entry.
+
+Safety Rules
+
+* Do not guess if the last completed feature cannot be identified confidently.
+* Do not undo unrelated work.
+* Do not undo multiple features.
+* Do not remove files unless they were created only for the feature being undone.
+* Do not use destructive Git commands such as:
+
+  * `git reset --hard`
+  * `git clean`
+  * force checkout of broad folders
+* Do not revert the whole project.
+* Do not make new design decisions while undoing.
+* Do not refactor while undoing.
+* Do not create or update `implementation.txt`.
+
+If Identification Is Ambiguous
+
+* Stop without changing files.
+* Report the possible candidate features.
+* Explain what information is needed to safely undo the correct feature.
+
+Documentation Updates
+
+* Update the selected epic's `features.txt` with:
+
+  * Reverted status
+  * Short note that the feature was undone
+  * Any remaining follow-up required
+* Update the selected epic's `testing.txt` with:
+
+  * Test status after undo
+  * Any tests that should be rerun
+* Update `bugs.txt` only if directly relevant.
+
+Testing
+
+* Run relevant checks where possible after undoing.
+* Prefer:
+
+  * `npm run lint`
+  * `npm run build`
+* If checks are unavailable or not run, report this clearly.
+
+Stop Point
+
+* Stop once the last feature has been safely undone and documentation has been updated.
+* Do not start reimplementing the feature.
+* Do not move on to another feature or bug.
+
+Report Back With
+
+* Feature undone.
+* How the feature was identified.
+* Files reverted or changed.
+* Vibe files updated.
+* Testing performed.
+* Anything intentionally not changed.
+* Any assumptions made.
+* Any follow-up work.
+
+---
+
+//undoLastBug
+
+Goal
+
+* Undo the most recently completed bug fix.
+* Revert only the code and vibe file changes related to that bug fix.
+* Keep the undo small, safe, and reviewable.
+
+Expanded Instruction
+
+* Reread the main rules file.
+* Reread `src/vibe/commands.txt`.
+* Identify the most recently fixed bug using the best available evidence:
+
+  * Recent edits in `src/vibe/epics/*/bugs.txt`
+  * Recent edits in `src/vibe/epics/*/testing.txt`
+  * Git history or Git diff if available
+  * The previous agent report if available in the current conversation or IDE context
+* Determine which bug was last marked `fixed` or most recently worked on.
+* Determine which files were changed for that bug fix.
+* Revert only the files and code related to that bug fix.
+* Update the relevant `bugs.txt` entry back from `fixed` to `not started`, `investigating`, or `attempted`, depending on what best reflects the reverted state.
+* Update the relevant `testing.txt` entry to show that the bug fix is no longer confirmed after the undo.
+* Update `features.txt` only if the undo affects a feature entry.
+
+Safety Rules
+
+* Do not guess if the last fixed bug cannot be identified confidently.
+* Do not undo unrelated work.
+* Do not undo multiple bug fixes.
+* Do not remove files unless they were created only for the bug fix being undone.
+* Do not use destructive Git commands such as:
+
+  * `git reset --hard`
+  * `git clean`
+  * force checkout of broad folders
+* Do not revert the whole project.
+* Do not make new design decisions while undoing.
+* Do not refactor while undoing.
+* Do not create or update `implementation.txt`.
+
+If Identification Is Ambiguous
+
+* Stop without changing files.
+* Report the possible candidate bugs.
+* Explain what information is needed to safely undo the correct bug fix.
+
+Documentation Updates
+
+* Update the selected epic's `bugs.txt` with:
+
+  * Reverted status
+  * Short note that the fix was undone
+  * Any remaining follow-up required
+* Update the selected epic's `testing.txt` with:
+
+  * Test status after undo
+  * Any tests that should be rerun
+* Update `features.txt` only if directly relevant.
+
+Testing
+
+* Run relevant checks where possible after undoing.
+* Prefer:
+
+  * `npm run lint`
+  * `npm run build`
+* If checks are unavailable or not run, report this clearly.
+
+Stop Point
+
+* Stop once the last bug fix has been safely undone and documentation has been updated.
+* Do not start fixing the bug again.
+* Do not move on to another bug or feature.
+
+Report Back With
+
+* Bug fix undone.
+* How the bug was identified.
+* Files reverted or changed.
+* Vibe files updated.
+* Testing performed.
+* Anything intentionally not changed.
+* Any assumptions made.
+* Any follow-up work.
