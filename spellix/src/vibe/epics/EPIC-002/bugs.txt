@@ -1,0 +1,751 @@
+Bug-001: Procedural board generation filled every non-fixed square as Field
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Procedural environment and feature generation for board
+
+Bug Summary
+
+* The EPIC-002 foundation slice initially assigned `field` to every non-fixed square before any other environment generation ran.
+* The board renderer also only mapped `field`, so the generated board could not show mixed land environments.
+
+Repro Steps
+
+* Start a new game and open `/gameplay`.
+* Inspect non-fixed squares across the board.
+* Compare the rendered board to the expected EPIC-002 environment mix.
+
+Expected Behaviour
+
+* Non-fixed squares should receive generated land environments where valid.
+* `field` should appear only as filler after other current environment generation completes.
+* The board renderer should show the current generated land environments through their dedicated components.
+
+Historical Actual Behaviour
+
+* Every non-fixed square ended up as `field` in the foundation slice.
+* The renderer only displayed the Field component.
+
+Suspected Cause
+
+* Non-fixed squares were initialized directly as `field` instead of remaining empty until environment generation completed.
+* `BoardGrid.jsx` only mapped the `field` environment component.
+
+Attempted Fixes
+
+* Initialized non-fixed squares with `environmentType: null`.
+* Added land-cluster generation for `hills`, `gravel`, `mud`, `woods`, `forest`, and `mountains` before Field filler runs.
+* Updated the board renderer to map each currently generated land `environmentType` to its dedicated component.
+* Added deterministic automated coverage for mixed generation and renderer mapping.
+
+Final Fix
+
+* `createBoard` now generates the current land environment clusters first and fills only the remaining non-fixed squares with `field`.
+* `BoardGrid` now renders `field`, `hills`, `gravel`, `mud`, `woods`, `forest`, and `mountains` through dedicated environment components.
+* Automated tests now prove the board contains mixed non-fixed environments, keeps section rules intact, and renders each supported land environment component.
+
+Out Of Scope Follow-up
+
+* `stream` and `river` generation are still pending.
+* 2x2 feature-area placement is still pending.
+
+Status Note
+
+* Fixed for the current land-environment slice of Feature-001.
+
+---
+
+Bug-002: Missing remaining water environment components
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Procedural environment and feature generation for board
+
+Bug Summary
+
+* The current land environment components exist, but the required `stream` and `river` environment components are still missing.
+* Water environments therefore cannot be rendered through dedicated components when that generation slice is implemented.
+
+Repro Steps
+
+* Open the environment components folder.
+* Check the existing environment component folders.
+* Confirm whether `stream` and `river` each have both a `.jsx` file and a `.css` file.
+
+Expected Behaviour
+
+* `components/environments/stream/stream.jsx` should exist.
+* `components/environments/stream/stream.css` should exist.
+* `components/environments/river/river.jsx` should exist.
+* `components/environments/river/river.css` should exist.
+* The board renderer should map those `environmentType` values once water generation is introduced.
+
+Actual Behaviour
+
+* `field`, `hills`, `gravel`, `mud`, `woods`, `forest`, and `mountains` components existed.
+* `stream` and `river` component folders were missing.
+
+Required Fix
+
+* Create the missing `stream` and `river` environment component folders and files.
+* Add renderer mapping for `stream` and `river` when the water-generation slice is implemented.
+* Keep the components small, lo-fi, and limited to rendering only.
+
+Suspected Cause
+
+* Feature-001 is still in progress and has only reached the current land-environment rendering slice.
+
+Attempted Fixes
+
+* Added `stream` and `river` component folders with their own `.jsx` and `.css` files.
+* Added `stream` and `river` renderer mapping in `BoardGrid.jsx`.
+* Extended renderer tests to cover both new water environment components.
+
+Final Fix
+
+* `stream.jsx`, `stream.css`, `river.jsx`, and `river.css` now exist under the environment component folders.
+* `BoardGrid` now maps `stream` and `river` to their dedicated components.
+* Automated tests now verify those two environment types render through the correct component classes.
+
+Testing Required
+
+* Confirm the `stream` component and CSS file exist.
+* Confirm the `river` component and CSS file exist.
+* Confirm the board renderer maps `stream` and `river`.
+* Confirm automated renderer coverage passes.
+
+---
+
+Bug-003: Rivers and Streams are not generating
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Procedural environment and feature generation for board
+
+Bug Summary
+
+* Most environment squares are now appearing correctly.
+* Rivers and Streams are still not appearing on the generated board.
+* Rivers and Streams are special environment types because they should be able to overwrite other generated environment squares.
+* Rivers and Streams must not overwrite fixed areas or feature areas.
+
+Repro Steps
+
+* Start a new game.
+* Generate the board.
+* View the gameplay board.
+* Inspect the generated environments.
+* Check whether any Stream squares appear.
+* Check whether any River squares appear.
+* Hover over board squares if tooltips are available and confirm whether any square has `environmentType: "stream"` or `environmentType: "river"`.
+
+Expected Behaviour
+
+* Streams should generate on the board where valid origins exist.
+* Rivers should generate on the board where valid origins exist.
+* Streams should start at the edge of a Hill or Mountain cluster.
+* Rivers should start at the edge of a Mountain cluster.
+* Streams and Rivers should be 1 square wide.
+* Streams and Rivers should snake away from their origin cluster like water viewed from above on a map.
+* Streams and Rivers may overwrite other generated environment squares.
+* Streams and Rivers must not overwrite:
+
+  * Feature areas.
+  * Start Area.
+  * Top-left Elite Battle area.
+  * Bottom-right Elite Battle area.
+  * Boss Battle area.
+* Streams and Rivers must not cross themselves.
+* Streams and Rivers must not go back on themselves.
+
+Historical Actual Behaviour
+
+* Stream squares do not appear to be generated.
+* River squares do not appear to be generated.
+* The board contains other environment types, but no visible water paths.
+
+Required Fix
+
+* Review the Stream and River generation logic.
+* Ensure Stream generation runs after Hill and Mountain clusters exist.
+* Ensure River generation runs after Mountain clusters exist.
+* Ensure valid origin squares are found:
+
+  * Stream origin must be adjacent to a Hill or Mountain cluster.
+  * River origin must be adjacent to a Mountain cluster.
+* Update water generation so Streams and Rivers are allowed to overwrite ordinary generated environment squares.
+* Ordinary generated environment squares include:
+
+  * Field
+  * Hills
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Mountains
+* Prevent Streams and Rivers from overwriting fixed or grouped non-environment areas.
+* Streams and Rivers must not overwrite:
+
+  * Start Area
+  * Top-left Elite Battle area
+  * Bottom-right Elite Battle area
+  * Boss Battle area
+  * Generated feature areas
+* Ensure Stream and River generation writes `environmentType: "stream"` or `environmentType: "river"` into the final board data.
+* Ensure Stream and River environment types are included in the board renderer environment component map.
+* Keep the fix focused on water generation and rendering only.
+* Keep UI lo-fi and functional.
+
+Water Overwrite Rules
+
+* Streams and Rivers are the only environment types that may overwrite other generated environment squares.
+* Other environment clusters should not overwrite existing generated environments unless explicitly allowed elsewhere.
+* Streams and Rivers may overwrite:
+
+  * Field
+  * Hills
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Mountains
+* Streams and Rivers may not overwrite:
+
+  * Feature areas
+  * Start Area
+  * Elite Battle areas
+  * Boss Battle area
+* Streams and Rivers should preserve the board square’s fixed-area or feature metadata if they are rejected from a square.
+* If a candidate water path enters a protected square, choose another direction or stop/retry the path.
+
+Out Of Scope
+
+* No new environment types.
+* No changes to non-water environment cluster rules.
+* No changes to feature area placement.
+* No changes to fixed board areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No terrain effects.
+* No water gameplay effects.
+* No bridges, crossings, or movement penalties.
+* No visual redesign.
+* No decorative water styling.
+* No save/load functionality.
+* No persistence.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* Stream and River generation may be rejecting all candidate squares because those squares already have an environment.
+* The current generation logic may only allow water to be placed on empty squares, but Field and other environments may already fill those squares.
+* Water generation may be running after Field filler without permission to overwrite Field.
+* Valid water origins may not be found correctly from Hill or Mountain cluster edges.
+* River and Stream environment types may not be written back into final board state.
+* River and Stream components may exist but may not be reached by the renderer if no squares are assigned those environment types.
+
+Attempted Fixes
+
+* Added explicit water-generation configs for `stream` and `river`, including path counts, path lengths, valid sections, and valid origin environment types.
+* Added helper logic to find valid water origins next to `hills` or `mountains`, prevent direct backtracking, and reject fixed-area or already-water squares.
+* Ran water generation after land clusters and Field filler so Streams and Rivers can overwrite ordinary generated environments without touching fixed areas.
+* Added deterministic automated coverage for Stream and River generation and fixed-area protection.
+
+Final Fix
+
+* `createBoard` now generates land clusters first, fills remaining non-fixed squares with `field`, and then generates Stream and River paths.
+* Stream origins now require adjacency to `hills` or `mountains`, while River origins now require adjacency to `mountains`.
+* Water paths now write `environmentType: "stream"` or `environmentType: "river"` into final board squares and may overwrite ordinary generated environments while still rejecting fixed areas and feature-tagged squares.
+* The current renderer already maps `stream` and `river`, and automated coverage now includes a deterministic water-generation assertion.
+
+Status Note
+
+* Fixed in board-generation code for the current slice.
+* Full Jest confirmation is still blocked by an unrelated `source-map-support` failure triggered while the existing app test suite reports React 19/React Router test warnings.
+* Bug-004 remains the follow-up for keeping water paths strictly one square wide.
+
+Testing Required
+
+* Confirm Stream generation runs after Hill and Mountain generation.
+* Confirm River generation runs after Mountain generation.
+* Confirm at least one valid Stream can generate where Hill or Mountain origins exist.
+* Confirm at least one valid River can generate where Mountain origins exist.
+* Confirm Streams can overwrite Field.
+* Confirm Streams can overwrite ordinary generated environment squares.
+* Confirm Rivers can overwrite Field.
+* Confirm Rivers can overwrite ordinary generated environment squares.
+* Confirm Streams do not overwrite feature areas.
+* Confirm Rivers do not overwrite feature areas.
+* Confirm Streams do not overwrite the Start Area.
+* Confirm Rivers do not overwrite the Start Area.
+* Confirm Streams do not overwrite Elite Battle areas.
+* Confirm Rivers do not overwrite Elite Battle areas.
+* Confirm Streams do not overwrite the Boss Battle area.
+* Confirm Rivers do not overwrite the Boss Battle area.
+* Confirm Streams are 1 square wide.
+* Confirm Rivers are 1 square wide.
+* Confirm Streams do not cross themselves.
+* Confirm Rivers do not cross themselves.
+* Confirm Streams do not go back on themselves.
+* Confirm Rivers do not go back on themselves.
+* Confirm Stream squares store `environmentType: "stream"` in board data.
+* Confirm River squares store `environmentType: "river"` in board data.
+* Confirm Stream squares render through the Stream component.
+* Confirm River squares render through the River component.
+* Confirm hover tooltips show Stream on Stream squares.
+* Confirm hover tooltips show River on River squares.
+* Confirm other environment generation still works.
+* Confirm fixed board areas remain unchanged.
+* Confirm generated feature areas still appear correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: Rivers and Streams cluster too widely instead of snaking as one-square-wide paths
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Procedural environment and feature generation for board
+
+Bug Summary
+
+* Rivers and Streams are now appearing on the board.
+* However, they are not clustering correctly.
+* They can appear side by side in wider groups, making them look more like lakes or blobs.
+* Rivers and Streams should be one-square-wide snaking paths.
+
+Repro Steps
+
+* Start a new game.
+* Generate the board.
+* Inspect the generated River and Stream squares.
+* Look for River or Stream squares that form wide blobs, lakes, or side-by-side clusters.
+* Check whether any River or Stream square touches more than two other River/Stream squares.
+
+Expected Behaviour
+
+* Rivers and Streams should look like one-square-wide paths.
+* River and Stream paths should snake through the environment.
+* A River or Stream square should only touch a maximum of two other River/Stream squares orthogonally.
+* This rule applies across all water squares, including water from different River or Stream clusters.
+* Rivers and Streams should not form side-by-side blocks.
+* Rivers and Streams should not form lake-like shapes.
+* Rivers and Streams should not create junctions where one water square touches three or more other water squares.
+* Rivers and Streams should still be allowed to overwrite ordinary generated environment squares.
+* Rivers and Streams must still not overwrite:
+
+  * Feature areas
+  * Start Area
+  * Elite Battle areas
+  * Boss Battle area
+
+Historical Actual Behaviour
+
+* Rivers and Streams are being placed correctly in terms of appearing on the board.
+* However, some River and Stream squares are touching too many other water squares.
+* Some water clusters appear too wide or blob-like instead of one-square-wide and snaking.
+
+Required Fix
+
+* Update River and Stream generation so water paths remain one square wide.
+* Before placing a River or Stream square, check how many orthogonally adjacent water squares it would touch.
+* Do not place a water square if it would cause that square to touch more than two other River/Stream squares.
+* Do not place a water square if it would cause any neighbouring River/Stream square to touch more than two other River/Stream squares.
+* Treat both River and Stream as water for this adjacency rule.
+* The rule must apply even when the adjacent water belongs to a different River or Stream cluster.
+* Prevent water paths from forming 2x2 water blocks.
+* Prevent water paths from forming lake-like blobs.
+* Prevent water paths from creating branches or junctions.
+* Keep Rivers and Streams as snaking one-square-wide paths.
+* Keep the fix focused on River and Stream path generation only.
+* Keep UI lo-fi and functional.
+
+Water Adjacency Rules
+
+* River and Stream squares both count as water squares.
+* A water square can touch at most two other water squares orthogonally.
+* Orthogonal neighbours are:
+
+  * up
+  * down
+  * left
+  * right
+* Diagonal touching does not count for this rule.
+* The two touching water squares should support a path-like shape, not a blob.
+* A candidate water square should be rejected if placing it would create:
+
+  * A water square with three or more orthogonal water neighbours.
+  * A neighbouring water square with three or more orthogonal water neighbours.
+  * A 2x2 block of water.
+  * A branch or junction.
+  * A lake-like cluster.
+* This check must consider all existing River and Stream squares already on the board, not only the current path being generated.
+
+Out Of Scope
+
+* No new environment types.
+* No changes to non-water environment clusters.
+* No changes to water origin rules unless required to maintain valid snaking paths.
+* No changes to fixed board areas.
+* No changes to feature placement.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No terrain effects.
+* No water gameplay effects.
+* No bridges, crossings, or movement penalties.
+* No visual redesign.
+* No decorative water styling.
+* No save/load functionality.
+* No persistence.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* Water path generation may only prevent a path from crossing itself, but not prevent side-by-side water placement.
+* The generator may not be checking adjacency against water from other River or Stream clusters.
+* The generator may allow a new water square if it is valid for the current path, even if it creates a wider water shape with existing water nearby.
+* The generator may be overwriting existing environments without checking whether the resulting water shape remains one square wide.
+
+Attempted Fixes
+
+* Added water-path validation that treats both `stream` and `river` as water during path generation, including already-placed water from previous paths.
+* Rejected candidate water squares if they would create more than two orthogonal water neighbours for themselves or any adjacent water square.
+* Rejected candidate water squares if they would create a 2x2 water block.
+* Extended the deterministic water-generation test to assert maximum orthogonal neighbour counts and the absence of 2x2 water blocks.
+* Ran direct board-sampling verification across 100 generated boards to confirm the updated path rule.
+
+Final Fix
+
+* Water path generation now validates each Stream and River square before placement so paths remain one square wide across both the current path and previously placed water.
+* Streams and Rivers now reject placements that would create junctions, side-by-side blobs, or 2x2 water blocks.
+* Existing overwrite rules remain intact: water can still replace ordinary generated environments but still cannot overwrite fixed areas or feature-tagged squares.
+
+Status Note
+
+* Fixed in board-generation code for the current slice.
+* Full Jest confirmation is still blocked by the existing unrelated `source-map-support` failure in the app test suite.
+
+Testing Required
+
+* Confirm Rivers still generate.
+* Confirm Streams still generate.
+* Confirm River squares are one square wide.
+* Confirm Stream squares are one square wide.
+* Confirm River paths snake through the board rather than forming blobs.
+* Confirm Stream paths snake through the board rather than forming blobs.
+* Confirm no River square touches more than two orthogonal water squares.
+* Confirm no Stream square touches more than two orthogonal water squares.
+* Confirm the adjacency rule counts both River and Stream squares as water.
+* Confirm water from different clusters cannot sit side by side in a way that creates a wider water shape.
+* Confirm no 2x2 water blocks are generated.
+* Confirm no water junctions are generated.
+* Confirm no lake-like water clusters are generated.
+* Confirm Rivers can still overwrite ordinary generated environment squares.
+* Confirm Streams can still overwrite ordinary generated environment squares.
+* Confirm Rivers do not overwrite feature areas.
+* Confirm Streams do not overwrite feature areas.
+* Confirm Rivers do not overwrite the Start Area.
+* Confirm Streams do not overwrite the Start Area.
+* Confirm Rivers do not overwrite Elite Battle areas.
+* Confirm Streams do not overwrite Elite Battle areas.
+* Confirm Rivers do not overwrite the Boss Battle area.
+* Confirm Streams do not overwrite the Boss Battle area.
+* Confirm hover tooltips still identify River and Stream squares correctly.
+* Confirm other environment generation still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-005: Rivers and Streams break up Mountain clusters
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Procedural environment and feature generation for board
+
+Bug Summary
+
+* Rivers and Streams currently overwrite Mountain squares during generation.
+* This makes Mountain clusters look broken or visually incorrect.
+* Rivers and Streams should still originate from Mountains where required, but they should attempt to flow away from Mountain clusters rather than cutting through them.
+
+Repro Steps
+
+* Start a new game.
+* Generate the board.
+* Inspect Mountain clusters.
+* Look for Rivers or Streams passing through Mountain clusters.
+* Check whether Mountain clusters appear broken up by water squares.
+
+Expected Behaviour
+
+* Rivers should still start at the edge of a Mountain cluster.
+* Streams may still start at the edge of a Mountain cluster.
+* Rivers and Streams should flow away from Mountain clusters.
+* Rivers and Streams should avoid overwriting Mountain squares where possible.
+* Mountain clusters should remain visually intact unless there is no valid alternative path.
+* Rivers and Streams should still be allowed to overwrite ordinary non-Mountain environment squares.
+* Rivers and Streams must still not overwrite:
+
+  * Feature areas
+  * Start Area
+  * Elite Battle areas
+  * Boss Battle area
+
+Actual Behaviour
+
+* Rivers and Streams can overwrite Mountain squares.
+* This can split or damage Mountain clusters visually.
+* Mountain clusters do not always look correct after water generation.
+
+Required Fix
+
+* Update River and Stream generation path selection.
+* Treat Mountain squares as strongly avoided squares for water placement.
+* Rivers and Streams should prefer paths that move away from Mountain clusters.
+* Rivers and Streams should not overwrite Mountain squares unless no valid non-Mountain path is available and the generator would otherwise fail.
+* If fallback overwriting is needed, keep it minimal and document the assumption.
+* River origin logic should still allow Rivers to start adjacent to Mountain clusters.
+* Stream origin logic should still allow Streams to start adjacent to Hill or Mountain clusters.
+* Water should still be 1 square wide.
+* Water should still not cross itself.
+* Water should still not go back on itself.
+* Water should still avoid creating lake-like blobs.
+* Keep the fix focused on water path generation only.
+
+Water Placement Priority
+
+* Preferred overwrite targets:
+
+  * Field
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Hills, for Streams only if needed
+* Avoid overwrite target:
+
+  * Mountains
+* Never overwrite:
+
+  * Feature areas
+  * Start Area
+  * Elite Battle areas
+  * Boss Battle area
+
+Out Of Scope
+
+* No new environment types.
+* No changes to Mountain generation rules.
+* No changes to non-water environment cluster rules.
+* No changes to feature area placement.
+* No changes to fixed board areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No terrain effects.
+* No water gameplay effects.
+* No bridges, crossings, or movement penalties.
+* No visual redesign.
+* No decorative water styling.
+* No save/load functionality.
+* No persistence.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The current water generation treats Mountain squares like any other ordinary generated environment.
+* Water path selection may allow Rivers and Streams to overwrite Mountains immediately after choosing a Mountain-edge origin.
+* The generator may not prioritise directions that move away from the Mountain cluster.
+
+Attempted Fixes
+
+* Added water-path preference rules so Stream and River origin and path selection score non-Mountain squares ahead of Mountain squares.
+* Ranked otherwise valid water candidates by how many adjacent Mountain squares they touch so paths prefer moving away from Mountain clusters where possible.
+* Kept the existing overwrite fallback in place so water can still use a Mountain square only when no better valid candidate exists.
+* Added focused automated coverage for the new water-candidate preference helper used by board generation.
+
+Final Fix
+
+* `createWaterEnvironmentPaths` now prefers valid non-Mountain origin and path squares before it falls back to overwriting Mountain squares.
+* When multiple non-Mountain candidates are valid, water now prefers the square with the fewest adjacent Mountain neighbours so Rivers and Streams move away from Mountain clusters where possible.
+* Existing water rules remain intact: paths still stay one square wide, still avoid fixed and feature-tagged squares, and still fall back safely if only Mountain squares are available.
+
+Status Note
+
+* Fixed in board-generation code for the current slice.
+* Full Jest confirmation is still blocked by the existing `source-map-support` test-suite failure.
+
+Testing Required
+
+* Confirm Rivers still generate.
+* Confirm Streams still generate.
+* Confirm Rivers can still start from the edge of Mountain clusters.
+* Confirm Streams can still start from the edge of Hill or Mountain clusters.
+* Confirm Rivers flow away from Mountain clusters where possible.
+* Confirm Streams flow away from Mountain clusters where possible.
+* Confirm Rivers avoid overwriting Mountain squares where possible.
+* Confirm Streams avoid overwriting Mountain squares where possible.
+* Confirm Mountain clusters remain visually intact after water generation.
+* Confirm Rivers can still overwrite Field.
+* Confirm Streams can still overwrite Field.
+* Confirm Rivers can still overwrite ordinary non-Mountain environments where valid.
+* Confirm Streams can still overwrite ordinary non-Mountain environments where valid.
+* Confirm Rivers do not overwrite feature areas.
+* Confirm Streams do not overwrite feature areas.
+* Confirm Rivers do not overwrite the Start Area.
+* Confirm Streams do not overwrite the Start Area.
+* Confirm Rivers do not overwrite Elite Battle areas.
+* Confirm Streams do not overwrite Elite Battle areas.
+* Confirm Rivers do not overwrite the Boss Battle area.
+* Confirm Streams do not overwrite the Boss Battle area.
+* Confirm water remains 1 square wide.
+* Confirm water does not form lake-like blobs.
+* Confirm water does not cross itself.
+* Confirm hover tooltips still identify River, Stream, and Mountain squares correctly.
+* Confirm other environment generation still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Remove grey borders from all board squares
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-005: Map environment variation numbers to environment images
+
+Bug Summary
+
+* Board squares still have grey borders around them.
+* These borders should be removed completely from all board squares.
+* The board should render without visible grey grid lines between squares.
+
+Repro Steps
+
+* Start a new game.
+* Generate the board.
+* View the gameplay board.
+* Inspect the square edges across the board.
+* Check whether grey borders or grid lines are visible around the squares.
+
+Expected Behaviour
+
+* No grey border appears around any board square.
+* No grey grid lines appear between board squares.
+* Environment image squares should sit directly next to each other without a visible grey border.
+* River and Stream squares should also have no grey border.
+* Fixed areas should also have no grey border around individual squares.
+* Feature areas should also have no grey border around individual squares.
+* Removing borders should not change the board size.
+* Removing borders should not change the 30x30px square size.
+* Removing borders should not affect player piece positioning.
+* Removing borders should not affect movement highlighting.
+
+Actual Behaviour
+
+* Grey borders are still visible around board squares.
+
+Required Fix
+
+* Remove the grey border styling from all board squares.
+* Check the main board square CSS.
+* Check environment component CSS files.
+* Check fixed area and feature area styles.
+* Remove or override any border rule that creates grey grid lines.
+* Ensure no square uses a grey `border`, `outline`, `box-shadow`, or similar visual line.
+* Keep the fix focused only on removing square borders.
+* Do not redesign the board.
+* Do not change environment images.
+* Do not change procedural generation logic.
+* Do not change player movement logic.
+
+Out Of Scope
+
+* No new board styling.
+* No decorative board changes.
+* No changes to environment images.
+* No changes to River or Stream generation.
+* No changes to environment generation rules.
+* No changes to fixed area placement.
+* No changes to feature area placement.
+* No changes to player pieces.
+* No changes to movement highlighting unless needed to keep it visible after border removal.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* A shared board square class may still apply a grey border.
+* Individual environment CSS files may inherit or define border styling.
+* Fixed area or feature rendering may still apply borders.
+* The board grid may be using CSS borders to separate squares.
+
+Attempted Fixes
+
+* Removed the shared grey `border` from `.board-square` in `BoardGrid.css`.
+* Removed the old grouped-border helper and hide-border class usage from `BoardGrid.jsx` because those classes no longer serve any purpose once square borders are gone.
+* Updated the existing grouped-area renderer regression in `src/App.test.jsx` so it no longer expects the removed border-hiding classes.
+
+Final Fix
+
+* Board squares no longer render the shared grey border because `.board-square` no longer applies `border: 1px solid #c0c0c0`.
+* The old grouped-area border-hiding classes were removed from the board renderer and stylesheet so grouped fixed areas, feature areas, and environment squares all use the same borderless square rendering path.
+
+Status Note
+
+* Fixed for the current board-rendering slice.
+* Full Jest confirmation is still blocked by the existing unrelated `source-map-support` failure in the app test suite.
+
+Testing Required
+
+* Confirm no grey borders appear around Field squares.
+* Confirm no grey borders appear around Hills squares.
+* Confirm no grey borders appear around Gravel squares.
+* Confirm no grey borders appear around Mud squares.
+* Confirm no grey borders appear around Woods squares.
+* Confirm no grey borders appear around Forest squares.
+* Confirm no grey borders appear around Mountains squares.
+* Confirm no grey borders appear around River squares.
+* Confirm no grey borders appear around Stream squares.
+* Confirm no grey borders appear around fixed area squares.
+* Confirm no grey borders appear around feature area squares.
+* Confirm the board still renders as 31x31.
+* Confirm each square still renders as 30x30px.
+* Confirm the full board still renders as 930x930px.
+* Confirm environment images still display correctly.
+* Confirm player pieces still display correctly.
+* Confirm movement highlights still display correctly.
+* Confirm hover tooltips still work if present.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

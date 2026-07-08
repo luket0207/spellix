@@ -1,0 +1,542 @@
+Feature-001: Procedural environment and feature generation for board
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* Fixed areas remain unchanged.
+* Non-fixed squares are assigned to easy or hard sections.
+* Land environment clusters now generate for `hills`, `gravel`, `mud`, `woods`, `forest`, and `mountains`.
+* Remaining non-fixed squares are filled with `field`.
+* Stream and River paths now generate after land generation and may overwrite ordinary generated environments without overwriting fixed areas.
+* Stream and River paths now reject junctions, 2x2 water blocks, and other placements that would make water wider than one square.
+* Four 2x2 feature areas now generate after environment generation:
+  * 2 in the easy section
+  * 2 in the hard section
+* Feature areas now render as grouped orange board areas and stay at least 3 squares away from fixed grouped areas and other generated features.
+* Current land environments render through dedicated environment components and CSS files.
+* The generated board still initializes once and remains stable during normal gameplay.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing Start Area, Elite Battle areas, and Boss Battle area unchanged.
+
+2. Scan non-fixed squares across both halves of the board.
+Expected result: Some non-fixed squares render as non-field land environments, and some remaining squares still render as Field filler.
+
+3. Inspect a lower-left non-fixed square such as `Square 3, 28` and an upper-right non-fixed square such as `Square 28, 3`.
+Expected result: The lower-left square stays marked as the `easy` section and the upper-right square stays marked as the `hard` section.
+
+4. Inspect a fixed-area square such as `Square 0, 28`.
+Expected result: The square remains a fixed area, does not use the `field` environment, and keeps its existing fixed-area appearance.
+
+5. Inspect the board for orange 2x2 grouped feature areas.
+Expected result: Exactly 4 feature areas appear, each one is 2x2, 2 are in the easy section, and 2 are in the hard section.
+
+6. Check the area around each feature area.
+Expected result: No feature area overlaps a fixed grouped area or another feature area, and each feature area stays at least 3 squares away from those restricted areas.
+
+7. Advance turns and move a player.
+Expected result: The board data remains stable and does not regenerate during turn changes or movement.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` verifies:
+  * fixed-area squares remain marked correctly
+  * easy and hard section metadata remain assigned to representative non-fixed squares
+  * deterministic board generation produces mixed non-fixed environments while keeping `field` as filler
+  * the current supported land environment components render inside the correct squares
+  * deterministic board generation can assign `stream` and `river` without overwriting fixed areas
+  * deterministic board generation keeps each water square at two or fewer orthogonal water neighbours and avoids 2x2 water blocks
+  * deterministic board generation creates exactly four spaced 2x2 feature areas with the required easy/hard split
+  * the board remains stable across turn changes
+
+Checks Run
+
+* Direct board sampling script over 100 generated boards passed for feature count, 2x2 shape, section split, and spacing from fixed areas and other features.
+* `npm test -- --watchAll=false --runInBand` is currently blocked by a Jest `source-map-support` failure while the existing app test suite reports React 19/React Router test warnings.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that confirms the current Stream, River, and feature-area assertions inside `src/App.test.jsx`.
+* Coverage for exact cluster-count and cluster-size behaviour where practical.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* Feature-001 is complete in code, but full automated confirmation is still blocked by the existing Jest/source-map reporting issue above.
+
+---
+
+Bug-001: Procedural board generation fills every square as Field
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a new game and open `/gameplay`.
+Expected result: The board should contain a mixture of generated environment types where valid, not only Field.
+
+2. Inspect representative non-fixed squares across both the easy and hard sections.
+Expected result: Some non-fixed squares should use generated environment types such as Hills, Gravel, Mud, Woods, Forest, Mountains, Stream, or River where valid.
+
+3. Check whether Field appears on every non-fixed square.
+Expected result: Field should only appear on squares left empty after environment generation, not on the entire non-fixed board.
+
+Actual current result
+
+* The board now contains a mixture of currently generated land environments across non-fixed squares.
+* `field` appears only on non-fixed squares left empty after the current land generation pass.
+* The current supported land environments render through their dedicated components.
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Coverage for the future stream and river generation slice.
+* Coverage for the future feature-area placement slice.
+
+Notes
+
+* Existing automated tests now cover mixed land-environment generation, supported land-environment rendering, and Field filler behavior for the current slice.
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Bug-002: Missing remaining water environment components
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Open `src/features/gameBoard/components/environments/`.
+Expected result: Both `stream/` and `river/` folders exist with `.jsx` and `.css` files.
+
+2. Render board data that includes `environmentType: "stream"` and `environmentType: "river"`.
+Expected result: Stream squares render through the Stream component and river squares render through the River component.
+
+Checks Run
+
+* `npm test -- --watchAll=false --runInBand` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* Coverage for future stream and river generation rules.
+
+Notes
+
+* `src/App.test.jsx` now verifies the board renderer maps `stream` and `river` to their dedicated component classes.
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+
+---
+
+Bug-003: Rivers and Streams are not generating
+
+Test Status
+
+* blocked
+
+Manual Regression Steps
+
+1. Start a new game and open `/gameplay`.
+Expected result: The board still renders with the existing Start Area, Elite Battle areas, and Boss Battle area unchanged.
+
+2. Inspect generated non-fixed squares across both sections.
+Expected result: At least some squares now use `stream` or `river` where valid, alongside the existing land environments and Field filler.
+
+3. Check representative fixed-area squares such as `Square 0, 28`, `Square 0, 0`, `Square 29, 29`, and `Square 29, 0`.
+Expected result: Fixed grouped areas keep their existing area types and are not overwritten by Stream or River paths.
+
+4. Inspect River squares if present on the board.
+Expected result: River squares remain in the `hard` section only.
+
+Actual current result
+
+* The board generator now includes Stream and River path creation after land generation and Field filler.
+* Water paths are allowed to overwrite ordinary generated environments but still reject fixed areas and feature-tagged squares.
+* A deterministic automated test was added for Stream and River generation plus fixed-area protection.
+
+Checks Run
+
+* `npm run build` passed.
+* `npm test -- --watchAll=false --runInBand` is currently blocked by a Jest `source-map-support` failure while the existing app test suite reports React 19/React Router test warnings.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run for the new deterministic Stream and River generation test in `src/App.test.jsx`.
+* Follow-up coverage for one-square-wide water-shape rules tracked by Bug-004.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the board-generation logic in this bug fix.
+
+---
+
+Bug-004: Rivers and Streams cluster too widely instead of snaking as one-square-wide paths
+
+Test Status
+
+* blocked
+
+Manual Regression Steps
+
+1. Start a new game and open `/gameplay`.
+Expected result: Stream and River squares can still appear on the board while fixed grouped areas remain unchanged.
+
+2. Inspect generated Stream and River shapes across the board.
+Expected result: Water appears as one-square-wide paths rather than lake-like blobs or side-by-side blocks.
+
+3. Check whether any Stream or River square touches three or more orthogonal water squares.
+Expected result: No water square touches more than two orthogonal water squares.
+
+4. Inspect visible 2x2 groups of board squares that include water.
+Expected result: No 2x2 block is filled entirely by Stream and/or River squares.
+
+Actual current result
+
+* The board generator now validates each new water square against both the current path and previously placed water.
+* Direct board sampling across 100 generated boards found no water square with more than two orthogonal water neighbours and no 2x2 water blocks.
+* The deterministic water-generation test in `src/App.test.jsx` now checks those same one-square-wide path rules.
+
+Checks Run
+
+* Direct board sampling script over 100 generated boards passed.
+* `npm run build` passed.
+* `npm test -- --watchAll=false --runInBand` is currently blocked by the existing Jest `source-map-support` failure.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run for the updated one-square-wide water-path assertions in `src/App.test.jsx`.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the water-shape generation logic in this bug fix.
+
+---
+
+Bug-005: Rivers and Streams break up Mountain clusters
+
+Test Status
+
+* blocked
+
+Manual Regression Steps
+
+1. Start a new game and open `/gameplay`.
+Expected result: Stream and River squares can still appear on the board while the fixed grouped areas remain unchanged.
+
+2. Inspect Mountain clusters that sit near visible Stream or River paths.
+Expected result: Water should prefer to flow away from the Mountain cluster instead of cutting through it when an adjacent non-Mountain route is available.
+
+3. Check whether any visible Stream or River square appears to split a Mountain cluster.
+Expected result: Mountain clusters should remain visually intact in ordinary cases, with Mountain overwrites used only as a fallback when no valid non-Mountain path is available.
+
+4. Inspect water paths near Mountains.
+Expected result: Water should still remain one square wide, avoid blobs, and continue to avoid fixed areas and feature areas.
+
+Actual current result
+
+* The board generator now ranks valid Stream and River candidates so non-Mountain squares are chosen before Mountain squares.
+* When multiple valid non-Mountain options exist, the generator now prefers the square with the fewest adjacent Mountain neighbours so paths move away from Mountain clusters where possible.
+* The new focused regression in `src/App.test.jsx` covers the preference helper used by water generation, but the full Jest suite still fails before tests execute because of the existing `source-map-support` issue.
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the new Mountain-avoidance preference regression in `src/App.test.jsx`.
+* Additional direct board-generation coverage for Mountain-cluster preservation once the existing Jest blocker is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Mountain-avoidance path-selection change in this bug fix.
+
+---
+
+Feature-002: Adjust procedural environment cluster values
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* The existing board generator now uses the updated Feature-002 size values for Gravel, Mud, Forest, and River paths.
+* River generation now targets exactly 2 paths through the existing water-generation config.
+* Existing board generation, rendering, fixed-area handling, feature placement, and water validation logic were left unchanged.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas unchanged.
+
+2. Inspect generated Gravel, Mud, and Forest regions across the board.
+Expected result: Those environment groups still generate, but the updated config now caps Gravel and Mud at 30 squares and Forest at 35 squares where the generator can fully realize the target size.
+
+3. Inspect visible River paths on the hard side of the board.
+Expected result: River generation still works, each River path still follows the existing one-square-wide water rules, and the configured River target length range is now 8 to 20 squares.
+
+4. Inspect the board for grouped orange feature areas and mixed environment rendering.
+Expected result: Feature areas still generate correctly, and environment components still render the resulting square types without UI regressions.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies the updated Feature-002 generation values directly through the exported board config entries for:
+  * Gravel maximum cluster size `30`
+  * Mud maximum cluster size `30`
+  * Forest maximum cluster size `35`
+  * Hills maximum cluster size unchanged at `50`
+  * River path count fixed at `2`
+  * River path length range updated to `8` through `20`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the new Feature-002 value regression in `src/App.test.jsx`.
+* Additional direct board-generation coverage for realized cluster sizes and river-path counts once the existing Jest blocker is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Feature-002 value changes.
+
+---
+
+Feature-003: Map generation rule adjustments for rivers, forests, and boss-area mountains
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* River generation now enforces the requested 3-square edge inset.
+* Forest generation now uses the requested 10 to 40 cluster size range.
+* Board generation now reserves and grows a required Boss Battle Mountain cluster around the top-right Boss Battle area before the remaining land clusters run.
+* Existing board rendering, fixed-area handling, feature placement, and water-shape validation logic were left unchanged.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31, and the existing Start Area, Elite Battle areas, and Boss Battle area remain unchanged.
+
+2. Inspect visible River squares on the board.
+Expected result: Every River square appears at least 3 spaces from the map edge, so no River square appears at `x: 0-2`, `x: 28-30`, `y: 0-2`, or `y: 28-30`.
+
+3. Inspect the squares surrounding the Boss Battle area in the top-right corner.
+Expected result: The 12 surrounding squares at `x: 27-28, y: 0-3` plus `x: 29-30, y: 2-3` are all Mountains, while the 2x2 Boss Battle area itself remains unchanged.
+
+4. Inspect the Mountain region around the Boss Battle area.
+Expected result: The special Boss Battle Mountain cluster forms one connected Mountain group and stays within the requested 15 to 20 total Mountain squares.
+
+5. Inspect visible Forest regions on the hard side of the board.
+Expected result: Forests still render and generate only in the hard section, now using the updated 10 to 40 square size range where the generator can realize the target.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies the updated Feature-003 generation rules through:
+  * Forest maximum cluster size `40`
+  * River edge inset `3`
+  * River squares staying within `x: 3-27` and `y: 3-27` on a deterministic generated board
+  * The required 12 Boss Battle surrounding squares all being Mountains
+  * The connected Boss Battle Mountain cluster staying within 15 to 20 squares on a deterministic generated board
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+* A direct Node board-sampling check could not be completed because the environment raised an `EPERM` filesystem error before loading `src/features/gameBoard/board.js`.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the new Feature-003 regression coverage in `src/App.test.jsx`.
+* Additional repeated board-generation sampling for river edge placement and Boss Battle Mountain cluster sizing once the existing Jest blocker and local Node loading issue are resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Feature-003 generation-rule changes.
+
+---
+
+Feature-004: Environment square variation numbers
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* Board generation now assigns a fixed `environmentVariation` value from 1 to 6 to every final environment square.
+* Variation numbers now stay `null` for fixed grouped areas and generated Feature areas.
+* `BoardGrid` now passes the assigned variation number into the environment components and exposes it as a board-square data attribute.
+* Each existing environment component now renders the assigned number inside the square as temporary lo-fi verification output.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect environment squares across the board.
+Expected result: Every environment square displays a visible number from 1 to 6 inside the square.
+
+3. Compare orthogonally adjacent environment squares across different environment types.
+Expected result: No environment square shares the same visible variation number with an orthogonally adjacent environment square.
+
+4. Inspect fixed grouped areas and orange Feature areas.
+Expected result: Fixed grouped areas and Feature areas do not need environment variation numbers and do not display the environment number overlay.
+
+5. Advance turns and move a player.
+Expected result: The variation numbers remain fixed and do not change during re-renders, turn changes, or movement.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies:
+  * rendered environment squares expose `data-environment-variation` and display their assigned variation number text
+  * generated environment squares all receive variation values between 1 and 6
+  * no environment square has an orthogonally adjacent environment square with the same variation number
+  * fixed grouped areas and generated Feature areas keep `environmentVariation: null`
+  * the variation data attribute stays stable across the existing turn-change board-stability test
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the new Feature-004 variation-number assertions in `src/App.test.jsx`.
+* Additional direct board-generation sampling for variation-number adjacency across repeated boards once the existing Jest blocker is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Feature-004 variation-number changes.
+
+---
+
+Feature-005: Map environment variation numbers to environment images
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* Field, Hills, Gravel, Mud, Woods, Forest, and Mountains environment components now render imported PNG images instead of visible variation-number text.
+* Image-based environment squares keep using the stored `environmentVariation` value from board data to select the correct image variant.
+* Image-based environment CSS now only keeps the square-filling wrapper behavior, while River and Stream remain unchanged.
+* A small shared image helper now provides per-environment variation mapping and falls back to variation `1` for invalid values.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect Field, Hills, Gravel, Mud, Woods, Forest, and Mountains squares across the board.
+Expected result: Each square renders an image that matches its stored environment type and variation instead of showing the visible variation number text.
+
+3. Inspect River and Stream squares.
+Expected result: River and Stream squares are unchanged and still show the existing temporary variation-number output from Feature-004.
+
+4. Inspect image-based environment squares alongside player pieces and movement highlights.
+Expected result: The square images fill the board tiles without changing board dimensions, and pieces and highlights still render above them.
+
+5. Advance turns and move a player.
+Expected result: Image choices remain stable because the underlying `environmentVariation` values do not change during re-renders, turn changes, or movement.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies:
+  * rendered image-based environment squares still expose `data-environment-variation`
+  * image-based environment squares render a matching `data-environment-image` marker instead of visible variation-number text
+  * River and Stream squares remain on the old visible-number rendering path
+  * the shared image helper maps stored variations to the expected image keys and falls back to variation `1` for invalid values
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the new Feature-005 image-mapping assertions in `src/App.test.jsx`.
+* Additional direct board rendering checks in a running app session to confirm there are no broken image assets for the seven image-based environment types.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The actual Mountains asset filenames are `mountain-1.png` through `mountain-6.png`, so the implementation maps the `mountains` environment type to those existing singular asset files.
+* The remaining automated-test blocker appears unrelated to the Feature-005 image-mapping changes.
+
+---
+
+Bug-006: Remove grey borders from all board squares
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* The shared board-square renderer no longer applies the grey border that was creating visible grid lines between board squares.
+* Grouped fixed-area border-hiding classes were removed because all board squares now render through the same borderless square path.
+* Existing square sizing, player marker positioning, and movement highlight layering were left unchanged.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as a 31x31 grid with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect Field, Hills, Gravel, Mud, Woods, Forest, Mountains, River, and Stream squares.
+Expected result: No grey border or grid line appears around individual squares, and adjacent squares sit directly against each other.
+
+3. Inspect fixed grouped areas and generated Feature areas.
+Expected result: No grey border appears around the individual squares inside those areas either.
+
+4. Inspect player pieces and any highlighted movement squares.
+Expected result: Player pieces still render in the same positions, and movement highlights still appear above the board squares.
+
+5. Check overall board dimensions while the board is visible.
+Expected result: The board still renders at 31x31 squares, each square still renders at 30x30px, and the full board still renders at 930x930px.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now keeps the existing grouped-area/shared-player-piece regression while asserting grouped squares no longer receive the removed border-hiding class names.
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the updated grouped-area renderer regression in `src/App.test.jsx`.
+* Direct in-app verification that no grey borders remain around environment, fixed-area, or feature squares.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Bug-006 board-border removal.

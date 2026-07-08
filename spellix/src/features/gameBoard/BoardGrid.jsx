@@ -1,3 +1,12 @@
+import Field from './components/environments/field/field';
+import Forest from './components/environments/forest/forest';
+import Gravel from './components/environments/gravel/gravel';
+import Hills from './components/environments/hills/hills';
+import Mountains from './components/environments/mountains/mountains';
+import Mud from './components/environments/mud/mud';
+import River from './components/environments/river/river';
+import Stream from './components/environments/stream/stream';
+import Woods from './components/environments/woods/woods';
 import { getMovementNodeIdFromCoordinates } from './movement';
 import './BoardGrid.css';
 
@@ -10,45 +19,24 @@ const PLAYER_MARKER_POSITIONS = [
   { left: 16, top: 10 },
 ];
 
+const ENVIRONMENT_COMPONENTS = {
+  field: Field,
+  forest: Forest,
+  gravel: Gravel,
+  hills: Hills,
+  mountains: Mountains,
+  mud: Mud,
+  river: River,
+  stream: Stream,
+  woods: Woods,
+};
+
 function getSquareKey(x, y) {
   return `${x}-${y}`;
 }
 
-function getGroupedBorderClasses(square, squareLookup) {
-  if (square.areaType === 'normal') {
-    return '';
-  }
-
-  const groupedBorderClasses = [];
-  const adjacentSquares = {
-    top: squareLookup.get(getSquareKey(square.x, square.y - 1)),
-    right: squareLookup.get(getSquareKey(square.x + 1, square.y)),
-    bottom: squareLookup.get(getSquareKey(square.x, square.y + 1)),
-    left: squareLookup.get(getSquareKey(square.x - 1, square.y)),
-  };
-
-  if (adjacentSquares.top?.areaType === square.areaType) {
-    groupedBorderClasses.push('board-square--hide-top-border');
-  }
-
-  if (adjacentSquares.right?.areaType === square.areaType) {
-    groupedBorderClasses.push('board-square--hide-right-border');
-  }
-
-  if (adjacentSquares.bottom?.areaType === square.areaType) {
-    groupedBorderClasses.push('board-square--hide-bottom-border');
-  }
-
-  if (adjacentSquares.left?.areaType === square.areaType) {
-    groupedBorderClasses.push('board-square--hide-left-border');
-  }
-
-  return groupedBorderClasses.join(' ');
-}
-
 function BoardGrid({ board, highlightedColour, highlightedNodeIds, onSquareClick, players }) {
   const playerLookup = new Map();
-  const squareLookup = new Map(board.squares.map((square) => [getSquareKey(square.x, square.y), square]));
 
   players
     .filter((player) => player.position)
@@ -61,6 +49,14 @@ function BoardGrid({ board, highlightedColour, highlightedNodeIds, onSquareClick
     });
 
   const highlightedNodeIdSet = new Set(highlightedNodeIds);
+
+  const renderEnvironment = (square) => {
+    const EnvironmentComponent = ENVIRONMENT_COMPONENTS[square.environmentType];
+
+    return EnvironmentComponent ? (
+      <EnvironmentComponent variation={square.environmentVariation} />
+    ) : null;
+  };
 
   return (
     <section aria-label="Board panel" className="board-panel">
@@ -78,7 +74,6 @@ function BoardGrid({ board, highlightedColour, highlightedNodeIds, onSquareClick
           const squarePlayers = playerLookup.get(getSquareKey(square.x, square.y)) ?? [];
           const nodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
           const isHighlighted = highlightedNodeIdSet.has(nodeId);
-          const groupedBorderClasses = getGroupedBorderClasses(square, squareLookup);
 
           return (
             <div
@@ -86,11 +81,17 @@ function BoardGrid({ board, highlightedColour, highlightedNodeIds, onSquareClick
               aria-label={`Square ${square.x}, ${square.y}`}
               className={`board-square board-square--${square.areaType}${
                 isHighlighted ? ' board-square--highlighted' : ''
-              } ${groupedBorderClasses}`.trim()}
+              }`.trim()}
               data-area-type={square.areaType}
+              data-environment-type={square.environmentType ?? ''}
+              data-environment-variation={
+                square.environmentVariation !== null ? square.environmentVariation : ''
+              }
               data-highlight-colour={isHighlighted ? highlightedColour : ''}
               data-highlight-opacity={isHighlighted ? '0.5' : ''}
               data-highlighted={isHighlighted ? 'true' : 'false'}
+              data-is-fixed-area={square.isFixedArea ? 'true' : 'false'}
+              data-section={square.section}
               data-x={square.x}
               data-y={square.y}
               role="button"
@@ -103,6 +104,7 @@ function BoardGrid({ board, highlightedColour, highlightedNodeIds, onSquareClick
                 }
               }}
             >
+              {renderEnvironment(square)}
               {isHighlighted ? (
                 <div
                   aria-hidden="true"

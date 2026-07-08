@@ -1,0 +1,6 @@
+.river-environment {
+  position: absolute;
+  inset: 0;
+  background: darkblue;
+  pointer-events: none;
+}

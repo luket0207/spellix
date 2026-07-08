@@ -1,0 +1,1766 @@
+Feature-001: Procedural environment and feature generation for board
+
+Status
+
+* done
+
+Goal
+
+* Procedurally generate the non-fixed parts of the 31x31 board.
+
+* Preserve the existing fixed board areas:
+
+  * Start Area
+  * Top-left Elite Battle area
+  * Bottom-right Elite Battle area
+  * Boss Battle area
+
+* Divide the board into easy and hard sections using an invisible diagonal split.
+
+* Generate environment clusters based on the defined environment rules.
+
+* Fill remaining empty squares with Field.
+
+* Randomly place four 2x2 feature areas after environment generation.
+
+* Render each environment type through its own component and associated CSS file so appearances can be changed easily later.
+
+Scope
+
+* Use the existing board generation logic from EPIC-001.
+
+* Use the existing game context.
+
+* Keep the board size at 31x31.
+
+* Keep each square at 30x30px.
+
+* Keep the full board at 930x930px.
+
+* Do not change the fixed board areas created in EPIC-001.
+
+* Generate procedural environments only on squares that are not already part of a fixed area.
+
+* Add an invisible board-section split from the top-left Elite Battle area to the bottom-right Elite Battle area.
+
+* Treat the bottom-left side of this split as the easy section.
+
+* Treat the top-right side of this split as the hard section.
+
+* Use the easy/hard section rules to decide where each environment can appear.
+
+* Generate environment clusters before filling the remaining squares.
+
+* Fill all remaining empty non-fixed squares with Field.
+
+* Place four feature areas after environment generation:
+
+  * Two feature areas in the easy section.
+  * Two feature areas in the hard section.
+
+* Each feature area should be 2x2.
+
+* Feature areas should be marked orange.
+
+* Feature areas should work as one grouped feature area in board data.
+
+* Feature placement must keep features at least 3 squares away from:
+
+  * Other generated features.
+  * Start Area.
+  * Top-left Elite Battle area.
+  * Bottom-right Elite Battle area.
+  * Boss Battle area.
+
+* Store the final generated board in game context.
+
+* Display the generated board on the gameplay page.
+
+* Keep UI changes limited to rendering the generated board square appearances.
+
+* Each environment square type should render through its own React component.
+
+* Each environment component should live in its own folder.
+
+* Each environment component folder should include its own associated CSS file.
+
+* This is required so each environment appearance can be changed easily later without editing one large board rendering file.
+
+* Use `.jsx` for each environment component.
+
+* Use `.css` for the associated environment component styles.
+
+* Use `.js` for pure board generation helpers where possible.
+
+* Use `.jsx` only for files that contain JSX.
+
+Environment Component Structure
+
+* Create a component folder for each environment type.
+* Each folder should contain the environment component and its CSS file.
+* Use lowercase folder and file names.
+* Keep each component small and focused only on rendering that environment square.
+* Do not put all environment rendering styles into one large shared board CSS file.
+* Do not create a broad styling system or design token system.
+* Do not make decorative design decisions beyond the requested environment appearances.
+
+Suggested structure:
+
+```txt
+src/features/board/components/environments/field/field.jsx
+src/features/board/components/environments/field/field.css
+
+src/features/board/components/environments/hills/hills.jsx
+src/features/board/components/environments/hills/hills.css
+
+src/features/board/components/environments/gravel/gravel.jsx
+src/features/board/components/environments/gravel/gravel.css
+
+src/features/board/components/environments/mud/mud.jsx
+src/features/board/components/environments/mud/mud.css
+
+src/features/board/components/environments/stream/stream.jsx
+src/features/board/components/environments/stream/stream.css
+
+src/features/board/components/environments/river/river.jsx
+src/features/board/components/environments/river/river.css
+
+src/features/board/components/environments/woods/woods.jsx
+src/features/board/components/environments/woods/woods.css
+
+src/features/board/components/environments/forest/forest.jsx
+src/features/board/components/environments/forest/forest.css
+
+src/features/board/components/environments/mountains/mountains.jsx
+src/features/board/components/environments/mountains/mountains.css
+```
+
+Environment Component Rules
+
+* `field.jsx` should render a Field square.
+* `hills.jsx` should render a Hills square.
+* `gravel.jsx` should render a Gravel square.
+* `mud.jsx` should render a Mud square.
+* `stream.jsx` should render a Stream square.
+* `river.jsx` should render a River square.
+* `woods.jsx` should render a Woods square.
+* `forest.jsx` should render a Forest square.
+* `mountains.jsx` should render a Mountains square.
+* Each component should be responsible only for that environment’s visual square output.
+* Each component should accept only the props it actually needs now.
+* If a wrapper board square component already exists, reuse it where practical.
+* Avoid duplicating gameplay or movement logic inside environment components.
+* Environment components should not decide board generation logic.
+* Environment components should not mutate game context.
+* Environment components should not contain player movement logic.
+* Environment components should not contain turn logic.
+* Environment components should only render the square appearance for the environment they represent.
+* If shared rendering behaviour is needed, keep it small and avoid over-engineering.
+* Only promote shared helpers/components if reuse is immediate and clearly needed.
+
+Board Section Rules
+
+* The board uses zero-based coordinates.
+
+* `x` increases from left to right.
+
+* `y` increases from top to bottom.
+
+* Top-left square is `{ x: 0, y: 0 }`.
+
+* Bottom-right square is `{ x: 30, y: 30 }`.
+
+* The invisible section split runs diagonally from the top-left Elite Battle area to the bottom-right Elite Battle area.
+
+* Use this split to separate:
+
+  * Easy section: bottom-left side of the board.
+  * Hard section: top-right side of the board.
+
+* Use the simplest clear coordinate rule for this split and document the choice.
+
+* Suggested rule:
+
+  * Easy section: `y >= x`
+  * Hard section: `y < x`
+
+* Fixed areas should keep their fixed area type regardless of this section split.
+
+Fixed Areas To Preserve
+
+* Start Area:
+
+  * Bottom left
+  * 3x3 squares
+  * `x: 0-2`
+  * `y: 28-30`
+  * Grey
+  * Grouped area
+
+* Top-left Elite Battle Area:
+
+  * Top left
+  * 2x2 squares
+  * `x: 0-1`
+  * `y: 0-1`
+  * Red
+  * Grouped area
+
+* Bottom-right Elite Battle Area:
+
+  * Bottom right
+  * 2x2 squares
+  * `x: 29-30`
+  * `y: 29-30`
+  * Red
+  * Grouped area
+
+* Boss Battle Area:
+
+  * Top right
+  * 2x2 squares
+  * `x: 29-30`
+  * `y: 0-1`
+  * Black
+  * Grouped area
+
+Environment Rules
+
+Field
+
+* Type: environment
+
+* Purpose: filler/default square
+
+* Cluster rule: no clustering required
+
+* Minimum clusters per map: N/A
+
+* Maximum clusters per map: N/A
+
+* Easy section: yes
+
+* Hard section: yes
+
+* Appearance: light green
+
+* Component:
+
+  * `components/environments/field/field.jsx`
+  * `components/environments/field/field.css`
+
+* Placement note:
+
+  * Use Field to fill remaining empty non-fixed, non-feature squares after other environment generation is complete.
+
+Hills
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 50 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: no
+* Appearance: medium green
+* Component:
+
+  * `components/environments/hills/hills.jsx`
+  * `components/environments/hills/hills.css`
+
+Gravel
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 50 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: no
+* Appearance: grey
+* Component:
+
+  * `components/environments/gravel/gravel.jsx`
+  * `components/environments/gravel/gravel.css`
+
+Mud
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 50 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: yes
+* Appearance: brown
+* Component:
+
+  * `components/environments/mud/mud.jsx`
+  * `components/environments/mud/mud.css`
+
+Stream
+
+* Type: environment
+
+* Cluster rule:
+
+  * Must start at the edge of a Hill or Mountain cluster.
+  * Must be 1 square wide.
+  * Should snake away from the Hill or Mountain cluster like a stream viewed from above on a map.
+  * Can turn left or right.
+  * Must not go back on itself.
+  * Must not cross itself.
+  * Must contain 3 to 10 squares.
+
+* Minimum clusters per map: 2
+
+* Maximum clusters per map: 5
+
+* Easy section: yes
+
+* Hard section: yes
+
+* Appearance: light blue
+
+* Component:
+
+  * `components/environments/stream/stream.jsx`
+  * `components/environments/stream/stream.css`
+
+River
+
+* Type: environment
+
+* Cluster rule:
+
+  * Must start at the edge of a Mountain cluster.
+  * Must be 1 square wide.
+  * Should snake away from the Mountain cluster like a river viewed from above on a map.
+  * Can turn left or right.
+  * Must not go back on itself.
+  * Must not cross itself.
+  * Must contain 10 to 30 squares.
+
+* Minimum clusters per map: 1
+
+* Maximum clusters per map: 2
+
+* Easy section: no
+
+* Hard section: yes
+
+* Appearance: dark blue
+
+* Component:
+
+  * `components/environments/river/river.jsx`
+  * `components/environments/river/river.css`
+
+Woods
+
+* Type: environment
+
+* Cluster rule: can be clustered in any direction in groups of 5 to 30 squares
+
+* Minimum clusters per map: 5
+
+* Maximum clusters per map: 10
+
+* Easy section: yes
+
+* Hard section: yes
+
+* Appearance: diagonally split square
+
+  * Top-left: light green
+  * Bottom-right: brown
+
+* Component:
+
+  * `components/environments/woods/woods.jsx`
+  * `components/environments/woods/woods.css`
+
+Forest
+
+* Type: environment
+
+* Cluster rule: can be clustered in any direction in groups of 10 to 50 squares
+
+* Minimum clusters per map: 3
+
+* Maximum clusters per map: 8
+
+* Easy section: no
+
+* Hard section: yes
+
+* Appearance: diagonally split square
+
+  * Top-left: dark green
+  * Bottom-right: brown
+
+* Component:
+
+  * `components/environments/forest/forest.jsx`
+  * `components/environments/forest/forest.css`
+
+Mountains
+
+* Type: environment
+
+* Cluster rule: can be clustered in any direction in groups of 5 to 20 squares
+
+* Minimum clusters per map: 5
+
+* Maximum clusters per map: 10
+
+* Easy section: no
+
+* Hard section: yes
+
+* Appearance: diagonally split square
+
+  * Top-left: white
+  * Bottom-right: grey
+
+* Component:
+
+  * `components/environments/mountains/mountains.jsx`
+  * `components/environments/mountains/mountains.css`
+
+Feature Area Rules
+
+* Generate exactly 4 feature areas.
+
+* Generate 2 feature areas in the easy section.
+
+* Generate 2 feature areas in the hard section.
+
+* Each feature area is 2x2.
+
+* Each feature area should be marked orange.
+
+* Feature areas work as one grouped area in board data.
+
+* Feature areas should be placed after environment clusters and Field filler are generated.
+
+* Feature areas can replace generated environment squares if needed.
+
+* Feature areas must not overlap fixed areas.
+
+* Feature areas must not overlap each other.
+
+* Feature areas must be at least 3 squares away from:
+
+  * Other generated feature areas.
+  * Start Area.
+  * Top-left Elite Battle area.
+  * Bottom-right Elite Battle area.
+  * Boss Battle area.
+
+* Use a clear distance check and document the approach.
+
+* Suggested simple approach:
+
+  * Use the closest square-to-square distance between the candidate 2x2 feature area and the other area.
+  * Reject the placement if any square is less than 3 squares away from a restricted area.
+
+Colour Rules
+
+* Use only the colours requested for board environments and features.
+* Make sure environment and feature colours are visibly different from the player piece colours already used in the game.
+* Do not create a broader colour palette or theme system.
+* Do not redesign the board.
+* If an environment colour conflicts too closely with a player piece colour, adjust the board environment colour slightly while keeping the intended meaning.
+* Document any colour adjustment briefly in `features.txt` or the final report.
+* Environment colour implementation should live in the relevant environment component CSS file where practical.
+
+Suggested Board Data Shape
+
+```js
+{
+  width: 31,
+  height: 31,
+  squareSize: 30,
+  squares: [
+    {
+      id: "square-0-0",
+      x: 0,
+      y: 0,
+      section: "hard",
+      areaType: "elite-battle",
+      environmentType: null,
+      featureId: null,
+      isFixedArea: true
+    },
+    {
+      id: "square-3-28",
+      x: 3,
+      y: 28,
+      section: "easy",
+      areaType: null,
+      environmentType: "field",
+      featureId: null,
+      isFixedArea: false
+    }
+  ],
+  features: [
+    {
+      id: "feature-1",
+      x: 10,
+      y: 20,
+      width: 2,
+      height: 2,
+      section: "easy",
+      areaType: "feature"
+    }
+  ]
+}
+```
+
+Suggested Generation Order
+
+* Start with an empty 31x31 board.
+
+* Add fixed areas from EPIC-001.
+
+* Mark each remaining square as easy or hard using the invisible diagonal split.
+
+* Generate environment clusters:
+
+  * Hills
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Mountains
+
+* Generate line-based water environments:
+
+  * Streams after Hills and Mountains exist.
+  * Rivers after Mountains exist.
+
+* Fill remaining empty non-fixed squares with Field.
+
+* Place 4 feature areas:
+
+  * 2 easy.
+  * 2 hard.
+
+* Save the final board in game context.
+
+* Render the final board using the relevant environment component for each environment square.
+
+Expected Behaviour
+
+* The board remains 31x31.
+* Each square remains 30x30px.
+* The full board remains 930x930px.
+* Existing fixed areas remain unchanged.
+* Existing fixed areas are not overwritten by procedural generation.
+* The board has an invisible easy/hard section split.
+* Easy-only environments only appear in the easy section.
+* Hard-only environments only appear in the hard section.
+* Both-section environments can appear in either section.
+* Environment clusters are generated within their required min/max cluster counts.
+* Environment clusters are generated within their required size ranges where possible.
+* Field fills remaining empty non-fixed squares.
+* Streams start from the edge of Hill or Mountain clusters.
+* Streams are 1 square wide.
+* Streams contain 3 to 10 squares.
+* Streams do not go back on themselves.
+* Streams do not cross themselves.
+* Rivers start from the edge of Mountain clusters.
+* Rivers are 1 square wide.
+* Rivers contain 10 to 30 squares.
+* Rivers do not go back on themselves.
+* Rivers do not cross themselves.
+* Woods render with the requested diagonal split appearance.
+* Forest renders with the requested diagonal split appearance.
+* Mountains render with the requested diagonal split appearance.
+* Each environment type is rendered by its own component.
+* Each environment component has its own associated CSS file.
+* Environment appearance can be changed later by editing that environment’s component/CSS folder.
+* Exactly 4 feature areas are generated.
+* 2 features are generated in the easy section.
+* 2 features are generated in the hard section.
+* Each feature is 2x2.
+* Features are marked orange.
+* Features do not overlap fixed areas.
+* Features do not overlap each other.
+* Features are at least 3 squares away from other features and fixed grouped areas.
+* The generated board is stored in game context.
+* The board does not regenerate on every render.
+* The board does not regenerate when turns change.
+* The board does not regenerate when players move.
+
+Out Of Scope
+
+* No new fixed board areas.
+* No changes to Start Area, Elite Battle areas, or Boss Battle area.
+* No player movement changes.
+* No dice changes.
+* No turn order changes.
+* No battle logic.
+* No feature behaviour beyond placement.
+* No elite battle behaviour.
+* No boss battle behaviour.
+* No environment gameplay effects.
+* No terrain movement costs.
+* No pathfinding changes unless strictly required to preserve existing movement behaviour.
+* No save/load functionality.
+* No persistence.
+* No seed input.
+* No board editor.
+* No animations.
+* No decorative styling.
+* No visible easy/hard dividing line.
+* No redesign of the board.
+* No player piece changes.
+* No new UI controls unless required only for testing the generation.
+* No shared environment design system.
+* No unnecessary reusable environment abstraction beyond what is needed to render the components cleanly.
+
+Assumptions
+
+* The easy/hard board split is invisible to the player.
+* The diagonal split can be implemented using a simple coordinate rule.
+* The suggested split rule is `easy = y >= x` and `hard = y < x`.
+* Fixed areas keep their fixed type and appearance even if they sit on either side of the easy/hard split.
+* Environments are not grouped movement areas.
+* Environment clusters should still count as normal individual board squares for movement.
+* Features are grouped 2x2 areas in board data, but feature gameplay behaviour is out of scope.
+* Procedural generation should run once when a new board is created.
+* Procedural generation should not rerun on normal gameplay re-renders.
+* If exact cluster counts cannot be achieved because of available space, the generator should create as much valid content as possible and report the limitation.
+* Streams should be generated after Hills and Mountains so they have valid origin clusters.
+* Rivers should be generated after Mountains so they have valid origin clusters.
+* The orange feature marking is functional and should not become a broader design decision.
+* Environment square components are being introduced intentionally so appearances are easy to change later.
+* The environment component folders are for rendering only, not for generation logic.
+
+Stop Point
+
+* Stop once the board generates procedural environments and four valid 2x2 feature areas, saves the generated board in game context, renders the generated board on the gameplay page, and uses separate environment components with associated CSS files for environment square appearances.
+
+Testing Checkpoints
+
+* Confirm the board remains 31x31.
+* Confirm each square remains 30x30px.
+* Confirm the full board remains 930x930px.
+* Confirm the Start Area remains unchanged.
+* Confirm the top-left Elite Battle area remains unchanged.
+* Confirm the bottom-right Elite Battle area remains unchanged.
+* Confirm the Boss Battle area remains unchanged.
+* Confirm fixed areas are not overwritten by procedural environments.
+* Confirm non-fixed squares are assigned to easy or hard sections.
+* Confirm easy-only environments appear only in the easy section.
+* Confirm hard-only environments appear only in the hard section.
+* Confirm both-section environments can appear in either section.
+* Confirm Field fills remaining empty non-fixed squares.
+* Confirm Hills generate in valid cluster counts and sizes where possible.
+* Confirm Gravel generates in valid cluster counts and sizes where possible.
+* Confirm Mud generates in valid cluster counts and sizes where possible.
+* Confirm Woods generate in valid cluster counts and sizes where possible.
+* Confirm Forest generates in valid cluster counts and sizes where possible.
+* Confirm Mountains generate in valid cluster counts and sizes where possible.
+* Confirm Streams start from Hill or Mountain cluster edges.
+* Confirm Streams are 1 square wide.
+* Confirm Streams contain 3 to 10 squares where possible.
+* Confirm Streams do not cross themselves.
+* Confirm Rivers start from Mountain cluster edges.
+* Confirm Rivers are 1 square wide.
+* Confirm Rivers contain 10 to 30 squares where possible.
+* Confirm Rivers do not cross themselves.
+* Confirm Woods render as diagonally split squares with light green and brown.
+* Confirm Forest renders as diagonally split squares with dark green and brown.
+* Confirm Mountains render as diagonally split squares with white and grey.
+* Confirm Field squares render through the Field component.
+* Confirm Hills squares render through the Hills component.
+* Confirm Gravel squares render through the Gravel component.
+* Confirm Mud squares render through the Mud component.
+* Confirm Stream squares render through the Stream component.
+* Confirm River squares render through the River component.
+* Confirm Woods squares render through the Woods component.
+* Confirm Forest squares render through the Forest component.
+* Confirm Mountains squares render through the Mountains component.
+* Confirm each environment component has its own associated CSS file.
+* Confirm exactly 4 feature areas are generated.
+* Confirm exactly 2 feature areas are in the easy section.
+* Confirm exactly 2 feature areas are in the hard section.
+* Confirm each feature area is 2x2.
+* Confirm feature areas are marked orange.
+* Confirm feature areas do not overlap fixed areas.
+* Confirm feature areas do not overlap each other.
+* Confirm feature areas are at least 3 squares away from other features.
+* Confirm feature areas are at least 3 squares away from the Start Area.
+* Confirm feature areas are at least 3 squares away from Elite Battle areas.
+* Confirm feature areas are at least 3 squares away from the Boss Battle area.
+* Confirm the generated board is stored in game context.
+* Confirm the board does not regenerate on every render.
+* Confirm the board does not regenerate when turns change.
+* Confirm the board does not regenerate when players move.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Completed the full Feature-001 board-generation slice for this pass.
+* Preserved the existing fixed grouped areas from EPIC-001.
+* Added board metadata for:
+  * `section`
+  * `environmentType`
+  * `featureId`
+  * `isFixedArea`
+* Applied the invisible section split using the simple coordinate rule `easy = y >= x`, `hard = y < x`.
+* Non-fixed squares now start empty, generate land clusters for Hills, Gravel, Mud, Woods, Forest, and Mountains, and then fill the remaining squares with `field`.
+* Added Stream and River path generation after the current land-generation and Field-filler passes so water can overwrite ordinary generated environments without touching fixed areas.
+* Added water-path validation so Streams and Rivers stay one square wide, avoid junctions, and do not form 2x2 water blocks.
+* Added four generated 2x2 feature areas after environment generation:
+  * 2 in the easy section
+  * 2 in the hard section
+* Feature areas now overwrite generated environments, clear `environmentType`, set `areaType: "feature"`, store a shared `featureId`, and render as grouped orange board areas.
+* Used the simple closest-square spacing rule with Chebyshev distance so each feature area stays at least 3 squares away from fixed grouped areas and other generated features.
+* Added separate environment component and CSS pairs for the current supported land environments, plus the pending `stream` and `river` renderer components, and mapped them in the board renderer.
+* Reuse check: reviewed the existing board generator, grouped-area board renderer, movement helper, and game context; reused the current board feature folder, grouped border rendering, and context initialization flow, and created only the feature-placement logic needed for this slice.
+* Intentionally not changed in this slice:
+  * movement-node changes for feature grouped areas
+
+Completion Note
+
+* Feature-001 now reaches its requested board-generation stop point in code.
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.
+
+---
+
+Feature-002: Adjust procedural environment cluster values
+
+Status
+
+* done
+
+Goal
+
+* Adjust the procedural environment generation values so some environment clusters are smaller.
+* Keep the existing procedural generation system from Feature-001.
+* Update only the environment cluster size values requested in this feature.
+
+Scope
+
+* Update the environment generation configuration values.
+* Keep the same environment types.
+* Keep the same easy/hard area rules.
+* Keep the same environment appearances.
+* Keep the same fixed board areas.
+* Keep the same feature area placement rules.
+* Keep the same environment component structure.
+* Do not rewrite the procedural generation system unless the current values are hard-coded in a way that requires a small focused cleanup.
+* If generation values are currently duplicated, update each relevant location so the values stay consistent.
+* Use `.js` for pure generation/config files.
+* Use `.jsx` only for files that contain JSX.
+
+Updated Environment Values
+
+Field
+
+* Type: environment
+* Purpose: filler/default square
+* Cluster rule: no clustering required
+* Minimum clusters per map: N/A
+* Maximum clusters per map: N/A
+* Easy section: yes
+* Hard section: yes
+* Appearance: light green
+
+Hills
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 50 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: no
+* Appearance: medium green
+
+Gravel
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 30 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: no
+* Appearance: grey
+
+Mud
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 30 squares
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: yes
+* Appearance: brown
+
+Stream
+
+* Type: environment
+* Cluster rule:
+
+  * Must start at the edge of a Hill or Mountain cluster.
+  * Should be in a line.
+  * Can turn left or right.
+  * Must never go back on itself.
+  * Must never cross itself.
+  * Must remain 1 square wide.
+  * Must contain 3 to 10 squares.
+* Minimum clusters per map: 2
+* Maximum clusters per map: 5
+* Easy section: yes
+* Hard section: yes
+* Appearance: light blue
+
+River
+
+* Type: environment
+* Cluster rule:
+
+  * Must start at the edge of a Mountain cluster.
+  * Should be in a line.
+  * Can turn left or right.
+  * Must never go back on itself.
+  * Must never cross itself.
+  * Must remain 1 square wide.
+  * Must contain 8 to 20 squares.
+* Minimum clusters per map: 2
+* Maximum clusters per map: 2
+* Easy section: no
+* Hard section: yes
+* Appearance: dark blue
+
+Woods
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 30 squares
+* Minimum clusters per map: 5
+* Maximum clusters per map: 10
+* Easy section: yes
+* Hard section: yes
+* Appearance: diagonally split square
+
+  * Top-left: light green
+  * Bottom-right: brown
+
+Forest
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 10 to 35 squares
+* Minimum clusters per map: 3
+* Maximum clusters per map: 8
+* Easy section: no
+* Hard section: yes
+* Appearance: diagonally split square
+
+  * Top-left: dark green
+  * Bottom-right: brown
+
+Mountains
+
+* Type: environment
+* Cluster rule: can be clustered in any direction in groups of 5 to 20 squares
+* Minimum clusters per map: 5
+* Maximum clusters per map: 10
+* Easy section: no
+* Hard section: yes
+* Appearance: diagonally split square
+
+  * Top-left: white
+  * Bottom-right: grey
+
+Specific Value Changes From Previous Feature
+
+* Gravel maximum cluster size changes from 50 to 30.
+* Mud maximum cluster size changes from 50 to 30.
+* River cluster size changes from 10-30 to 8-20.
+* Forest maximum cluster size changes from 50 to 35.
+* All other values remain the same unless they already differ from the values listed in this feature.
+
+Expected Behaviour
+
+* New boards use the updated environment generation values.
+* Gravel clusters contain 5 to 30 squares.
+* Mud clusters contain 5 to 30 squares.
+* Rivers contain 8 to 20 squares.
+* Forest clusters contain 10 to 35 squares.
+* Hills remain 5 to 50 squares.
+* Streams remain 3 to 10 squares.
+* Woods remain 5 to 30 squares.
+* Mountains remain 5 to 20 squares.
+* Environment minimum and maximum cluster counts remain unchanged.
+* Easy-only environments still appear only in the easy section.
+* Hard-only environments still appear only in the hard section.
+* Both-section environments can still appear in either section.
+* Field still fills remaining empty non-fixed squares after other environment generation.
+* Streams and Rivers still follow their existing water path rules.
+* Streams and Rivers still remain 1 square wide.
+* Streams and Rivers still do not overwrite fixed areas or feature areas.
+* There are always two rivers
+* Feature areas still generate using the existing Feature-001 rules.
+* Fixed board areas remain unchanged.
+* Environment components continue to render the generated environment types correctly.
+
+Out Of Scope
+
+* No new environment types.
+* No removed environment types.
+* No changes to environment appearance.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No changes to fixed board areas.
+* No changes to feature area placement rules.
+* No changes to easy/hard section logic.
+* No changes to water overwrite rules except preserving the existing valid behaviour.
+* No changes to environment component structure.
+* No visual redesign.
+* No decorative styling.
+* No save/load functionality.
+* No persistence.
+* No unrelated bug fixes.
+
+Assumptions
+
+* This feature is a configuration/value adjustment, not a procedural generation rewrite.
+* If environment generation values are stored in a central config, only that config should need to change.
+* If the values are hard-coded inside generation helpers, update only the smallest relevant parts.
+* Existing bug fixes for Rivers and Streams should remain respected.
+* Existing component rendering for environment squares should remain unchanged.
+
+Stop Point
+
+* Stop once the procedural generation uses the updated values and existing board generation/rendering behaviour still works.
+
+Testing Checkpoints
+
+* Confirm a new board can still be generated.
+* Confirm the board remains 31x31.
+* Confirm fixed areas remain unchanged.
+* Confirm Gravel clusters use the updated 5 to 30 square range.
+* Confirm Mud clusters use the updated 5 to 30 square range.
+* Confirm Rivers use the updated 8 to 20 square range.
+* Confirm Forest clusters use the updated 10 to 35 square range.
+* Confirm Hills still use the 5 to 50 square range.
+* Confirm Streams still use the 3 to 10 square range.
+* Confirm Woods still use the 5 to 30 square range.
+* Confirm Mountains still use the 5 to 20 square range.
+* Confirm easy-only environments still appear only in the easy section.
+* Confirm hard-only environments still appear only in the hard section.
+* Confirm both-section environments can still appear in either section.
+* Confirm Field still fills remaining empty non-fixed squares.
+* Confirm Streams and Rivers still appear where valid.
+* Confirm Streams and Rivers still remain 1 square wide.
+* Confirm feature areas still generate correctly.
+* Confirm environment square tooltips still report the correct environment type if tooltips exist.
+* Confirm environment components still render correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Updated the existing board-generation config in `src/features/gameBoard/board.js` without changing the surrounding generation flow.
+* Gravel now uses a maximum cluster size of 30.
+* Mud now uses a maximum cluster size of 30.
+* Forest now uses a maximum cluster size of 35.
+* Rivers now always target 2 paths and use the updated 8 to 20 square length range.
+* Reuse check: reviewed the existing board generator config, water-path config, and board-generation tests; reused the current config structure and test file, and created no new feature files because the requested values already lived in the existing generator.
+* Intentionally not changed in this slice:
+  * board rendering
+  * fixed-area rules
+  * feature-area placement rules
+  * water-shape validation logic
+  * movement or gameplay logic
+
+Completion Note
+
+* Feature-002 now applies the requested procedural environment value adjustments in code.
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.
+
+---
+
+Feature-003: Map generation rule adjustments for rivers, forests, and boss-area mountains
+
+Status
+
+* done
+
+Goal
+
+* Add extra procedural map generation rules.
+* Keep Rivers away from the edge of the map.
+* Increase Forest cluster size slightly.
+* Ensure the Boss Battle area is surrounded by a Mountain cluster.
+
+Scope
+
+* Use the existing procedural board generation system from EPIC-002.
+* Keep the board size at 31x31.
+* Keep each square at 30x30px.
+* Keep the full board at 930x930px.
+* Preserve all existing fixed areas:
+
+  * Start Area
+  * Top-left Elite Battle area
+  * Bottom-right Elite Battle area
+  * Boss Battle area
+* Add a River edge-distance rule.
+* Update the Forest cluster size rule.
+* Add a required Mountain cluster around the Boss Battle area.
+* Keep all other environment generation rules unchanged unless a small change is required to support this feature.
+* Keep environment components and CSS structure unchanged.
+* Use `.js` for pure board generation/config files where possible.
+* Use `.jsx` only for files that contain JSX.
+
+River Edge-Distance Rule
+
+* Rivers must always be at least 3 spaces from the edge of the map.
+* No River square can be within 3 squares of any map edge.
+* On a 31x31 board using zero-based coordinates:
+
+  * `x: 0-2` is too close to the left edge.
+  * `x: 28-30` is too close to the right edge.
+  * `y: 0-2` is too close to the top edge.
+  * `y: 28-30` is too close to the bottom edge.
+* River squares should only be placed where:
+
+  * `x >= 3`
+  * `x <= 27`
+  * `y >= 3`
+  * `y <= 27`
+* If a River path would move into the edge-restricted zone, the generator should choose another valid direction or retry the River path.
+* If a valid River cannot be generated after reasonable attempts, the generator should avoid placing an invalid River and report or document the limitation.
+* This edge-distance rule applies only to Rivers unless otherwise requested later.
+* Streams do not need this edge-distance rule for this feature.
+
+Forest Rule Adjustment
+
+* Update the Forest cluster description to:
+
+  * Can be clustered in any direction in groups of 10 to 40.
+* Forest cluster size should now be:
+
+  * Minimum size: 10 squares.
+  * Maximum size: 40 squares.
+* Forest cluster count should remain:
+
+  * Minimum clusters per map: 3.
+  * Maximum clusters per map: 8.
+* Forest section rules remain unchanged:
+
+  * Easy section: no.
+  * Hard section: yes.
+* Forest appearance remains unchanged:
+
+  * Diagonally split square.
+  * Top-left: dark green.
+  * Bottom-right: brown.
+
+Boss Battle Mountain Cluster Rule
+
+* The Boss Battle area in the top right corner should always be surrounded by a Mountain cluster.
+* This Mountain cluster counts towards the normal Mountain cluster count for the map.
+* The Boss Battle Mountain cluster should be generated as part of the Mountain generation process.
+* The Boss Battle Mountain cluster must not overwrite the Boss Battle area itself.
+* The Boss Battle Mountain cluster must be at least 2 squares thick around the Boss Battle area where the board allows it.
+* Because the Boss Battle area is in the top right corner, the required surrounding Mountain squares are the 12 closest valid board squares around it.
+* Required minimum surrounding Mountain area:
+
+  * Boss Battle area:
+
+    * `x: 29-30`
+    * `y: 0-1`
+  * Required surrounding Mountain squares:
+
+    * `x: 27-28`
+    * `y: 0-3`
+    * and
+    * `x: 29-30`
+    * `y: 2-3`
+* This creates a 4x4 top-right block, excluding the 2x2 Boss Battle area itself.
+* These 12 surrounding squares must be Mountains.
+* The Boss Battle Mountain cluster may grow beyond these 12 squares.
+* The Boss Battle Mountain cluster must never be smaller than the required 12 surrounding squares.
+* This specific Mountain cluster should have:
+
+  * Minimum size: 15 squares.
+  * Maximum size: 20 squares.
+* The extra Mountain squares beyond the required 12 should connect to the required surrounding Mountain area.
+* The Boss Battle Mountain cluster should remain one connected Mountain cluster.
+* The Boss Battle Mountain cluster should not overwrite:
+
+  * Boss Battle area
+  * Feature areas
+  * Start Area
+  * Elite Battle areas
+* Rivers and Streams should continue to avoid overwriting Mountains where possible, including this Boss Battle Mountain cluster.
+
+Mountain Cluster Count Rule
+
+* The Boss Battle Mountain cluster counts as one Mountain cluster.
+* The normal Mountain cluster count still applies:
+
+  * Minimum clusters per map: 5.
+  * Maximum clusters per map: 10.
+* Since the Boss Battle Mountain cluster counts towards this total, generate the remaining Mountain clusters accordingly.
+* Example:
+
+  * If the map target is 5 Mountain clusters total, the Boss Battle Mountain cluster plus 4 additional Mountain clusters satisfies the target.
+* Do not generate the Boss Battle Mountain cluster as an extra cluster outside the configured Mountain cluster count.
+
+Expected Behaviour
+
+* New boards still generate correctly.
+* Rivers appear only within the valid River placement area:
+
+  * `x: 3-27`
+  * `y: 3-27`
+* No River square appears within 3 squares of any board edge.
+* Streams are unaffected by the River edge-distance rule.
+* Forest clusters use the updated 10 to 40 square size range.
+* Forest clusters still appear only in the hard section.
+* The Boss Battle area remains fixed in the top right.
+* The Boss Battle area is not overwritten by Mountains.
+* The 12 closest valid squares around the Boss Battle area are always Mountains.
+* The Boss Battle Mountain cluster has a total size between 15 and 20 squares.
+* The Boss Battle Mountain cluster is connected.
+* The Boss Battle Mountain cluster counts towards the total Mountain cluster count.
+* The total Mountain cluster count remains within the configured 5 to 10 cluster range.
+* Fixed areas remain unchanged.
+* Feature areas still generate correctly.
+* Rivers and Streams still render correctly.
+* Mountains still render correctly.
+* Other environment generation continues to work.
+
+Out Of Scope
+
+* No changes to board size.
+* No changes to square size.
+* No changes to Start Area.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area size or position.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No battle logic.
+* No Boss Battle behaviour.
+* No Elite Battle behaviour.
+* No Mountain gameplay effects.
+* No River gameplay effects.
+* No Stream gameplay effects.
+* No changes to Feature area behaviour.
+* No visible easy/hard section line.
+* No save/load functionality.
+* No persistence.
+* No visual redesign.
+* No decorative styling.
+* No new environment types.
+* No changes to environment component folder structure.
+
+Assumptions
+
+* “At least 3 spaces from the edge” means River squares may only appear at coordinates `3` through `27` on both axes.
+* The River edge-distance rule applies only to Rivers, not Streams.
+* The Boss Battle Mountain cluster should be generated before ordinary Mountain clusters or reserved during Mountain generation so the required surrounding squares are never missed.
+* The required 12 Mountain squares around the Boss Battle area are based on the valid in-board 4x4 block around the top-right corner Boss Battle area, excluding the Boss Battle area itself.
+* The Boss Battle Mountain cluster should be treated as a normal Mountain cluster for rendering and movement.
+* The Boss Battle Mountain cluster size rule of 15 to 20 applies only to this special Mountain cluster.
+* Other Mountain clusters keep their existing 5 to 20 square size rule.
+* Rivers and Streams should continue using the existing water rules from previous bug fixes.
+
+Stop Point
+
+* Stop once River edge-distance limits are enforced, Forest cluster size is updated to 10 to 40, and the Boss Battle area is always surrounded by a connected Mountain cluster of 15 to 20 squares that counts towards the Mountain cluster total.
+
+Testing Checkpoints
+
+* Confirm a new board can still be generated.
+* Confirm the board remains 31x31.
+* Confirm each square remains 30x30px.
+* Confirm the full board remains 930x930px.
+* Confirm Rivers still generate where valid.
+* Confirm no River square appears at `x: 0-2`.
+* Confirm no River square appears at `x: 28-30`.
+* Confirm no River square appears at `y: 0-2`.
+* Confirm no River square appears at `y: 28-30`.
+* Confirm all River squares are within `x: 3-27` and `y: 3-27`.
+* Confirm Streams can still generate.
+* Confirm Streams are not incorrectly blocked by the River edge-distance rule.
+* Confirm Forest clusters use the updated 10 to 40 square range.
+* Confirm Forest clusters still appear only in the hard section.
+* Confirm the Boss Battle area remains at the top right.
+* Confirm the Boss Battle area is not overwritten by Mountains.
+* Confirm the 12 closest valid surrounding squares around the Boss Battle area are Mountains.
+* Confirm the Boss Battle Mountain cluster is connected.
+* Confirm the Boss Battle Mountain cluster has at least 15 squares.
+* Confirm the Boss Battle Mountain cluster has no more than 20 squares.
+* Confirm the Boss Battle Mountain cluster counts as one Mountain cluster.
+* Confirm the total Mountain cluster count remains between 5 and 10.
+* Confirm other Mountain clusters still use their existing 5 to 20 square size range.
+* Confirm Rivers and Streams avoid overwriting Mountains where possible.
+* Confirm Rivers and Streams do not overwrite fixed areas.
+* Confirm Rivers and Streams do not overwrite feature areas.
+* Confirm fixed areas remain unchanged.
+* Confirm generated feature areas still appear correctly.
+* Confirm environment square tooltips still report the correct environment type if tooltips exist.
+* Confirm environment components still render correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Updated the existing board-generation config and helpers in `src/features/gameBoard/board.js` without changing board rendering or gameplay flow.
+* Rivers now use an edge inset of 3, so River squares can only be placed within `x: 3-27` and `y: 3-27`.
+* Forest now uses the requested 10 to 40 cluster size range.
+* Added a required Boss Battle Mountain cluster that reserves the 12 surrounding top-right squares, grows that cluster to 15 to 20 total Mountain squares, and counts it toward the normal Mountain cluster total by reducing ordinary Mountain generation by one cluster.
+* Kept additional ordinary Mountain clusters from touching the reserved Boss Battle Mountain cluster so the special cluster remains bounded to its own 15 to 20 square connected group.
+* Reuse check: reviewed the existing board generator, current land/water config structure, and existing board-generation tests; reused the same generator file and test file, and created no new feature files because the requested rule changes fit the current generation code.
+* Intentionally not changed in this slice:
+  * board rendering
+  * feature-area placement rules
+  * movement or turn logic
+  * environment component structure
+  * Stream edge rules
+
+Completion Note
+
+* Feature-003 now applies the requested River edge rule, Forest size update, and Boss Battle Mountain cluster rule in code.
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.
+
+---
+
+Feature-004: Environment square variation numbers
+
+Status
+
+* done
+
+Goal
+
+* Add fixed variation numbers to environment squares when the board is generated.
+* Use these numbers to create visible variation inside environment clusters.
+* Display the assigned variation number inside each environment square for now.
+
+Scope
+
+* Use the existing procedural board generation system from EPIC-002.
+* Apply this only to environment squares.
+* Assign each environment square a random number from 1 to 6 when the board is generated.
+* Store the assigned number in the board square data.
+* The assigned number must remain fixed for the whole game.
+* The assigned number must not change on re-render.
+* The assigned number must not change when turns change.
+* The assigned number must not change when players move.
+* No environment square can be orthogonally adjacent to another environment square with the same variation number.
+* Orthogonal adjacency means:
+
+  * up
+  * down
+  * left
+  * right
+* Diagonal adjacency does not count for this rule.
+* Pass the variation number into the relevant environment component.
+* For now, each environment component should display the variation number inside the square.
+* Keep the number display lo-fi and functional.
+* Use the number display only to verify that the variation numbers are generated and assigned correctly.
+* Use `.js` for pure board generation/helper logic where possible.
+* Use `.jsx` for environment components that render the variation number.
+
+Environment Variation Rules
+
+* Each environment square should have a variation number from 1 to 6.
+* Variation numbers should be assigned during board generation.
+* Variation numbers should be stored in the generated board data.
+* Variation numbers should be fixed after generation.
+* Adjacent environment squares must not share the same variation number.
+* This rule applies across all environment types.
+* Example:
+
+  * A Field square with variation `3` cannot be directly next to a Hills square with variation `3`.
+  * A Woods square with variation `5` cannot be directly next to a Woods square with variation `5`.
+  * A River square with variation `2` cannot be directly next to a Stream square with variation `2`.
+* Diagonal squares may share the same variation number.
+* Fixed non-environment grouped areas do not need environment variation numbers.
+* Feature areas do not need environment variation numbers.
+
+Suggested Board Data Shape
+
+```js id="9glz7f"
+{
+  id: "square-4-12",
+  x: 4,
+  y: 12,
+  section: "easy",
+  areaType: null,
+  environmentType: "woods",
+  environmentVariation: 3,
+  featureId: null,
+  isFixedArea: false
+}
+```
+
+Environment Component Requirement
+
+* Each environment component should receive the assigned variation number.
+* Each environment component should display that number inside the square for now.
+* The number should be readable enough for testing.
+* Do not create image arrays yet.
+* Do not add environment images yet.
+* Do not create decorative number styling.
+* Keep each environment component focused only on rendering that environment square.
+
+Future Use Note
+
+* These variation numbers will later be used to select an image from an array of images.
+* Image selection is out of scope for this feature.
+* This feature only proves that stable variation numbers are generated, stored, passed to components, and displayed.
+
+Expected Behaviour
+
+* When a new board is generated, every environment square receives a number from 1 to 6.
+* Every environment square stores its number in the board data.
+* Environment variation numbers remain fixed for the whole game.
+* Environment variation numbers do not change on re-render.
+* Environment variation numbers do not change when turns change.
+* Environment variation numbers do not change when players move.
+* No environment square is orthogonally adjacent to another environment square with the same number.
+* Diagonal environment squares may have the same number.
+* Field squares display their assigned number.
+* Hills squares display their assigned number.
+* Gravel squares display their assigned number.
+* Mud squares display their assigned number.
+* Stream squares display their assigned number.
+* River squares display their assigned number.
+* Woods squares display their assigned number.
+* Forest squares display their assigned number.
+* Mountains squares display their assigned number.
+* Feature areas do not need to display environment variation numbers.
+* Fixed grouped areas do not need to display environment variation numbers.
+* Existing environment appearances remain otherwise unchanged.
+* Existing board generation rules continue to work.
+
+Out Of Scope
+
+* No image arrays.
+* No environment images.
+* No tile artwork.
+* No visual design pass.
+* No decorative number styling.
+* No changes to environment cluster rules.
+* No changes to River or Stream path rules.
+* No changes to Forest, Mountain, Field, or feature generation rules.
+* No changes to fixed board areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No new environment types.
+* No changes to feature areas.
+
+Assumptions
+
+* “Next to” means orthogonally adjacent only.
+* The variation number should be assigned after the final environment type for each square is known.
+* If Rivers or Streams overwrite an existing environment square, the final River or Stream square should receive its own variation number.
+* Variation numbers should be generated after all environment and feature placement is complete, or after all environment overwrites are complete.
+* Fixed areas and feature areas can have no `environmentVariation` value.
+* If assigning random numbers creates a conflict, the generator should choose another valid number for that square.
+* Because there are 6 possible numbers and only 4 orthogonal neighbours, a valid number should normally be available.
+* The visible number is temporary debugging output and should be easy to remove or replace later.
+
+Stop Point
+
+* Stop once each environment square has a fixed variation number from 1 to 6, no orthogonally adjacent environment squares share the same number, and each environment component displays its assigned number.
+
+Testing Checkpoints
+
+* Confirm a new board can still be generated.
+* Confirm every environment square has an `environmentVariation` value.
+* Confirm every `environmentVariation` value is between 1 and 6.
+* Confirm Field squares display their variation number.
+* Confirm Hills squares display their variation number.
+* Confirm Gravel squares display their variation number.
+* Confirm Mud squares display their variation number.
+* Confirm Stream squares display their variation number.
+* Confirm River squares display their variation number.
+* Confirm Woods squares display their variation number.
+* Confirm Forest squares display their variation number.
+* Confirm Mountains squares display their variation number.
+* Confirm fixed grouped areas do not require variation numbers.
+* Confirm feature areas do not require variation numbers.
+* Confirm no environment square is orthogonally adjacent to another environment square with the same variation number.
+* Confirm diagonal environment squares can share the same variation number.
+* Confirm variation numbers do not change when the board re-renders.
+* Confirm variation numbers do not change when turns change.
+* Confirm variation numbers do not change when players move.
+* Confirm existing environment generation still works.
+* Confirm existing River and Stream rules still work.
+* Confirm existing Boss Battle Mountain cluster rules still work.
+* Confirm existing feature areas still generate correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Added `environmentVariation` to board squares in `src/features/gameBoard/board.js`.
+* Variation numbers are now assigned after the final environment layout is complete, so Feature areas and fixed grouped areas keep `environmentVariation: null`.
+* Every environment square now receives a fixed random variation number from 1 to 6, and the assignment pass rejects orthogonally adjacent duplicates across all environment types.
+* `BoardGrid` now passes the variation number into each environment component and exposes it on the square as a data attribute for testing.
+* Each existing environment component now renders the assigned variation number inside the square using a shared plain number overlay class in `BoardGrid.css`.
+* Reuse check: reviewed the existing board generator, current board data flow, `BoardGrid`, and the existing environment component folders; reused the current generator file, renderer, and environment component structure, and created no new feature files because the requested variation behavior fit the existing board feature.
+* Intentionally not changed in this slice:
+  * environment generation rules
+  * River and Stream path rules
+  * feature-area placement rules
+  * movement or turn logic
+  * environment artwork or image arrays
+
+Completion Note
+
+* Feature-004 now assigns stable variation numbers to environment squares, stores them in board data, and displays them in the environment components.
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.
+
+
+---
+
+Feature-005: Map environment variation numbers to environment images
+
+Status
+
+* done
+
+Goal
+
+* Replace the temporary displayed environment variation numbers with environment images.
+* Use each environment square’s fixed variation number to choose the correct image.
+* Remove the basic colour rendering from environment squares that now have images.
+* Do not change River or Stream squares in this feature.
+
+Scope
+
+* Use the existing `environmentVariation` value from Feature-004.
+* Keep the variation numbers in board data.
+* Stop displaying variation numbers inside environment squares.
+* Replace the visual rendering for the following environment types with images:
+
+  * Field
+  * Hills
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Mountains
+* Do not change Stream rendering.
+* Do not change River rendering.
+* Do not change Stream colours, components, or CSS in this feature.
+* Do not change River colours, components, or CSS in this feature.
+* Use images from:
+
+  * `src/images/environments/`
+* Each non-water environment has 6 image variants.
+* The environment variation number should decide which image variant is used.
+* Use the matching image for each environment and variation number.
+* Remove basic colour backgrounds from the image-based environment squares.
+* Keep existing environment component folder structure.
+* Update each relevant environment component so it renders the correct image.
+* Keep the rendering lo-fi and functional.
+* Do not add decorative styling beyond making the image fill the square.
+* Use `.jsx` for environment components.
+* Use `.css` for environment component styles.
+* Use `.js` for pure image mapping helpers if needed.
+
+Image-Based Environment Types
+
+Field
+
+* Uses images:
+
+  * `field-1.png`
+  * `field-2.png`
+  * `field-3.png`
+  * `field-4.png`
+  * `field-5.png`
+  * `field-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `field-1.png`
+  * `environmentVariation: 2` uses `field-2.png`
+  * `environmentVariation: 3` uses `field-3.png`
+  * `environmentVariation: 4` uses `field-4.png`
+  * `environmentVariation: 5` uses `field-5.png`
+  * `environmentVariation: 6` uses `field-6.png`
+
+Hills
+
+* Uses images:
+
+  * `hills-1.png`
+  * `hills-2.png`
+  * `hills-3.png`
+  * `hills-4.png`
+  * `hills-5.png`
+  * `hills-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `hills-1.png`
+  * `environmentVariation: 2` uses `hills-2.png`
+  * `environmentVariation: 3` uses `hills-3.png`
+  * `environmentVariation: 4` uses `hills-4.png`
+  * `environmentVariation: 5` uses `hills-5.png`
+  * `environmentVariation: 6` uses `hills-6.png`
+
+Gravel
+
+* Uses images:
+
+  * `gravel-1.png`
+  * `gravel-2.png`
+  * `gravel-3.png`
+  * `gravel-4.png`
+  * `gravel-5.png`
+  * `gravel-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `gravel-1.png`
+  * `environmentVariation: 2` uses `gravel-2.png`
+  * `environmentVariation: 3` uses `gravel-3.png`
+  * `environmentVariation: 4` uses `gravel-4.png`
+  * `environmentVariation: 5` uses `gravel-5.png`
+  * `environmentVariation: 6` uses `gravel-6.png`
+
+Mud
+
+* Uses images:
+
+  * `mud-1.png`
+  * `mud-2.png`
+  * `mud-3.png`
+  * `mud-4.png`
+  * `mud-5.png`
+  * `mud-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `mud-1.png`
+  * `environmentVariation: 2` uses `mud-2.png`
+  * `environmentVariation: 3` uses `mud-3.png`
+  * `environmentVariation: 4` uses `mud-4.png`
+  * `environmentVariation: 5` uses `mud-5.png`
+  * `environmentVariation: 6` uses `mud-6.png`
+
+Woods
+
+* Uses images:
+
+  * `woods-1.png`
+  * `woods-2.png`
+  * `woods-3.png`
+  * `woods-4.png`
+  * `woods-5.png`
+  * `woods-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `woods-1.png`
+  * `environmentVariation: 2` uses `woods-2.png`
+  * `environmentVariation: 3` uses `woods-3.png`
+  * `environmentVariation: 4` uses `woods-4.png`
+  * `environmentVariation: 5` uses `woods-5.png`
+  * `environmentVariation: 6` uses `woods-6.png`
+
+Forest
+
+* Uses images:
+
+  * `forest-1.png`
+  * `forest-2.png`
+  * `forest-3.png`
+  * `forest-4.png`
+  * `forest-5.png`
+  * `forest-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `forest-1.png`
+  * `environmentVariation: 2` uses `forest-2.png`
+  * `environmentVariation: 3` uses `forest-3.png`
+  * `environmentVariation: 4` uses `forest-4.png`
+  * `environmentVariation: 5` uses `forest-5.png`
+  * `environmentVariation: 6` uses `forest-6.png`
+
+Mountains
+
+* Uses images:
+
+  * `mountains-1.png`
+  * `mountains-2.png`
+  * `mountains-3.png`
+  * `mountains-4.png`
+  * `mountains-5.png`
+  * `mountains-6.png`
+* Variation mapping:
+
+  * `environmentVariation: 1` uses `mountains-1.png`
+  * `environmentVariation: 2` uses `mountains-2.png`
+  * `environmentVariation: 3` uses `mountains-3.png`
+  * `environmentVariation: 4` uses `mountains-4.png`
+  * `environmentVariation: 5` uses `mountains-5.png`
+  * `environmentVariation: 6` uses `mountains-6.png`
+
+River And Stream Exception
+
+* River squares should not be changed in this feature.
+* Stream squares should not be changed in this feature.
+* River and Stream components should remain exactly as they are now.
+* River and Stream colours should remain exactly as they are now.
+* River and Stream CSS should remain exactly as it is now.
+* Do not map River or Stream variation numbers to images in this feature.
+
+Image Rendering Rules
+
+* Each image-based environment square should render the matching PNG image.
+* The image should fill the 30x30px square.
+* The image should not distort the board layout.
+* The image should not change the board square size.
+* The image should not add spacing between board squares.
+* The image should replace the visible colour background for that environment.
+* The temporary visible variation number should be removed.
+* The `environmentVariation` value should remain stored in board data.
+* If an environment square is missing a valid variation number, use the smallest safe fallback and document it.
+* Suggested fallback:
+
+  * Use variation `1`.
+* If an image file cannot be found, avoid crashing the app and report the missing file.
+
+Expected Behaviour
+
+* Field squares render as Field images.
+* Hills squares render as Hills images.
+* Gravel squares render as Gravel images.
+* Mud squares render as Mud images.
+* Woods squares render as Woods images.
+* Forest squares render as Forest images.
+* Mountains squares render as Mountain images.
+* River squares remain unchanged.
+* Stream squares remain unchanged.
+* No variation numbers are visibly displayed on image-based environment squares.
+* Basic colour backgrounds are removed from image-based environment squares.
+* Each image-based environment square uses its own stored `environmentVariation` to choose the image.
+* `environmentVariation: 1` maps to `environment-1.png`.
+* `environmentVariation: 2` maps to `environment-2.png`.
+* `environmentVariation: 3` maps to `environment-3.png`.
+* `environmentVariation: 4` maps to `environment-4.png`.
+* `environmentVariation: 5` maps to `environment-5.png`.
+* `environmentVariation: 6` maps to `environment-6.png`.
+* Variation numbers remain fixed in board data for the whole game.
+* The board does not regenerate when images render.
+* The board does not change variation numbers when images render.
+* The board still renders at 31x31.
+* Each square still renders at 30x30px.
+* The full board still renders at 930x930px.
+* Existing player pieces still render correctly on top of the board.
+* Existing movement highlights still work.
+* Existing hover tooltips still work if present.
+* Existing fixed areas still render correctly.
+* Existing feature areas still render correctly.
+
+Out Of Scope
+
+* No changes to River rendering.
+* No changes to Stream rendering.
+* No River images.
+* No Stream images.
+* No new image generation.
+* No changes to procedural map generation rules.
+* No changes to variation number generation.
+* No changes to environment cluster sizes.
+* No changes to fixed board areas.
+* No changes to generated feature areas.
+* No changes to player setup.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No decorative styling beyond making images display correctly.
+* No animation.
+* No responsive board redesign.
+* No new gameplay behaviour.
+
+Assumptions
+
+* The 42 image files already exist in `src/images/environments/`.
+* The 42 images cover 7 image-based environments with 6 images each.
+* The 7 image-based environments are:
+
+  * Field
+  * Hills
+  * Gravel
+  * Mud
+  * Woods
+  * Forest
+  * Mountains
+* Image filenames use the pattern:
+
+  * `<environment>-<variation>.png`
+* The variation number should map directly to the filename number.
+* Example:
+
+  * `environmentVariation: 3` for Hills should use `hills-3.png`.
+* The reference to `field-1.png` for the number 4 should be checked against the actual files. If filenames map directly by number, use `field-4.png` for variation 4 and document the assumption.
+* Existing environment component folders should be reused.
+* Existing environment CSS files should be updated only enough to render the images correctly.
+* Image rendering should be handled inside each relevant environment component or through a very small shared helper if that keeps the code clearer without creating a broad abstraction.
+
+Stop Point
+
+* Stop once all non-River and non-Stream environment squares render the correct image based on their stored variation number, visible variation numbers are removed, basic colour backgrounds are removed from those environment squares, and River/Stream squares remain unchanged.
+
+Testing Checkpoints
+
+* Confirm the app can import images from `src/images/environments/`.
+* Confirm Field variation 1 renders `field-1.png`.
+* Confirm Field variation 2 renders `field-2.png`.
+* Confirm Field variation 3 renders `field-3.png`.
+* Confirm Field variation 4 renders `field-4.png`.
+* Confirm Field variation 5 renders `field-5.png`.
+* Confirm Field variation 6 renders `field-6.png`.
+* Confirm Hills variation 1 renders `hills-1.png`.
+* Confirm Hills variation 2 renders `hills-2.png`.
+* Confirm Hills variation 3 renders `hills-3.png`.
+* Confirm Hills variation 4 renders `hills-4.png`.
+* Confirm Hills variation 5 renders `hills-5.png`.
+* Confirm Hills variation 6 renders `hills-6.png`.
+* Confirm Gravel squares render the matching `gravel-1.png` to `gravel-6.png` images.
+* Confirm Mud squares render the matching `mud-1.png` to `mud-6.png` images.
+* Confirm Woods squares render the matching `woods-1.png` to `woods-6.png` images.
+* Confirm Forest squares render the matching `forest-1.png` to `forest-6.png` images.
+* Confirm Mountains squares render the matching `mountains-1.png` to `mountains-6.png` images.
+* Confirm River squares are unchanged.
+* Confirm Stream squares are unchanged.
+* Confirm visible variation numbers are no longer displayed on image-based environment squares.
+* Confirm image-based environment squares no longer rely on their previous basic colour backgrounds.
+* Confirm image-based environment squares remain 30x30px.
+* Confirm the full board remains 930x930px.
+* Confirm player pieces still appear above image-based squares.
+* Confirm movement highlights still appear above image-based squares.
+* Confirm fixed areas still render correctly.
+* Confirm generated feature areas still render correctly.
+* Confirm hover tooltips still report the correct environment type and variation if tooltips exist.
+* Confirm variation numbers remain stable when turns change.
+* Confirm variation numbers remain stable when players move.
+* Confirm the board does not regenerate when images render.
+* Confirm there are no broken image icons.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Feature-005 now maps Field, Hills, Gravel, Mud, Woods, Forest, and Mountains squares to imported environment images by using each square's stored `environmentVariation` value.
+* A small shared helper now normalizes invalid variation values to the safe fallback `1` so image-based environment rendering does not crash on bad data.
+* The actual Mountains asset files are named `mountain-1.png` through `mountain-6.png`, so the image mapping keeps the `mountains` environment type while using the existing singular asset filenames.
+* River and Stream rendering were intentionally left unchanged in this feature, including their visible variation-number output from Feature-004.
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.

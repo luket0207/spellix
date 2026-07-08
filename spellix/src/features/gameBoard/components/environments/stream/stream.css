@@ -1,0 +1,6 @@
+.stream-environment {
+  position: absolute;
+  inset: 0;
+  background: lightblue;
+  pointer-events: none;
+}
