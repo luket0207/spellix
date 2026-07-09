@@ -10,11 +10,43 @@ import {
   WATER_ENVIRONMENT_CONFIGS,
 } from './features/gameBoard/board';
 import { getEnvironmentImageDetails } from './features/gameBoard/components/environments/environmentImages';
+import { createPlayers } from './features/gameSetup/gameSetup';
 import { GameSetupProvider, useGameSetup } from './features/gameSetup/GameSetupContext';
 
-function renderApp(initialRoute = '/') {
+function createGameplayReadySetup(playerCount = 2) {
+  const players = createPlayers(playerCount).map((player) => {
+    const spellSlots = player.spellSlots.map((slot) => ({
+      ...slot,
+      tokens: [],
+    }));
+
+    spellSlots[0].tokens = player.tokenBag
+      .filter((token) => token.type === 'red')
+      .map((token) => ({ ...token, committed: true }));
+    spellSlots[1].tokens = player.tokenBag
+      .filter((token) => token.type === 'blue')
+      .map((token) => ({ ...token, committed: true }));
+
+    return {
+      ...player,
+      tokenBag: [],
+      spellSlots,
+      hasCommittedInitialSpells: true,
+    };
+  });
+
+  return {
+    playerCount,
+    players,
+    turnOrder: [],
+    currentTurnIndex: 0,
+    board: null,
+  };
+}
+
+function renderApp(initialRoute = '/', { initialGameSetup = null } = {}) {
   return render(
-    <GameSetupProvider>
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
       <MemoryRouter
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
         initialEntries={[initialRoute]}
@@ -244,9 +276,10 @@ describe('App routing flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /start game/i }));
     expect(screen.getByLabelText(/board panel/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/gameplay panel/i)).toBeInTheDocument();
-    expect(screen.getByText(/player count: 4/i)).toBeInTheDocument();
-    expect(screen.getByText(/player 3: orange/i)).toBeInTheDocument();
-    expect(screen.getByText(/player 4: purple/i)).toBeInTheDocument();
+    expect(screen.getByText(/it is currently red player's turn\./i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/orange player piece/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/purple player piece/i)).toBeInTheDocument();
   });
 
   test('renders the setup page from its route', () => {
@@ -256,17 +289,31 @@ describe('App routing flow', () => {
   });
 
   test('renders the gameplay page from its route', () => {
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/board panel/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/gameplay panel/i)).toBeInTheDocument();
-    expect(screen.getByText(/player count: 2/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /spells/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/committed spell slots/i)).toBeInTheDocument();
     expect(screen.getByText(/it is currently .* player's turn\./i)).toBeInTheDocument();
     expect(screen.getByLabelText(/game board/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /gameplay/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /board/i })).not.toBeInTheDocument();
+  });
+
+  test('creates players with starting token bags and empty spell slots for the spell setup foundation', () => {
+    const players = createPlayers(2);
+
+    players.forEach((player) => {
+      expect(player.tokenBag.filter((token) => token.type === 'red')).toHaveLength(5);
+      expect(player.tokenBag.filter((token) => token.type === 'blue')).toHaveLength(2);
+      expect(player.spellSlots).toHaveLength(6);
+      expect(player.spellSlots.every((slot) => slot.maxTokens === 5)).toBe(true);
+      expect(player.spellSlots.every((slot) => slot.tokens.length === 0)).toBe(true);
+      expect(player.hasCommittedInitialSpells).toBe(false);
+    });
   });
 
   test('keeps the settings button visible across app pages', () => {
@@ -281,9 +328,45 @@ describe('App routing flow', () => {
     expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
 
     setupRender.unmount();
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
+  });
+
+  test('opens the forced spells modal and blocks dice rolling until the current player saves spells', () => {
+    renderApp('/gameplay');
+
+    expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
+    expect(screen.getByText(/spells for .* player\./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/token bag drop zone/i)).toBeInTheDocument();
+    expect(screen.getByText(/red tokens: 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/blue tokens: 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/spell slots/i)).toBeInTheDocument();
+    expect(screen.getByText(/slot 1: 0 of 5 tokens/i)).toBeInTheDocument();
+    expect(screen.getByText(/slot 6: 0 of 5 tokens/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  });
+
+  test('opens the spells modal for a committed player and uses cancel confirmation to close it', async () => {
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
+
+    await userEvent.click(screen.getByRole('button', { name: /spells/i }));
+
+    expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
+    expect(screen.getByText(/no available tokens/i)).toBeInTheDocument();
+    expect(screen.getByText(/slot 1: 5 of 5 tokens/i)).toBeInTheDocument();
+    expect(screen.getByText(/slot 2: 2 of 5 tokens/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.getByRole('dialog', { name: /cancel spells confirmation/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /yes/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /spells/i })).not.toBeInTheDocument();
+    });
   });
 
   test('updates the number of colour selectors when the player count changes', () => {
@@ -304,7 +387,7 @@ describe('App routing flow', () => {
       .mockReturnValueOnce(0.5)
       .mockReturnValueOnce(0.9);
 
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     await userEvent.click(screen.getByRole('button', { name: /roll dice/i }));
 
@@ -320,13 +403,15 @@ describe('App routing flow', () => {
 
     expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
     expect(screen.getByText(/it is now blue player's turn\./i)).toBeInTheDocument();
-    expect(screen.getByText(/player 1: red at 0, 27/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/square 0, 27/i).querySelector('[aria-label="red player piece"]')
+    ).not.toBeNull();
 
     randomSpy.mockRestore();
   });
 
   test('creates a fixed 31x31 board with the required area colours and starting positions', () => {
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     const board = screen.getByLabelText(/game board/i);
     const easySectionSquare = screen.getByLabelText('Square 3, 28');
@@ -346,10 +431,12 @@ describe('App routing flow', () => {
     expect(easySectionSquare).toHaveAttribute('data-section', 'easy');
     expect(hardSectionSquare).toHaveAttribute('data-section', 'hard');
 
-    expect(screen.getByText(/player 1: red at 0, 28/i)).toBeInTheDocument();
-    expect(screen.getByText(/player 2: blue at 1, 28/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/red player piece/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/blue player piece/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/square 0, 28/i).querySelector('[aria-label="red player piece"]')
+    ).not.toBeNull();
+    expect(
+      screen.getByLabelText(/square 1, 28/i).querySelector('[aria-label="blue player piece"]')
+    ).not.toBeNull();
   });
 
   test('generates mixed land environments before filling remaining squares with field', () => {
@@ -438,7 +525,7 @@ describe('App routing flow', () => {
         ).not.toBeNull();
         expect(renderedSquare).not.toHaveTextContent(String(square.environmentVariation));
       } else {
-        expect(renderedSquare).toHaveTextContent(String(square.environmentVariation));
+        expect(renderedSquare).not.toHaveTextContent(String(square.environmentVariation));
       }
     });
   });
@@ -679,7 +766,7 @@ describe('App routing flow', () => {
   });
 
   test('does not regenerate the board when turns change', async () => {
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     const startingSquare = screen.getByLabelText(/square 0, 28/i);
     const startingVariation = startingSquare.getAttribute('data-environment-variation');
@@ -692,8 +779,12 @@ describe('App routing flow', () => {
       'data-environment-variation',
       startingVariation ?? ''
     );
-    expect(screen.getByText(/player 1: red at 0, 28/i)).toBeInTheDocument();
-    expect(screen.getByText(/player 2: blue at 1, 28/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/square 0, 28/i).querySelector('[aria-label="red player piece"]')
+    ).not.toBeNull();
+    expect(
+      screen.getByLabelText(/square 1, 28/i).querySelector('[aria-label="blue player piece"]')
+    ).not.toBeNull();
   });
 
   test('opens and closes the settings modal from the start page', async () => {
@@ -737,7 +828,7 @@ describe('App routing flow', () => {
   test('highlights legal destinations after rolling and moves the current player', async () => {
     const randomSpy = jest.spyOn(Math, 'random').mockReturnValueOnce(0.9).mockReturnValueOnce(0.5);
 
-    renderApp('/gameplay');
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     await userEvent.click(screen.getByRole('button', { name: /roll dice/i }));
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
@@ -749,12 +840,16 @@ describe('App routing flow', () => {
     expect(screen.getByLabelText(/square 0, 27/i)).toHaveAttribute('data-highlight-opacity', '0.5');
 
     await userEvent.click(screen.getByLabelText(/square 0, 28/i));
-    expect(screen.getByText(/player 1: red at 0, 28/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/square 0, 28/i).querySelector('[aria-label="red player piece"]')
+    ).not.toBeNull();
     expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByLabelText(/square 3, 28/i));
 
-    expect(screen.getByText(/player 1: red at 3, 28/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/square 3, 28/i).querySelector('[aria-label="red player piece"]')
+    ).not.toBeNull();
     expect(screen.getByLabelText(/square 3, 28/i)).toHaveAttribute('data-highlighted', 'false');
     expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
 

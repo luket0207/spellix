@@ -1,0 +1,1150 @@
+Bug-001: Spells modal is missing drag-and-drop token setup, initial setup flow, and save/cancel behaviour
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* The Spells modal is missing major required behaviour from Feature-002.
+* The player cannot drag and drop tokens from their token bag into spell slots.
+* The starting token setup is missing.
+* The initial forced spell setup at the start of each player’s first turn is missing.
+* The save and cancel confirmation flows are missing.
+* This means much of the spell setup feature has not been implemented according to the brief.
+
+Repro Steps
+
+* Start a new game.
+* Begin gameplay.
+* Reach a player’s first turn.
+* Open the Spells modal, or observe whether it opens automatically.
+* Check whether the player has a starting token bag.
+* Check whether the token bag contains 5 red tokens and 2 blue tokens.
+* Try to drag tokens from the token bag into spell slots.
+* Try to save token placement.
+* Try to cancel token placement.
+* Check whether the player is forced to complete spell setup before rolling dice on their first turn.
+
+Expected Behaviour
+
+* On each player’s first turn, the Spells modal should open automatically before the player can roll dice.
+* The first-turn Spells modal should not be dismissible until the player has placed all starting tokens into spell slots and saved.
+* Each player should start with:
+
+  * 5 red tokens
+  * 2 blue tokens
+* Starting spell tokens should be shown visually in a token bag area.
+* Spell tokens should be represented as coloured circles matching the token colour.
+* Red tokens should appear as red circles.
+* Blue tokens should appear as blue circles.
+* The player should be able to drag tokens from the token bag into any spell slot.
+* The player should have 6 spell slots.
+* Each spell slot should hold up to 5 spell tokens by default.
+* The player should be able to move newly placed, unsaved tokens between slots during the current modal visit.
+* The player should be able to return newly placed, unsaved tokens to the token bag during the current modal visit.
+* The player should not be able to move or remove tokens that have already been committed by saving.
+* The modal should have a `Save` button.
+* The modal should have a `Cancel` button.
+* Clicking `Cancel` should show a confirmation message.
+* Clicking `Save` should show a confirmation message.
+* Saving should commit the token placement into that player’s spell data.
+* Cancelling should discard unsaved token placement changes.
+* Each player’s spell setup should be saved separately.
+
+Actual Behaviour
+
+* Drag and drop from the token bag to spell slots is missing.
+* The starting token bag is missing or not correctly represented.
+* The initial forced spell setup flow is missing.
+* Spell tokens are not shown as coloured circles in the token bag.
+* The save confirmation flow is missing.
+* The cancel confirmation flow is missing.
+* Feature-002 appears to have been only partially implemented or the brief was not followed.
+
+Required Fix
+
+* Review Feature-002 in `src/vibe/epics/EPIC-003/features.txt`.
+* Implement the missing spell setup behaviour from Feature-002.
+* Add starting token data for each player:
+
+  * 5 red tokens
+  * 2 blue tokens
+* Represent tokens visually as simple coloured circles.
+* Add a token bag area in the Spells modal.
+* Add 6 spell slots in the Spells modal.
+* Use an external drag-and-drop library as required by Feature-002.
+* Allow tokens to be dragged from the token bag into spell slots.
+* Allow newly moved, unsaved tokens to be moved between slots.
+* Allow newly moved, unsaved tokens to be returned to the token bag.
+* Prevent committed tokens from being moved or removed.
+* Enforce the default slot capacity of 5 tokens per spell slot.
+* Add the first-turn forced setup flow.
+* On a player’s first turn, automatically open the Spells modal before dice rolling.
+* Prevent the player from rolling dice until their initial spell setup is saved.
+* Prevent the first-turn forced Spells modal from being dismissed before all starting tokens are placed and saved.
+* Add the `Cancel` button.
+* Add the `Save` button.
+* Add the cancel confirmation flow.
+* Add the save confirmation flow.
+* Save committed spell slot data into that player’s data in game context.
+* Keep the implementation lo-fi and functional.
+* Do not add decorative token art.
+* Do not add spell effects or battle logic.
+
+Required Token Display
+
+* Tokens should be shown as simple coloured circles.
+* Red tokens:
+
+  * Render as red circles.
+* Blue tokens:
+
+  * Render as blue circles.
+* Token circles should be draggable when they are uncommitted.
+* Token circles should not be draggable once committed.
+* Keep token styling minimal and functional.
+
+Cancel Flow Requirement
+
+* Clicking `Cancel` should ask:
+
+```txt
+Are you sure you want to cancel? All changes to your spell slots will be lost
+```
+
+* If the player clicks `Yes`:
+
+  * Close the confirmation.
+  * Close the Spells modal.
+  * Discard unsaved changes from the current modal visit.
+  * Leave committed spell data unchanged.
+* If the player clicks `No`:
+
+  * Close the confirmation.
+  * Return to the Spells modal.
+  * Keep the current unsaved changes in place.
+* During forced first-turn setup, the player should not be able to cancel out of setup before saving all starting tokens.
+
+Save Flow Requirement
+
+* Clicking `Save` should ask:
+
+```txt
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.
+```
+
+* If the player clicks `Yes`:
+
+  * Save the new spell slot configuration.
+  * Commit the newly placed tokens.
+  * Mark the player’s initial spell setup as complete if this is their first setup.
+  * Close the confirmation.
+  * Close the Spells modal.
+* If the player clicks `No`:
+
+  * Close the confirmation.
+  * Return to the Spells modal.
+  * Keep the current unsaved changes in place.
+
+Initial Setup Requirement
+
+* Each player must complete spell setup on their first turn.
+* The Spells modal should open automatically on that player’s first turn.
+* The player must place all 7 starting tokens into spell slots before saving:
+
+  * 5 red tokens
+  * 2 blue tokens
+* The player cannot roll dice until this setup is saved.
+* The player should only be forced through this setup once.
+* Later visits to the Spells modal should allow only uncommitted/new tokens to be moved.
+* Already committed tokens should remain locked.
+
+Out Of Scope
+
+* No battle system.
+* No spell effects.
+* No red token damage calculation yet.
+* No blue token effect yet.
+* No token loss after battle.
+* No potions.
+* No potion-based editing.
+* No extra token types.
+* No token rewards.
+* No token shop.
+* No spell names.
+* No spell targeting.
+* No enemy or opponent logic.
+* No save/load functionality.
+* No persistence.
+* No decorative token images.
+* No custom token art.
+* No board generation changes.
+* No player movement changes except blocking dice rolling until initial spell setup is complete.
+* No dice logic changes except disabling dice before required spell setup.
+* No turn order changes unless required to trigger first-turn setup.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* Feature-002 may have been implemented only as a partial UI or data structure.
+* The external drag-and-drop library may not have been installed or wired into the Spells modal.
+* Token bag and spell slot draft state may not have been implemented.
+* The initial forced setup rule may have been skipped.
+* Save and cancel confirmation flows may have been omitted.
+
+Attempted Fixes
+
+* Installed `@dnd-kit/core` and `@dnd-kit/utilities` to satisfy the required external drag-and-drop dependency with the smallest scoped setup.
+* Added draft spell-editing state for the current player so token moves stay local to the modal until save confirmation.
+* Added token-bag and spell-slot drop zones, token circle rendering, slot-capacity enforcement, and locked committed-token behaviour.
+* Added first-turn forced spell setup gating so the current player cannot use `Roll Dice` before saving their initial 7 starting tokens.
+* Added `Save` and `Cancel` confirmation flows and a read-only current-player spell-slot summary on the gameplay sidebar after setup is committed.
+
+Final Fix
+
+* The Spells modal now uses `@dnd-kit` drag-and-drop to move simple red and blue token circles between the token bag and six spell slots.
+* Each player is forced through their first spell setup before rolling dice, all 7 starting tokens must be placed before saving, and the forced setup cannot be cancelled out of.
+* Saving commits the current playerâ€™s spell slots into game context, locks those committed tokens against future edits, and shows the committed slots in read-only form on the right-side gameplay panel.
+
+Testing Required
+
+* Confirm each player starts with 5 red tokens.
+* Confirm each player starts with 2 blue tokens.
+* Confirm starting tokens appear in a token bag area.
+* Confirm red tokens display as red circles.
+* Confirm blue tokens display as blue circles.
+* Confirm the Spells modal has 6 spell slots.
+* Confirm each spell slot can hold up to 5 tokens.
+* Confirm an external drag-and-drop library is installed and used.
+* Confirm red tokens can be dragged from the token bag into spell slots.
+* Confirm blue tokens can be dragged from the token bag into spell slots.
+* Confirm tokens can be placed into any spell slot.
+* Confirm tokens can be stacked in a spell slot.
+* Confirm a slot rejects tokens after reaching 5 tokens.
+* Confirm newly placed unsaved tokens can be moved between slots.
+* Confirm newly placed unsaved tokens can be returned to the token bag.
+* Confirm committed tokens cannot be dragged.
+* Confirm committed tokens cannot be removed.
+* Confirm clicking `Cancel` opens the cancel confirmation.
+* Confirm clicking `Yes` on cancel discards unsaved changes and closes the modal.
+* Confirm clicking `No` on cancel returns to the Spells modal with changes preserved.
+* Confirm clicking `Save` opens the save confirmation.
+* Confirm clicking `Yes` on save commits the token placement.
+* Confirm clicking `No` on save returns to the Spells modal with changes preserved.
+* Confirm the Spells modal opens automatically on the first player’s first turn.
+* Confirm the first player cannot close the forced setup modal before placing all starting tokens and saving.
+* Confirm the first player cannot roll dice before saving initial spell setup.
+* Confirm the first player can roll dice after saving initial spell setup.
+* Confirm each later player gets the same forced setup on their first turn.
+* Confirm each player is forced through initial spell setup only once.
+* Confirm each player’s saved spell slots are stored separately.
+* Confirm one player’s spell setup does not change another player’s spell setup.
+* Confirm saved spell slots appear in read-only form on the right-side gameplay panel after setup.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+Bug-002: Spells modal layout does not show spell slots horizontally
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Related Bug
+
+* Bug-001: Spells modal is missing drag-and-drop token setup, initial setup flow, and save/cancel behaviour
+
+Bug Summary
+
+* The spell setup is happening inside the Spells modal, which is correct.
+* However, the Spells modal layout is poor.
+* The six spell slots should be horizontally stacked so the player can see all spell slots clearly at the same time.
+
+Repro Steps
+
+* Start a new game.
+* Reach a player’s first turn.
+* Open the Spells modal.
+* Look at the spell slot layout.
+* Check whether all six spell slots are visible in a horizontal row.
+
+Expected Behaviour
+
+* The Spells modal should show all six spell slots horizontally.
+* Spell slots should be arranged side by side.
+* The player should be able to see all six spell slots at the same time where possible.
+* The token source area should remain inside the modal.
+* During initial setup, the token source area should show `Starting Tokens`.
+* During later visits, the token source area should show `Token Bag`.
+* Drag-and-drop should still work from the token source area into any spell slot.
+* Save and Cancel controls should remain usable.
+
+Actual Behaviour
+
+* The Spells modal is correctly being used.
+* However, the spell slot layout makes the modal hard to use.
+* The spell slots are not clearly shown as a horizontal set of six slots.
+
+Required Fix
+
+* Update the Spells modal layout so the six spell slots are horizontally stacked.
+* Keep all six spell slots visible side by side where possible.
+* If the modal is too narrow, use the smallest functional fallback, such as horizontal scrolling inside the spell slot area.
+* Keep drag-and-drop working for every spell slot.
+* Keep the token source area inside the modal.
+* Keep Save and Cancel behaviour unchanged.
+* Keep the UI lo-fi and functional.
+* Do not add decorative styling.
+* Do not redesign the modal beyond the spell slot layout fix.
+
+Layout Requirement
+
+* The Spells modal should contain:
+
+  * A horizontal spell slot area with 6 spell slots.
+  * A token source area below the spell slots.
+  * Save and Cancel controls.
+* The spell slot area should show:
+
+  * Slot 1
+  * Slot 2
+  * Slot 3
+  * Slot 4
+  * Slot 5
+  * Slot 6
+* The slots should be laid out left to right in numerical order.
+
+Out Of Scope
+
+* No separate first-time setup page.
+* No drag-and-drop outside the Spells modal.
+* No new spell effects.
+* No battle system.
+* No token loss.
+* No potions.
+* No extra token types.
+* No token images.
+* No decorative token styling.
+* No save/load functionality.
+* No persistence.
+* No unrelated gameplay changes.
+* No changes to board generation.
+* No changes to dice logic except preserving the existing first-setup block before rolling.
+* No changes to turn order unless required to trigger the modal correctly.
+
+Suspected Cause
+
+* The Spells modal layout may currently stack spell slots vertically or wrap them in a way that makes them hard to view together.
+* The modal may not have a dedicated horizontal spell slot container.
+
+Attempted Fixes
+
+* Added a spell-specific modal panel width so the Spells modal can show a left-to-right slot row without changing the shared modal width for unrelated dialogs.
+* Moved the spell slot area above the token source area in the Spells modal.
+* Updated the spell slot list to render horizontally with a simple horizontal-scroll fallback on narrower widths.
+* Updated the token source label to show `Starting Tokens` during forced first-turn setup and `Token Bag` on later visits, without changing the existing drag-and-drop or save/cancel behaviour.
+
+Final Fix
+
+* The Spells modal now shows all six spell slots in a horizontal left-to-right row, keeps the token source area inside the modal below the slots, and preserves the existing drag-and-drop, save, cancel, and committed-token behaviour.
+
+Testing Required
+
+* Confirm the Spells modal opens correctly.
+* Confirm all six spell slots are shown horizontally.
+* Confirm Slot 1 through Slot 6 are shown left to right.
+* Confirm all six spell slots are visible at the same time where possible.
+* Confirm horizontal scrolling is available if needed on narrow screens.
+* Confirm starting tokens still appear inside the modal during initial setup.
+* Confirm the token bag still appears inside the modal during later visits.
+* Confirm tokens can still be dragged into any spell slot.
+* Confirm each spell slot still enforces the 5-token capacity.
+* Confirm Save still works.
+* Confirm Cancel still works where allowed.
+* Confirm committed tokens remain locked after saving.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-003: Remove token count text from Starting Tokens area
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* The Starting Tokens area currently shows token count text.
+* The count text is not needed and should be removed.
+* Starting tokens should be represented visually by the token circles only.
+
+Repro Steps
+
+* Start a new game.
+* Reach a player’s first turn.
+* Open the forced Spells modal.
+* Look at the Starting Tokens area.
+* Check whether token count text is displayed.
+
+Expected Behaviour
+
+* The Starting Tokens area should show the starting token circles.
+* The Starting Tokens area should show:
+
+  * 5 red token circles.
+  * 2 blue token circles.
+* The Starting Tokens area should not show token count text such as:
+
+```txt
+Red tokens: 0
+
+Blue tokens: 0
+```
+
+* The player should still be able to drag starting token circles into spell slots.
+* Removing the count text should not affect drag-and-drop behaviour.
+
+Actual Behaviour
+
+* The Starting Tokens area displays unnecessary token count text.
+* Example unwanted text:
+
+```txt
+Red tokens: 0
+
+Blue tokens: 0
+```
+
+Required Fix
+
+* Remove the token count text from the Starting Tokens area.
+* Keep the visible token circles.
+* Keep drag-and-drop behaviour unchanged.
+* Keep the Spells modal layout unchanged except for removing this text.
+* Do not remove token count data from state if it is needed internally.
+* Do not change token bag logic.
+* Do not change save or cancel behaviour.
+
+Out Of Scope
+
+* No changes to spell slot layout.
+* No changes to drag-and-drop behaviour.
+* No changes to token data structure unless strictly required to remove the displayed text.
+* No changes to token circle styling.
+* No changes to committed token behaviour.
+* No changes to save/cancel confirmation flows.
+* No changes to first-turn forced setup logic.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The Starting Tokens area may be rendering debug or summary count text that is no longer needed.
+* The count text may have been copied from the normal Token Bag area.
+
+Attempted Fixes
+
+* Made the Starting Tokens count text conditional so it is hidden during forced first-turn setup while the draggable token circles remain visible.
+* Kept the later-visit `Token Bag` view unchanged so it still shows the red and blue count text there.
+* Added focused modal test coverage to verify the forced setup view no longer renders token count text.
+
+Final Fix
+
+* The forced `Starting Tokens` area now shows only the draggable token circles and no longer renders the red/blue count text, while the later `Token Bag` view still keeps its token counts.
+
+Testing Required
+
+* Confirm the Starting Tokens area no longer shows `Red tokens: 0`.
+* Confirm the Starting Tokens area no longer shows `Blue tokens: 0`.
+* Confirm the Starting Tokens area still shows 5 red token circles.
+* Confirm the Starting Tokens area still shows 2 blue token circles.
+* Confirm red token circles can still be dragged into spell slots.
+* Confirm blue token circles can still be dragged into spell slots.
+* Confirm the player can still save after placing all starting tokens.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: Committed spell display title and layout need cleanup
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* The committed spell slots display on the main gameplay UI needs to be cleaned up.
+* The title should be simplified to `Spells`.
+* The spell slot layout should be more compact.
+* Tokens inside each spell slot should be vertically stacked.
+* The whole committed spells display should only take up 300px width.
+* Each of the six spell slots should be 50px wide.
+
+Repro Steps
+
+* Start a new game.
+* Complete the initial spell setup for a player.
+* Return to the main gameplay UI.
+* Look at the committed spell slots display on the right-side gameplay panel.
+* Check the title text.
+* Check the spell slot layout.
+* Check how much width the committed spell display uses.
+* Check whether tokens are stacked vertically inside each slot.
+
+Expected Behaviour
+
+* The committed spell slot section title should be exactly:
+
+```txt
+Spells
+```
+
+* The committed spell display should use a total width of 300px.
+* There should be 6 spell slots.
+* Each spell slot should be 50px wide.
+* The spell slots should fit horizontally inside the 300px committed spells display.
+* Tokens inside each spell slot should be stacked vertically.
+* The layout should take up less horizontal space than the current version.
+* The committed spell display should remain read-only.
+* The committed spell display should update for the current player when turns change.
+
+Actual Behaviour
+
+* The committed spell display title is not the desired text.
+* The spell slots are not organised compactly enough.
+* Tokens are not vertically stacked in a way that saves space.
+* The spell display takes up too much room or is visually inefficient.
+
+Required Fix
+
+* Change the committed spell display title to exactly `Spells`.
+* Update the committed spell slot display layout.
+* Set the committed spell display width to 300px.
+* Set each spell slot width to 50px.
+* Arrange the 6 spell slots horizontally within the 300px area.
+* Stack tokens vertically inside each spell slot.
+* Keep the committed spell display read-only.
+* Keep the fix focused only on the committed spell display on the main gameplay UI.
+* Do not change the Spells modal layout unless strictly required by shared component reuse.
+* Do not change drag-and-drop behaviour.
+* Do not change saved spell data.
+
+Out Of Scope
+
+* No changes to the Spells modal drag-and-drop layout unless strictly required.
+* No changes to token movement.
+* No changes to token save/cancel behaviour.
+* No changes to first-turn forced setup.
+* No changes to token data structure unless strictly required for display.
+* No new spell effects.
+* No battle system.
+* No potions.
+* No extra token types.
+* No token images.
+* No decorative styling.
+* No broad right-side panel redesign.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The committed spell display may be using temporary heading text.
+* The display may be using a layout copied from the editable Spells modal rather than a compact read-only layout.
+* Token rendering inside read-only spell slots may not be optimised for the narrow right-side panel.
+
+Attempted Fixes
+
+* Split the committed spell display onto its own compact read-only layout classes instead of reusing the wider modal slot layout.
+* Changed the committed spell display heading to `Spells`.
+* Added focused committed-display test coverage to verify the simplified title, the six slot labels, and the dedicated compact read-only classes.
+
+Final Fix
+
+* The committed spell display on the gameplay sidebar now uses the title `Spells`, keeps a compact six-slot horizontal read-only layout, and renders committed tokens inside the dedicated narrow slot display without changing modal drag-and-drop or saved spell data.
+
+Testing Required
+
+* Confirm the committed spell display title is exactly `Spells`.
+* Confirm the committed spell display appears after a player saves initial spell setup.
+* Confirm the committed spell display is 300px wide.
+* Confirm there are 6 spell slots.
+* Confirm each spell slot is 50px wide.
+* Confirm all 6 spell slots fit horizontally inside the 300px display.
+* Confirm tokens are vertically stacked inside each spell slot.
+* Confirm committed tokens remain read-only.
+* Confirm the committed spell display updates when the current player changes.
+* Confirm the Spells modal still works.
+* Confirm drag-and-drop inside the Spells modal still works.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-005: Remove token count text from Token Bag area
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Related Bug
+
+* Bug-003: Remove token count text from Starting Tokens area
+
+Bug Summary
+
+* The Token Bag area currently shows token count text.
+* The count text is not needed and should be removed.
+* Tokens in the bag are enough to show what the player has available.
+* Token count text should never be displayed in either the Starting Tokens area or the Token Bag area.
+
+Repro Steps
+
+* Start a new game.
+* Complete a player’s initial spell setup.
+* Open the Spells modal again later.
+* Look at the Token Bag area.
+* Check whether token count text is displayed.
+
+Expected Behaviour
+
+* The Token Bag area should show available token circles only.
+* The Token Bag area should not show token count text such as:
+
+```txt
+Red tokens: 0
+
+Blue tokens: 0
+```
+
+* Token circles should remain visible.
+* Token drag-and-drop should still work.
+* Removing the count text should not affect token data or spell slot data.
+
+Actual Behaviour
+
+* The Token Bag area displays unnecessary token count text.
+* Example unwanted text:
+
+```txt
+Red tokens: 0
+
+Blue tokens: 0
+```
+
+Required Fix
+
+* Remove token count text from the Token Bag area.
+* Ensure token count text is not shown for Red tokens.
+* Ensure token count text is not shown for Blue tokens.
+* Keep the visible token circles.
+* Keep drag-and-drop behaviour unchanged.
+* Keep token bag data unchanged internally.
+* Do not remove token counts from state if they are needed internally.
+* Do not change spell slot logic.
+* Do not change save or cancel behaviour.
+* Check that the Starting Tokens area also does not show token count text, as covered by Bug-003.
+
+Out Of Scope
+
+* No changes to token circle styling.
+* No changes to spell slot layout.
+* No changes to drag-and-drop behaviour.
+* No changes to token data structure unless strictly required to remove the displayed text.
+* No changes to committed token behaviour.
+* No changes to save/cancel confirmation flows.
+* No changes to first-turn forced setup logic.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The Token Bag area may be rendering debug or summary count text.
+* The count text may share rendering logic with the Starting Tokens area.
+* The token display may be showing both token circles and a redundant token count summary.
+
+Attempted Fixes
+
+* Removed the later-visit Token Bag count text from the Spells modal while keeping the token circles and the token drop zone intact.
+* Removed the now-unused token-count summary rendering from the modal component without changing token data or drag-and-drop behavior.
+* Updated the focused Spells modal test so later `Token Bag` visits also verify the count text is absent.
+
+Final Fix
+
+* The Spells modal no longer shows red or blue token count text in the later `Token Bag` view, so neither `Starting Tokens` nor `Token Bag` renders token count text anymore.
+
+Testing Required
+
+* Confirm the Token Bag area no longer shows `Red tokens: 0`.
+* Confirm the Token Bag area no longer shows `Blue tokens: 0`.
+* Confirm the Token Bag area does not show any token count text.
+* Confirm available token circles still appear in the Token Bag area.
+* Confirm token circles can still be dragged into spell slots.
+* Confirm token circles can still be returned to the Token Bag when unsaved.
+* Confirm Save still works.
+* Confirm Cancel still works.
+* Confirm committed tokens remain locked.
+* Confirm the Starting Tokens area also does not show token count text.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Remove “No committed tokens” text from empty spell slots
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* Empty committed spell slots currently display the text `No committed tokens`.
+* This text is not needed.
+* Empty spell slot columns should simply appear empty.
+
+Repro Steps
+
+* Start a new game.
+* Complete a player’s initial spell setup while leaving at least one spell slot empty.
+* Return to the main gameplay UI.
+* Look at the committed spell display on the right-side gameplay panel.
+* Check any spell slot with no committed tokens.
+
+Expected Behaviour
+
+* Empty committed spell slots should show no placeholder text.
+* The text `No committed tokens` should not appear.
+* Empty spell slot columns should remain visible but empty.
+* Spell slots that do contain tokens should still show those tokens normally.
+* The committed spell display should remain read-only.
+
+Actual Behaviour
+
+* Empty committed spell slots display the text:
+
+```txt
+No committed tokens
+```
+
+Required Fix
+
+* Remove the `No committed tokens` placeholder text from empty committed spell slots.
+* Keep the empty spell slot column visible.
+* Do not remove the spell slot itself.
+* Do not change token rendering for slots that contain committed tokens.
+* Do not change spell slot sizing.
+* Do not change token drag-and-drop behaviour in the Spells modal.
+* Keep the fix focused only on the committed spell display placeholder text.
+
+Out Of Scope
+
+* No changes to spell slot layout.
+* No changes to token circle styling.
+* No changes to drag-and-drop behaviour.
+* No changes to token data.
+* No changes to save/cancel flows.
+* No changes to first-turn forced setup.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The committed spell display likely renders fallback text when a spell slot has an empty token array.
+* The fallback text should be removed or replaced with an empty render.
+
+Attempted Fixes
+
+* Removed the empty-slot fallback text from the committed spell display so empty columns now render with no placeholder content.
+* Kept the committed spell slot columns, sizing, and token rendering unchanged for slots that already contain committed tokens.
+* Added focused committed-display test coverage to verify empty committed spell slots stay visible and do not render the placeholder text.
+
+Final Fix
+
+* Empty committed spell slots on the gameplay sidebar now remain visible but blank, and the `No committed tokens` placeholder text is no longer rendered.
+
+Testing Required
+
+* Confirm empty committed spell slots do not show `No committed tokens`.
+* Confirm empty committed spell slots remain visible as empty columns.
+* Confirm spell slots with committed tokens still show those tokens.
+* Confirm the committed spell display title remains `Spells`.
+* Confirm the committed spell display remains read-only.
+* Confirm the Spells modal still works.
+* Confirm drag-and-drop still works inside the Spells modal.
+* Confirm Save still works.
+* Confirm Cancel still works.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-007: Disable Save and skip Cancel confirmation when Spells modal has no changes
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* If no changes have been made in the Spells modal, the `Save` button should be disabled.
+* If no changes have been made in the Spells modal, clicking `Cancel` should close the modal immediately.
+* The cancel confirmation should only appear when there are unsaved changes.
+
+Repro Steps
+
+* Start a game.
+* Complete initial spell setup for a player.
+* Open the Spells modal again.
+* Do not move, add, or remove any tokens.
+* Check whether the `Save` button is enabled.
+* Click `Cancel`.
+* Observe whether the cancel confirmation appears.
+
+Expected Behaviour
+
+* When the Spells modal opens with no changes made, the `Save` button should be disabled.
+* If the player makes a valid change, the `Save` button should become enabled.
+* If the player returns the modal to its original state, the `Save` button should become disabled again.
+* If no changes have been made, clicking `Cancel` should close the Spells modal immediately.
+* If changes have been made, clicking `Cancel` should show the existing confirmation:
+
+```txt id="bp7u03"
+Are you sure you want to cancel? All changes to your spell slots will be lost
+```
+
+* The existing first-turn forced setup rules should still apply.
+
+Actual Behaviour
+
+* The `Save` button may be enabled even when no changes have been made.
+* The `Cancel` button may show the confirmation even when there are no unsaved changes.
+
+Required Fix
+
+* Add a clear check for whether the current Spells modal draft differs from the saved player spell data.
+* Disable the `Save` button when there are no unsaved changes.
+* Enable the `Save` button when there are unsaved valid changes.
+* Update the `Cancel` button behaviour:
+
+  * If there are no unsaved changes, close the Spells modal immediately.
+  * If there are unsaved changes, show the cancel confirmation.
+* Preserve first-turn forced setup behaviour:
+
+  * During forced setup, the player still cannot dismiss the modal until all required starting tokens are placed and saved.
+  * If closing/cancelling is not allowed during forced setup, keep it blocked.
+* Keep this fix focused only on unsaved-change detection, Save button disabled state, and Cancel behaviour.
+
+Out Of Scope
+
+* No changes to spell slot layout.
+* No changes to token circle styling.
+* No changes to drag-and-drop library.
+* No changes to token data structure unless strictly required for comparing draft and saved state.
+* No changes to committed token locking rules.
+* No changes to save confirmation copy.
+* No changes to first-turn forced setup rules except preserving them correctly.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The Spells modal may not currently track whether draft spell data differs from saved spell data.
+* The Save and Cancel buttons may not be checking for unsaved changes before acting.
+
+Attempted Fixes
+
+* Added a focused spell-state comparison helper so the modal can tell whether the current draft differs from the saved player spell data without depending on token order in the bag.
+* Wired the Spells modal flow so `Save` stays disabled when there are no unsaved changes and `Cancel` closes immediately when there is nothing to discard.
+* Added focused helper and gameplay-page test coverage for unchanged drafts, changed drafts, restored drafts, disabled `Save`, and immediate `Cancel` close behavior.
+
+Final Fix
+
+* The Spells modal now disables `Save` until the draft differs from the saved spell data, re-disables `Save` if the draft returns to its original state, and closes immediately on `Cancel` when there are no unsaved changes.
+
+Testing Required
+
+* Confirm the Spells modal opens with `Save` disabled when no changes have been made.
+* Confirm moving a token into a spell slot enables `Save`.
+* Confirm moving an unsaved token back to its original location disables `Save` again.
+* Confirm clicking `Cancel` with no changes closes the modal immediately.
+* Confirm clicking `Cancel` with unsaved changes opens the cancel confirmation.
+* Confirm clicking `Yes` on the cancel confirmation discards unsaved changes.
+* Confirm clicking `No` on the cancel confirmation returns to the Spells modal with changes preserved.
+* Confirm first-turn forced setup still cannot be dismissed before valid save.
+* Confirm first-turn forced setup still allows saving once all starting tokens are placed.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-008: Simplify spell slot labels in gameplay spell display
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Bug Summary
+
+* On the gameplay UI, the read-only Spells area currently labels spell slots as `Slot 1`, `Slot 2`, etc.
+* The word `Slot` should be removed.
+* Each spell slot should show only its number.
+* The number should be inside the same column border as the tokens, so it looks connected to that spell slot.
+
+Repro Steps
+
+* Start a game.
+* Complete initial spell setup for a player.
+* Return to the main gameplay UI.
+* Look at the read-only `Spells` area.
+* Check the labels for each spell slot.
+
+Expected Behaviour
+
+* The read-only gameplay spell display title should remain:
+
+```txt id="5syy9c"
+Spells
+```
+
+* The six spell slots should be labelled only with numbers:
+
+```txt id="0bz6fa"
+1
+2
+3
+4
+5
+6
+```
+
+* The labels should not say:
+
+  * `Slot 1`
+  * `Slot 2`
+  * `Slot 3`
+  * `Slot 4`
+  * `Slot 5`
+  * `Slot 6`
+* Each number should appear inside the same column border as the tokens for that slot.
+* The number should look visually connected to the spell slot column.
+* The token stack should remain below or otherwise connected to that number within the same bordered column.
+* The display should remain read-only.
+
+Actual Behaviour
+
+* Slot labels include the word `Slot`.
+* The slot number may not appear inside the same bordered column as the tokens.
+
+Required Fix
+
+* Update the read-only gameplay spell display.
+* Remove the word `Slot` from each slot label.
+* Show only the slot number.
+* Move or style the number so it sits inside the same bordered column as the tokens.
+* Keep each spell slot column 50px wide if Bug-004 has already been implemented.
+* Keep the full Spells display width at 300px if Bug-004 has already been implemented.
+* Keep token stacking behaviour unchanged.
+* Keep the display read-only.
+* Keep the fix focused only on the gameplay UI spell display.
+* Do not change the editable Spells modal unless shared code makes a minimal change necessary.
+
+Out Of Scope
+
+* No changes to token data.
+* No changes to spell slot data.
+* No changes to drag-and-drop behaviour.
+* No changes to save/cancel behaviour.
+* No changes to first-turn forced setup.
+* No changes to token circle styling beyond what is required to keep the label inside the column.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The read-only spell display may use temporary labels such as `Slot 1`.
+* The label may be outside the slot column rather than part of the same bordered container.
+
+Attempted Fixes
+
+* Moved the committed gameplay spell-slot number into the same bordered read-only column as the token stack.
+* Removed the word `Slot` from the committed gameplay spell-display labels so the columns now show only `1` through `6`.
+* Updated the focused committed-display test coverage to verify numeric labels only and to confirm the number now renders inside the bordered column.
+
+Final Fix
+
+* The read-only gameplay `Spells` display now shows only the numbers `1` through `6`, and each number renders inside the same bordered column as that slot’s committed tokens.
+
+Testing Required
+
+* Confirm the read-only spell display title remains `Spells`.
+* Confirm slot labels show only `1`, `2`, `3`, `4`, `5`, and `6`.
+* Confirm the word `Slot` does not appear in the read-only gameplay spell display.
+* Confirm each number appears inside the same bordered column as its tokens.
+* Confirm token stacks remain visible below or connected to the slot number.
+* Confirm each spell slot column remains 50px wide if Bug-004 has already been completed.
+* Confirm the full Spells display remains 300px wide if Bug-004 has already been completed.
+* Confirm the display remains read-only.
+* Confirm the Spells modal still works.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-009: Gameplay spell columns should always match height
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Player spell slots, token bag, and spell setup modal
+
+Related Bug
+
+* Bug-004: Committed spell display title and layout need cleanup
+* Bug-008: Simplify spell slot labels in gameplay spell display
+
+Bug Summary
+
+* On the gameplay UI, the read-only Spells area should keep all spell slot columns the same height.
+* Columns currently may have different heights depending on how many tokens are in each slot.
+* There may eventually be more than 5 tokens in a spell slot, so a fixed height should not be used.
+* Each column should have a minimum height of 150px.
+* All columns should match the height of the tallest column, using a grid or equivalent layout.
+
+Repro Steps
+
+* Start a game.
+* Complete spell setup for a player.
+* Place different numbers of tokens into different spell slots.
+* Return to the main gameplay UI.
+* Look at the read-only `Spells` area.
+* Check whether spell slot columns have different heights.
+
+Expected Behaviour
+
+* All spell slot columns in the gameplay UI should always be the same height.
+* The minimum height for each spell slot column should be 150px.
+* If one spell slot has enough tokens to become taller than 150px, the other spell slot columns should match that taller height.
+* The layout should support more than 5 tokens in a column later.
+* The columns should not use a fixed height that cuts off or hides tokens.
+* The columns should remain inside the existing `Spells` area.
+* The spell display should remain read-only.
+* Slot numbers should remain inside their column borders.
+* Tokens should remain vertically stacked.
+
+Actual Behaviour
+
+* Spell slot columns may not stay the same height.
+* Columns with fewer tokens may appear shorter than columns with more tokens.
+* The layout does not yet clearly support flexible matching column heights.
+
+Required Fix
+
+* Update the read-only gameplay `Spells` display layout.
+* Use CSS grid or an equivalent simple layout so all six columns match the same height.
+* Set each spell slot column to a minimum height of 150px.
+* Do not set a fixed height that prevents columns from growing.
+* Allow columns to grow taller when there are more tokens.
+* Ensure all columns match the height of the tallest column.
+* Keep the full display width at 300px if Bug-004 has already been implemented.
+* Keep each column width at 50px if Bug-004 has already been implemented.
+* Keep slot labels as numbers only if Bug-008 has already been implemented.
+* Keep tokens vertically stacked.
+* Keep the display read-only.
+* Keep the fix focused only on the gameplay UI spell display.
+
+Out Of Scope
+
+* No changes to the editable Spells modal layout unless shared styles make a minimal change necessary.
+* No changes to token data.
+* No changes to spell slot data.
+* No changes to drag-and-drop behaviour.
+* No changes to save/cancel behaviour.
+* No changes to first-turn forced setup.
+* No fixed maximum height.
+* No token scrolling behaviour unless needed to prevent broken layout.
+* No visual redesign.
+* No decorative styling.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* Each spell slot column may be sizing independently based on its own contents.
+* The current layout may not use grid alignment or stretch behaviour.
+* The columns may not have a shared parent layout that forces equal height.
+
+Attempted Fixes
+
+* Switched the committed gameplay spell-slot row to a simple six-column grid so the columns share a row height instead of sizing independently.
+* Set each committed gameplay spell column to a minimum height of 150px while still allowing the bordered column to grow taller with its content.
+* Kept the existing 300px overall width, 50px per-column width, numeric in-column labels, and vertical token stacking unchanged.
+
+Final Fix
+
+* The read-only gameplay `Spells` columns now use a shared-height grid layout with a 150px minimum height, and shorter columns stretch to match the tallest spell column without using a fixed capped height.
+
+Testing Required
+
+* Confirm the read-only spell display title remains `Spells`.
+* Confirm all six spell slot columns are the same height.
+* Confirm each spell slot column has a minimum height of 150px.
+* Confirm columns can grow taller than 150px when token content requires it.
+* Confirm columns do not cut off tokens.
+* Confirm columns with fewer tokens match the height of the tallest column.
+* Confirm each spell slot column remains 50px wide if Bug-004 has already been completed.
+* Confirm the full Spells display remains 300px wide if Bug-004 has already been completed.
+* Confirm slot labels remain numbers only if Bug-008 has already been completed.
+* Confirm slot numbers remain inside the column borders.
+* Confirm tokens remain vertically stacked.
+* Confirm the display remains read-only.
+* Confirm the Spells modal still works.
+* Confirm drag-and-drop inside the Spells modal still works.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

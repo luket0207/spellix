@@ -1,6 +1,8 @@
 import { createContext, useContext, useState } from 'react';
 import {
   clampPlayerCount,
+  cloneSpellSlots,
+  cloneTokenBag,
   createInitialGameSetup,
   createPlayers,
   createTurnOrder,
@@ -10,8 +12,8 @@ import { assignStartingPositions, createBoard } from '../gameBoard/board';
 
 const GameSetupContext = createContext(null);
 
-export function GameSetupProvider({ children }) {
-  const [gameSetup, setGameSetup] = useState(createInitialGameSetup);
+export function GameSetupProvider({ children, initialGameSetup = null }) {
+  const [gameSetup, setGameSetup] = useState(() => initialGameSetup ?? createInitialGameSetup());
 
   const setPlayerCount = (playerCount) => {
     setGameSetup((currentSetup) => {
@@ -90,6 +92,23 @@ export function GameSetupProvider({ children }) {
     }));
   };
 
+  const updatePlayerSpells = (playerId, nextSpellData) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              tokenBag: cloneTokenBag(nextSpellData.tokenBag),
+              spellSlots: cloneSpellSlots(nextSpellData.spellSlots),
+              hasCommittedInitialSpells:
+                nextSpellData.hasCommittedInitialSpells ?? player.hasCommittedInitialSpells,
+            }
+          : player
+      ),
+    }));
+  };
+
   const resetGame = () => {
     setGameSetup(createInitialGameSetup());
   };
@@ -106,6 +125,7 @@ export function GameSetupProvider({ children }) {
         setPlayerPosition,
         setPlayerColour,
         setPlayerCount,
+        updatePlayerSpells,
       }}
     >
       {children}

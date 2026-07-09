@@ -540,3 +540,136 @@ Notes
 
 * `npm run lint` was not run because there is no `lint` script in `package.json`.
 * The remaining automated-test blocker appears unrelated to the Bug-006 board-border removal.
+
+---
+
+Feature-006: Remove water variation numbers and add basic water animation
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* River and Stream environment components no longer render visible variation-number text.
+* River and Stream squares now use simple CSS-only animated stripe overlays while keeping their existing dark blue and light blue base colours.
+* The shared board data flow still keeps `environmentVariation` on water squares, and non-water image-based environment rendering was left unchanged.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect visible River and Stream squares.
+Expected result: River and Stream squares no longer show the temporary variation-number text.
+
+3. Continue inspecting River and Stream squares for a few seconds.
+Expected result: Each water square shows a basic animated water effect while River remains dark blue and Stream remains light blue.
+
+4. Inspect non-water environment squares, fixed areas, and feature areas.
+Expected result: Non-water environment images still render normally, and fixed/feature areas remain unchanged.
+
+5. Inspect player pieces and any highlighted movement squares that overlap water.
+Expected result: Player pieces still render above water squares, movement highlights still appear above the squares, and board dimensions remain unchanged at 31x31 squares of 30x30px.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies the existing board renderer still exposes `data-environment-variation` for water squares while River and Stream no longer display the variation number text inside their rendered squares.
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the updated River/Stream renderer assertions in `src/App.test.jsx`.
+* Direct in-app verification that the water animation is visible and remains subtle enough not to interfere with readability.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The water animation is implemented as a simple CSS-only overlay in the existing River and Stream component styles, with no new animation system or image assets.
+* The remaining automated-test blocker appears unrelated to the Feature-006 water-rendering change.
+
+---
+
+Bug-007: Water animation is too jumpy and visually disjointed
+
+Test Status
+
+* blocked
+
+Manual Regression Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect visible River squares for several seconds.
+Expected result: River squares remain dark blue, no longer show variation-number text, and now animate with a smoother wave-like shimmer instead of sharp jagged moving lines.
+
+3. Inspect visible Stream squares for several seconds.
+Expected result: Stream squares remain light blue, no longer show variation-number text, and now animate with the same smoother wave-like motion pattern.
+
+4. Compare adjacent River or Stream squares within the same connected water path.
+Expected result: Adjacent water squares visually line up better and the path reads as more continuous instead of disjointed from square to square.
+
+5. Inspect non-water environment squares, player pieces, movement highlights, fixed areas, and feature areas.
+Expected result: Non-water image squares remain unchanged, pieces and highlights still render above water squares, and board dimensions remain unchanged at 31x31 squares of 30x30px.
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run for the existing renderer assertions in `src/App.test.jsx`.
+* Direct in-app verification that the new River/Stream animation reads as smoother and more continuous across connected water squares.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The smoother water effect is implemented only by updating the existing River and Stream CSS overlays; no JSX, generation logic, or non-water rendering changes were required for this bug fix.
+* The remaining automated-test blocker appears unrelated to the Bug-007 water-animation styling change.
+
+---
+
+Bug-008: Water animation loop has visible break and water colours need adjustment
+
+Test Status
+
+* failed
+
+Manual Regression Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The board still renders as 31x31 with the existing fixed grouped areas, Feature areas, and environment types intact.
+
+2. Inspect visible River squares for several seconds.
+Expected result: River squares still render as blue water, look slightly paler than before, and animate with a smooth linear loop that does not show a visible reset point.
+
+3. Inspect visible Stream squares for several seconds.
+Expected result: Stream squares still render as blue water, look slightly darker than before, and animate with the same smooth linear loop without an obvious start/end break.
+
+4. Compare adjacent River or Stream squares within the same connected water path.
+Expected result: Adjacent water squares remain visually aligned, the animation feels continuous, and the loop boundary is not noticeably visible.
+
+5. Inspect non-water environment squares, fixed areas, feature areas, player pieces, and movement highlights.
+Expected result: Non-water image squares remain unchanged, fixed/feature areas remain unchanged, pieces and highlights still render above water squares, and board dimensions remain unchanged at 31x31 squares of 30x30px.
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` ran and failed on an existing assertion in `src/App.test.jsx:366` that expects every non-fixed square to have a non-null `environmentType`.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run after resolving the unrelated `src/App.test.jsx:366` expectation so the current renderer regressions can be fully confirmed alongside this bug fix.
+* Direct in-app verification that the River/Stream loop reset is no longer visibly noticeable and the updated colour balance looks correct during gameplay.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The Bug-008 implementation only updates the existing River and Stream CSS files; no JSX, generation logic, or non-water rendering changes were required.
+* The current Jest failure appears unrelated to Bug-008 and instead points to an older test expectation about non-fixed squares and `environmentType`.

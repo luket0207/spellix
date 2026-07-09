@@ -749,3 +749,295 @@ Testing Required
 * Confirm hover tooltips still work if present.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-007: Water animation is too jumpy and visually disjointed
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Remove water variation numbers and add basic water animation
+
+Bug Summary
+
+* The current River and Stream animation is too basic.
+* The animation looks jumpy and jagged.
+* Adjacent water squares do not visually line up, which makes connected Rivers and Streams look disjointed.
+* The water should have a smoother, more wave-like animation.
+
+Repro Steps
+
+* Start a new game.
+* Generate a board with Rivers and Streams.
+* View the River and Stream squares on the gameplay board.
+* Watch the current water animation.
+* Compare adjacent River or Stream squares that are part of the same water path.
+* Observe whether the animation appears jumpy, jagged, or visually disconnected.
+
+Expected Behaviour
+
+* River and Stream squares should have a smoother water-like animation.
+* The animation should feel more wavey rather than jumpy.
+* Adjacent water squares should visually line up better.
+* Connected River and Stream paths should look more continuous.
+* The animation should not make water paths look disjointed between squares.
+* Rivers should remain dark blue.
+* Streams should remain light blue.
+* River and Stream squares should remain 30x30px.
+* The animation should not change board layout or square size.
+
+Actual Behaviour
+
+* The current water animation is too basic.
+* The animation appears jumpy and jagged.
+* The animated lines or visual details do not line up across adjacent water squares.
+* Connected water paths look visually broken between squares.
+
+Required Fix
+
+* Replace or adjust the current River and Stream animation.
+* Use a smoother wave-like animation.
+* Avoid animation patterns that create hard jumps between frames.
+* Avoid per-square animation details that make adjacent water squares look disconnected.
+* Prefer a continuous-looking CSS approach where possible.
+* The same animation pattern can be used for both Rivers and Streams.
+* Rivers should keep a darker blue base colour.
+* Streams should keep a lighter blue base colour.
+* Keep the animation subtle enough that the board remains readable.
+* Keep the fix focused only on River and Stream animation styling.
+* Do not change River or Stream generation logic.
+* Do not change non-water environment rendering.
+
+Suggested Animation Direction
+
+* Use a smoother repeating wave effect rather than sharp line movement.
+* Consider using:
+
+  * A soft animated gradient.
+  * A pseudo-element overlay.
+  * A background-position animation.
+  * A subtle wave-like shimmer.
+* Keep the animation consistent across all River and Stream squares so adjacent squares feel connected.
+* Avoid randomly offset animation timing per square.
+* Avoid animation details that depend on each square independently.
+* Avoid jagged line patterns that break at square edges.
+
+Out Of Scope
+
+* No River image assets.
+* No Stream image assets.
+* No new environment image mapping.
+* No changes to Field, Hills, Gravel, Mud, Woods, Forest, or Mountains.
+* No changes to environment variation numbers.
+* No changes to procedural board generation.
+* No changes to River or Stream placement rules.
+* No changes to water path rules.
+* No changes to fixed board areas.
+* No changes to feature areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No broad animation system.
+* No decorative board redesign.
+* No unrelated styling fixes.
+
+Suspected Cause
+
+* The current animation may use sharp repeating lines or hard position jumps.
+* The animation may be applied independently per square in a way that makes adjacent water squares appear disconnected.
+* The animation may have too few intermediate frames or too much contrast.
+* The animation may use a pattern that does not tile cleanly across 30x30px squares.
+
+Attempted Fixes
+
+* Replaced the sharp moving stripe overlays in `river.css` and `stream.css` with softer layered gradient and radial-wave overlays.
+* Switched both water styles to the same background-position animation timing so adjacent River and Stream squares use a more consistent motion pattern.
+* Kept the existing dark blue River base colour and light blue Stream base colour while lowering the contrast of the animated highlights.
+
+Final Fix
+
+* River and Stream now use a smoother wave-like CSS overlay built from soft repeating gradients that tile cleanly across 30x30px squares.
+* The animated overlay now shifts through a gentler background-position loop instead of translating sharp diagonal lines, so connected water squares look less jagged and more continuous.
+
+Status Note
+
+* Fixed for the current water-animation styling slice.
+* Full Jest confirmation is still blocked by the existing unrelated `source-map-support` failure in the app test suite.
+
+Testing Required
+
+* Confirm River squares still render as dark blue.
+* Confirm Stream squares still render as light blue.
+* Confirm River squares no longer display variation numbers.
+* Confirm Stream squares no longer display variation numbers.
+* Confirm River squares show a smoother wave-like animation.
+* Confirm Stream squares show a smoother wave-like animation.
+* Confirm the animation no longer appears jumpy.
+* Confirm the animation no longer appears jagged.
+* Confirm adjacent River squares visually line up better.
+* Confirm adjacent Stream squares visually line up better.
+* Confirm connected water paths look more continuous.
+* Confirm the animation does not change square size.
+* Confirm the animation does not change board layout.
+* Confirm the board still renders as 31x31.
+* Confirm each square still renders as 30x30px.
+* Confirm the full board still renders as 930x930px.
+* Confirm non-water environment image squares still render correctly.
+* Confirm fixed areas still render correctly.
+* Confirm feature areas still render correctly.
+* Confirm player pieces still render correctly above water squares.
+* Confirm movement highlights still render correctly above water squares.
+* Confirm hover tooltips still work if present.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-008: Water animation loop has visible break and water colours need adjustment
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Remove water variation numbers and add basic water animation
+
+Related Bug
+
+* Bug-007: Water animation is too jumpy and visually disjointed
+
+Bug Summary
+
+* The updated water animation is smoother than before.
+* However, the start and end point of the animation loop is visible.
+* The animation should loop continuously without an obvious break.
+* River colour should be made a bit paler.
+* Stream colour should be made a bit darker.
+
+Repro Steps
+
+* Start a new game.
+* Generate a board with Rivers and Streams.
+* Watch the River and Stream animation for several seconds.
+* Look for the point where the animation resets.
+* Compare the current River and Stream colours.
+
+Expected Behaviour
+
+* River and Stream animation should loop smoothly.
+* The start and end of the animation should not be visibly noticeable.
+* The animation should feel continuous.
+* The animation timing should be linear.
+* River squares should be a slightly paler dark blue.
+* Stream squares should be a slightly darker light blue.
+* Rivers and Streams should still be visually distinct from each other.
+* River and Stream squares should remain 30x30px.
+* The animation should not change board layout or square size.
+
+Actual Behaviour
+
+* The animation itself is improved.
+* The loop reset is still visible.
+* The animation start/end point can be seen.
+* River colour is currently too strong/dark.
+* Stream colour is currently too pale/light.
+
+Required Fix
+
+* Update the River and Stream animation so the loop is seamless.
+* Use linear animation timing.
+* Ensure the animated pattern starts and ends in matching visual states.
+* Avoid hard jumps at the loop boundary.
+* Adjust the River colour to be slightly paler.
+* Adjust the Stream colour to be slightly darker.
+* Keep Rivers darker than Streams overall.
+* Keep the fix focused only on River and Stream animation and colour styling.
+* Do not change River or Stream generation logic.
+* Do not change non-water environment rendering.
+
+Suggested CSS Direction
+
+* Use `animation-timing-function: linear`.
+* Ensure the `0%` and `100%` keyframes match cleanly.
+* If using `background-position`, move the background by a full repeat length so the loop tiles seamlessly.
+* Avoid keyframes where the final frame visually differs from the first frame.
+* Avoid abrupt opacity, scale, or position jumps.
+* Keep the animation subtle and readable.
+
+Out Of Scope
+
+* No River image assets.
+* No Stream image assets.
+* No new environment image mapping.
+* No changes to Field, Hills, Gravel, Mud, Woods, Forest, or Mountains.
+* No changes to environment variation numbers.
+* No changes to procedural board generation.
+* No changes to River or Stream placement rules.
+* No changes to water path rules.
+* No changes to fixed board areas.
+* No changes to feature areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No broad animation system.
+* No decorative board redesign.
+* No unrelated styling fixes.
+
+Suspected Cause
+
+* The animation keyframes may not start and end in visually matching states.
+* The background movement may not be travelling by a clean repeatable distance.
+* The animation timing may use easing rather than linear timing.
+* The current River and Stream colour values need small adjustment after seeing them in-game.
+
+Attempted Fixes
+
+* Reused the smoother Bug-007 overlay pattern, but removed the opacity swing and switched the animation timing to `linear` so the loop no longer eases into a visibly different end state.
+* Kept the background-position travel equal to one full repeat width so the `0%` and `100%` frames tile cleanly.
+* Adjusted the River base colour slightly paler and the Stream base colour slightly darker while keeping Rivers darker than Streams overall.
+
+Final Fix
+
+* River and Stream now animate with a linear background-position loop whose start and end states tile cleanly, removing the visible reset at the loop boundary.
+* River now uses a slightly paler blue base colour, and Stream now uses a slightly darker light-blue base colour so the two water types stay distinct while matching the requested balance better.
+
+Status Note
+
+* Fixed for the current water-animation and colour-adjustment slice.
+* `npm test -- --watchAll=false --runInBand` now runs in this environment, but the current full suite still has one unrelated failing assertion in `src/App.test.jsx` that expects every non-fixed square to have a non-null `environmentType`.
+
+Testing Required
+
+* Confirm River squares still render as blue water.
+* Confirm Stream squares still render as blue water.
+* Confirm River squares are slightly paler than before.
+* Confirm Stream squares are slightly darker than before.
+* Confirm Rivers and Streams remain visually distinct.
+* Confirm River animation uses a linear loop.
+* Confirm Stream animation uses a linear loop.
+* Confirm the animation loops without an obvious visual break.
+* Confirm the start and end of the animation are not noticeably visible.
+* Confirm the animation still looks smooth and wave-like.
+* Confirm the animation does not change square size.
+* Confirm the animation does not change board layout.
+* Confirm the board still renders as 31x31.
+* Confirm each square still renders as 30x30px.
+* Confirm the full board still renders as 930x930px.
+* Confirm non-water environment image squares still render correctly.
+* Confirm fixed areas still render correctly.
+* Confirm feature areas still render correctly.
+* Confirm player pieces still render correctly above water squares.
+* Confirm movement highlights still render correctly above water squares.
+* Confirm hover tooltips still work if present.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

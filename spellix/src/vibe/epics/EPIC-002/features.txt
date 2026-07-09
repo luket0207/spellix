@@ -1764,3 +1764,138 @@ Completion Note
 * The actual Mountains asset files are named `mountain-1.png` through `mountain-6.png`, so the image mapping keeps the `mountains` environment type while using the existing singular asset filenames.
 * River and Stream rendering were intentionally left unchanged in this feature, including their visible variation-number output from Feature-004.
 * Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.
+
+---
+
+Feature-006: Remove water variation numbers and add basic water animation
+
+Status
+
+* done
+
+Goal
+
+* Remove the visible variation numbers from River and Stream squares.
+* Add a basic water-like animation to River and Stream squares.
+* Keep River and Stream colours distinct.
+
+Scope
+
+* Update only River and Stream environment rendering.
+* Remove the visible variation number from River squares.
+* Remove the visible variation number from Stream squares.
+* Keep River and Stream `environmentVariation` values in board data if they already exist.
+* Add a simple water-like animation to both River and Stream squares.
+* The animation can be the same for Rivers and Streams.
+* Rivers should remain dark blue.
+* Streams should remain light blue.
+* Keep the animation basic and functional.
+* Do not add image assets for Rivers or Streams in this feature.
+* Do not change non-water environment image rendering.
+* Do not change procedural generation logic.
+* Use the existing River and Stream component folders.
+* Use the existing River and Stream CSS files.
+* Use `.jsx` for components that contain JSX.
+* Use `.css` for the water animation styles.
+
+Water Animation Rules
+
+* River and Stream squares should show a simple animated water effect.
+* The animation should be subtle enough that the board remains readable.
+* The animation should not change square size.
+* The animation should not affect board layout.
+* The animation should not affect movement highlighting.
+* The animation should not affect player piece positioning.
+* The animation should not affect hover tooltips.
+* The animation should work for both River and Stream components.
+* The River version should use a darker blue base colour.
+* The Stream version should use a lighter blue base colour.
+* Reuse the same animation pattern for both where practical.
+* Do not create a broader animation system.
+
+Expected Behaviour
+
+* River squares no longer display variation numbers.
+* Stream squares no longer display variation numbers.
+* River squares show a basic animated water effect.
+* Stream squares show a basic animated water effect.
+* River squares remain dark blue.
+* Stream squares remain light blue.
+* River and Stream squares remain 30x30px.
+* The full board remains 930x930px.
+* Non-water environment squares continue to render their images.
+* Fixed areas continue to render correctly.
+* Feature areas continue to render correctly.
+* Player pieces continue to render correctly above the board.
+* Movement highlights continue to render correctly.
+* Hover tooltips continue to work if present.
+
+Out Of Scope
+
+* No River images.
+* No Stream images.
+* No new water image assets.
+* No changes to Field, Hills, Gravel, Mud, Woods, Forest, or Mountains rendering.
+* No changes to environment image mapping.
+* No changes to variation number generation.
+* No changes to procedural board generation.
+* No changes to River or Stream placement rules.
+* No changes to water movement rules.
+* No changes to fixed board areas.
+* No changes to feature areas.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No save/load functionality.
+* No persistence.
+* No broad animation system.
+* No decorative board redesign.
+* No unrelated styling changes.
+
+Assumptions
+
+* River and Stream components already exist from EPIC-002 Feature-001 or related bug fixes.
+* River and Stream CSS files already exist and should be updated directly.
+* The visible variation numbers were only temporary debugging output.
+* The underlying `environmentVariation` value can remain in board data for now.
+* A simple CSS animation is enough for this feature.
+* The animation should be visual only and should not affect gameplay state.
+
+Stop Point
+
+* Stop once River and Stream squares no longer display variation numbers and both show a basic water-like animation while preserving their existing dark blue and light blue colours.
+
+Testing Checkpoints
+
+* Confirm River squares no longer display variation numbers.
+* Confirm Stream squares no longer display variation numbers.
+* Confirm River squares still render as dark blue.
+* Confirm Stream squares still render as light blue.
+* Confirm River squares show a basic water-like animation.
+* Confirm Stream squares show a basic water-like animation.
+* Confirm River and Stream animation does not change square size.
+* Confirm River and Stream animation does not change board layout.
+* Confirm the board still renders as 31x31.
+* Confirm each square still renders as 30x30px.
+* Confirm the full board still renders as 930x930px.
+* Confirm non-water environment image squares still render correctly.
+* Confirm fixed areas still render correctly.
+* Confirm feature areas still render correctly.
+* Confirm player pieces still render correctly.
+* Confirm movement highlights still render correctly.
+* Confirm hover tooltips still work if present.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Feature-006 now removes the temporary visible variation-number output from River and Stream squares while keeping their `environmentVariation` values in board data unchanged.
+* River and Stream now use small CSS-only animated stripe overlays inside their existing component wrappers so the water effect stays visual-only and does not affect layout, highlighting, or player markers.
+* Reuse check: reviewed the existing River and Stream environment components, their CSS files, the shared `BoardGrid` square rendering, and the existing environment render test; reused the current water component folders, renderer data flow, and test coverage path, and created no new feature files because the requested change fit the existing water-rendering structure.
+* Intentionally not changed in this slice:
+  * non-water environment image rendering
+  * board generation and environment placement rules
+  * `environmentVariation` assignment logic
+  * fixed-area or feature-area rendering
+  * movement and turn logic
+* Full Jest confirmation remains blocked by the existing unrelated `source-map-support` issue recorded in `testing.txt`.

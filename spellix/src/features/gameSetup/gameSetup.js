@@ -1,6 +1,41 @@
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
 export const PLAYER_COLOURS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+const SPELL_SLOT_COUNT = 6;
+const SPELL_SLOT_CAPACITY = 5;
+const STARTING_TOKEN_COUNTS = {
+  red: 5,
+  blue: 2,
+};
+
+function createInitialTokenBag(playerId) {
+  return Object.entries(STARTING_TOKEN_COUNTS).flatMap(([type, count]) =>
+    Array.from({ length: count }, (_, index) => ({
+      id: `${playerId}-${type}-${index + 1}`,
+      type,
+      committed: false,
+    }))
+  );
+}
+
+export function cloneTokenBag(tokenBag = []) {
+  return tokenBag.map((token) => ({ ...token }));
+}
+
+function createInitialSpellSlots() {
+  return Array.from({ length: SPELL_SLOT_COUNT }, (_, index) => ({
+    id: `slot-${index + 1}`,
+    maxTokens: SPELL_SLOT_CAPACITY,
+    tokens: [],
+  }));
+}
+
+export function cloneSpellSlots(spellSlots = []) {
+  return spellSlots.map((slot) => ({
+    ...slot,
+    tokens: slot.tokens.map((token) => ({ ...token })),
+  }));
+}
 
 export function clampPlayerCount(value) {
   const numericValue = Number(value);
@@ -13,10 +48,20 @@ export function clampPlayerCount(value) {
 }
 
 export function createPlayers(playerCount, existingPlayers = []) {
-  return Array.from({ length: playerCount }, (_, index) => ({
-    id: `player-${index + 1}`,
-    colour: existingPlayers[index]?.colour ?? PLAYER_COLOURS[index],
-  }));
+  return Array.from({ length: playerCount }, (_, index) => {
+    const playerId = `player-${index + 1}`;
+    const existingPlayer = existingPlayers[index];
+
+    return {
+      id: playerId,
+      colour: existingPlayer?.colour ?? PLAYER_COLOURS[index],
+      tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
+      spellSlots: existingPlayer
+        ? cloneSpellSlots(existingPlayer.spellSlots)
+        : createInitialSpellSlots(),
+      hasCommittedInitialSpells: existingPlayer?.hasCommittedInitialSpells ?? false,
+    };
+  });
 }
 
 export function createInitialGameSetup() {

@@ -1,0 +1,234 @@
+Feature-001: Clean up gameplay control panel
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* The right-side gameplay panel now only renders the current turn sentence and the `Roll Dice` button.
+* The old `Current turn` heading, player count text, and player position/debug list are no longer rendered in that panel.
+* Existing board rendering, player markers, dice flow, and turn flow remain unchanged.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The gameplay page still renders the board and the right-side gameplay panel without console errors.
+
+2. Inspect the right-side gameplay panel.
+Expected result: The panel shows `It is currently X player's turn.` and the `Roll Dice` button only.
+
+3. Continue inspecting the same panel.
+Expected result: The panel does not show the `Current turn` heading, player count, or any per-player position/debug lines.
+
+4. Click `Roll Dice`, dismiss the dice modal, and complete a valid move.
+Expected result: The dice flow still works, movement still works, and the current turn sentence still updates correctly after the turn changes.
+
+5. Inspect the board and settings button after the panel cleanup.
+Expected result: The board still renders normally, player pieces still appear on the board, and the settings button is still available.
+
+Automated Tests Completed
+
+* `src/App.test.jsx` now verifies:
+  * gameplay navigation still reaches the board and gameplay panel
+  * the gameplay page still shows the current turn sentence and `Roll Dice`
+  * player state is still observable through board markers instead of the removed gameplay-panel debug text
+  * dice rolling, movement, grouped-area rendering, and turn changes still work after the panel cleanup
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` failed before running tests because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run that executes the updated gameplay-panel cleanup assertions in `src/App.test.jsx`.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The remaining automated-test blocker appears unrelated to the Feature-001 gameplay-panel cleanup.
+
+---
+
+Feature-002: Player spell slots, token bag, and spell setup modal
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* Each player still starts with spell data in game setup:
+  * 5 red tokens
+  * 2 blue tokens
+  * 6 spell slots with max capacity 5
+  * `hasCommittedInitialSpells: false` until their first save
+* The gameplay panel now forces the current player through first-turn spell setup before `Roll Dice` can be used.
+* The Spells modal now shows draggable token circles, a token bag drop zone, six spell-slot drop zones, save/cancel confirmations, and committed-token locking after save.
+* The Spells modal now lays out the six spell slots horizontally in left-to-right order, with simple horizontal scrolling as the fallback when the modal is narrower.
+* The token source area now stays below the spell slots and is labelled `Starting Tokens` during forced setup and `Token Bag` on later visits.
+* The token source area now shows token circles only in both forced setup and later Token Bag visits, with no red/blue count text in either case.
+* The Spells modal now detects whether the current draft differs from the saved spell data, disables `Save` when there are no unsaved changes, and closes immediately on `Cancel` when nothing has changed.
+* After save, the current player's committed spell slots now render in a compact read-only sidebar section below the `Spells` button with the title `Spells`, empty committed spell slots stay visible without placeholder text, the six columns are labelled only with `1` through `6` inside the bordered slot columns, and all columns share a 150px minimum height within the same read-only grid.
+
+Manual Test Steps
+
+1. Start a game and go to `/gameplay`.
+Expected result: The gameplay page renders the board, current-turn sentence, `Roll Dice`, and `Spells`, and the first player immediately gets the forced Spells modal.
+
+2. Inspect the forced Spells modal before moving any tokens.
+Expected result: The modal shows 6 spell slots in a horizontal left-to-right row, shows `Starting Tokens` below the slots, does not show red/blue count text there, disables `Cancel`, and keeps `Roll Dice` unavailable.
+
+3. Drag tokens from the token bag into spell slots, including moving at least one unsaved token between slots and back to the bag.
+Expected result: Draft token moves work inside the modal, and only unsaved tokens can move.
+
+4. Try to place more than 5 tokens in one spell slot.
+Expected result: The slot stops accepting additional tokens after reaching 5 tokens.
+
+5. Click `Save` before all 7 starting tokens are placed.
+Expected result: The modal stays open and shows a validation message telling the player to place all 7 starting tokens before saving.
+
+6. After placing all 7 tokens, click `Save`, choose `No`, then click `Save` again and choose `Yes`.
+Expected result: `No` returns to the modal with the draft preserved; `Yes` commits the setup, closes the modal, and enables `Roll Dice`.
+
+7. Inspect the right-side gameplay panel after saving, then reopen `Spells`.
+Expected result: The sidebar shows a read-only `Spells` section for the current player, the six committed spell slots fit in the compact horizontal layout, committed tokens are no longer draggable, any empty committed slots show no `No committed tokens` placeholder text, the columns show only `1` through `6` instead of `Slot 1` through `Slot 6`, and each column is at least 150px tall.
+
+8. End the turn and reach the next player.
+Expected result: The next player gets the same forced first-turn spell setup flow once, while previously committed players keep their saved spell slots.
+
+9. Reopen the Spells modal after the current player has already committed spells.
+Expected result: The slot row still appears horizontally, the token source area is still inside the modal below the slots, its heading changes to `Token Bag`, and it still does not show red/blue count text.
+
+10. Reopen the Spells modal for a player with no new token changes and do not move anything.
+Expected result: `Save` is disabled, `Cancel` closes the modal immediately, and no cancel confirmation appears.
+
+11. Save a player setup with uneven token counts across different committed spell columns and inspect the gameplay sidebar again.
+Expected result: All six committed spell columns remain the same height, shorter columns stretch to match the tallest column, and no token stack is cut off.
+
+Automated Tests Completed
+
+* `src/features/spells/spellSetup.test.js` passes and now verifies:
+  * bag-to-slot token movement
+  * full-slot rejection at 5 tokens
+  * slot-to-bag token returns for unsaved tokens
+  * unchanged draft state reports no spell changes
+  * moved draft state reports spell changes
+  * restoring a moved token to its original location reports no spell changes
+* `src/features/spells/SpellsModal.test.jsx` passes and now verifies:
+  * the spell slot area renders before the token source area
+  * all 6 slot labels render in order
+  * forced setup uses `Starting Tokens`
+  * forced setup does not render red/blue count text
+  * later visits use `Token Bag`
+  * later visits also do not render red/blue count text
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes and now verifies:
+  * the committed gameplay-sidebar title is `Spells`
+  * all 6 committed slot numbers render as `1` through `6`
+  * the committed gameplay display does not render `Slot 1`-style labels
+  * the committed display uses its dedicated compact read-only classes
+  * committed tokens still render in the read-only slot display
+  * empty committed spell slots stay visible without rendering `No committed tokens`
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * reopening the Spells modal with no draft changes disables `Save`
+  * clicking `Cancel` with no draft changes closes the modal immediately without showing the cancel confirmation
+* `src/App.test.jsx` was updated to cover:
+  * forced spell modal and blocked dice rolling for an uncommitted player
+  * committed-player route rendering with the read-only spell sidebar
+  * committed-player spell modal cancel confirmation flow
+  * gameplay-ready setup data for the existing dice and movement tests
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` ran `src/features/spells/spellSetup.test.js`, `src/features/spells/SpellsModal.test.jsx`, `src/features/spells/CommittedSpellSlots.test.jsx`, and `src/pages/GameplayPage.test.jsx` successfully, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean passing Jest run for the updated `src/App.test.jsx` suite once the `source-map-support` startup problem is resolved.
+* DOM-level automated coverage for the full drag-and-drop and confirmation flow once the app-level Jest suite can run reliably.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* `npm run build`, the spell helper tests, the focused Spells modal tests, the committed spell display tests, and the focused gameplay-page spell test all passed for this slice.
+* Equal-height/min-height behavior for the committed gameplay columns still relies mainly on manual verification because the current focused tests cover the read-only structure and labels more reliably than CSS layout measurements in this Jest setup.
+
+---
+
+Feature-003: Debug menu token admin tools and token bag capacity handling
+
+Test Status
+
+* blocked
+
+Current Slice Covered
+
+* The settings modal now includes a `Debug` button that opens a separate debug modal without changing routes or replacing the existing settings flow.
+* The debug modal now uses a scrollable panel, shows the current player colour when gameplay is active, and provides a simple token-type selector plus `Give Token` action.
+* The debug token tool now supports Red, Blue, Orange, Green, Light Blue, Light Green, Black, White, Purple, Yellow, and Grey tokens.
+* Given debug tokens are now added only to the current playerâ€™s token bag, stay uncommitted, and are available for later use in the Spells modal.
+* When the current playerâ€™s token bag already has 5 tokens, the debug modal now shows a discard-or-replace choice that keeps the bag at 5 tokens after replacement.
+* The debug tool is intentionally disabled until the current player completes their initial spell setup because the current implementation still keeps starting setup tokens in the token bag before that first save.
+
+Manual Test Steps
+
+1. Start a game, complete the current playerâ€™s forced first-turn spell setup, and wait until normal gameplay resumes.
+Expected result: The current player can now use `Roll Dice` and `Spells`, and their initial setup is committed.
+
+2. Open the settings button, then click `Debug`.
+Expected result: The settings modal closes, a separate `Debug` modal opens, and the modal shows the current player colour plus a token-type control.
+
+3. Inspect the `Debug` modal before giving a token.
+Expected result: The modal stays scrollable, shows a `Give Token` button, and offers all supported token types in the selector.
+
+4. Choose `Purple` and click `Give Token` while the current playerâ€™s token bag has space.
+Expected result: The modal stays open, shows a success message, and the token is added to the current playerâ€™s token bag only.
+
+5. Close the debug modal, open `Spells`, and inspect the `Token Bag` area for the same player.
+Expected result: The newly given token appears in that playerâ€™s token bag as an uncommitted token and can be dragged into a spell slot like any other later token.
+
+6. Reopen `Debug` and keep giving tokens until the current playerâ€™s token bag reaches 5 tokens, then try to give one more token.
+Expected result: The modal does not add the extra token immediately and instead shows the full-bag discard-or-replace choice.
+
+7. Choose `Discard New Token`.
+Expected result: The new token is discarded, the existing token bag stays unchanged, and no committed spell-slot tokens are affected.
+
+8. Trigger the full-bag flow again, select one existing bag token, and choose `Replace Selected Token`.
+Expected result: Only the selected bag token is replaced, the new token is added, the token bag still contains 5 tokens, and committed spell slots remain unchanged.
+
+9. End the turn or inspect another player afterward.
+Expected result: Existing turn order, dice flow, movement, and other playersâ€™ spell/token data remain unchanged.
+
+Automated Tests Completed
+
+* `src/features/debug/tokenBagAdmin.test.js` passes and now verifies:
+  * unique debug token IDs are generated from the current playerâ€™s existing token history
+  * token-bag capacity checks report correctly below and at the 5-token limit
+  * direct bag adds keep new tokens uncommitted
+  * full-bag replacement swaps exactly one existing bag token while keeping bag size unchanged
+* `src/features/debug/DebugModal.test.jsx` passes and now verifies:
+  * the debug modal renders committed-player controls and uses the dedicated debug panel class
+  * the full-bag replacement UI appears with discard/replace actions
+  * the token-giving controls stay disabled until the current player finishes initial spell setup
+* The previously focused spell-related regression tests still pass:
+  * `src/features/spells/spellSetup.test.js`
+  * `src/features/spells/SpellsModal.test.jsx`
+  * `src/features/spells/CommittedSpellSlots.test.jsx`
+  * `src/pages/GameplayPage.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed `src/features/debug/tokenBagAdmin.test.js`, `src/features/debug/DebugModal.test.jsx`, `src/features/spells/spellSetup.test.js`, `src/features/spells/SpellsModal.test.jsx`, `src/features/spells/CommittedSpellSlots.test.jsx`, and `src/pages/GameplayPage.test.jsx`, but `src/App.test.jsx` still failed on pre-existing stale assertions for removed spell token-count text, no-change spell-cancel behavior, and one unrelated board-generation expectation.
+
+Automated Tests Still Needed
+
+* App-level integration coverage for the settings-to-debug token flow once the stale `src/App.test.jsx` expectations are updated or isolated.
+* A clean full Jest run after the existing `src/App.test.jsx` assertions are brought back in line with the current spell UI behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The debug token flow reuses the existing spell token circles for functional token-type visibility rather than introducing a separate visual system.

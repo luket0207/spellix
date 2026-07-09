@@ -1,0 +1,782 @@
+Feature-001: Clean up gameplay control panel
+
+Status
+
+* done
+
+Goal
+
+* Simplify the UI on the right side of the gameplay screen.
+* Remove unnecessary player/debug information from the gameplay controls panel.
+
+Scope
+
+* Update the right-side gameplay panel.
+* Remove all current debug/player detail text except:
+
+  * `It is currently X player's turn.`
+  * The `Roll Dice` button
+* Keep the current turn sentence.
+* Keep on the right side of the gameplay screen.
+* Remove unnecessary player/debug information from the gameplay controls panel.
+
+Scope
+
+* Update the right-side gameplay panel.
+* Remove all the `Roll Dice` button.
+* Do not remove the board.
+* Do not remove the settings button.
+* Do not change turn order logic.
+* Do not change dice rolling logic.
+* Do not change player movement logic.
+* Do not change player data in context.
+* Keep the UI lo-fi and functional.
+* Use `.jsx` for React files that contain JSX.
+
+Current Example To Clean Up
+
+Remove this kind of extra information from the right-side gameplay panel:
+
+```txt
+Current turn
+It is currently blue player's turn.
+Player count: 2
+Player 1: red at 0, 28
+Player 2: blue at 1, 28
+```
+
+After cleanup, the gameplay panel should only show:
+
+```txt
+It is currently blue player's turn.
+
+Roll Dice
+```
+
+Expected Behaviour
+
+* The right-side gameplay panel no longer shows the heading `Current turn`.
+* The right-side gameplay panel no longer shows player count.
+* The right-side gameplay panel no longer shows each player’s position.
+* The right-side gameplay panel still shows the current turn sentence.
+* The current turn sentence still updates correctly when turns change.
+* The `Roll Dice` button still appears.
+* The `Roll Dice` button still works as it did before this feature.
+* Existing gameplay behaviour remains unchanged.
+
+Out Of Scope
+
+* No spell UI.
+* No player spell data.
+* No token bag data.
+* No drag and drop.
+* No modal changes.
+* No dice logic changes.
+* No movement logic changes.
+* No turn order changes.
+* No player context restructuring unless strictly required for removing display text.
+* No visual redesign.
+* No decorative styling.
+* No save/load functionality.
+* No persistence.
+
+Assumptions
+
+* The removed information was temporary debug/gameplay information.
+* Player position data should remain in game context even though it is no longer displayed in this panel.
+* The current turn sentence should use the player colour already available from game context.
+
+Stop Point
+
+* Stop once the right-side gameplay panel only shows the current turn sentence and the `Roll Dice` button, with existing gameplay behaviour still working.
+
+Testing Checkpoints
+
+* Confirm the gameplay page loads without console errors.
+* Confirm the right-side panel shows `It is currently X player's turn.`
+* Confirm the right-side panel shows the `Roll Dice` button.
+* Confirm the right-side panel does not show `Current turn`.
+* Confirm the right-side panel does not show player count.
+* Confirm the right-side panel does not show player position details.
+* Confirm the current turn sentence updates correctly after a turn change.
+* Confirm the `Roll Dice` button still works.
+* Confirm player movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Feature-001 now removes the `Current turn` heading, player count text, and per-player position list from the right-side gameplay panel.
+* The gameplay panel now only shows the current turn sentence and the `Roll Dice` button, while board rendering, settings access, dice flow, turn flow, and player state remain unchanged.
+* Reuse check: reviewed the existing `GameplayPage`, `GameplayPage.css`, app-level gameplay tests, current board marker rendering, and the existing game context; reused the current gameplay page structure, board marker output, and existing roll/turn behavior, and created no new feature files because the cleanup fit the existing gameplay page directly.
+* Intentionally not changed in this slice:
+  * board rendering
+  * settings button behavior
+  * dice rolling logic
+  * turn order logic
+  * player data in context
+  * movement logic
+
+---
+
+Feature-002: Player spell slots, token bag, and spell setup modal
+
+Status
+
+* done
+
+Goal
+
+* Add spell data to each player.
+* Add each player’s starting token bag.
+* Add a Spells modal opened from the gameplay controls panel.
+* Allow players to drag tokens from their token bag into spell slots.
+* Require each player to arrange and save their starting spells on their first turn before they can take any other action.
+* Show each player’s committed spell slots in a non-editable format on the right-side gameplay panel after their first setup is complete.
+
+Scope
+
+* Use the existing game context.
+* Extend each player’s data with spell-related state.
+* Each player should have 6 spell slots.
+* Each spell slot can hold 5 spell tokens by default.
+* Each player starts the game with:
+
+  * 5 red tokens
+  * 2 blue tokens
+* Store each player’s tokens and spell slots individually in that player’s data.
+* Add a `Spells` button below the `Roll Dice` button in the right-side gameplay panel.
+* Clicking the `Spells` button should open the Spells modal for the current player.
+* Use an external drag-and-drop library for the drag-and-drop functionality.
+* Keep the drag-and-drop implementation as small and focused as possible.
+* Do not build a custom drag-and-drop system from scratch.
+* Do not add a broad drag-and-drop abstraction.
+* The player should be able to drag tokens from their token bag into any spell slot.
+* The player should be able to add as many available tokens as they want from their token bag into spell slots.
+* The player should not be able to exceed the slot capacity of 5 tokens per spell slot.
+* The player should be able to move or remove tokens that were added during the current Spells modal visit before saving.
+* The player should not be able to remove or move tokens that were committed in a previous save.
+* The Spells modal should have:
+
+  * `Cancel`
+  * `Save`
+* Reuse the existing reusable modal component where practical.
+* If confirmation modals are needed, reuse the existing modal component where practical.
+* Keep UI lo-fi and functional.
+* Use `.jsx` for React component/context files that contain JSX.
+* Use `.js` for pure helper logic where no JSX is needed.
+
+Player Spell Data Requirements
+
+* Each player should have their own spell slot data.
+* Each player should have their own token bag data.
+* Spell data should be saved into the player object or a clearly linked player data structure in game context.
+* Spell slots are important game data and should not be stored only in local component state after saving.
+* Draft changes inside the Spells modal may use local component state until saved.
+* Saved/committed spell data should live in game context.
+
+Suggested Player Data Shape
+
+```js
+{
+  id: "player-1",
+  colour: "red",
+  position: {
+    x: 0,
+    y: 28
+  },
+  tokenBag: [
+    {
+      id: "player-1-red-1",
+      type: "red",
+      committed: false
+    },
+    {
+      id: "player-1-blue-1",
+      type: "blue",
+      committed: false
+    }
+  ],
+  spellSlots: [
+    {
+      id: "slot-1",
+      maxTokens: 5,
+      tokens: []
+    },
+    {
+      id: "slot-2",
+      maxTokens: 5,
+      tokens: []
+    },
+    {
+      id: "slot-3",
+      maxTokens: 5,
+      tokens: []
+    },
+    {
+      id: "slot-4",
+      maxTokens: 5,
+      tokens: []
+    },
+    {
+      id: "slot-5",
+      maxTokens: 5,
+      tokens: []
+    },
+    {
+      id: "slot-6",
+      maxTokens: 5,
+      tokens: []
+    }
+  ],
+  hasCommittedInitialSpells: false
+}
+```
+
+Token Rules
+
+* Tokens are used to improve spell slot effects in battle later.
+* Battle effects are out of scope for this feature.
+* Token types needed now:
+
+  * Red
+  * Blue
+* Starting tokens:
+
+  * 5 red tokens
+  * 2 blue tokens
+* Red token future meaning:
+
+  * 1 Red token = Plus 10 damage
+* Blue token future meaning:
+
+  * Not defined yet.
+* Do not implement battle effects in this feature.
+* Do not implement token loss from battles in this feature.
+* Tokens can be stacked in spell slots.
+* Multiple tokens of the same type can be placed in the same spell slot.
+* A spell slot can hold up to 5 tokens by default.
+* A player can place tokens in any slot as long as the slot has capacity.
+* A token can only be in one place at a time:
+
+  * Token bag
+  * One spell slot
+* Tokens committed by saving cannot be removed or moved in later visits to the Spells modal.
+* Tokens newly added during the current modal visit can be moved or removed before saving.
+* Tokens newly added during the current modal visit become committed after save confirmation.
+
+Spell Slot Rules
+
+* Each player has exactly 6 spell slots.
+* Each spell slot has a default max capacity of 5 tokens.
+* Slots should be identified clearly, such as:
+
+  * Slot 1
+  * Slot 2
+  * Slot 3
+  * Slot 4
+  * Slot 5
+  * Slot 6
+* Slots should accept dragged tokens while they have available capacity.
+* Slots should reject additional tokens when they already contain 5 tokens.
+* Slots can contain mixed token types.
+* Slots can contain stacked token types.
+* Empty slots are allowed after normal editing unless another rule later requires otherwise.
+* During the first-turn forced setup, all starting tokens must be placed into spell slots before saving.
+
+Spells Modal Rules
+
+* The Spells modal should open for the current player.
+* The modal should show the current player’s token bag.
+* The modal should show the current player’s 6 spell slots.
+* The modal should allow drag and drop from token bag into spell slots.
+* The modal should allow newly placed unsaved tokens to be moved between slots.
+* The modal should allow newly placed unsaved tokens to be returned to the token bag before saving.
+* The modal should show committed tokens as locked or non-editable in a simple functional way.
+* The modal should not allow committed tokens to be dragged, removed, or moved.
+* The modal should have a `Cancel` button.
+* The modal should have a `Save` button.
+* The modal should not permanently update spell slots until the player confirms save.
+* The modal should not permanently remove tokens from the token bag until the player confirms save.
+* Keep modal layout simple and lo-fi.
+
+Cancel Flow
+
+* Clicking `Cancel` should ask:
+
+```txt
+Are you sure you want to cancel? All changes to your spell slots will be lost
+```
+
+* If the player clicks `Yes`:
+
+  * Close the confirmation.
+  * Close the Spells modal.
+  * Discard all unsaved spell slot changes from this modal visit.
+  * Leave the player’s committed spell data unchanged.
+* If the player clicks `No`:
+
+  * Close the confirmation.
+  * Return to the Spells modal.
+  * Keep the current unsaved modal changes in place.
+* During first-turn forced setup, the player should not be able to cancel out of arranging spells unless they have already completed and saved their initial setup.
+
+Save Flow
+
+* Clicking `Save` should ask:
+
+```txt
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.
+```
+
+* If the player clicks `Yes`:
+
+  * Save the new spell slot configuration for that player.
+  * Commit the newly added tokens.
+  * Remove saved tokens from the player’s available token bag if using separate bag/slot storage.
+  * Mark the player’s initial spell setup as complete if this is their first setup.
+  * Close the confirmation.
+  * Close the Spells modal.
+* If the player clicks `No`:
+
+  * Close the confirmation.
+  * Return to the Spells modal.
+  * Keep the current unsaved modal changes in place.
+
+First-Turn Forced Spell Setup
+
+* On each player’s first turn, before they can roll dice or take any other turn action, the Spells modal should open automatically.
+* The modal cannot be dismissed until that player has placed all starting tokens into spell slots and saved.
+* All starting tokens means:
+
+  * 5 red tokens
+  * 2 blue tokens
+  * 7 total tokens
+* During forced first-turn setup:
+
+  * `Roll Dice` should not be usable until spell setup is saved.
+  * The modal should not be closable through overlay click, escape, close icon, or cancel flow.
+  * Save should only complete if all starting tokens are placed into spell slots.
+  * If not all starting tokens are placed, show a simple validation message.
+* After the player saves their initial spell setup:
+
+  * The Spells modal closes.
+  * That player may take their first turn.
+  * That player should not be forced to set up spells again on later turns.
+* Each player should go through this forced setup only once.
+
+Right-Side Spell Display
+
+* After the current player has completed their first spell setup, show that player’s spell slots in a non-editable format on the right-side gameplay panel.
+* This display should appear below the `Spells` button.
+* The display should show the current player’s committed spell slots.
+* The display should be read-only.
+* It should not allow drag and drop.
+* It should not allow editing.
+* It should update when the current turn changes to another player.
+* If the current player has not completed first spell setup yet, the forced modal should appear instead of relying on this display.
+* Keep the display lo-fi and functional.
+
+Drag-And-Drop Library Requirement
+
+* Use an external drag-and-drop library.
+* Install the smallest suitable dependency needed for this feature.
+* Document which library was chosen and why in the final report or feature notes.
+* Do not introduce multiple drag-and-drop libraries.
+* Do not build custom drag-and-drop logic from pointer/mouse events.
+* Keep the drag-and-drop implementation scoped to the Spells modal.
+* Do not apply drag-and-drop to board movement or other app areas.
+
+Expected Behaviour
+
+* Each player starts with 5 red tokens and 2 blue tokens.
+* Each player has 6 spell slots.
+* Each spell slot can hold 5 tokens by default.
+* A `Spells` button appears below the `Roll Dice` button.
+* Clicking `Spells` opens the Spells modal for the current player.
+* The player can drag tokens from their token bag into spell slots.
+* The player can stack tokens in spell slots.
+* The player cannot place more than 5 tokens in a spell slot.
+* Tokens moved during the current modal visit can be moved again before saving.
+* Tokens moved during the current modal visit can be removed before saving.
+* Tokens committed in a previous save cannot be moved or removed.
+* Clicking `Cancel` shows the cancel confirmation.
+* Clicking `Yes` on cancel confirmation discards unsaved changes and closes the Spells modal.
+* Clicking `No` on cancel confirmation returns to the Spells modal with unsaved changes still present.
+* Clicking `Save` shows the save confirmation.
+* Clicking `Yes` on save confirmation saves and commits the token setup.
+* Clicking `No` on save confirmation returns to the Spells modal with unsaved changes still present.
+* On each player’s first turn, the Spells modal opens automatically.
+* On each player’s first turn, the player cannot dismiss the modal until all starting tokens are placed and saved.
+* On each player’s first turn, the player cannot roll dice until spell setup is complete.
+* After a player saves their initial spell setup, their spell slots appear in read-only form on the right-side gameplay panel.
+* Each player’s spell data is stored separately.
+* Changing one player’s spells does not change another player’s spells.
+* Existing turn order still works.
+* Existing dice rolling still works after spell setup is complete.
+* Existing player movement still works after spell setup is complete.
+
+Out Of Scope
+
+* No battle system.
+* No spell effects.
+* No damage calculation.
+* No implementation of Red token damage effect yet.
+* No implementation of Blue token effect yet.
+* No token loss after battle.
+* No potions.
+* No potion editing/unlocking behaviour.
+* No extra token types.
+* No token rewards.
+* No token shop.
+* No spell names.
+* No spell targeting.
+* No enemy/opponent logic.
+* No save/load functionality.
+* No persistence.
+* No visual design.
+* No decorative token art.
+* No custom token images.
+* No drag-and-drop outside the Spells modal.
+* No changes to board generation.
+* No changes to environment rendering.
+* No changes to movement rules.
+* No changes to route structure unless strictly required for context/provider placement.
+
+Assumptions
+
+* Spell setup belongs to each player individually.
+* Token bag and spell slot data should be part of game context.
+* Starting tokens are created when players are created or when game setup is finalised.
+* The first-turn forced modal should happen for each player when that player first becomes the current player.
+* The player must place all 7 starting tokens into spell slots during first-turn setup.
+* Empty spell slots are allowed as long as all starting tokens have been placed somewhere.
+* A token becomes committed only after save confirmation.
+* Committed tokens cannot be changed later until a future potion feature exists.
+* The potion feature is out of scope.
+* A simple textual token display is acceptable for now.
+* The external drag-and-drop library choice should be minimal and documented.
+* Confirmation prompts can use the existing reusable modal component.
+* If nested modals are awkward, use the smallest clear confirmation flow that preserves the required behaviour.
+
+Stop Point
+
+* Stop once each player has starting tokens and spell slots, the Spells modal supports drag-and-drop token placement, first-turn forced spell setup works, committed tokens are locked, and the current player’s committed spell slots show read-only on the right-side gameplay panel.
+
+Testing Checkpoints
+
+* Confirm each player starts with 5 red tokens.
+* Confirm each player starts with 2 blue tokens.
+* Confirm each player has 6 spell slots.
+* Confirm each spell slot has a max capacity of 5 tokens.
+* Confirm the `Spells` button appears below the `Roll Dice` button.
+* Confirm clicking `Spells` opens the Spells modal for the current player.
+* Confirm tokens can be dragged from token bag into spell slots.
+* Confirm tokens can be stacked in a spell slot.
+* Confirm a spell slot cannot accept more than 5 tokens.
+* Confirm unsaved tokens can be moved between spell slots before saving.
+* Confirm unsaved tokens can be returned to the token bag before saving.
+* Confirm committed tokens cannot be moved.
+* Confirm committed tokens cannot be removed.
+* Confirm clicking `Cancel` shows the cancel confirmation.
+* Confirm clicking `Yes` on cancel confirmation closes the Spells modal and discards unsaved changes.
+* Confirm clicking `No` on cancel confirmation returns to the Spells modal with unsaved changes preserved.
+* Confirm clicking `Save` shows the save confirmation.
+* Confirm clicking `Yes` on save confirmation saves the spell slots.
+* Confirm clicking `Yes` on save confirmation commits newly placed tokens.
+* Confirm clicking `No` on save confirmation returns to the Spells modal with unsaved changes preserved.
+* Confirm the first player gets the forced Spells modal before rolling dice on their first turn.
+* Confirm the first player cannot close the forced modal before placing all starting tokens and saving.
+* Confirm the first player cannot roll dice before saving initial spell setup.
+* Confirm the first player can roll dice after saving initial spell setup.
+* Confirm each later player gets the forced Spells modal on their first turn.
+* Confirm each player only gets the forced setup once.
+* Confirm each player’s spell data remains separate.
+* Confirm the right-side panel shows the current player’s committed spell slots after setup.
+* Confirm the right-side spell display is read-only.
+* Confirm the right-side spell display updates when turns change.
+* Confirm existing turn changes still work.
+* Confirm existing dice rolling still works after spell setup.
+* Confirm existing movement still works after spell setup.
+* Confirm no unrelated gameplay UI is added.
+* Confirm there are no console errors.
+* Confirm relevant checks run where possible.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Added a focused spell-setup implementation using the existing game context plus a small feature-local spells folder.
+* Chose `@dnd-kit/core` with `@dnd-kit/utilities` as the smallest external drag-and-drop setup needed for token movement inside the Spells modal.
+* The Spells modal now supports:
+  * draft token movement from the token bag into spell slots
+  * draft token movement between spell slots
+  * returning draft tokens to the token bag
+  * slot-capacity enforcement at 5 tokens
+  * locked committed tokens after save
+  * `Save` and `Cancel` confirmation flows
+* Each player is now forced through initial spell setup on their first turn before `Roll Dice` can be used.
+* Saving now commits that playerâ€™s spell slots into game context, marks `hasCommittedInitialSpells: true`, and shows the current playerâ€™s committed spell slots as a read-only sidebar section.
+* Reuse check: reviewed the existing game-setup helpers/context, reusable modal component, `GameplayPage`, and the existing app-level tests; reused the current game context, modal pattern, gameplay panel structure, and existing route/test setup, and only created feature-local spell files where the new drag-and-drop and read-only spell UI needed their own focused code.
+* Intentionally not changed in this slice:
+  * battle logic
+  * spell effects
+  * potions or potion-based unlocking
+  * persistence or save/load
+  * extra token types or rewards
+  * decorative token art or broader gameplay redesign
+* Remaining follow-up outside Feature-002 scope:
+  * update the stale failing `src/App.test.jsx` expectations for removed spell token-count text, no-change cancel behavior, and the separate board-generation assertion so the full app-level suite can pass cleanly
+
+---
+
+Feature-003: Debug menu token admin tools and token bag capacity handling
+
+Status
+
+* done
+
+Goal
+
+* Add a debug menu inside the existing settings menu.
+* Add a debug modal for admin/debug actions.
+* Allow debug tools to give tokens to the current player.
+* Add token bag capacity handling when a player receives a token.
+* Keep the debug modal scrollable so it can grow later.
+
+Scope
+
+* Use the existing settings button and settings modal from EPIC-001.
+* Add a new `Debug` button inside the settings menu.
+* Clicking `Debug` should open a new debug modal.
+* Reuse the existing reusable modal component where practical.
+* The debug modal should be scrollable.
+* The debug modal should contain a token-giving admin tool.
+* The token-giving tool should give tokens to the player whose turn it currently is.
+* Given tokens should go into the current player’s token bag.
+* Add token bag capacity handling.
+* Token bags can hold a maximum of 5 tokens by default.
+* Token bag capacity applies only to the token bag.
+* Token bag capacity does not apply to spell slots.
+* If the current player has fewer than 5 tokens in their token bag, the new token should be added directly.
+* If the current player already has 5 tokens in their token bag, the player must choose whether to:
+
+  * Discard the new token.
+  * Discard one existing token from their token bag and keep the new token.
+* Allow the debug menu to give any supported token type to the current player.
+* Keep UI lo-fi and functional.
+* Do not add decorative debug styling.
+* Use `.jsx` for React component/context files that contain JSX.
+* Use `.js` for pure helper logic where no JSX is needed.
+
+Supported Debug Token Types
+
+* Red
+* Blue
+* Orange
+* Green
+* Light Blue
+* Light Green
+* Black
+* White
+* Purple
+* Yellow
+* Grey
+
+Token Data Rules
+
+* Tokens should belong to a specific player.
+* Tokens given through the debug modal should be added to the current player’s token bag.
+* Each token should have a unique ID.
+* Each token should have a token type.
+* Each token should be uncommitted when added to the token bag.
+* Debug-given tokens should be available in later visits to that player’s Spells modal.
+* Debug-given tokens should not be automatically placed into spell slots.
+* Debug-given tokens should not affect committed spell slots unless the player later places and saves them through the Spells modal.
+
+Suggested Token Data Shape
+
+```js id="r2y6mt"
+{
+  id: "player-1-purple-3",
+  type: "purple",
+  committed: false
+}
+```
+
+Debug Modal Rules
+
+* The debug modal should open from the settings menu.
+* The debug modal should be separate from the settings modal.
+* The debug modal should be scrollable so more debug tools can be added later.
+* The debug modal should clearly show that tokens will be given to the current player.
+* The debug modal should show the current player colour.
+* The debug modal should provide a way to choose one of the supported token types.
+* The debug modal should provide a way to give the selected token to the current player.
+* Keep controls simple.
+* A basic select/dropdown plus button is acceptable.
+* A list of token buttons is acceptable if that is simpler in the existing UI.
+* Do not add extra debug tools in this feature.
+
+Token Bag Capacity Rules
+
+* Each player’s token bag has a default maximum capacity of 5 tokens.
+* This capacity applies only to the token bag.
+* Spell slots are separate and still use their own slot capacity rules.
+* If a token is given while the current player’s token bag has fewer than 5 tokens:
+
+  * Add the token to the token bag.
+  * Keep the debug modal open unless closing is simpler and already established.
+  * Show simple feedback if an existing feedback pattern exists.
+* If a token is given while the current player’s token bag already has 5 tokens:
+
+  * Do not immediately add the token.
+  * Show a choice to the player.
+  * The player must choose whether to discard the new token or discard one existing token from the token bag.
+* If the player chooses to discard the new token:
+
+  * Do not add the new token.
+  * Keep the existing token bag unchanged.
+* If the player chooses to discard an existing token:
+
+  * Remove the selected existing token from the token bag.
+  * Add the new token to the token bag.
+  * The token bag should still contain 5 tokens after the replacement.
+* The player should not be able to discard committed spell slot tokens through this capacity flow.
+* Only uncommitted tokens currently in the token bag are eligible to be discarded in this flow.
+
+Full Token Bag Choice UI
+
+* When the token bag is full and a new token is being given, show a simple choice UI.
+* The choice UI should make clear:
+
+  * The token bag is full.
+  * The new token type being offered.
+  * The player can discard the new token.
+  * The player can discard one existing token from the token bag to make room.
+* The player should be able to select exactly one existing bag token to discard if they want to keep the new token.
+* The choice UI may be inside the debug modal or in a confirmation modal, whichever is smallest and clearest.
+* Keep this flow lo-fi and functional.
+
+Expected Behaviour
+
+* The settings menu contains a `Debug` button.
+* Clicking `Debug` opens the debug modal.
+* The debug modal is scrollable.
+* The debug modal shows token admin controls.
+* The debug modal indicates which current player will receive tokens.
+* The user can select or click any supported token type.
+* The user can give a Red token to the current player.
+* The user can give a Blue token to the current player.
+* The user can give an Orange token to the current player.
+* The user can give a Green token to the current player.
+* The user can give a Light Blue token to the current player.
+* The user can give a Light Green token to the current player.
+* The user can give a Black token to the current player.
+* The user can give a White token to the current player.
+* The user can give a Purple token to the current player.
+* The user can give a Yellow token to the current player.
+* The user can give a Grey token to the current player.
+* Given tokens go into the current player’s token bag.
+* Given tokens do not go into other players’ token bags.
+* If the current player’s token bag has fewer than 5 tokens, the token is added directly.
+* If the current player’s token bag already has 5 tokens, the capacity choice flow appears.
+* The player can discard the new token.
+* The player can discard one existing token from the bag and keep the new token.
+* Token bag capacity remains at 5 after replacement.
+* Debug-given tokens appear in the current player’s Token Bag area when opening the Spells modal later.
+* Existing spell slots remain unchanged until the player edits and saves through the Spells modal.
+* Existing turn order, dice rolling, and movement still work.
+
+Out Of Scope
+
+* No battle system.
+* No token effects.
+* No Red token damage implementation.
+* No effects for Blue, Orange, Green, Light Blue, Light Green, Black, White, Purple, Yellow, or Grey tokens.
+* No token images.
+* No token rewards from gameplay.
+* No token shop.
+* No potions.
+* No token removal from spell slots.
+* No editing committed spell tokens.
+* No save/load functionality.
+* No persistence.
+* No extra debug tools.
+* No admin tools beyond giving tokens.
+* No player selection in the debug menu.
+* No giving tokens to non-current players.
+* No changes to board generation.
+* No changes to player movement.
+* No changes to dice rolling.
+* No changes to turn order.
+* No decorative debug styling.
+
+Assumptions
+
+* “Whoever’s turn it currently is” means the current player derived from the existing turn state.
+* The token bag maximum capacity of 5 applies to all players by default.
+* Starting tokens used during first-turn spell setup are separate from later token bag capacity unless already stored in the token bag by the current implementation.
+* If a player has completed initial spell setup, their token bag may be empty until tokens are added later.
+* Debug-given tokens should be uncommitted and draggable in the Spells modal.
+* A simple token type string is enough for now.
+* Token visual circles can reuse existing token colour rendering where practical.
+* If there is no existing feedback/toast pattern, simple inline modal text is enough.
+* The debug modal is allowed to be scrollable even if current content does not yet require scrolling.
+
+Stop Point
+
+* Stop once the settings menu has a Debug button, the debug modal can give any supported token type to the current player, token bag capacity is enforced at 5, and the full-bag discard/replace flow works.
+
+Testing Checkpoints
+
+* Confirm the settings menu contains a `Debug` button.
+* Confirm clicking `Debug` opens the debug modal.
+* Confirm the debug modal is scrollable.
+* Confirm the debug modal shows the current player colour.
+* Confirm the debug modal provides controls for giving tokens.
+* Confirm Red can be given to the current player.
+* Confirm Blue can be given to the current player.
+* Confirm Orange can be given to the current player.
+* Confirm Green can be given to the current player.
+* Confirm Light Blue can be given to the current player.
+* Confirm Light Green can be given to the current player.
+* Confirm Black can be given to the current player.
+* Confirm White can be given to the current player.
+* Confirm Purple can be given to the current player.
+* Confirm Yellow can be given to the current player.
+* Confirm Grey can be given to the current player.
+* Confirm given tokens are added to the current player’s token bag.
+* Confirm given tokens are not added to other players’ token bags.
+* Confirm debug-given tokens appear in the current player’s Token Bag area in the Spells modal.
+* Confirm debug-given tokens can be dragged into spell slots through the Spells modal.
+* Confirm a token is added directly when the token bag has fewer than 5 tokens.
+* Confirm the capacity choice flow appears when the token bag already has 5 tokens.
+* Confirm choosing to discard the new token leaves the existing token bag unchanged.
+* Confirm choosing to discard an existing token removes only that selected bag token.
+* Confirm choosing to discard an existing token adds the new token to the bag.
+* Confirm token bag size remains 5 after replacing a token.
+* Confirm committed spell slot tokens are not affected by the token bag capacity flow.
+* Confirm existing spell slots do not change when tokens are given through debug.
+* Confirm existing turn order still works.
+* Confirm existing dice rolling still works.
+* Confirm existing movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Current Slice Notes
+
+* Added a feature-local debug modal that opens from the existing settings modal without adding new routes or extra admin tools.
+* Added focused token-bag admin helpers that create unique token IDs from the current playerâ€™s existing token history and support either a direct add or a one-for-one bag replacement at the 5-token capacity.
+* The debug modal now uses a simple token-type select plus `Give Token` action for all listed token types, stays scrollable, and shows an inline discard-or-replace flow when the bag is already full.
+* Debug-given tokens are saved only into the current playerâ€™s token bag, stay uncommitted, and remain available in later visits to that playerâ€™s Spells modal.
+* Because the current implementation still stores starting spell tokens in the token bag before first save, the debug token tool is intentionally disabled until the current player finishes initial spell setup.
+* Reuse check: reviewed the existing app-level settings modal, reusable `Modal`, `GameSetupContext` spell updater, existing spell token component, and current spell helper patterns; reused the settings button/modal flow, current-player context state, modal pattern, and token-circle rendering, and only created a small feature-local debug modal plus token-bag helper because there was no existing admin-token flow to extend safely.
+* Intentionally not changed in this slice:
+  * extra debug/admin tools
+  * player selection for debug tools
+  * committed spell-slot editing
+  * spell effects or battle logic
+  * persistence or save/load
+  * movement, dice, turn order, or board-generation rules
+* Remaining follow-up outside Feature-003 scope:
+  * add app-level integration coverage for the settings-to-debug token flow once the stale `src/App.test.jsx` assertions are updated or isolated

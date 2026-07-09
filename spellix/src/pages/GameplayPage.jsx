@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import Modal from '../components/Modal';
 import BoardGrid from '../features/gameBoard/BoardGrid';
 import { getHighlightedNodeIds, getMovementNodeIdFromCoordinates } from '../features/gameBoard/movement';
+import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
+import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
+import SpellsModal from '../features/spells/SpellsModal';
+import {
+  createCommittedSpellData,
+  hasDraftSpellChanges,
+  moveSpellTokenInDraft,
+} from '../features/spells/spellSetup';
 import './GameplayPage.css';
 
 function GameplayPage() {
@@ -13,11 +21,28 @@ function GameplayPage() {
     initializeBoard,
     initializeTurnOrder,
     setPlayerPosition,
+    updatePlayerSpells,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
+  const [draftSpellSlots, setDraftSpellSlots] = useState([]);
+  const [draftTokenBag, setDraftTokenBag] = useState([]);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState([]);
   const [showDiceModal, setShowDiceModal] = useState(false);
+  const [showSpellsModal, setShowSpellsModal] = useState(false);
+  const [showSpellCancelConfirmation, setShowSpellCancelConfirmation] = useState(false);
+  const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
+  const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [showTurnModal, setShowTurnModal] = useState(false);
+  const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
+  const hasUnsavedSpellChanges = Boolean(
+    currentPlayer &&
+      hasDraftSpellChanges({
+        draftSpellSlots,
+        draftTokenBag,
+        savedSpellSlots: currentPlayer.spellSlots,
+        savedTokenBag: currentPlayer.tokenBag,
+      })
+  );
 
   useEffect(() => {
     if (gameSetup.turnOrder.length === 0 && gameSetup.players.length > 0) {
@@ -31,8 +56,33 @@ function GameplayPage() {
     }
   }, [gameSetup.board, gameSetup.players.length, initializeBoard]);
 
+  useEffect(() => {
+    if (currentPlayer && isForcedSpellSetup) {
+      setShowSpellsModal(true);
+    }
+  }, [currentPlayer, isForcedSpellSetup]);
+
+  useEffect(() => {
+    if (!showSpellsModal || !currentPlayer) {
+      return;
+    }
+
+    setDraftTokenBag(cloneTokenBag(currentPlayer.tokenBag));
+    setDraftSpellSlots(cloneSpellSlots(currentPlayer.spellSlots));
+    setShowSpellCancelConfirmation(false);
+    setShowSpellSaveConfirmation(false);
+    setSpellValidationMessage('');
+  }, [currentPlayer, showSpellsModal]);
+
   const handleRollDice = () => {
-    if (!currentPlayer || showDiceModal || showTurnModal || currentDiceRoll) {
+    if (
+      !currentPlayer ||
+      !currentPlayer.hasCommittedInitialSpells ||
+      showDiceModal ||
+      showSpellsModal ||
+      showTurnModal ||
+      currentDiceRoll
+    ) {
       return;
     }
 
@@ -44,7 +94,7 @@ function GameplayPage() {
   };
 
   const handleSquareClick = (square) => {
-    if (!currentPlayer || showDiceModal || showTurnModal || currentDiceRoll === null) {
+    if (!currentPlayer || showDiceModal || showSpellsModal || showTurnModal || currentDiceRoll === null) {
       return;
     }
 
@@ -54,11 +104,81 @@ function GameplayPage() {
       return;
     }
 
+    const nextTurnIndex = (gameSetup.currentTurnIndex + 1) % gameSetup.turnOrder.length;
+    const nextPlayerId = gameSetup.turnOrder[nextTurnIndex];
+    const nextPlayer = gameSetup.players.find((player) => player.id === nextPlayerId) ?? null;
+
     setPlayerPosition(currentPlayer.id, { x: square.x, y: square.y });
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
     advanceTurn();
-    setShowTurnModal(true);
+    setShowTurnModal(Boolean(nextPlayer?.hasCommittedInitialSpells));
+  };
+
+  const handleSpellTokenDrop = (tokenId, destinationId) => {
+    const movementResult = moveSpellTokenInDraft({
+      destinationId,
+      spellSlots: draftSpellSlots,
+      tokenBag: draftTokenBag,
+      tokenId,
+    });
+
+    if (!movementResult.didMove) {
+      return;
+    }
+
+    setDraftTokenBag(movementResult.tokenBag);
+    setDraftSpellSlots(movementResult.spellSlots);
+    setSpellValidationMessage('');
+  };
+
+  const handleSpellCancelRequest = () => {
+    if (isForcedSpellSetup) {
+      return;
+    }
+
+    if (!hasUnsavedSpellChanges) {
+      setShowSpellsModal(false);
+      return;
+    }
+
+    setShowSpellCancelConfirmation(true);
+  };
+
+  const handleSpellSaveRequest = () => {
+    if (!currentPlayer || !hasUnsavedSpellChanges) {
+      return;
+    }
+
+    if (isForcedSpellSetup && draftTokenBag.length > 0) {
+      setSpellValidationMessage('Place all 7 starting tokens into spell slots before saving.');
+      return;
+    }
+
+    setShowSpellSaveConfirmation(true);
+  };
+
+  const handleConfirmSpellSave = () => {
+    if (!currentPlayer) {
+      return;
+    }
+
+    updatePlayerSpells(currentPlayer.id, {
+      ...createCommittedSpellData({
+        spellSlots: draftSpellSlots,
+        tokenBag: draftTokenBag,
+      }),
+      hasCommittedInitialSpells: true,
+    });
+    setShowSpellSaveConfirmation(false);
+    setShowSpellsModal(false);
+    setSpellValidationMessage('');
+  };
+
+  const handleConfirmSpellCancel = () => {
+    setShowSpellCancelConfirmation(false);
+    setShowSpellsModal(false);
+    setSpellValidationMessage('');
   };
 
   return (
@@ -74,33 +194,88 @@ function GameplayPage() {
       ) : null}
 
       <section aria-label="Gameplay panel" className="gameplay-sidebar">
-        <section>
-          <h2>Current turn</h2>
-          <p>
-            {currentPlayer
-              ? `It is currently ${currentPlayer.colour} player's turn.`
-              : 'Preparing turn order.'}
-          </p>
-        </section>
+        <p>
+          {currentPlayer
+            ? `It is currently ${currentPlayer.colour} player's turn.`
+            : 'Preparing turn order.'}
+        </p>
 
         <button
           type="button"
-          disabled={showDiceModal || showTurnModal || currentDiceRoll !== null}
+          disabled={
+            !currentPlayer?.hasCommittedInitialSpells ||
+            showDiceModal ||
+            showSpellsModal ||
+            showTurnModal ||
+            currentDiceRoll !== null
+          }
           onClick={handleRollDice}
         >
           Roll Dice
         </button>
 
-        <p>{`Player count: ${gameSetup.playerCount}`}</p>
-        <ul aria-label="Player setup">
-          {gameSetup.players.map((player, index) => (
-            <li key={player.id}>
-              {`Player ${index + 1}: ${player.colour}`}
-              {player.position ? ` at ${player.position.x}, ${player.position.y}` : ''}
-            </li>
-          ))}
-        </ul>
+        <button
+          disabled={!currentPlayer || showDiceModal || showSpellsModal || showTurnModal}
+          type="button"
+          onClick={() => setShowSpellsModal(true)}
+        >
+          Spells
+        </button>
+
+        {currentPlayer?.hasCommittedInitialSpells ? (
+          <CommittedSpellSlots spellSlots={currentPlayer.spellSlots} />
+        ) : null}
       </section>
+
+      <SpellsModal
+        currentPlayer={currentPlayer}
+        draftSpellSlots={draftSpellSlots}
+        draftTokenBag={draftTokenBag}
+        isForcedSetup={isForcedSpellSetup}
+        isOpen={showSpellsModal}
+        onCancel={handleSpellCancelRequest}
+        onSave={handleSpellSaveRequest}
+        isSaveDisabled={!hasUnsavedSpellChanges}
+        onTokenDrop={handleSpellTokenDrop}
+        validationMessage={spellValidationMessage}
+      />
+
+      <Modal
+        actions={
+          <>
+            <button type="button" onClick={handleConfirmSpellCancel}>
+              Yes
+            </button>
+            <button type="button" onClick={() => setShowSpellCancelConfirmation(false)}>
+              No
+            </button>
+          </>
+        }
+        ariaLabel="Cancel spells confirmation"
+        isOpen={showSpellCancelConfirmation}
+      >
+        <p>Are you sure you want to cancel? All changes to your spell slots will be lost</p>
+      </Modal>
+
+      <Modal
+        actions={
+          <>
+            <button type="button" onClick={handleConfirmSpellSave}>
+              Yes
+            </button>
+            <button type="button" onClick={() => setShowSpellSaveConfirmation(false)}>
+              No
+            </button>
+          </>
+        }
+        ariaLabel="Save spells confirmation"
+        isOpen={showSpellSaveConfirmation}
+      >
+        <p>
+          Are you sure you want to commit your tokens to these spell slots? This cannot be changed
+          without using potions once they are saved.
+        </p>
+      </Modal>
 
       <Modal
         actions={
