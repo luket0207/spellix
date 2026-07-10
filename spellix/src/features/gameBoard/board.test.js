@@ -7,6 +7,7 @@ import {
   balanceEasySectionWoodsCoverage,
   balanceHardSectionForestCoverage,
   createBoard,
+  getFirstStartAreaPosition,
 } from './board';
 
 const WATER_ENVIRONMENT_TYPES = ['stream', 'river'];
@@ -205,6 +206,12 @@ describe('board start area and protected field zone', () => {
     ]);
     expect(new Set(positionKeys.slice(0, 4)).size).toBe(4);
     expect(new Set(positionKeys).size).toBe(4);
+  });
+
+  test('returns the first start area square for respawn positioning', () => {
+    const board = createBoard(() => 0);
+
+    expect(getFirstStartAreaPosition(board)).toEqual({ x: 0, y: 29 });
   });
 
   test('generates 3 easy features and 3 hard features with the stricter spacing rules', () => {

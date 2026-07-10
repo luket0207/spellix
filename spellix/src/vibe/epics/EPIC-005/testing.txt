@@ -1,0 +1,404 @@
+Feature-001: Add Anywhere Mode debug movement tool
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The Debug modal now shows an `Anywhere Mode` control, a current-player-only scope note, and enabled/disabled status for the current player.
+* Enabling Anywhere Mode affects only the current player and leaves other players unchanged.
+* While Anywhere Mode is active, Gameplay highlights every valid board node except the current node and lets the player move far beyond normal dice range.
+* Anywhere Mode is consumed after the move and later turns return to normal movement rules.
+* Existing debug token tools, settings access, and normal non-Anywhere movement remain intact.
+
+Manual Test Steps
+
+1. Start gameplay, open Settings, then open Debug.
+Expected result: The Debug modal still opens normally and shows an `Anywhere Mode` control that says it applies to the current player only.
+
+2. Enable Anywhere Mode for the current player.
+Expected result: The Debug modal shows that Anywhere Mode is enabled for the current player, and other players are unaffected.
+
+3. Close Debug, roll movement for that player, dismiss the dice-result modal, and inspect the highlighted board.
+Expected result: Valid destinations across the board can be selected even far outside normal dice range, while the current square itself is not highlighted as a destination.
+
+4. Select a far destination square and complete the move.
+Expected result: The player moves to the selected square successfully, including across rivers or back onto the Start Area if chosen, and turn flow continues normally.
+
+5. Continue play until that same player gets another turn and roll again without re-enabling Anywhere Mode.
+Expected result: Anywhere Mode has been consumed, so the player returns to normal movement highlighting and range rules.
+
+6. Reopen Debug and use the existing token-giving tools.
+Expected result: Debug token tools still work as before.
+
+Automated Tests Completed
+
+* `src/features/debug/DebugModal.test.jsx` passes and now verifies:
+  * the Debug modal shows Anywhere Mode status and the current-player-only note
+  * the enable control is available when Anywhere Mode is off
+  * the enable control becomes disabled when Anywhere Mode is already on
+* `src/features/gameSetup/gameSetup.test.js` passes and now verifies:
+  * newly created players start with `anywhereMode: false`
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * Anywhere Mode destinations include every other valid board node, including river, stream, and grouped Start Area nodes
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * Gameplay uses Anywhere Mode destinations when the current player has Anywhere Mode
+  * Anywhere Mode is consumed after that player uses it to move
+  * later turns fall back to normal movement highlighting for that player
+* `src/AppSettingsButton.test.jsx` passes and now verifies:
+  * enabling Anywhere Mode from the Debug modal updates the current player's status inside the existing settings/debug flow
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/debug/DebugModal.test.jsx src/features/gameSetup/gameSetup.test.js src/features/gameBoard/movement.test.js src/pages/GameplayPage.test.jsx src/AppSettingsButton.test.jsx` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside Debug modal behavior, per-player state, and gameplay destination highlighting, and did not add extra debug tools or change normal movement rules for players without Anywhere Mode.
+
+---
+
+Feature-002: Add player health and reusable health bar component
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Players now start with per-player `currentHealth: 100` and `maxHealth: 100` values inside the existing game setup data.
+* Gameplay now shows the current player's health bar directly under the existing current-player piece image in the right-side panel.
+* The reusable `HealthBar` component clamps values safely, supports variable max health, and uses the required green/orange/red threshold colors.
+* The sidebar health bar updates automatically when the current turn changes.
+* Health is still not displayed on the board itself.
+
+Manual Test Steps
+
+1. Start a new game and reach the gameplay screen.
+Expected result: The current player's piece image still appears in the right-side panel, and a health bar showing `100 / 100` appears directly underneath it.
+
+2. End the current player's turn and continue until the next player becomes active.
+Expected result: The health bar updates with the new current player's health values and remains directly under that player's piece image.
+
+3. Continue playing through multiple turn changes.
+Expected result: Health values stay attached to the correct player and do not reset when turns change.
+
+4. Inspect the board/map during gameplay.
+Expected result: Player health is not shown on board pieces or board squares.
+
+5. Verify the health bar display itself.
+Expected result: The bar is continuous rather than segmented, uses CSS styling, and the fill width reflects the current health percentage.
+
+6. Manually exercise low-health and over/under-range values in dev/test data if needed.
+Expected result: Values above 20% show green, values at 20% and above 10% show orange, values at 10% or below show red, below-zero display clamps to `0`, and over-max fill does not exceed 100%.
+
+Automated Tests Completed
+
+* `src/components/health/HealthBar.test.jsx` passes and now verifies:
+  * the component shows current/max health text
+  * the fill width uses the correct percentage for variable max health
+  * the green/orange/red thresholds follow the required rules
+  * below-zero values clamp to `0`
+* `src/features/gameSetup/gameSetup.test.js` passes and now verifies:
+  * newly created players start with `currentHealth: 100` and `maxHealth: 100`
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * the current player's health bar renders under the existing sidebar piece image
+  * the displayed health updates when the current player changes turns
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/components/health/HealthBar.test.jsx src/features/gameSetup/gameSetup.test.js src/pages/GameplayPage.test.jsx` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This feature stayed focused on player health defaults, one reusable health bar component, and the existing gameplay sidebar only, without adding battle systems, damage controls, or board-level health display.
+
+---
+
+Feature-003: Add battle page, debug battle triggers, battle health testing, win flow, and lose respawn flow
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The Debug modal now includes Level 1, Level 2, Level 3, and Level 4 battle buttons for the current player.
+* Debug battle buttons now navigate to a new battle page that shows the battling player's piece image, health bar, and selected battle level.
+* The battle page now includes `Remove 5 health`, `Win`, and `Lose` debug buttons.
+* Winning now routes to a minimal reward page with a `Continue` button that returns to gameplay and advances the turn.
+* Losing now opens a modal with `Respawn`, and respawning restores full health, returns the player to the Start Area, returns to gameplay, and advances the turn.
+
+Manual Test Steps
+
+1. Start gameplay, open Settings, then open Debug.
+Expected result: The Debug modal still opens and now includes Level 1, Level 2, Level 3, and Level 4 battle buttons for the current player.
+
+2. Click each battle level button from the Debug modal on separate attempts.
+Expected result: The app navigates to the battle page each time, and the displayed battle level matches the selected button.
+
+3. On the battle page, inspect the player display.
+Expected result: The battling player's selected piece image is shown, the shared health bar is shown, and unnecessary labels such as `Player's health` are not added.
+
+4. Click `Remove 5 health` repeatedly.
+Expected result: Only the battling player's health decreases in 5-point steps, the displayed health never goes below `0`, and reaching `0` opens the lose modal.
+
+5. Click `Lose`, then click `Respawn`.
+Expected result: The lose modal appears with a `Respawn` button, the player returns to gameplay, the player is moved back to the Start Area, their health is restored to full, and the next player's turn begins.
+
+6. Start another debug battle and click `Win`, then click `Continue` on the reward page.
+Expected result: The app goes to the reward page, the page contains only the `Continue` button, and clicking it returns to gameplay and advances to the next player's turn without healing the player.
+
+7. Reopen Debug and reuse existing token and Anywhere Mode tools.
+Expected result: Existing debug token tools still work, Anywhere Mode still works, and normal gameplay movement still works outside battle.
+
+Automated Tests Completed
+
+* `src/features/debug/DebugModal.test.jsx` passes and now verifies:
+  * the Debug modal shows the new battle section and level buttons
+  * clicking a level button calls the selected battle level handler
+* `src/AppSettingsButton.test.jsx` passes and now verifies:
+  * starting a Level 3 debug battle from the existing settings/debug flow opens the battle page with the correct level, player piece image, and health bar
+* `src/pages/BattlePage.test.jsx` passes and now verifies:
+  * `Remove 5 health` updates player health in 5-point steps
+  * health clamps at `0` and triggers the lose modal
+  * `Respawn` restores full health, returns the player to the Start Area, clears battle state, and advances the turn
+  * `Win` goes to the reward page and `Continue` returns to gameplay on the next turn
+* `src/features/gameBoard/board.test.js` passes and now verifies:
+  * the new Start Area helper returns the first Start Area square used for respawn positioning
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/debug/DebugModal.test.jsx src/AppSettingsButton.test.jsx src/pages/BattlePage.test.jsx src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This feature stayed focused on temporary debug-triggered battle routing, player health mutation, reward/respawn turn flow, and safe Start Area respawn placement only, without implementing enemy systems, actual battle mechanics, or reward logic.
+
+---
+
+Feature-004: Add enemy data, enemy selection, and enemy display on battle page
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Enemy data now exists for all 20 enemies, including English names, Japanese names, image file names, levels, health, and six spell slots each.
+* Level-triggered debug battles now select a random enemy only from the chosen level.
+* The Debug modal now includes an enemy dropdown and a manual selected-enemy battle trigger.
+* The battle page now shows the selected enemy image, enemy health bar, and enemy spell slots alongside the existing player battle controls.
+* Enemy `Miss` slots render without tokens, and `Joined with X` slots now render as `J` only.
+
+Manual Test Steps
+
+1. Start gameplay, open Settings, then open Debug.
+Expected result: The Debug modal still opens, still keeps existing token and Anywhere Mode tools, and now includes an enemy dropdown plus `Start Selected Enemy Battle`.
+
+2. Use the Level 1, Level 2, Level 3, and Level 4 battle buttons on separate attempts.
+Expected result: Each battle opens for the current player, and the selected enemy belongs only to the requested level.
+
+3. Inspect the enemy dropdown in Debug.
+Expected result: All enemies are listed using English names, with level text shown, and Japanese names are not shown in the dropdown.
+
+4. Select a specific enemy in the dropdown and click `Start Selected Enemy Battle`.
+Expected result: The battle starts for the current player using exactly the selected enemy, and the battle level matches that enemy's level.
+
+5. Inspect the battle page enemy display.
+Expected result: The enemy image loads from `src/images/enemies`, the enemy health bar shows the enemy's starting health, and enemy spell slots appear using the existing committed spell-slot display.
+
+6. Inspect enemy spell-slot edge cases.
+Expected result: Duplicate enemy token types consolidate correctly, `Miss` slots show no tokens, and joined slots show `J` only for the current placeholder behavior.
+
+7. Use `Remove 5 health`, `Win`, `Lose`, `Continue`, and `Respawn` from battle flow.
+Expected result: Remove 5 health still affects only the player, win still goes to reward and back to gameplay on Continue, lose still shows Respawn, and respawn still restores player health, returns to Start Area, and advances the turn.
+
+Automated Tests Completed
+
+* `src/features/battle/enemies.test.js` passes and now verifies:
+  * all 20 enemies are defined with Japanese names, health, and six spell slots
+  * random selection returns only enemies from the requested level
+  * joined slots store `J` display state and `Miss` slots stay empty
+  * each level band contains five enemies
+* `src/features/debug/DebugModal.test.jsx` passes and now verifies:
+  * the Debug modal shows the enemy dropdown and manual enemy battle trigger
+  * changing the dropdown selection reports the selected enemy ID
+  * starting a selected-enemy battle calls the manual trigger handler
+* `src/AppSettingsButton.test.jsx` passes and now verifies:
+  * a level-triggered debug battle still opens battle flow with an enemy display
+  * selecting `Hellcrown Reaper` in the dropdown starts a manual Level 4 battle with the correct enemy image, health, and joined-slot display
+* `src/pages/BattlePage.test.jsx` passes and now verifies:
+  * the battle page shows enemy image, enemy health, and joined-slot `J` displays
+  * Japanese enemy names are not rendered on the page
+  * player-only damage, win, and respawn flows still work with enemy state present
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes and confirms the shared committed-slot display still works for player spell slots after the joined-slot support change
+* `src/features/gameBoard/board.test.js` still passes, confirming the respawn Start Area helper behavior remains intact
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/battle/enemies.test.js src/features/debug/DebugModal.test.jsx src/AppSettingsButton.test.jsx src/pages/BattlePage.test.jsx src/features/spells/CommittedSpellSlots.test.jsx src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This feature stayed focused on enemy data definition, level/random and manual enemy selection, battle-page enemy display, and read-only enemy spell presentation only, without implementing enemy damage, AI, joined-spell behavior, or broader battle systems.
+
+---
+
+Feature-005: Structure battle page with player and enemy facing each other
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The battle page now renders a left player panel and a right enemy panel while keeping the existing battle level, debug controls, player health, enemy health, and enemy spell display.
+* The player battle image is now flipped only on the battle page.
+* The enemy battle image remains unflipped.
+* Existing win, lose, respawn, and reward flows still work with the new layout.
+
+Manual Test Steps
+
+1. Start gameplay, open Settings, then open Debug and begin any battle.
+Expected result: The battle page opens and clearly places the player battle content on the left and the enemy battle content on the right.
+
+2. Inspect the battle images.
+Expected result: The player piece is horizontally flipped so it faces inward toward the enemy, and the enemy image remains unflipped.
+
+3. Inspect the battle content in each panel.
+Expected result: The player side still shows the battling player's piece and health bar, and the enemy side still shows the selected enemy image, health bar, and spell slots.
+
+4. Inspect other player-piece locations outside battle.
+Expected result: The current player image in gameplay, the turn-change modal image, and the Spells modal image are not flipped.
+
+5. Use `Remove 5 health`, `Win`, `Lose`, `Continue`, and `Respawn`.
+Expected result: Remove 5 health still affects only the player, win still reaches the reward page, Continue still returns to gameplay on the next turn, lose still opens the lose modal, and Respawn still restores health, returns the player to Start Area, and advances the turn.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` passes and now verifies:
+  * the battle page renders player and enemy panels
+  * the battle player image uses the battle-only flipped class
+  * the enemy image uses the unflipped enemy class
+  * existing player-damage, lose, respawn, and reward flows still work
+* `src/AppSettingsButton.test.jsx` passes and now verifies:
+  * debug-triggered battles still open with the new player and enemy panels
+  * the battle player image uses the flipped battle-page class
+  * manual selected-enemy battles still show the correct enemy image with the enemy class
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * the gameplay sidebar player image is not using the battle-page flip class
+  * the turn-change modal player image is not using the battle-page flip class
+  * the Spells entry path still shows an unflipped player image
+* `src/features/spells/SpellsModal.test.jsx` passes and now verifies:
+  * the Spells modal player image remains unflipped during forced and normal visits
+* `src/features/battle/enemies.test.js` passes, confirming the existing enemy data used by the battle page still behaves as expected
+* `src/features/debug/DebugModal.test.jsx` passes, confirming existing debug battle entry points still work
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes, confirming enemy spell-slot display behavior remains intact
+* `src/features/gameBoard/board.test.js` passes, confirming respawn positioning behavior remains intact
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/battle/enemies.test.js src/features/debug/DebugModal.test.jsx src/AppSettingsButton.test.jsx src/pages/BattlePage.test.jsx src/pages/GameplayPage.test.jsx src/features/spells/SpellsModal.test.jsx src/features/spells/CommittedSpellSlots.test.jsx src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This feature stayed focused on battle-page structure and battle-only image flipping, without changing battle mechanics, debug battle behavior, gameplay layouts, or unrelated styling.
+
+---
+
+Feature-006: Display player spells on the battle page and fix player image width
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The battle page now shows the battling player's committed spell slots in the left-side player panel using the same reusable read-only spell-slot display as the enemy side.
+* The player battle image now keeps its natural width instead of stretching across the full player panel width.
+* The player image remains horizontally flipped only on the battle page.
+* Existing enemy spell display, battle debug controls, reward flow, and respawn flow still work.
+
+Manual Test Steps
+
+1. Start gameplay, open Settings, then open Debug and begin any battle after player spells have been committed.
+Expected result: The battle page still opens normally with the player on the left and the enemy on the right.
+
+2. Inspect the left-side player panel.
+Expected result: The player panel shows the battling player's piece image, health bar, and six read-only committed spell columns.
+
+3. Inspect the player spell display.
+Expected result: The player spell slots use the same visual spell-slot component as the enemy side, duplicate token types are consolidated, and empty slots stay visible without placeholder text.
+
+4. Inspect the player battle image sizing.
+Expected result: The player image remains horizontally flipped but no longer stretches to the full width of the player panel, and its aspect ratio stays natural.
+
+5. Inspect the enemy side and battle controls.
+Expected result: Enemy image, enemy health, enemy spell slots, `Miss` behavior, `J` joined-slot behavior, `Remove 5 health`, `Win`, `Lose`, `Continue`, and `Respawn` all continue working as before.
+
+6. Open the Spells modal outside battle.
+Expected result: The Spells modal behavior and player spell editing remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` passes and now verifies:
+  * the battle page player panel includes the player's committed spell tokens
+  * the player spell display still shows six numbered read-only slots
+  * the battle player image keeps battle-only natural-width styling while remaining flipped
+  * existing lose, respawn, and reward flows still work
+* `src/AppSettingsButton.test.jsx` passes and now verifies:
+  * debug-triggered battles still open normally
+  * the player battle image keeps the battle-only natural-width styling
+  * the player battle panel shows the committed red and blue spell tokens from gameplay setup
+* `src/features/battle/enemies.test.js` passes, confirming enemy spell data used on the unchanged enemy side still behaves as expected
+* `src/features/debug/DebugModal.test.jsx` passes, confirming existing battle entry points still work
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes, confirming the shared committed spell-slot component still behaves correctly
+* `src/features/spells/SpellsModal.test.jsx` still passes, confirming the editable spell modal behavior remains unchanged
+* `src/pages/GameplayPage.test.jsx` still passes, confirming non-battle player-piece behavior remains unchanged
+* `src/features/gameBoard/board.test.js` still passes, confirming respawn positioning behavior remains intact
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/battle/enemies.test.js src/features/debug/DebugModal.test.jsx src/AppSettingsButton.test.jsx src/pages/BattlePage.test.jsx src/pages/GameplayPage.test.jsx src/features/spells/SpellsModal.test.jsx src/features/spells/CommittedSpellSlots.test.jsx src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This feature stayed focused on the battle-page player spell display and battle-only image width fix, without changing spell editing, enemy spell behavior, battle mechanics, or unrelated UI.

@@ -58,9 +58,12 @@ export function createPlayers(playerCount, existingPlayers = []) {
 
     return {
       id: playerId,
+      anywhereMode: existingPlayer?.anywhereMode ?? false,
       colour,
+      currentHealth: existingPlayer?.currentHealth ?? 100,
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
+      maxHealth: existingPlayer?.maxHealth ?? 100,
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
       spellSlots: existingPlayer
@@ -73,6 +76,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
 
 export function createInitialGameSetup() {
   return {
+    activeBattle: null,
     playerCount: MIN_PLAYER_COUNT,
     players: createPlayers(MIN_PLAYER_COUNT),
     turnOrder: [],

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import Modal from './components/Modal';
 import DebugModal from './features/debug/DebugModal';
+import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
 import {
   addTokenToBag,
@@ -13,18 +14,22 @@ import {
   replaceTokenInBag,
 } from './features/debug/tokenBagAdmin';
 import './App.css';
+import BattlePage from './pages/BattlePage';
 import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
+import RewardPage from './pages/RewardPage';
 import StartPage from './pages/StartPage';
 
 function App() {
   const navigate = useNavigate();
-  const { currentPlayer, resetGame, updatePlayerSpells } = useGameSetup();
+  const { currentPlayer, resetGame, setPlayerAnywhereMode, startBattle, updatePlayerSpells } =
+    useGameSetup();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
   const [selectedDebugTokenType, setSelectedDebugTokenType] = useState('red');
   const [pendingDebugTokenType, setPendingDebugTokenType] = useState('');
   const [selectedReplacementTokenId, setSelectedReplacementTokenId] = useState('');
+  const [selectedDebugEnemyId, setSelectedDebugEnemyId] = useState(ENEMIES[0]?.id ?? '');
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
@@ -130,6 +135,61 @@ function App() {
     setSelectedReplacementTokenId('');
   };
 
+  const handleEnableAnywhereMode = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Anywhere Mode is only available during gameplay turns.');
+      return;
+    }
+
+    if (currentPlayer.anywhereMode) {
+      setDebugMessage(`Anywhere Mode is already enabled for the ${currentPlayer.colour} player.`);
+      return;
+    }
+
+    setPlayerAnywhereMode(currentPlayer.id, true);
+    setDebugMessage(`Anywhere Mode enabled for the ${currentPlayer.colour} player.`);
+  };
+
+  const handleStartBattle = (level) => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug battles are only available during gameplay turns.');
+      return;
+    }
+
+    const enemy = selectRandomEnemyForLevel(level);
+
+    if (!enemy) {
+      setDebugMessage(`No enemy is available for battle level ${level}.`);
+      return;
+    }
+
+    startBattle(currentPlayer.id, level, enemy.id);
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/battle');
+  };
+
+  const handleStartSelectedEnemyBattle = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug battles are only available during gameplay turns.');
+      return;
+    }
+
+    const enemy = getEnemyById(selectedDebugEnemyId);
+
+    if (!enemy) {
+      setDebugMessage('Select a valid enemy before starting a manual battle.');
+      return;
+    }
+
+    startBattle(currentPlayer.id, enemy.level, enemy.id);
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/battle');
+  };
+
   return (
     <>
       <button
@@ -145,6 +205,8 @@ function App() {
         <Route path="/" element={<StartPage />} />
         <Route path="/setup" element={<GameSetupPage />} />
         <Route path="/gameplay" element={<GameplayPage />} />
+        <Route path="/battle" element={<BattlePage />} />
+        <Route path="/reward" element={<RewardPage />} />
       </Routes>
 
       <Modal
@@ -171,13 +233,22 @@ function App() {
         currentPlayer={currentPlayer}
         isOpen={isDebugOpen}
         message={debugMessage}
+        onEnableAnywhereMode={handleEnableAnywhereMode}
         onClose={handleCloseDebug}
         onDiscardPendingToken={handleDiscardPendingToken}
+        enemyOptions={ENEMIES.map((enemy) => ({
+          id: enemy.id,
+          label: `${enemy.englishName} - Level ${enemy.level}`,
+        }))}
         onGiveToken={handleGiveDebugToken}
+        onStartBattle={handleStartBattle}
+        onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
         onPendingTokenReplacementChange={setSelectedReplacementTokenId}
         onReplacePendingToken={handleReplacePendingToken}
+        onSelectedEnemyIdChange={setSelectedDebugEnemyId}
         onSelectedTokenTypeChange={setSelectedDebugTokenType}
         pendingTokenType={pendingDebugTokenType}
+        selectedEnemyId={selectedDebugEnemyId}
         selectedReplacementTokenId={selectedReplacementTokenId}
         selectedTokenType={selectedDebugTokenType}
       />

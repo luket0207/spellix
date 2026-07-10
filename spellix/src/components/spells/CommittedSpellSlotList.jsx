@@ -24,7 +24,7 @@ function consolidateSlotTokens(tokens = []) {
 function CommittedSpellSlotList({ spellSlots, title = 'Spells' }) {
   return (
     <section aria-label="Committed spell slots" className="committed-spell-slot-display">
-      <p className="committed-spell-slot-display-title">{title}</p>
+      {title ? <p className="committed-spell-slot-display-title">{title}</p> : null}
       <ul className="committed-spell-slot-list">
         {spellSlots.map((slot, index) => {
           const consolidatedTokens = consolidateSlotTokens(slot.tokens);
@@ -34,6 +34,9 @@ function CommittedSpellSlotList({ spellSlots, title = 'Spells' }) {
               <div className="committed-spell-slot-column">
                 <span className="committed-spell-slot-number">{index + 1}</span>
                 <div className="committed-spell-token-stack">
+                  {slot.displayLabel ? (
+                    <span className="committed-spell-slot-text">{slot.displayLabel}</span>
+                  ) : null}
                   {consolidatedTokens.map(({ count, tokenType }) => (
                     <Token
                       key={`${slot.id}-${tokenType}`}

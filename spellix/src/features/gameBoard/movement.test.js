@@ -1,4 +1,8 @@
-import { getHighlightedNodeIds, getMovementNodeIdFromCoordinates } from './movement';
+import {
+  getAnywhereModeHighlightedNodeIds,
+  getHighlightedNodeIds,
+  getMovementNodeIdFromCoordinates,
+} from './movement';
 
 function createBoardSquare({
   x,
@@ -63,6 +67,20 @@ describe('movement start area grouping', () => {
         blockedNodeIds: ['start-area'],
       })
     ).not.toContain('square-0-28');
+  });
+
+  test('returns every other board node for anywhere mode destinations', () => {
+    const board = createBoard(31, 31, [
+      createBoardSquare({ x: 4, y: 3, environmentType: 'river' }),
+      createBoardSquare({ x: 6, y: 3, environmentType: 'stream' }),
+    ]);
+
+    const anywhereNodeIds = getAnywhereModeHighlightedNodeIds(board, { x: 2, y: 29 });
+
+    expect(anywhereNodeIds).toContain('start-area');
+    expect(anywhereNodeIds).toContain('square-4-3');
+    expect(anywhereNodeIds).toContain('square-6-3');
+    expect(anywhereNodeIds).not.toContain('square-2-29');
   });
 });
 

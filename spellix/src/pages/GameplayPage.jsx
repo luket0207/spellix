@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
+import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
 import BoardGrid from '../features/gameBoard/BoardGrid';
-import { getHighlightedNodeIds, getMovementNodeIdFromCoordinates } from '../features/gameBoard/movement';
+import {
+  getAnywhereModeHighlightedNodeIds,
+  getHighlightedNodeIds,
+  getMovementNodeIdFromCoordinates,
+} from '../features/gameBoard/movement';
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
@@ -87,6 +92,13 @@ function GameplayPage() {
       return;
     }
 
+    if (currentPlayer.anywhereMode) {
+      setCurrentDiceRoll('Anywhere Mode');
+      setHighlightedNodeIds(getAnywhereModeHighlightedNodeIds(gameSetup.board, currentPlayer.position));
+      setShowDiceModal(true);
+      return;
+    }
+
     const diceRoll = Math.floor(Math.random() * 6) + 1;
 
     setCurrentDiceRoll(diceRoll);
@@ -123,7 +135,10 @@ function GameplayPage() {
     setPlayerPosition(
       currentPlayer.id,
       { x: square.x, y: square.y },
-      { hasLeftStartArea }
+      {
+        anywhereMode: false,
+        hasLeftStartArea,
+      }
     );
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
@@ -229,8 +244,9 @@ function GameplayPage() {
       ) : null}
 
       <section aria-label="Gameplay panel" className="gameplay-sidebar">
-        {currentPlayer
-          ? renderPlayerPiece({
+        {currentPlayer ? (
+          <div className="gameplay-current-player-summary">
+            {renderPlayerPiece({
               ariaLabel: 'Current player piece',
               className: 'gameplay-current-player-piece',
               height: '150px',
@@ -239,8 +255,15 @@ function GameplayPage() {
                 alignSelf: 'flex-start',
                 width: 'auto',
               },
-            })
-          : <p>Preparing turn order.</p>}
+            })}
+            <HealthBar
+              currentHealth={currentPlayer.currentHealth}
+              maxHealth={currentPlayer.maxHealth}
+            />
+          </div>
+        ) : (
+          <p>Preparing turn order.</p>
+        )}
 
         <button
           type="button"

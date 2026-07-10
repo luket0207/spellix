@@ -90,6 +90,20 @@ export function getMovementNodeIdFromPosition(position) {
   return getMovementNodeIdFromCoordinates(position.x, position.y);
 }
 
+export function getAnywhereModeHighlightedNodeIds(board, position) {
+  if (!board || !position) {
+    return [];
+  }
+
+  const startingNodeId = getMovementNodeIdFromPosition(position);
+
+  return Array.from(
+    new Set(
+      board.squares.map((square) => getMovementNodeIdFromCoordinates(square.x, square.y))
+    )
+  ).filter((nodeId) => nodeId !== startingNodeId);
+}
+
 export function getHighlightedNodeIds(board, position, steps, options = {}) {
   if (!board || !position || steps < 1) {
     return [];

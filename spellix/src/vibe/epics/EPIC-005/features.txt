@@ -1,0 +1,1324 @@
+Feature-001: Add Anywhere Mode debug movement tool
+
+Status
+
+* done
+
+Goal
+
+* Add a new debug tool that allows the admin to enable `Anywhere Mode` for the current player.
+* Anywhere Mode gives the current player an infinite movement option for their next turn.
+* When active, the player should be able to select and move to any valid square on the map.
+
+Scope
+
+* Update the existing debug modal from EPIC-003.
+* Add an `Anywhere Mode` control to the debug modal.
+* The debug tool should apply only to the player whose turn it currently is.
+* Anywhere Mode should apply to that player’s next movement opportunity.
+* When Anywhere Mode is active, the player should be able to move anywhere on the board.
+* After the player uses Anywhere Mode to move, Anywhere Mode should turn off for that player.
+* Keep this as debug/admin functionality only.
+* Keep the UI simple and functional.
+
+Debug Menu Requirement
+
+* The debug modal should include a new control labelled:
+
+```txt id="5rqgkp"
+Anywhere Mode
+```
+
+* The debug modal should make clear that Anywhere Mode applies to the current player only.
+* The debug modal should show whether Anywhere Mode is currently enabled for the current player.
+* The admin should be able to turn Anywhere Mode on for the current player.
+* A simple button or checkbox is acceptable.
+* Keep the debug modal scrollable as required by the existing debug menu feature.
+
+Player State Requirement
+
+* Anywhere Mode should be tracked per player.
+* Suggested player state:
+
+```js id="g5r42n"
+{
+  anywhereMode: false
+}
+```
+
+* Turning on Anywhere Mode from the debug modal should set it for the current player only.
+* One player having Anywhere Mode should not affect any other player.
+* Anywhere Mode should remain active until that player uses it to move.
+* After the player moves using Anywhere Mode, set their `anywhereMode` back to `false`.
+
+Movement Requirement
+
+* If the current player has Anywhere Mode active:
+
+  * They should effectively have an infinite dice roll.
+  * They should be able to select any valid board square as their movement destination.
+  * Legal destination highlighting should show that the player can move anywhere valid.
+  * Normal dice distance should not restrict their movement.
+* The player should still move by selecting a destination square.
+* Once the destination is selected and movement completes, Anywhere Mode should be consumed.
+* Turn flow should then continue normally.
+
+Valid Destination Requirement
+
+* Anywhere Mode should allow movement to normal valid board squares.
+* Do not allow movement onto invalid or non-playable squares if any exist.
+* Do not allow movement outside the board.
+* Do not allow movement to missing board data.
+* If fixed areas, grouped areas, or feature areas already have special movement rules, preserve them where practical.
+* The current player’s current square should not need to be highlighted as a destination.
+* The current player should not be able to select their current square as a move destination unless the existing movement system already allows staying still.
+
+Interaction With Existing Movement Rules
+
+* Anywhere Mode should override normal dice distance.
+* Anywhere Mode should override river blocking distance restrictions because the player can move anywhere.
+* Anywhere Mode should override Start Area return restrictions only if the target square would otherwise be considered a valid board square.
+* If the Start Area should remain blocked even for debug movement, keep it blocked only if that is simpler and safer.
+* Do not change the normal movement rules for players without Anywhere Mode.
+* Do not change dice rolling for normal turns.
+* Do not permanently change the dice result system.
+
+Expected Behaviour
+
+* The debug modal contains an Anywhere Mode control.
+* The admin can enable Anywhere Mode for the current player.
+* Anywhere Mode applies only to the current player.
+* When Anywhere Mode is active, that player can move to any valid board square.
+* Normal movement range does not limit the player while Anywhere Mode is active.
+* River blocking does not limit Anywhere Mode movement.
+* After the player moves, Anywhere Mode turns off.
+* Other players are unaffected.
+* Later turns return to normal movement unless Anywhere Mode is enabled again.
+* Existing debug token tools still work.
+* Existing settings menu still works.
+* Existing movement still works for non-Anywhere Mode players.
+
+Out Of Scope
+
+* No player selection inside the debug menu.
+* No applying Anywhere Mode to all players.
+* No permanent infinite movement mode.
+* No teleport animation.
+* No special visual effects.
+* No new dice UI.
+* No changes to normal dice roll values.
+* No changes to board generation.
+* No changes to river generation.
+* No changes to Start Area generation.
+* No changes to player pieces.
+* No changes to spells.
+* No changes to token bag rules.
+* No save/load functionality.
+* No persistence.
+* No unrelated debug tools.
+
+Assumptions
+
+* “Current player” means the player whose turn it currently is.
+* “For the next turn” means for that player’s next movement action, then it is consumed.
+* Anywhere Mode is a debug/admin tool and does not need to be balanced for normal gameplay.
+* Anywhere Mode should use the existing movement selection flow where possible.
+* The simplest implementation is to make every valid board square selectable while Anywhere Mode is active.
+
+Stop Point
+
+* Stop once the debug modal can enable Anywhere Mode for the current player, that player can move to any valid board square, and Anywhere Mode is consumed after the move.
+
+Testing Checkpoints
+
+* Confirm `src/vibe/epics/EPIC-005/features.txt` exists.
+* Confirm the debug modal still opens from the settings menu.
+* Confirm the debug modal contains an `Anywhere Mode` control.
+* Confirm the debug modal shows that Anywhere Mode applies to the current player.
+* Confirm enabling Anywhere Mode affects only the current player.
+* Confirm other players do not receive Anywhere Mode.
+* Confirm a player with Anywhere Mode can select a valid board square far outside normal dice range.
+* Confirm a player with Anywhere Mode can move to the selected square.
+* Confirm Anywhere Mode is consumed after movement.
+* Confirm the player returns to normal dice movement on their next turn.
+* Confirm other players continue using normal movement.
+* Confirm river blocking does not prevent Anywhere Mode movement.
+* Confirm invalid or outside-board squares cannot be selected.
+* Confirm the player’s current square is not incorrectly highlighted as a destination.
+* Confirm normal movement still works when Anywhere Mode is not active.
+* Confirm debug token tools still work.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* The Debug modal now includes an `Anywhere Mode` control and current-player status, and enabling it sets a per-player `anywhereMode` flag only for the player whose turn it is.
+* Gameplay now reuses the existing square-selection flow by highlighting every valid board node except the current node while Anywhere Mode is active, so Anywhere Mode ignores normal distance, river blocking, and Start Area return restrictions for that move.
+* After the player completes a move using Anywhere Mode, the flag is consumed and later turns return to normal movement rules.
+* Reuse check: reviewed the existing Debug modal, settings/debug wiring, `GameplayPage` movement flow, and movement helpers; reused the current modal flow, board-node highlighting, and move-selection path, and added only a small anywhere-mode helper plus focused state/debug/gameplay tests.
+* Intentionally not changed: board generation, river generation, Start Area generation, normal dice values, spells, token bag rules, player-piece rendering, save/load, persistence, or unrelated debug tools.
+
+---
+
+Feature-002: Add player health and reusable health bar component
+
+Status
+
+* done
+
+Goal
+
+* Add health to all players.
+* All players should start the game with 100 health.
+* Display the current player’s health under their piece in the gameplay UI to the right of the map.
+* Create a reusable health bar component.
+* Do not display health on the map itself.
+
+Scope
+
+* Add health data to each player.
+* Add max health data to each player.
+* Create a reusable health bar component.
+* Display the current player’s health under their current-player piece image in the right-side gameplay UI.
+* Health should persist across turns.
+* Health should only change when a future event changes it, such as battle damage or healing.
+* Style the health bar so it looks like a health bar.
+* Use CSS for the health bar styling.
+* The health bar should be continuous, not segmented.
+
+Player Health Data Requirement
+
+* Every player should start with:
+
+```js
+{
+  currentHealth: 100,
+  maxHealth: 100
+}
+```
+
+* Health should be stored per player.
+* Health should be maintained across turns.
+* One player’s health should not affect another player’s health.
+* Health should not reset when the turn changes.
+* Health should not be displayed on the board/map.
+
+Health Bar Component Requirement
+
+* Create a reusable health bar component.
+* Suggested component name:
+
+```txt
+HealthBar
+```
+
+* Suggested file structure:
+
+```txt
+src/components/health/healthBar/healthBar.jsx
+src/components/health/healthBar/healthBar.css
+```
+
+* Adjust folder names only if needed to match the existing project structure.
+* The component should accept:
+
+  * current health.
+  * max health.
+* The component should support variable max health.
+* The component must not assume max health is always 100.
+* The component should calculate the filled width as a percentage of max health.
+* The component should clamp display values safely:
+
+  * health below 0 should display as 0.
+  * health above max health should not visually exceed 100%.
+* The component should remain reusable for players and enemies later.
+
+Health Bar Display Requirement
+
+* The health bar should be displayed under the current player’s piece image in the right-side gameplay UI.
+* It should not have an unnecessary title such as `Player health`.
+* It should be clear from the bar itself.
+* The bar should be continuous.
+* The bar should not be segmented.
+* The bar should visually show how much health remains.
+* Displaying numeric health text inside or near the bar is acceptable if it remains clean and useful.
+* Avoid unnecessary labels.
+
+Health Colour Requirement
+
+* Health bar colour should depend on current health as a percentage of max health.
+* If health is above 20% of max health:
+
+  * bar colour should be green.
+* If health is 20% or below, but above 10% of max health:
+
+  * bar colour should be orange.
+* If health is 10% or below:
+
+  * bar colour should be red.
+
+Threshold Requirement
+
+* Use the following threshold logic:
+
+```txt
+healthPercent > 20 = green
+healthPercent <= 20 and healthPercent > 10 = orange
+healthPercent <= 10 = red
+```
+
+Expected Behaviour
+
+* Each player starts with 100 current health.
+* Each player starts with 100 max health.
+* The current player’s health is displayed under their piece in the right-side gameplay UI.
+* The health bar remains visible during gameplay.
+* The health bar updates when the current player changes.
+* Health values persist between turns.
+* Health does not reset unless explicitly changed by another feature.
+* The health bar is green above 20%.
+* The health bar is orange at 20% or below and above 10%.
+* The health bar is red at 10% or below.
+* The health bar supports a max health value other than 100.
+* Health is not displayed on the board itself.
+
+Out Of Scope
+
+* No battle page.
+* No battle logic.
+* No damage buttons.
+* No healing buttons.
+* No death handling.
+* No respawn handling.
+* No enemy health.
+* No enemy data.
+* No rewards.
+* No changes to movement.
+* No changes to dice rolling.
+* No changes to turn order except displaying the current player’s health.
+* No changes to player setup UI unless required to initialise health.
+* No health display on map pieces.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Player health should be added to the same player objects currently stored in game context.
+* The current player can be derived from existing turn state.
+* The health bar component will also be reused by the battle page and enemy display in later features.
+* Numeric health text is optional, but the bar itself is required.
+* Health should not go below 0 visually.
+
+Stop Point
+
+* Stop once every player starts with health data, the reusable health bar component exists, and the current player’s health bar displays under their piece in the right-side gameplay UI.
+
+Testing Checkpoints
+
+* Confirm every player starts with 100 current health.
+* Confirm every player starts with 100 max health.
+* Confirm health is stored per player.
+* Confirm the current player’s health displays under their piece in the right-side gameplay UI.
+* Confirm health is not displayed on the board itself.
+* Confirm the health bar updates when the current player changes.
+* Confirm health persists across turn changes.
+* Confirm the health bar is continuous and not segmented.
+* Confirm the health bar supports a max health value other than 100.
+* Confirm the health bar is green above 20%.
+* Confirm the health bar is orange at 20% or below and above 10%.
+* Confirm the health bar is red at 10% or below.
+* Confirm health below 0 displays as 0 if tested manually.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Added `currentHealth` and `maxHealth` to each player object with `100` defaults, and preserved those values inside the existing game setup/context flow so health stays per-player across turns.
+* Added a reusable shared `HealthBar` component in `src/components/health/HealthBar.jsx` with CSS styling, percentage-based fill width, safe clamping, and the required green/orange/red threshold logic.
+* Updated the gameplay right-side panel to show the current player's health bar directly under the existing current-player piece image, while keeping health off the board itself.
+* Reuse check: reviewed the existing player creation helpers, game setup context, gameplay sidebar, and current-player piece rendering; reused the current player model, shared component structure, and sidebar flow, and added only one new shared health component because no existing health UI or meter component was available.
+* Assumption: used `src/components/health/HealthBar.jsx` and `src/components/health/HealthBar.css` instead of the suggested lowercase nested path so the new shared component matches the project's existing component naming pattern.
+* Intentionally not changed: battle logic, damage/healing controls, enemy health, death/respawn handling, movement, dice rules, turn order behavior beyond the sidebar display, map-piece rendering, persistence, or unrelated UI.
+
+---
+
+Feature-003: Add battle page, debug battle triggers, battle health testing, win flow, and lose respawn flow
+
+Status
+
+* done
+
+Goal
+
+* Add a new battle page to the project.
+* Add debug menu buttons that can trigger battles for the current player.
+* Add temporary debug controls on the battle page for testing health, winning, and losing.
+* Add a reward page after winning a battle.
+* Add a lose modal and respawn flow after losing a battle.
+* Do not implement the actual battle system yet.
+
+Scope
+
+* Add a new battle page.
+* Add a new reward page.
+* Add battle routing.
+* Add debug menu battle trigger buttons.
+* Battle triggers should currently only be available through the debug menu.
+* Add four debug battle buttons:
+
+  * Level 1
+  * Level 2
+  * Level 3
+  * Level 4
+* Each debug button should start a battle for the current player at the selected level.
+* The battle page should display:
+
+  * the battling player’s piece.
+  * the battling player’s health using the health bar component.
+  * the battle level.
+  * three debug buttons:
+
+    * Remove 5 health.
+    * Win.
+    * Lose.
+* Avoid unnecessary titles like `Player’s health` or `Player’s piece`.
+* The reward page should currently contain only a Continue button.
+* The lose flow should show a modal with a Respawn button.
+* This feature does not implement actual battle turns, enemy data, attacks, spells, AI, or rewards yet.
+
+Routing Requirement
+
+* Add a route for the battle page.
+* Suggested route:
+
+```txt
+/battle
+```
+
+* Add a route for the reward page.
+* Suggested route:
+
+```txt
+/reward
+```
+
+* Use the existing React Router setup.
+* Do not use manual browser-history routing.
+* The battle page should be reachable only from the debug battle trigger for now.
+* The reward page should be reached after clicking Win on the battle page.
+
+Battle State Requirement
+
+* Add enough battle state to know:
+
+  * which player is in battle.
+  * what battle level was selected.
+  * whether a battle is active.
+* Suggested battle state:
+
+```js
+{
+  activeBattle: {
+    playerId: "player-1",
+    level: 1
+  }
+}
+```
+
+* Store this in the existing game context or an appropriate battle context.
+* Keep it simple.
+* Do not create a large battle engine yet.
+* If the battle page is opened without active battle state, fail safely by returning to gameplay or showing a simple fallback.
+
+Debug Menu Requirement
+
+* In the existing debug modal, add four new buttons:
+
+  * Level 1
+  * Level 2
+  * Level 3
+  * Level 4
+* Clicking one of these buttons should:
+
+  * identify the current player.
+  * create battle state for that player.
+  * store the selected battle level.
+  * navigate to the battle page.
+* These buttons should not start battles for non-current players.
+* Do not add a player selector.
+* Do not remove existing debug tools.
+* Do not break Anywhere Mode or token debug tools.
+
+Battle Page Display Requirement
+
+* The battle page should show the battling player’s piece image.
+* The battle page should show the battling player’s health using the reusable health bar component from Feature-002.
+* The battle page should show the selected battle level.
+* Avoid unnecessary titles.
+* Do not add text such as:
+
+  * `Player’s health`
+  * `Player’s piece`
+* The page should be simple and functional.
+* The player piece should use the same selected piece image from gameplay setup.
+* The health bar should update when health changes.
+
+Battle Debug Button Requirement
+
+* The battle page should have three debug buttons:
+
+  * Remove 5 health
+  * Win
+  * Lose
+
+Remove 5 Health Requirement
+
+* Clicking `Remove 5 health` should remove 5 health from the battling player.
+* Nothing else should happen if the player still has health remaining.
+* The player’s health should not display below 0.
+* If health reaches 0 or below:
+
+  * display 0 health.
+  * trigger the same flow as clicking Lose.
+* Health should persist on the player data.
+* Do not create temporary battle-only health for the player.
+* Do not affect other players’ health.
+
+Win Requirement
+
+* Clicking `Win` should:
+
+  * end the battle.
+  * navigate to the reward page.
+* The reward page should currently contain only a Continue button.
+* Clicking Continue on the reward page should:
+
+  * return to the gameplay page.
+  * move on to the next player’s turn.
+* Do not add actual rewards yet.
+* Do not heal the player after winning unless a later feature says so.
+* Do not move the player after winning unless existing movement flow already did that before battle.
+
+Lose Requirement
+
+* Clicking `Lose` should show a modal saying the player has lost.
+* The modal should contain a `Respawn` button.
+* The modal does not need extra buttons.
+* When Respawn is clicked:
+
+  * return to the gameplay board.
+  * move the player back to the Start Area.
+  * return that player to full health.
+  * move on to the next player’s turn.
+* Full health means current health becomes max health.
+* Do not show negative health.
+* Do not leave the player on the battle page after respawning.
+
+Respawn Position Requirement
+
+* Respawning should move the player back to the Start Area.
+* If EPIC-004 Feature-001 has been completed, the Start Area is the 2x2 area:
+
+```txt
+x: 0-1
+y: 29-30
+```
+
+* Prefer using the board’s Start Area data rather than hardcoding coordinates.
+* If multiple players are already on Start Area squares, use existing player stacking logic.
+* It is acceptable to place the respawned player on the first valid Start Area square.
+* Respawning should not break the “cannot return to Start Area after leaving” movement rule, because this is a forced respawn, not normal movement.
+* After respawn, the player should still be considered to have already left the Start Area if that state exists, unless future rules say otherwise.
+
+Turn Flow Requirement
+
+* Winning should move the game to the next player after the reward page Continue button is clicked.
+* Losing and clicking Respawn should move the game to the next player.
+* Do not move to the next player immediately when Remove 5 health is clicked unless health reaches 0.
+* Do not move to the next player before the player clicks Continue on the reward page after winning.
+* Do not move to the next player before the player clicks Respawn after losing.
+
+Expected Behaviour
+
+* Debug menu has Level 1, Level 2, Level 3, and Level 4 battle buttons.
+* Clicking a level button starts a battle for the current player.
+* The app navigates to the battle page.
+* The battle page shows the battling player’s piece.
+* The battle page shows the battling player’s health bar.
+* The battle page shows the selected battle level.
+* The battle page shows Remove 5 health, Win, and Lose buttons.
+* Remove 5 health lowers the battling player’s health by 5.
+* Health never displays as a negative number.
+* Reaching 0 health triggers the lose flow.
+* Win navigates to the reward page.
+* Reward page Continue returns to gameplay and advances to the next player’s turn.
+* Lose shows a lost modal with Respawn.
+* Respawn returns the player to the board, moves them to the Start Area, restores full health, and advances to the next player’s turn.
+
+Out Of Scope
+
+* No actual battle mechanics.
+* No enemy selection.
+* No enemy display.
+* No enemy attacks.
+* No player attacks.
+* No spell effects.
+* No token effects.
+* No battle dice.
+* No rewards beyond the placeholder reward page.
+* No experience system.
+* No level-up system.
+* No inventory.
+* No battle animations.
+* No battle sound effects.
+* No battle result history.
+* No player selection in the debug menu.
+* No battle trigger from map squares.
+* No automatic battle trigger from Elite/Boss/Feature squares.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* “Current player” means the player whose turn it currently is when the debug button is clicked.
+* The health bar component from Feature-002 exists before or as part of this work.
+* Returning to full health means setting current health to max health.
+* The reward page is intentionally minimal for now.
+* Battle state can be temporary and does not need persistence.
+* The lose modal can use the existing reusable modal component.
+* The battle page and reward page should use `.jsx`.
+
+Stop Point
+
+* Stop once battles can be triggered from the debug menu, the battle page displays the current player and level, test buttons can remove health, win, or lose, the reward Continue flow works, and the lose Respawn flow returns the player to Start Area with full health and advances the turn.
+
+Testing Checkpoints
+
+* Confirm the debug modal still opens.
+* Confirm the debug modal has Level 1, Level 2, Level 3, and Level 4 buttons.
+* Confirm clicking Level 1 starts a battle for the current player at level 1.
+* Confirm clicking Level 2 starts a battle for the current player at level 2.
+* Confirm clicking Level 3 starts a battle for the current player at level 3.
+* Confirm clicking Level 4 starts a battle for the current player at level 4.
+* Confirm the app navigates to the battle page.
+* Confirm the battle page shows the battling player’s piece.
+* Confirm the battle page shows the battling player’s health bar.
+* Confirm the battle page shows the correct battle level.
+* Confirm the page avoids unnecessary labels such as `Player’s health`.
+* Confirm Remove 5 health removes 5 health from the battling player.
+* Confirm Remove 5 health does not affect other players.
+* Confirm health never displays below 0.
+* Confirm reaching 0 health triggers the lose modal.
+* Confirm clicking Lose shows the lose modal.
+* Confirm the lose modal has a Respawn button.
+* Confirm clicking Respawn returns to gameplay.
+* Confirm Respawn moves the player to the Start Area.
+* Confirm Respawn restores the player to full health.
+* Confirm Respawn advances to the next player’s turn.
+* Confirm clicking Win navigates to the reward page.
+* Confirm the reward page has a Continue button.
+* Confirm clicking Continue returns to gameplay.
+* Confirm clicking Continue advances to the next player’s turn.
+* Confirm existing debug token tools still work.
+* Confirm Anywhere Mode still works.
+* Confirm normal movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Added minimal battle state to the existing game setup context so the app can track the battling player, selected level, and current battle/reward flow without introducing a larger battle engine.
+* Added four debug battle buttons to the existing Debug modal, and wired them through the existing app-level debug flow so the current player can start Level 1 to Level 4 battles from gameplay only.
+* Added a simple `BattlePage` with the current player's selected piece image, current health bar, selected battle level, and the three required debug buttons: `Remove 5 health`, `Win`, and `Lose`.
+* Added a simple `RewardPage` with only a `Continue` button, plus win/lose flow handling so winning advances on Continue and losing respawns the player to the Start Area at full health before advancing the turn.
+* Added a small `getFirstStartAreaPosition` helper so respawn uses board Start Area data instead of hardcoding the return square in battle-page logic.
+* Reuse check: reviewed the existing game setup context, debug modal, app routing, reusable modal component, current-player piece image flow, and shared health bar; reused the current context/provider structure, debug modal, router setup, `HealthBar`, and `Modal`, and only added the smallest new battle/reward pages plus one board helper because no existing battle-state or respawn helper existed.
+* Assumption: the reward page now accepts any existing battle context rather than requiring a reward-only phase check, which keeps the win navigation flow stable while still failing safely when no battle state exists.
+* Intentionally not changed: enemy selection/data, battle mechanics, attacks, spells, AI, rewards beyond the placeholder page, automatic battle triggers from board squares, persistence, save/load, or unrelated gameplay/debug systems.
+
+---
+
+Feature-004: Add enemy data, enemy selection, and enemy display on battle page
+
+Status
+
+* done
+
+Goal
+
+* Add enemy data for all enemies in the game.
+* Select a random enemy when a debug level battle is triggered.
+* Add a debug dropdown that can manually trigger a battle with a specific enemy.
+* Display the selected enemy image, health, and spell slots on the battle page.
+* Use the existing committed spell slot display component for enemy spells.
+* Use the reusable health bar component for enemy health.
+* Store Japanese enemy names in enemy data, but do not display them yet.
+* Actual battle mechanics remain out of scope.
+
+Scope
+
+* Add a structured enemy data file.
+* Add all enemies from the provided table.
+* Store each enemy’s:
+
+  * English name.
+  * Japanese name.
+  * image file name.
+  * level.
+  * health.
+  * six spell slots.
+* Enemy images are stored in:
+
+```txt
+src/images/enemies/XX.png
+```
+
+* `XX.png` comes from the Image File Name column.
+* When a battle is triggered by level, randomly select an enemy from that level.
+* When a battle is triggered manually from the debug dropdown, use the selected enemy.
+* Display enemy data on the battle page.
+* Display enemy spells using the existing committed spell slot display component from EPIC-003 Feature-006.
+* Display enemy health using the reusable health bar component from Feature-002.
+* Avoid unnecessary titles above elements.
+* Store Japanese names now, but do not use them in the UI yet.
+
+Enemy Data File Requirement
+
+* Create a dedicated enemy data file.
+* Suggested file path:
+
+```txt
+src/data/enemies.js
+```
+
+* Use `.js` because this should be pure data and should not contain JSX.
+* Export an array of enemy objects.
+* Keep enemy data readable and easy to extend.
+
+Suggested Enemy Data Shape
+
+```js
+{
+  id: "vilewhisker-rat",
+  englishName: "Vilewhisker Rat",
+  japaneseName: "毒ヒゲネズミ",
+  imageFileName: "VR.png",
+  level: 1,
+  maxHealth: 40,
+  currentHealth: 40,
+  spellSlots: [
+    { type: "miss" },
+    [{ type: "orange", count: 1 }],
+    [{ type: "red", count: 1 }],
+    [{ type: "red", count: 1 }],
+    [{ type: "orange", count: 2 }],
+    { type: "miss" }
+  ]
+}
+```
+
+* The exact structure can differ if it better fits the existing spell display component.
+* The data must be easy to map into the existing spell display component.
+* Do not mutate the base enemy data directly during battle.
+* Use a battle instance copy if enemy health will later change.
+
+Enemy Image Requirement
+
+* Enemy images should be loaded from:
+
+```txt
+src/images/enemies/
+```
+
+* Use the image file name from the enemy data.
+* Example:
+
+```txt
+src/images/enemies/VR.png
+```
+
+* If an expected image is missing, fail safely without crashing the battle page.
+
+Enemy Table
+
+```txt
+English Name | Japanese Name | Image File Name | Level | Health | Spell Slot 1 | Spell Slot 2 | Spell Slot 3 | Spell Slot 4 | Spell Slot 5 | Spell Slot 6
+Vilewhisker Rat | 毒ヒゲネズミ | VR.png | 1 | 40 | Miss | 1 Orange | 1 Red | 1 Red | 2 Orange | Miss
+Emberhorn Imp | 火角インプ | EI.png | 1 | 40 | 2 Red | Miss | 1 Red | Miss | Miss | 2 Red
+Boneveil Acolyte | 骨衣の使徒 | BA.png | 1 | 40 | 1 Green | 1 Blue | 1 Red | 1 Red | Miss | 1 Green
+Nightplume Raven | 夜羽ガラス | NR.png | 1 | 40 | 1 Blue | 1 Red | 1 Purple | 1 Red | Miss | Miss
+Flaskwick Goblin | 薬瓶ゴブリン | FG.png | 1 | 40 | Miss | 1 Red | 1 Green | 2 Orange | 1 Red | Miss
+Hexmaw Hag | 呪牙の魔女 | HH.png | 2 | 60 | 1 Red | 2 Purple | 1 Blue | 1 Blue | 2 Purple | 1 Red
+Runefang Wolf | 魔紋狼 | RW.png | 2 | 60 | 2 Orange | 1 Blue, 2 Orange | Miss | 1 Red | 2 Orange | 1 Red
+Frostwisp Spirit | 氷霊ウィスプ | FS.png | 2 | 60 | Miss | 1 Blue, 1 Orange | 1 Light Blue | 1 Blue, 1 Orange | 2 Red | 1 Orange
+Harvestrot Scarecrow | 腐れ案山子 | HS.png | 2 | 60 | 1 Blue, 1 Green | 1 Red | 2 Yellow | 1 Blue | 1 Red | 1 Blue, 1 Green
+Wartback Brute | イボ背の巨漢 | WB.png | 2 | 60 | 3 Red | 1 Green | Miss | Miss | 3 Red | 1 Green
+Gravechant Necromancer | 墓歌の屍術師 | GN.png | 3 | 80 | 1 Red | 3 Purple, 2 Green | 2 Red | 2 Red | 3 Purple, 2 Green | 1 Red
+Dreadsteel Knight | 恐鋼の騎士 | DK.png | 3 | 80 | 5 Red | Miss | 2 Blue, 1 Orange | 2 Blue, 1 Orange | Miss | 5 Red
+Skullclub Warlord | 髑髏棍の戦王 | SW.png | 3 | 80 | 3 Blue, 1 Orange | 1 Green, 3 Orange | 2 Red | 2 Red | 1 Green, 3 Orange | 3 Blue, 1 Orange
+Venomglyph Serpent | 毒紋の大蛇 | VS.png | 3 | 80 | 2 Light Blue | 1 Orange, 1 Green | 3 Red | 3 Red | 1 Orange, 1 Green | 2 Light Blue
+Cinderveil Demon | 炎灰の悪魔 | CD.png | 3 | 80 | 2 Red, 1 Orange | 1 Yellow | 1 Red, 2 Orange | 1 Red, 2 Orange | 1 Yellow | 2 Red, 1 Orange
+Crowned Lichlord | 冠のリッチ王 | CL.png | 4 | 120 | 2 Red, 2 Orange | Joined with 1 | 4 Purple | 3 Red | 2 Blue, 2 Green | 2 Blue, 2 Green
+Amethyst Ogre | 紫晶のオーガ | AO.png | 4 | 120 | 5 Red | 3 Blue, 2 Green | 3 Blue, 2 Green | 2 Red | 5 Red | 2 Red
+Mossroot Elder | 苔根の古老 | ME.png | 4 | 120 | 2 Blue, 3 Yellow | 1 Red, 4 Orange | 3 Blue, 1 Red | 3 Blue, 1 Red | 1 Red, 4 Orange | 2 Blue, 3 Yellow
+Duskwyrm Warlock | 黄昏竜の魔導士 | DW.png | 4 | 120 | 1 Light Blue, 3 Red | 1 Light Blue, 3 Blue | 1 Light Blue, 4 Orange | 1 Light Blue, 3 Red | 1 Light Blue, 3 Blue | 1 Light Blue, 4 Orange
+Hellcrown Reaper | 地獄冠の死神 | HR.png | 4 | 120 | 5 Blue | 3 Red, 2 Green | Joined with 2 | 2 Purple | 3 Red, 2 Green | Joined with 5
+```
+
+Enemy Spell Display Requirement
+
+* Enemy spells should use the committed spell slot display component created in EPIC-003 Feature-006.
+* Enemy spell tokens should display the same way player committed spell tokens display.
+* Duplicate token types should be consolidated by the spell display component.
+* Enemy spell slots should display six columns.
+* Enemy spells are read-only.
+* Enemy spell slots do not need drag-and-drop.
+* Enemy spell slots do not need save/cancel behaviour.
+* Do not change the Spells modal.
+
+Miss Spell Slot Requirement
+
+* If an enemy spell slot says `Miss`, display that spell slot as empty or as a simple `Miss` indicator only if required by the existing component.
+* Prefer keeping it visually simple.
+* Do not render any tokens for `Miss`.
+
+Joined Spell Slot Requirement
+
+* Some enemy spell slots use `Joined with X`.
+* For now, do not implement joined spell logic.
+* In a spell column with `Joined with X`, display only the character:
+
+```txt
+J
+```
+
+* Do not show tokens in that joined column.
+* Do not try to merge the joined column with another column yet.
+* Do not implement any behaviour for joined spells yet.
+* Store the joined data clearly so it can be implemented properly later.
+
+Random Enemy Selection Requirement
+
+* When the debug menu starts a battle by level:
+
+  * find all enemies with that level.
+  * randomly select one enemy from that level.
+  * store that selected enemy in battle state.
+  * navigate to the battle page.
+* Level 1 should randomly select from Level 1 enemies.
+* Level 2 should randomly select from Level 2 enemies.
+* Level 3 should randomly select from Level 3 enemies.
+* Level 4 should randomly select from Level 4 enemies.
+* If no enemy exists for a level, fail safely.
+
+Manual Enemy Debug Dropdown Requirement
+
+* Add a new enemy dropdown to the debug modal.
+* The dropdown should include all enemies.
+* Each dropdown option should show the English enemy name.
+* The dropdown may also show the level if helpful, for example:
+
+```txt
+Vilewhisker Rat - Level 1
+```
+
+* The admin should be able to select an enemy and manually trigger a battle with that enemy.
+* This manual trigger should battle the current player.
+* Do not add a player selector.
+* Do not display Japanese names in the dropdown yet.
+
+Battle State Requirement
+
+* Extend battle state to include selected enemy data.
+* Suggested battle state:
+
+```js
+{
+  activeBattle: {
+    playerId: "player-1",
+    level: 2,
+    enemyId: "hexmaw-hag"
+  }
+}
+```
+
+* The battle page should use this state to display the correct enemy.
+* Store enemy current health for the battle instance if needed.
+* Do not mutate the base enemy data.
+
+Battle Page Enemy Display Requirement
+
+* The battle page should display:
+
+  * player piece.
+  * player health bar.
+  * battle level.
+  * enemy image.
+  * enemy health bar.
+  * enemy spell slots.
+  * Remove 5 health button.
+  * Win button.
+  * Lose button.
+* Avoid unnecessary titles such as:
+
+  * `Enemy health`
+  * `Enemy spells`
+  * `Enemy image`
+  * `Player’s piece`
+* Display the enemy elements clearly without over-labelling.
+* The enemy health bar should use the health bar component.
+* The enemy spells should use the committed spell slot display component.
+* The enemy image should come from `src/images/enemies`.
+
+Expected Behaviour
+
+* Enemy data exists for all 20 enemies.
+* Japanese names are stored in enemy data.
+* Japanese names are not displayed yet.
+* Debug level battle buttons now select a random enemy from the selected level.
+* The battle page displays the selected enemy image.
+* The battle page displays the selected enemy health using the health bar component.
+* The battle page displays the selected enemy spells using the spell display component.
+* Enemy `Miss` slots do not display tokens.
+* Enemy `Joined with X` slots display `J` only.
+* The debug menu includes a dropdown with all enemies.
+* Selecting a specific enemy from the dropdown can manually trigger a battle with that enemy.
+* Manual enemy battle applies to the current player.
+* Existing battle win flow still works.
+* Existing battle lose/respawn flow still works.
+* Existing Remove 5 health button still affects the player only unless later changed.
+
+Out Of Scope
+
+* No actual battle mechanics.
+* No enemy attacks.
+* No player attacks.
+* No spell execution.
+* No joined spell behaviour beyond displaying `J`.
+* No Japanese name display.
+* No enemy defeat logic beyond existing Win button.
+* No enemy damage buttons unless already present from another feature.
+* No enemy health reduction.
+* No battle AI.
+* No rewards.
+* No enemy selection outside debug.
+* No battle trigger from map squares.
+* No changes to player health logic except preserving the existing battle page display.
+* No changes to the Spells modal.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Enemy image filenames exactly match the files in `src/images/enemies`.
+* The battle page from Feature-003 already exists or will be built before this feature is completed.
+* The committed spell slot display component can accept enemy spell slot data after a small adapter/helper if needed.
+* `Joined with X` is a display-only state for now.
+* `Miss` means the slot has no tokens.
+* Manual enemy battle and level-random battle both use the current player.
+* Enemy current health should start equal to the enemy’s health value.
+
+Stop Point
+
+* Stop once enemy data is defined, level-triggered battles randomly select an enemy from the correct level, the debug menu can manually trigger a battle with any enemy, and the battle page displays the selected enemy image, health bar, and spell slots correctly.
+
+Testing Checkpoints
+
+* Confirm enemy data exists for all 20 enemies.
+* Confirm each enemy has an English name.
+* Confirm each enemy has a Japanese name stored.
+* Confirm each enemy has an image file name.
+* Confirm each enemy has a level.
+* Confirm each enemy has health.
+* Confirm each enemy has six spell slots.
+* Confirm Level 1 debug battles randomly select only Level 1 enemies.
+* Confirm Level 2 debug battles randomly select only Level 2 enemies.
+* Confirm Level 3 debug battles randomly select only Level 3 enemies.
+* Confirm Level 4 debug battles randomly select only Level 4 enemies.
+* Confirm the debug dropdown lists all enemies.
+* Confirm the debug dropdown uses English names.
+* Confirm manually selecting an enemy starts a battle with that enemy.
+* Confirm manual enemy battle uses the current player.
+* Confirm the battle page displays the selected enemy image.
+* Confirm enemy images load from `src/images/enemies`.
+* Confirm the battle page displays the selected enemy health bar.
+* Confirm enemy health starts at the enemy’s health value.
+* Confirm the battle page displays enemy spell slots.
+* Confirm enemy spell slots use the committed spell slot display component.
+* Confirm enemy token spells render correctly.
+* Confirm duplicate enemy spell tokens consolidate correctly.
+* Confirm `Miss` slots do not render tokens.
+* Confirm `Joined with 1` displays `J`.
+* Confirm `Joined with 2` displays `J`.
+* Confirm `Joined with 5` displays `J`.
+* Confirm Japanese names are not displayed yet.
+* Confirm the battle page avoids unnecessary labels.
+* Confirm Remove 5 health still removes health from the player.
+* Confirm Win still navigates to the reward page.
+* Confirm reward Continue still returns to gameplay and advances the turn.
+* Confirm Lose still shows the respawn modal.
+* Confirm Respawn still restores player health, moves the player to Start Area, returns to gameplay, and advances the turn.
+* Confirm existing debug token tools still work.
+* Confirm Anywhere Mode still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Added a dedicated battle enemy data module with all 20 enemies, including English names, Japanese names, image file names, levels, health values, and six read-only spell-slot definitions per enemy.
+* Extended the existing battle-state flow so level-triggered battles now randomly select an enemy from the requested level, and active battle state stores the selected enemy ID plus battle-instance enemy health without mutating the base enemy data.
+* Added a debug enemy dropdown plus a manual `Start Selected Enemy Battle` trigger in the existing Debug modal, using English enemy labels with level text only.
+* Updated the battle page to display the selected enemy image, enemy health bar, and enemy spell slots alongside the existing player battle UI, while keeping player damage, win, and lose/respawn flows unchanged.
+* Extended the existing committed spell-slot display just enough to support joined enemy columns by rendering `J` for joined slots and no tokens for `Miss` slots, while keeping existing player committed-spell behavior intact.
+* Reuse check: reviewed the existing battle page, game setup context, debug modal, shared `HealthBar`, shared committed spell-slot display, and existing image helper patterns; reused the current battle routing/state flow, modal wiring, health bar, and spell-slot display, and added only a feature-local enemy data module plus enemy image helper because no enemy library or enemy image mapping existed yet.
+* Assumption: using the existing committed spell-slot display with a small `displayLabel` extension is the smallest acceptable way to show `J` joined slots while preserving the current player spell UI and avoiding a separate enemy-only spell component.
+* Intentionally not changed: enemy damage buttons, enemy AI, actual battle mechanics, joined-spell behavior beyond `J`, Japanese-name UI display, rewards, automatic board-triggered battles, persistence, save/load, or unrelated gameplay/debug systems.
+
+
+---
+
+Feature-005: Structure battle page with player and enemy facing each other
+
+Status
+
+* done
+
+Goal
+
+* Improve the battle page layout.
+* Display the player’s battle information on the left side of the page.
+* Display the enemy’s battle information on the right side of the page.
+* Horizontally flip the player’s piece image so the player and enemy visually face each other.
+
+Scope
+
+* Update the battle page layout only.
+* Add a left-side container for the player.
+* Add a right-side container for the enemy.
+* Keep the existing battle page data from Feature-003 and Feature-004.
+* Keep the player’s piece image, player health bar, enemy image, enemy health bar, enemy spell display, battle level, and debug battle buttons.
+* Horizontally flip the player’s piece image on the battle page.
+* Do not flip the player’s piece image anywhere else in the game.
+* Keep the enemy image unflipped unless a later feature says otherwise.
+* Keep the layout simple, readable, and functional.
+
+Battle Layout Requirement
+
+* The battle page should have two main display containers:
+
+  * Player container on the left.
+  * Enemy container on the right.
+* The player container should contain the player’s battle elements.
+* The enemy container should contain the enemy’s battle elements.
+* The player and enemy should visually face each other across the page.
+* The layout should be clear enough that the left side is the player and the right side is the enemy without adding unnecessary labels.
+* Avoid unnecessary headings such as:
+
+  * `Player`
+  * `Player’s piece`
+  * `Player’s health`
+  * `Enemy`
+  * `Enemy health`
+  * `Enemy spells`
+
+Player Container Requirement
+
+* The player container should display:
+
+  * the battling player’s piece image.
+  * the battling player’s health bar.
+* The player’s piece image should be horizontally flipped.
+* Use CSS for the horizontal flip.
+* Suggested styling direction:
+
+```css id="7l3zve"
+transform: scaleX(-1);
+```
+
+* This flip should apply only to the player image on the battle page.
+* Do not mutate the image asset.
+* Do not flip the player image on the map.
+* Do not flip the player image in the gameplay UI.
+* Do not flip the player image in the start-of-turn modal.
+* Do not flip the player image in the Spells modal.
+
+Enemy Container Requirement
+
+* The enemy container should display:
+
+  * the selected enemy image.
+  * the selected enemy health bar.
+  * the selected enemy spell slots.
+* The enemy image should remain normal and unflipped.
+* Enemy spells should continue using the committed spell slot display component.
+* Enemy health should continue using the health bar component.
+* Enemy `Miss` slots and `Joined with X` display rules from Feature-004 should remain unchanged.
+
+Battle Debug Controls Requirement
+
+* The battle page should still include the debug controls from Feature-003:
+
+  * Remove 5 health.
+  * Win.
+  * Lose.
+* The debug controls may sit below the player/enemy containers.
+* Do not remove or rename the debug buttons.
+* Do not change their behaviour in this feature.
+
+Battle Level Requirement
+
+* The battle page should still display the battle level.
+* Place the battle level wherever it fits cleanly with the new layout.
+* Do not add excessive title text.
+* Keep the battle level display simple.
+
+Expected Behaviour
+
+* The battle page shows the player’s battle details on the left.
+* The battle page shows the enemy’s battle details on the right.
+* The player’s piece image is horizontally flipped on the battle page.
+* The player’s piece and enemy image visually face each other.
+* The enemy image is not flipped.
+* The player health bar still displays correctly.
+* The enemy health bar still displays correctly.
+* Enemy spells still display correctly.
+* The battle level still displays.
+* Remove 5 health still removes 5 health from the player.
+* Win still navigates to the reward page.
+* Lose still shows the lose modal.
+* Respawn still works.
+* Reward Continue still works.
+
+Out Of Scope
+
+* No actual battle mechanics.
+* No enemy attacks.
+* No player attacks.
+* No spell execution.
+* No token effects.
+* No animation.
+* No attack effects.
+* No sound effects.
+* No battle background art.
+* No image editing.
+* No changes to enemy data.
+* No changes to enemy selection.
+* No changes to debug battle triggers.
+* No changes to player health logic.
+* No changes to enemy health logic.
+* No changes to reward page behaviour.
+* No changes to respawn behaviour.
+* No changes to gameplay page.
+* No changes to map player pieces.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* The battle page from Feature-003 already exists or will be created before this feature is completed.
+* Enemy display from Feature-004 already exists or will be created before this feature is completed.
+* The player and enemy images generally face inward when the player image is horizontally flipped.
+* The horizontal flip should be done with CSS, not by editing or duplicating image files.
+
+Stop Point
+
+* Stop once the battle page has a left-side player container, a right-side enemy container, the player’s battle image is horizontally flipped, and all existing battle debug flows still work.
+
+Testing Checkpoints
+
+* Confirm the battle page displays a player container on the left.
+* Confirm the battle page displays an enemy container on the right.
+* Confirm the player container shows the battling player’s piece.
+* Confirm the player container shows the battling player’s health bar.
+* Confirm the enemy container shows the selected enemy image.
+* Confirm the enemy container shows the selected enemy health bar.
+* Confirm the enemy container shows the selected enemy spell slots.
+* Confirm the player’s piece image is horizontally flipped on the battle page.
+* Confirm the player image and enemy image visually face each other.
+* Confirm the player image is not flipped on the gameplay map.
+* Confirm the player image is not flipped in the right-side gameplay UI.
+* Confirm the player image is not flipped in the start-of-turn modal.
+* Confirm the player image is not flipped in the Spells modal.
+* Confirm the enemy image is not flipped.
+* Confirm the battle level still displays.
+* Confirm Remove 5 health still works.
+* Confirm Win still navigates to the reward page.
+* Confirm reward Continue still returns to gameplay and advances the turn.
+* Confirm Lose still shows the lose modal.
+* Confirm Respawn still returns to gameplay, restores player health, moves the player to Start Area, and advances the turn.
+* Confirm enemy spells still render correctly.
+* Confirm enemy `Joined with X` slots still display `J`.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Updated the existing battle page only, adding a simple left player panel and right enemy panel while keeping the current battle level, player health bar, enemy health bar, enemy spell display, and existing debug battle buttons in place.
+* Added a battle-page-only CSS class to horizontally flip the player piece with `transform: scaleX(-1)`, while keeping the enemy image unflipped and leaving gameplay, turn-change, and spells player images unchanged.
+* Reuse check: reviewed the existing `BattlePage`, shared `HealthBar`, shared committed spell-slot display, and existing battle state/image helpers; reused all existing battle data and controls, and added only a small page-local CSS file because no existing battle layout stylesheet existed.
+* Assumption: simple flex containers and minimal battle-page CSS are the plainest functional way to make the player and enemy face each other without changing battle logic or adding extra UI.
+* Intentionally not changed: battle mechanics, enemy data, enemy selection, player or enemy health logic, reward page behavior, respawn behavior, gameplay page layout, map pieces, start-of-turn modal, spells modal behavior, persistence, or unrelated styling.
+
+---
+
+Feature-006: Display player spells on the battle page and fix player image width
+
+Status
+
+* done
+
+Goal
+
+* Add the battling player’s committed spells to the battle page.
+* Display the player’s spells in the same way the enemy’s spells are displayed.
+* Fix the player battle image so it keeps its natural width instead of stretching to the full container width.
+
+Scope
+
+* Update the battle page only.
+* Add the battling player’s committed spell slots to the player-side battle container.
+* Use the reusable committed spell slot display component from EPIC-003 Feature-006.
+* Keep the enemy spell display unchanged.
+* Keep the existing player/enemy left-right battle layout from Feature-005.
+* Fix the player piece image sizing on the battle page.
+* The player piece image should keep its natural aspect ratio.
+* Do not change the player image size or styling elsewhere in the game.
+
+Player Spell Display Requirement
+
+* The battle page should display the battling player’s committed spells.
+* Player spells should be displayed in the same way enemy spells are displayed.
+* Use the same reusable committed spell slot display component.
+* The player spell display should be read-only.
+* The player spell display should show six spell columns.
+* Duplicate tokens should consolidate using the existing component behaviour.
+* Empty slots should remain visually empty apart from their slot number.
+* Do not add drag-and-drop to the battle page.
+* Do not allow spell editing from the battle page.
+* Do not change the Spells modal.
+
+Player Container Requirement
+
+* The player-side battle container should now display:
+
+  * the battling player’s piece image.
+  * the battling player’s health bar.
+  * the battling player’s committed spell slots.
+* Avoid unnecessary labels such as:
+
+  * `Player’s piece`
+  * `Player’s health`
+  * `Player’s spells`
+* The layout should still be clear through positioning and visual structure.
+
+Player Image Width Requirement
+
+* The player’s piece image on the battle page is currently taking up the full width of its container.
+* This should be fixed.
+* The image should keep its natural proportional width.
+* The image should not stretch horizontally.
+* The image should keep its intended height from the current battle page styling.
+* Set width to auto or otherwise preserve the image aspect ratio.
+* Check for inherited styles such as:
+
+  * `width: 100%`
+  * generic image rules
+  * flex or grid stretching
+  * container styles forcing the image to fill available width
+* The player image should still be horizontally flipped from Feature-005.
+* The fix should apply only to the player image on the battle page.
+
+Enemy Display Preservation
+
+* The enemy-side battle container should remain unchanged.
+* Enemy image display should still work.
+* Enemy health bar should still work.
+* Enemy spell slots should still work.
+* Enemy `Miss` slots should still render correctly.
+* Enemy `Joined with X` slots should still display `J`.
+
+Expected Behaviour
+
+* The battle page shows the player on the left and the enemy on the right.
+* The player side now includes the player’s committed spell slots.
+* The player spell slots use the same reusable spell display component as the enemy.
+* The player spell display is read-only.
+* The player spell display does not affect the Spells modal.
+* The player image on the battle page no longer stretches to the full width of its container.
+* The player image keeps its natural aspect ratio.
+* The player image remains horizontally flipped.
+* The enemy display still works.
+* Existing battle debug buttons still work.
+
+Out Of Scope
+
+* No actual battle mechanics.
+* No spell execution.
+* No player attacks.
+* No enemy attacks.
+* No token effects.
+* No spell editing on the battle page.
+* No drag-and-drop on the battle page.
+* No changes to the Spells modal.
+* No changes to committed spell data.
+* No changes to enemy spell display logic.
+* No changes to health logic.
+* No changes to battle win flow.
+* No changes to battle lose/respawn flow.
+* No changes to reward page.
+* No changes to gameplay UI.
+* No changes to map player pieces.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* The battling player’s committed spell slots are already stored in player data from the spell setup feature.
+* The reusable committed spell slot display component can receive player spell slot data in the same shape as, or adapted from, enemy spell slot data.
+* The player spell display should visually match the enemy spell display.
+* The battle page player image should still use the same selected player piece image from setup.
+* The horizontal flip from Feature-005 should remain in place.
+
+Stop Point
+
+* Stop once the battle page displays the player’s committed spell slots using the reusable spell display component, and the player battle image keeps its natural width while remaining horizontally flipped.
+
+Testing Checkpoints
+
+* Confirm the battle page still loads.
+* Confirm the player container remains on the left.
+* Confirm the enemy container remains on the right.
+* Confirm the player container shows the battling player’s piece image.
+* Confirm the player image is still horizontally flipped.
+* Confirm the player image does not stretch to full container width.
+* Confirm the player image keeps its natural aspect ratio.
+* Confirm the player container shows the battling player’s health bar.
+* Confirm the player container shows the battling player’s committed spell slots.
+* Confirm player spell slots use the reusable committed spell slot display component.
+* Confirm player spell slots are read-only on the battle page.
+* Confirm duplicate player tokens consolidate correctly.
+* Confirm empty player spell slots do not show placeholder text.
+* Confirm the enemy spell display still works.
+* Confirm enemy `Joined with X` slots still display `J`.
+* Confirm enemy `Miss` slots still render correctly.
+* Confirm Remove 5 health still works.
+* Confirm Win still navigates to the reward page.
+* Confirm reward Continue still returns to gameplay and advances the turn.
+* Confirm Lose still shows the lose modal.
+* Confirm Respawn still returns to gameplay, restores player health, moves the player to Start Area, and advances the turn.
+* Confirm the Spells modal has not changed.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Updated the existing battle page only, adding the battling player's committed spell-slot display under the existing player health bar by reusing the same shared committed spell-slot component already used for enemy spells.
+* Fixed the battle-only player image stretch by keeping the existing height and width auto behavior while applying a player-image-specific alignment guard only on the battle page, so the image no longer fills the full player panel width.
+* Reuse check: reviewed the existing `BattlePage`, shared `CommittedSpellSlotList`, shared `HealthBar`, and current player spell-slot data shape; reused the existing read-only spell display component and current player spell data directly, and made only a small battle-page sizing adjustment because the stretch came from the current battle layout.
+* Assumption: the battling player's `spellSlots` already represent the committed spell state needed for read-only battle display, so no adapter or new battle-specific spell data model was required.
+* Intentionally not changed: enemy spell display logic, the Spells modal, committed spell editing, battle mechanics, health logic, reward flow, respawn flow, gameplay UI, map pieces, persistence, or unrelated styling.

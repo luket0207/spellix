@@ -5,11 +5,17 @@ describe('game setup player piece selection foundation', () => {
   test('creates players with default boy piece-selection data', () => {
     const players = createPlayers(2);
 
+    expect(players[0].anywhereMode).toBe(false);
     expect(players[0].gender).toBe('boy');
+    expect(players[0].currentHealth).toBe(100);
     expect(players[0].hasLeftStartArea).toBe(false);
+    expect(players[0].maxHealth).toBe(100);
     expect(players[0].pieceImage).toBe('m-red.png');
+    expect(players[1].anywhereMode).toBe(false);
     expect(players[1].gender).toBe('boy');
+    expect(players[1].currentHealth).toBe(100);
     expect(players[1].hasLeftStartArea).toBe(false);
+    expect(players[1].maxHealth).toBe(100);
     expect(players[1].pieceImage).toBe('m-blue.png');
   });
 

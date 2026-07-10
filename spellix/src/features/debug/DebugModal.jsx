@@ -5,19 +5,26 @@ import './debug.css';
 
 function DebugModal({
   currentPlayer,
+  enemyOptions = [],
   isOpen,
   message,
+  onEnableAnywhereMode,
   onClose,
   onDiscardPendingToken,
   onGiveToken,
+  onStartBattle,
+  onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
   onReplacePendingToken,
+  onSelectedEnemyIdChange,
   onSelectedTokenTypeChange,
+  selectedEnemyId = '',
   pendingTokenType = '',
   selectedReplacementTokenId = '',
   selectedTokenType = 'red',
 }) {
   const isCurrentPlayerReady = Boolean(currentPlayer?.hasCommittedInitialSpells);
+  const isAnywhereModeEnabled = Boolean(currentPlayer?.anywhereMode);
   const isTokenSelectionDisabled = !currentPlayer || !isCurrentPlayerReady || Boolean(pendingTokenType);
 
   return (
@@ -38,6 +45,51 @@ function DebugModal({
             ? `Current player: ${currentPlayer.colour}`
             : 'No current player is available outside gameplay turns.'}
         </p>
+        <div className="debug-anywhere-mode-controls">
+          <p>Anywhere Mode applies to the current player only.</p>
+          <p>{`Anywhere Mode: ${isAnywhereModeEnabled ? 'Enabled' : 'Disabled'}`}</p>
+          <button
+            type="button"
+            disabled={!currentPlayer || isAnywhereModeEnabled}
+            onClick={onEnableAnywhereMode}
+          >
+            Enable Anywhere Mode
+          </button>
+        </div>
+
+        <div className="debug-battle-controls">
+          <p>Start a debug battle for the current player.</p>
+          {[1, 2, 3, 4].map((level) => (
+            <button
+              key={level}
+              type="button"
+              disabled={!currentPlayer}
+              onClick={() => onStartBattle(level)}
+            >
+              {`Level ${level}`}
+            </button>
+          ))}
+          <label htmlFor="debug-enemy-select">Enemy</label>
+          <select
+            id="debug-enemy-select"
+            value={selectedEnemyId}
+            disabled={!currentPlayer}
+            onChange={(event) => onSelectedEnemyIdChange(event.target.value)}
+          >
+            {enemyOptions.map((enemyOption) => (
+              <option key={enemyOption.id} value={enemyOption.id}>
+                {enemyOption.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!currentPlayer || !selectedEnemyId}
+            onClick={onStartSelectedEnemyBattle}
+          >
+            Start Selected Enemy Battle
+          </button>
+        </div>
 
         {currentPlayer && !isCurrentPlayerReady ? (
           <p>Finish the current player&apos;s initial spell setup before using debug token tools.</p>

@@ -1,11 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { createPlayers } from './features/gameSetup/gameSetup';
 import { GameSetupProvider } from './features/gameSetup/GameSetupContext';
 
-jest.mock('./features/gameBoard/BoardGrid', () => () => <div aria-label="game board" />);
+jest.mock('./features/gameBoard/BoardGrid', () => ({ currentPlayerId }) => (
+  <div aria-label="game board">{`Current board player: ${currentPlayerId}`}</div>
+));
 
 function createGameplaySetup({ hasCommittedInitialSpells = true, playerCount = 2 } = {}) {
   const players = createPlayers(playerCount).map((player, index) => {
@@ -108,5 +110,76 @@ describe('App gameplay settings button accessibility', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: /debug/i })).not.toBeInTheDocument();
     });
+  });
+
+  test('enables anywhere mode for only the current player from the debug modal', async () => {
+    renderApp('/gameplay', {
+      initialGameSetup: createGameplaySetup({ hasCommittedInitialSpells: true }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+
+    expect(screen.getByText(/current player: red/i)).toBeInTheDocument();
+    expect(screen.getByText(/anywhere mode: disabled/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /enable anywhere mode/i }));
+
+    expect(screen.getByText(/anywhere mode: enabled/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/anywhere mode enabled for the red player/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /enable anywhere mode/i })).toBeDisabled();
+  });
+
+  test('starts a level 3 debug battle for the current player', async () => {
+    renderApp('/gameplay', {
+      initialGameSetup: createGameplaySetup({ hasCommittedInitialSpells: true }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^level 3$/i }));
+
+    expect(screen.getByRole('heading', { name: /battle/i })).toBeInTheDocument();
+    expect(screen.getByText(/battle level: 3/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/battle player panel/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/battle enemy panel/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/battle player piece/i)).toHaveAttribute(
+      'src',
+      expect.stringContaining('m-red.png')
+    );
+    expect(screen.getByLabelText(/battle player piece/i)).toHaveClass('battle-player-piece');
+    expect(screen.getByLabelText(/battle player piece/i)).toHaveStyle({
+      alignSelf: 'flex-start',
+      width: 'auto',
+    });
+    expect(screen.getByText('100 / 100')).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/battle player panel/i)).getByLabelText('5 red tokens in slot 1')
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/battle player panel/i)).getByLabelText('2 blue tokens in slot 2')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /battle enemy/i })).toHaveClass('battle-enemy-piece');
+  });
+
+  test('starts a manual battle with the selected enemy from the debug modal', async () => {
+    renderApp('/gameplay', {
+      initialGameSetup: createGameplaySetup({ hasCommittedInitialSpells: true }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+    await userEvent.selectOptions(screen.getByLabelText(/enemy/i), 'hellcrown-reaper');
+    await userEvent.click(screen.getByRole('button', { name: /start selected enemy battle/i }));
+
+    expect(screen.getByRole('heading', { name: /battle/i })).toBeInTheDocument();
+    expect(screen.getByText(/battle level: 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /hellcrown reaper/i })).toHaveClass(
+      'battle-enemy-piece'
+    );
+    expect(screen.getByText('120 / 120')).toBeInTheDocument();
+    expect(screen.getAllByText('J')).toHaveLength(2);
   });
 });

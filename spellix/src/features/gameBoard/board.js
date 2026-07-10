@@ -1008,3 +1008,16 @@ export function assignStartingPositions(players) {
     position: START_AREA_POSITION_SEQUENCE[index] ?? START_AREA_POSITION_SEQUENCE[index % 4],
   }));
 }
+
+export function getFirstStartAreaPosition(board) {
+  const startAreaSquare = board?.squares?.find((square) => square.areaType === 'start-area');
+
+  if (startAreaSquare) {
+    return {
+      x: startAreaSquare.x,
+      y: startAreaSquare.y,
+    };
+  }
+
+  return { ...START_AREA_POSITION_SEQUENCE[0] };
+}

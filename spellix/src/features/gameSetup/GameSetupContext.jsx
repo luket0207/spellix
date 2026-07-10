@@ -8,6 +8,7 @@ import {
   createTurnOrder,
   getCurrentPlayer,
 } from './gameSetup';
+import { getEnemyById } from '../battle/enemies';
 import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
 
@@ -22,6 +23,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
       return {
         ...currentSetup,
+        activeBattle: null,
         playerCount: nextPlayerCount,
         players: createPlayers(nextPlayerCount, currentSetup.players),
         turnOrder: [],
@@ -34,6 +36,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   const setPlayerColour = (playerId, colour) => {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
+      activeBattle: null,
       players: currentSetup.players.map((player) =>
         player.id === playerId
           ? {
@@ -52,6 +55,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   const setPlayerGender = (playerId, gender) => {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
+      activeBattle: null,
       players: currentSetup.players.map((player) =>
         player.id === playerId
           ? {
@@ -117,6 +121,24 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     }));
   };
 
+  const setPlayerAnywhereMode = (playerId, anywhereMode) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId ? { ...player, anywhereMode } : player
+      ),
+    }));
+  };
+
+  const setPlayerHealth = (playerId, currentHealth) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId ? { ...player, currentHealth } : player
+      ),
+    }));
+  };
+
   const updatePlayerSpells = (playerId, nextSpellData) => {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
@@ -134,6 +156,48 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     }));
   };
 
+  const startBattle = (playerId, level, enemyId) => {
+    const enemy = getEnemyById(enemyId);
+
+    if (!enemy) {
+      return;
+    }
+
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      activeBattle: {
+        enemyCurrentHealth: enemy.currentHealth,
+        enemyId,
+        level,
+        phase: 'active',
+        playerId,
+      },
+    }));
+  };
+
+  const setActiveBattlePhase = (phase) => {
+    setGameSetup((currentSetup) => {
+      if (!currentSetup.activeBattle) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...currentSetup.activeBattle,
+          phase,
+        },
+      };
+    });
+  };
+
+  const clearActiveBattle = () => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      activeBattle: null,
+    }));
+  };
+
   const resetGame = () => {
     setGameSetup(createInitialGameSetup());
   };
@@ -141,16 +205,37 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   return (
     <GameSetupContext.Provider
       value={{
+        activeBattle: gameSetup.activeBattle ?? null,
+        battleEnemy: gameSetup.activeBattle?.enemyId
+          ? (() => {
+              const enemy = getEnemyById(gameSetup.activeBattle.enemyId);
+
+              return enemy
+                ? {
+                    ...enemy,
+                    currentHealth: gameSetup.activeBattle.enemyCurrentHealth ?? enemy.currentHealth,
+                  }
+                : null;
+            })()
+          : null,
+        battlePlayer: gameSetup.activeBattle
+          ? gameSetup.players.find((player) => player.id === gameSetup.activeBattle.playerId) ?? null
+          : null,
         gameSetup,
+        clearActiveBattle,
         currentPlayer: getCurrentPlayer(gameSetup),
         advanceTurn,
         initializeBoard,
         initializeTurnOrder,
         resetGame,
+        setActiveBattlePhase,
+        setPlayerAnywhereMode,
+        setPlayerHealth,
         setPlayerPosition,
         setPlayerColour,
         setPlayerGender,
         setPlayerCount,
+        startBattle,
         updatePlayerSpells,
       }}
     >

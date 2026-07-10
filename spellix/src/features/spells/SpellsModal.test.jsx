@@ -47,6 +47,7 @@ describe('SpellsModal layout', () => {
     );
     expect(screen.getByText(/^Spells$/i)).toBeInTheDocument();
     expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
+    expect(spellPlayerPiece).not.toHaveClass('battle-player-piece');
     expect(spellPlayerPiece).toHaveStyle({ height: '100px' });
     expect(spellSlotLabels).toHaveLength(6);
     expect(spellSlotLabels[0]).toHaveTextContent('Slot 1: 0 of 5 tokens');
@@ -62,6 +63,7 @@ describe('SpellsModal layout', () => {
 
     expect(screen.getByText(/^Spells$/i)).toBeInTheDocument();
     expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
+    expect(spellPlayerPiece).not.toHaveClass('battle-player-piece');
     expect(spellPlayerPiece).toHaveStyle({ height: '100px' });
     expect(screen.getByText(/^Token Bag$/i)).toBeInTheDocument();
     expect(screen.queryByText(/^Starting Tokens$/i)).not.toBeInTheDocument();

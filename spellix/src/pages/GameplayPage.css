@@ -11,6 +11,12 @@
   gap: 12px;
 }
 
+.gameplay-current-player-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .gameplay-current-player-piece {
   align-self: flex-start;
   width: auto;

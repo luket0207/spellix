@@ -79,3 +79,8 @@
   justify-content: flex-start;
   gap: 3px;
 }
+
+.committed-spell-slot-text {
+  font-size: 18px;
+  font-weight: 700;
+}
