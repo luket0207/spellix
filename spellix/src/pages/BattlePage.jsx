@@ -33,11 +33,7 @@ function BattlePage() {
   }, [hasBattleContext, navigate]);
 
   if (!hasBattleContext) {
-    return (
-      <main>
-        <p>Returning to gameplay.</p>
-      </main>
-    );
+    return null;
   }
 
   const enemyImageSource = getEnemyImageSource(battleEnemy.imageFileName);

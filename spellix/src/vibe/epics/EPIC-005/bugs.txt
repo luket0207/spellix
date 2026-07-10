@@ -1,0 +1,114 @@
+Bug-001: Remove “Returning to gameplay” transition text after battle ends
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle page, debug battle triggers, battle health testing, win flow, and lose respawn flow
+
+Bug Summary
+
+* After a battle is finished by either winning or losing, the app displays the text `Returning to gameplay`.
+* This intermediate step should not be visible.
+* The app should immediately return to the gameplay page after the battle-end flow is complete.
+
+Repro Steps
+
+* Start a battle from the debug menu.
+* Finish the battle by clicking `Win`.
+* Continue from the reward page.
+* Observe whether `Returning to gameplay` is displayed.
+* Start another battle.
+* Finish the battle by clicking `Lose`.
+* Click `Respawn`.
+* Observe whether `Returning to gameplay` is displayed.
+
+Expected Behaviour
+
+* After winning:
+
+  * Click `Win`.
+  * Navigate to the reward page.
+  * Click `Continue`.
+  * Immediately return to gameplay.
+  * Advance to the next player’s turn.
+* After losing:
+
+  * Click `Lose`.
+  * Show the lost modal.
+  * Click `Respawn`.
+  * Immediately return to gameplay.
+  * Move the player back to the Start Area.
+  * Restore the player to full health.
+  * Advance to the next player’s turn.
+* The text `Returning to gameplay` should never be displayed to the user.
+* There should be no visible intermediate return screen or message.
+
+Actual Behaviour
+
+* The app displays:
+
+```txt id="fxv82n"
+Returning to gameplay
+```
+
+* This creates an unnecessary extra visible step after battle completion.
+
+Required Fix
+
+* Remove the visible `Returning to gameplay` text.
+* Remove or bypass any intermediate return screen if one exists.
+* After reward Continue, navigate directly back to the gameplay page.
+* After Respawn, navigate directly back to the gameplay page.
+* Keep the existing battle state cleanup.
+* Keep the existing turn advancement behaviour.
+* Keep the existing respawn behaviour.
+* Do not add a replacement message.
+
+Out Of Scope
+
+* No changes to battle mechanics.
+* No changes to enemy display.
+* No changes to player health logic.
+* No changes to reward contents.
+* No changes to the Win button behaviour except removing the visible return message after Continue.
+* No changes to the Lose button behaviour except removing the visible return message after Respawn.
+* No changes to respawn position logic.
+* No changes to turn order logic unless strictly required to preserve the existing advance-to-next-player behaviour.
+* No unrelated routing changes.
+* No unrelated UI redesign.
+
+Suspected Cause
+
+* There may be a temporary return/loading state or placeholder component that renders `Returning to gameplay`.
+* The reward or respawn flow may navigate through an intermediate route before returning to gameplay.
+
+Attempted Fixes
+
+* Reviewed the battle-end pages and confirmed both `BattlePage` and `RewardPage` still rendered a fallback `<p>Returning to gameplay.</p>` while a `useEffect` redirect was happening after battle state was cleared.
+* Removed the visible fallback text from both pages by returning `null` during the brief redirect state instead of rendering an intermediate message.
+* Extended the existing battle-flow test to assert that `Returning to gameplay` is never present after `Continue` or `Respawn`.
+
+Final Fix
+
+* `src/pages/BattlePage.jsx` now redirects to gameplay without rendering any visible fallback content when battle context is missing.
+* `src/pages/RewardPage.jsx` now redirects to gameplay without rendering any visible fallback content when reward-page battle state is missing.
+* `src/pages/BattlePage.test.jsx` now verifies that the text `Returning to gameplay` does not appear after either the win/continue flow or the lose/respawn flow.
+
+Testing Required
+
+* Confirm winning a battle still navigates to the reward page.
+* Confirm clicking Continue on the reward page returns directly to gameplay.
+* Confirm `Returning to gameplay` is not displayed after winning.
+* Confirm Continue still advances to the next player’s turn.
+* Confirm losing a battle still shows the lost modal.
+* Confirm clicking Respawn returns directly to gameplay.
+* Confirm `Returning to gameplay` is not displayed after losing.
+* Confirm Respawn still moves the player back to the Start Area.
+* Confirm Respawn still restores the player to full health.
+* Confirm Respawn still advances to the next player’s turn.
+* Confirm battle state is still cleaned up correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

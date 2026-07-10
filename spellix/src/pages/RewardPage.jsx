@@ -14,11 +14,7 @@ function RewardPage() {
   }, [isRewardPageReady, navigate]);
 
   if (!isRewardPageReady) {
-    return (
-      <main>
-        <p>Returning to gameplay.</p>
-      </main>
-    );
+    return null;
   }
 
   const handleContinue = () => {

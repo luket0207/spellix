@@ -402,3 +402,56 @@ Notes
 
 * `npm run lint` was not run because there is no `lint` script in `package.json`.
 * This feature stayed focused on the battle-page player spell display and battle-only image width fix, without changing spell editing, enemy spell behavior, battle mechanics, or unrelated UI.
+
+---
+
+Bug-001: Remove "Returning to gameplay" transition text after battle ends
+
+Test Status
+
+* passed
+
+Bug Coverage
+
+* Finishing a battle through either `Continue` on the reward page or `Respawn` from the lose modal now returns to gameplay without ever showing the `Returning to gameplay` text.
+* Existing battle cleanup, respawn positioning, health restore, and next-turn advancement still work.
+
+Manual Regression Steps
+
+1. Start gameplay, open Settings, then open Debug and begin a battle.
+Expected result: The battle starts normally.
+
+2. Click `Win`, then click `Continue` on the reward page.
+Expected result: The app returns directly to gameplay, advances to the next player's turn, and never shows `Returning to gameplay`.
+
+3. Start another battle, click `Lose`, then click `Respawn`.
+Expected result: The app returns directly to gameplay, restores the player to full health, moves them back to Start Area, advances to the next player's turn, and never shows `Returning to gameplay`.
+
+4. Observe the app during both return flows.
+Expected result: No visible intermediate return screen or placeholder message appears, and there are no console errors.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` passes and now verifies:
+  * the reward-page `Continue` path returns to gameplay without rendering `Returning to gameplay`
+  * the lose/respawn path returns to gameplay without rendering `Returning to gameplay`
+  * existing battle cleanup, respawn, and turn-advance behavior still works
+* `src/AppSettingsButton.test.jsx` passes, confirming debug-triggered battle entry still works after the redirect cleanup
+* `src/features/debug/DebugModal.test.jsx` passes, confirming existing debug battle controls still work
+* `src/features/battle/enemies.test.js` passes, confirming enemy battle data behavior remains intact
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes, confirming shared battle spell display behavior remains intact
+* `src/features/gameBoard/board.test.js` passes, confirming respawn Start Area positioning remains intact
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/pages/BattlePage.test.jsx src/AppSettingsButton.test.jsx src/features/debug/DebugModal.test.jsx src/features/battle/enemies.test.js src/features/spells/CommittedSpellSlots.test.jsx src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the existing stale expectations in `src/App.test.jsx` are updated to match the current gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix stayed focused on removing the visible intermediate redirect message only, without changing battle mechanics, routing structure, reward contents, or respawn rules.

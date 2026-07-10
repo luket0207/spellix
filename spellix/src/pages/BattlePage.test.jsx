@@ -154,6 +154,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 0,29/i)).toBeInTheDocument();
+    expect(screen.queryByText(/returning to gameplay/i)).not.toBeInTheDocument();
   });
 
   test('wins a battle, goes to reward, and continues back to gameplay on the next turn', () => {
@@ -169,5 +170,6 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 3,28/i)).toBeInTheDocument();
+    expect(screen.queryByText(/returning to gameplay/i)).not.toBeInTheDocument();
   });
 });
