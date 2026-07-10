@@ -1,9 +1,21 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createPlayers } from '../features/gameSetup/gameSetup';
 import { GameSetupProvider } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
 
-jest.mock('../features/gameBoard/BoardGrid', () => () => <div aria-label="game board" />);
+jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareClick }) => (
+  <div aria-label="game board">
+    <p>{`Current board player: ${currentPlayerId}`}</p>
+    <button type="button" onClick={() => onSquareClick({ x: 1, y: 28 })}>
+      Move to square 1, 28
+    </button>
+  </div>
+));
+
+jest.mock('../features/gameBoard/movement', () => ({
+  getHighlightedNodeIds: () => ['square-1-28'],
+  getMovementNodeIdFromCoordinates: (x, y) => `square-${x}-${y}`,
+}));
 
 jest.mock('../features/gameBoard/board', () => ({
   assignStartingPositions: (players) =>
@@ -58,12 +70,60 @@ function renderGameplayPage() {
 }
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
+  test('shows the current player piece in the sidebar and the next player piece in the turn-change modal', async () => {
+    renderGameplayPage();
+
+    expect(screen.getByText(/^Current board player: player-1$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/it is currently .* player's turn/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/current player piece/i)).toHaveAttribute(
+      'src',
+      expect.stringContaining('m-red.png')
+    );
+    expect(screen.getByLabelText(/current player piece/i)).toHaveStyle({ height: '150px' });
+    expect(screen.getByLabelText(/current player piece/i)).toHaveStyle({
+      alignSelf: 'flex-start',
+      width: 'auto',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
+    expect(screen.getByText(/it is now blue player's turn\./i)).toBeInTheDocument();
+    expect(screen.getByText(/^Current board player: player-2$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/turn change player piece/i)).toHaveAttribute(
+      'src',
+      expect.stringContaining('m-blue.png')
+    );
+    expect(screen.getByLabelText(/turn change player piece/i)).toHaveStyle({ height: '150px' });
+
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText(/current player piece/i)).toHaveAttribute(
+      'src',
+      expect.stringContaining('m-blue.png')
+    );
+  });
+
   test('disables save and closes immediately on cancel when no spell changes were made', async () => {
     renderGameplayPage();
 
     fireEvent.click(screen.getByRole('button', { name: /spells/i }));
 
-    expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
+    const spellsDialog = screen.getByRole('dialog', { name: /spells/i });
+
+    expect(spellsDialog).toBeInTheDocument();
+    expect(within(spellsDialog).getByRole('heading', { name: /^spells$/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/spell player piece/i)).toHaveAttribute(
+      'src',
+      expect.stringContaining('m-red.png')
+    );
+    expect(screen.getByLabelText(/spell player piece/i)).toHaveStyle({ height: '100px' });
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));

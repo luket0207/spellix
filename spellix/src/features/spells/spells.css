@@ -4,6 +4,17 @@
   gap: 12px;
 }
 
+.spells-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spells-player-piece {
+  display: block;
+}
+
 .modal-panel--spells {
   width: min(960px, calc(100vw - 32px));
 }
@@ -146,17 +157,22 @@
 
 .committed-spell-slot-list {
   display: grid;
-  grid-template-columns: repeat(6, 50px);
+  grid-template-columns: repeat(6, 40px);
+  justify-content: space-between;
   list-style: none;
   margin: 0;
   padding: 0;
-  width: 300px;
+  width: 100%;
+  gap: 0;
+  box-sizing: border-box;
 }
 
 .committed-spell-slot-item {
   display: flex;
-  width: 50px;
-  flex: 0 0 50px;
+  width: 40px;
+  min-width: 40px;
+  flex: 0 0 40px;
+  box-sizing: border-box;
 }
 
 .committed-spell-drop-zone {

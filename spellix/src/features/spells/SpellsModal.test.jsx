@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { getPlayerPieceImageName } from '../gameSetup/pieceImages';
 import SpellsModal from './SpellsModal';
 
 function createDraftSpellSlots() {
@@ -15,6 +16,7 @@ function renderSpellsModal({ isForcedSetup = true } = {}) {
       currentPlayer={{
         id: 'player-1',
         colour: 'red',
+        pieceImage: getPlayerPieceImageName({ colour: 'red', gender: 'girl' }),
       }}
       draftSpellSlots={createDraftSpellSlots()}
       draftTokenBag={[
@@ -32,16 +34,20 @@ function renderSpellsModal({ isForcedSetup = true } = {}) {
 }
 
 describe('SpellsModal layout', () => {
-  test('shows spell slots before the token source and labels forced setup tokens as starting tokens without count text', () => {
+  test('shows a Spells title, the current player piece image, and forced setup tokens before the token source', () => {
     renderSpellsModal({ isForcedSetup: true });
 
     const spellSlotsList = screen.getByLabelText(/^spell slots$/i);
     const startingTokensHeading = screen.getByText(/^Starting Tokens$/i);
     const spellSlotLabels = screen.getAllByText(/^Slot [1-6]: 0 of 5 tokens$/i);
+    const spellPlayerPiece = screen.getByRole('img', { name: /spell player piece/i });
 
     expect(spellSlotsList.compareDocumentPosition(startingTokensHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     );
+    expect(screen.getByText(/^Spells$/i)).toBeInTheDocument();
+    expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
+    expect(spellPlayerPiece).toHaveStyle({ height: '100px' });
     expect(spellSlotLabels).toHaveLength(6);
     expect(spellSlotLabels[0]).toHaveTextContent('Slot 1: 0 of 5 tokens');
     expect(spellSlotLabels[5]).toHaveTextContent('Slot 6: 0 of 5 tokens');
@@ -49,9 +55,14 @@ describe('SpellsModal layout', () => {
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
   });
 
-  test('labels later-visit tokens as token bag without count text', () => {
+  test('keeps the current player piece image during later normal spells visits', () => {
     renderSpellsModal({ isForcedSetup: false });
 
+    const spellPlayerPiece = screen.getByRole('img', { name: /spell player piece/i });
+
+    expect(screen.getByText(/^Spells$/i)).toBeInTheDocument();
+    expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
+    expect(spellPlayerPiece).toHaveStyle({ height: '100px' });
     expect(screen.getByText(/^Token Bag$/i)).toBeInTheDocument();
     expect(screen.queryByText(/^Starting Tokens$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();

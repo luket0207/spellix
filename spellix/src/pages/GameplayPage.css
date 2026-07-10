@@ -10,3 +10,13 @@
   flex-direction: column;
   gap: 12px;
 }
+
+.gameplay-current-player-piece {
+  align-self: flex-start;
+  width: auto;
+  display: block;
+}
+
+.turn-change-player-piece {
+  display: block;
+}

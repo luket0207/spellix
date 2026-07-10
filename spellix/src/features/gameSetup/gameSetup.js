@@ -1,3 +1,5 @@
+import { DEFAULT_PLAYER_GENDER, getPlayerPieceImageName } from './pieceImages';
+
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
 export const PLAYER_COLOURS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
@@ -51,10 +53,14 @@ export function createPlayers(playerCount, existingPlayers = []) {
   return Array.from({ length: playerCount }, (_, index) => {
     const playerId = `player-${index + 1}`;
     const existingPlayer = existingPlayers[index];
+    const colour = existingPlayer?.colour ?? PLAYER_COLOURS[index];
+    const gender = existingPlayer?.gender ?? DEFAULT_PLAYER_GENDER;
 
     return {
       id: playerId,
-      colour: existingPlayer?.colour ?? PLAYER_COLOURS[index],
+      colour,
+      gender,
+      pieceImage: getPlayerPieceImageName({ colour, gender }),
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
       spellSlots: existingPlayer
         ? cloneSpellSlots(existingPlayer.spellSlots)

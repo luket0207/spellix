@@ -780,3 +780,758 @@ Current Slice Notes
   * movement, dice, turn order, or board-generation rules
 * Remaining follow-up outside Feature-003 scope:
   * add app-level integration coverage for the settings-to-debug token flow once the stale `src/App.test.jsx` assertions are updated or isolated
+
+
+---
+
+Feature-004: Replace player colour markers with gameplay piece images
+
+Status
+
+* done
+
+Goal
+
+* Replace the simple colour-based player markers with gameplay piece images.
+* Update player setup so each player chooses:
+
+  * Boy or Girl.
+  * Colour.
+* Use the selected piece image throughout the gameplay UI where the player colour marker is currently used.
+
+Scope
+
+* Use the new piece images added in:
+
+```txt id="h9ut8z"
+src/images/pieces
+```
+
+* Piece images are split into two sets:
+
+  * Male pieces start with `m-`.
+  * Female pieces start with `f-`.
+* The rest of the filename represents the colour.
+* Example naming pattern:
+
+```txt id="ka77x4"
+m-red
+f-red
+m-blue
+f-blue
+```
+
+* Use the real file extensions that exist in `src/images/pieces`.
+* Update the game setup page.
+* Update the player data stored in game context.
+* Replace board player colour circles with the selected player piece image.
+* Replace the current-turn text in the right-side gameplay UI with the current player’s piece image.
+* Update the start-of-turn modal to include the player’s piece image.
+* Update the Spells modal heading/player display.
+
+Player Setup Requirement
+
+* Each player setup section should now include two choices:
+
+  * Whether they want to be a Boy or a Girl.
+  * Which colour they want to use.
+* Boy should map to the male piece image set.
+* Girl should map to the female piece image set.
+* The player’s selected piece image should be derived from both choices.
+* Colours remain exclusive.
+* If one player chooses the red girl piece, no other player can choose the red boy piece.
+* Colour exclusivity is based on colour only, not gender.
+* Gender choice does not need to be exclusive.
+* Multiple players can choose Boy.
+* Multiple players can choose Girl.
+* Each player must still have a unique colour.
+* A player setup should not be considered valid until both gender and colour are selected.
+* Existing player count setup should remain unchanged.
+
+Suggested Player Data Shape
+
+```js id="y3q790"
+{
+  id: "player-1",
+  colour: "red",
+  gender: "girl",
+  pieceImage: "f-red.png"
+}
+```
+
+* The exact image filename should match the real file in `src/images/pieces`.
+* The code may store the image import/path directly if that fits the current project structure better.
+* Keep the stored player data simple and readable.
+
+Board Player Piece Requirement
+
+* On the board itself, replace the simple coloured player circles with the selected player piece image.
+* Each board piece image should be rendered at:
+
+```txt id="1b8t51"
+height: 25px
+```
+
+* The board should still show each player on their current square.
+* Existing logic for multiple players on the same square should still work.
+* Piece images should not change board square size.
+* Piece images should not affect movement calculation.
+* Piece images should not affect legal move highlighting.
+
+Right-Side Gameplay UI Requirement
+
+* The right-side gameplay UI currently says something like:
+
+```txt id="lb3lph"
+It is currently X player's turn.
+```
+
+* Remove this sentence.
+* Replace it with the current player’s selected piece image.
+* The current player image should be rendered at:
+
+```txt id="37bzr1"
+height: 150px
+```
+
+* The image should update when the current turn changes.
+* The `Roll Dice` button should remain.
+* The `Spells` button should remain.
+* The read-only committed spells display should remain.
+
+Start-Of-Turn Modal Requirement
+
+* The start-of-turn modal should still say:
+
+```txt id="5xvdi9"
+It is now X player's turn
+```
+
+* `X` should still be replaced with the player’s colour name only.
+* The modal should also show the current player’s selected piece image.
+* The image should be rendered at:
+
+```txt id="23yo0k"
+height: 150px
+```
+
+* The modal should still require the player to acknowledge it before continuing, using the existing modal behaviour.
+* Do not replace the colour name in this modal with the image.
+* The modal should contain both the colour-name text and the image.
+
+Spells Modal Requirement
+
+* The Spells modal currently says something like:
+
+```txt id="ve2s98"
+Spells for X player
+```
+
+* Replace this title with exactly:
+
+```txt id="nx40l8"
+Spells
+```
+
+* Add the current player’s selected piece image to the top right of the Spells modal.
+* The piece image should be rendered at:
+
+```txt id="2j8nl5"
+height: 100px
+```
+
+* The image should represent the player whose spells are being viewed or edited.
+* This should work during:
+
+  * Initial forced spell setup.
+  * Later normal Spells modal visits.
+* Do not change the drag-and-drop spell slot behaviour.
+* Do not change Save or Cancel behaviour.
+
+Image Mapping Rules
+
+* Image selection should be based on:
+
+  * Player gender.
+  * Player colour.
+* Boy should use the `m-` image for that colour.
+* Girl should use the `f-` image for that colour.
+* Colours should map to filenames consistently.
+* Keep the mapping simple and explicit.
+* Do not infer unrelated colours.
+* Do not use fallback decorative placeholders unless an image is missing and the app would otherwise crash.
+* If an expected image is missing, fail safely with a simple text fallback or empty fallback, but do not break gameplay.
+
+Expected Behaviour
+
+* The setup page lets each player choose Boy or Girl.
+* The setup page lets each player choose a colour.
+* The same colour cannot be selected by two players, even if the gender choice is different.
+* A red girl and red boy cannot both be selected in the same game.
+* The board displays each player using their selected piece image instead of a coloured circle.
+* Board piece images are 25px tall.
+* The right-side gameplay UI displays the current player’s piece image instead of the sentence `It is currently X player's turn.`
+* The right-side current player image is 150px tall.
+* The start-of-turn modal still says `It is now X player's turn`, using the colour name.
+* The start-of-turn modal also shows the player’s piece image at 150px tall.
+* The Spells modal title is exactly `Spells`.
+* The Spells modal shows the current player’s piece image in the top right.
+* The Spells modal piece image is 100px tall.
+* Existing turn order still works.
+* Existing movement still works.
+* Existing spells functionality still works.
+
+Out Of Scope
+
+* No new player colours beyond the existing piece images.
+* No image editing.
+* No sprite animation.
+* No directional facing.
+* No attack animations.
+* No hover previews.
+* No player names.
+* No changing player count rules.
+* No changing board generation.
+* No changing movement logic.
+* No changing dice logic.
+* No changing spell token logic.
+* No changing spell save/cancel behaviour.
+* No changing committed spell display except where the current player image/title requirement overlaps.
+* No decorative UI redesign.
+* No broad setup page redesign beyond adding Boy/Girl and piece selection.
+* No persistence.
+* No save/load functionality.
+
+Assumptions
+
+* “Boy” means use the male `m-` image set.
+* “Girl” means use the female `f-` image set.
+* The colour part of the filename matches the colour value used in setup.
+* Image filenames are consistent enough to map from gender and colour.
+* The existing setup colours should be limited to colours that have matching piece images.
+* Colour exclusivity should continue to use the player colour value, not the full image filename.
+* Existing player colour text can still be used internally for turn messages, rules, and data keys.
+
+Stop Point
+
+* Stop once players can choose Boy/Girl and colour during setup, selected piece images are stored in player data, and the board, right-side gameplay UI, start-of-turn modal, and Spells modal all use the selected piece image in the required places and sizes.
+
+Completion Notes
+
+* Added the setup/data-model foundation for piece-image selection by extending player data with `gender` and a derived `pieceImage` filename.
+* Added an explicit piece-image mapping helper for the currently available Boy/Girl plus colour combinations in `src/images/pieces`.
+* The setup page now lets each player choose `boy` or `girl`, keeps colours exclusive based on colour only, and updates the stored `pieceImage` whenever either setup choice changes.
+* The board now reuses the stored `pieceImage` value to render each player as the selected gameplay piece image instead of a plain coloured circle, while keeping the existing shared-square offset positions.
+* Board piece images now render at the required `25px` height and fall back to a simple colour-text label if a mapped image source is missing, so gameplay does not crash on bad piece data.
+* The gameplay sidebar now replaces the current-turn sentence with the selected current-player piece image at `150px`.
+* The turn-change modal still uses the colour-name sentence and now also shows the selected current-player piece image at `150px`.
+* The Spells modal now shows a visible `Spells` title and the selected current-player piece image at `100px` during both forced setup and later normal visits.
+* Assumption for this feature: the default setup counts as already selected with `boy` plus the player's default unique colour, so no extra setup validation was added beyond the required selectors and existing colour exclusivity.
+* Reuse check: reviewed the existing setup page, `GameSetupContext`, player-creation helpers, board renderer, gameplay page, spells modal, and existing player-colour data flow; reused the current setup form structure, context update pattern, board piece positioning logic, board square markup, gameplay modal flow, and existing Spells modal structure, and only added a small piece-image helper plus focused board/setup/gameplay/modal tests because there was no existing gender/piece mapping utility or current-player image test coverage to extend.
+
+Testing Checkpoints
+
+* Confirm the setup page shows a Boy/Girl choice for each player.
+* Confirm the setup page shows a colour choice for each player.
+* Confirm each player must choose both gender and colour.
+* Confirm two players cannot choose the same colour.
+* Confirm a red girl and red boy cannot both be chosen.
+* Confirm two players can both choose Boy if they use different colours.
+* Confirm two players can both choose Girl if they use different colours.
+* Confirm the selected player data includes gender and colour.
+* Confirm the selected player piece image maps to the correct file in `src/images/pieces`.
+* Confirm the board shows piece images instead of coloured circles.
+* Confirm board piece images are 25px tall.
+* Confirm multiple players on the same square are still visible enough to identify.
+* Confirm movement still moves the correct piece image.
+* Confirm legal move highlighting still works.
+* Confirm the right-side gameplay UI no longer says `It is currently X player's turn.`
+* Confirm the right-side gameplay UI shows the current player’s piece image.
+* Confirm the right-side current player image is 150px tall.
+* Confirm the right-side current player image updates after turn changes.
+* Confirm the start-of-turn modal still says `It is now X player's turn` using the colour name.
+* Confirm the start-of-turn modal shows the current player’s piece image.
+* Confirm the start-of-turn modal image is 150px tall.
+* Confirm the Spells modal title is exactly `Spells`.
+* Confirm the Spells modal shows the current player’s piece image in the top right.
+* Confirm the Spells modal image is 100px tall.
+* Confirm the Spells modal image is correct during first-turn forced spell setup.
+* Confirm the Spells modal image is correct during later normal Spells modal visits.
+* Confirm Spells modal drag-and-drop still works.
+* Confirm Save still works in the Spells modal.
+* Confirm Cancel still works in the Spells modal.
+* Confirm committed spells still display correctly on the gameplay UI.
+* Confirm existing turn order still works.
+* Confirm existing dice rolling still works.
+* Confirm existing movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Improve board piece visibility and highlight current player
+
+Status
+
+* done
+
+Goal
+
+* Make player pieces on the board easier to see.
+* Increase the board piece image size.
+* Add a pulsing glow to the current player’s board piece.
+* Ensure the current player’s piece appears visually in front when multiple players are on the same square.
+
+Scope
+
+* Update the board player piece rendering from Feature-004.
+* Increase player piece images on the board from 25px tall to 40px tall.
+* Add a pulsing glow effect to the current player’s piece on the board.
+* The glow should be a light white/yellowish colour.
+* The glow should make it clear where the current player is.
+* If more than one player is on the same square, the current player’s piece should appear visually in front of the others.
+* Keep the existing multiple-player positioning behaviour.
+* Keep the existing selected piece images.
+* Keep movement logic unchanged.
+* Keep turn order logic unchanged.
+
+Board Piece Size Requirement
+
+* Player piece images on the board should now render at:
+
+```txt id="y3be45"
+height: 40px
+```
+
+* This replaces the previous board piece height from Feature-004.
+* The board square size should not change.
+* The board grid should remain 31x31.
+* The board should remain 930px by 930px.
+* The larger image may visually overlap nearby square edges if needed.
+* Do not resize the board squares to fit the larger image.
+
+Current Player Glow Requirement
+
+* When it is a player’s turn, their piece on the board should have a pulsing glow.
+* The glow should use a light white/yellowish colour.
+* The glow should pulse continuously while it is that player’s turn.
+* The glow should move with the player piece after movement.
+* When the turn changes, the glow should move to the new current player’s piece.
+* Only the current player’s board piece should have the glow.
+* Non-current players should not have the glow.
+* Keep the animation simple and lo-fi.
+
+Suggested Glow Styling
+
+```css id="gcsy1f"
+box-shadow: 0 0 8px rgba(255, 245, 180, 0.9);
+```
+
+* The exact values can be adjusted slightly if needed for visibility.
+* Do not add heavy decorative effects.
+* Do not add complex animation libraries.
+* Use CSS animation if possible.
+
+Stacking Requirement
+
+* If multiple players are on the same square, the current player’s piece should appear visually in front of all other player pieces on that square.
+* Use a simple stacking order such as `z-index`.
+* The current player’s piece should have a higher stacking value than non-current pieces.
+* This should only affect visual layering.
+* This should not change player positions in state.
+* This should not change movement rules.
+* This should not change turn order.
+
+Expected Behaviour
+
+* Player pieces on the board are 40px tall.
+* The current player’s piece has a pulsing light white/yellowish glow.
+* The glow clearly indicates whose turn it is.
+* The glow updates when the current turn changes.
+* The glow remains on the current player after they move.
+* If two or more players are on the same square, the current player’s piece appears in front.
+* Non-current player pieces remain visible where possible.
+* Existing multiple-player positioning still works.
+* Existing board generation still works.
+* Existing movement still works.
+* Existing legal move highlighting still works.
+* Existing piece image selection still works.
+
+Out Of Scope
+
+* No new piece images.
+* No image editing.
+* No sprite animation.
+* No directional facing.
+* No attack animations.
+* No hover previews.
+* No changes to setup page.
+* No changes to player gender or colour selection.
+* No changes to turn order.
+* No changes to dice logic.
+* No changes to movement calculation.
+* No changes to legal move highlighting.
+* No changes to board generation.
+* No changes to spell logic.
+* No changes to debug menu.
+* No decorative redesign.
+* No sound effects.
+* No save/load functionality.
+* No persistence.
+
+Assumptions
+
+* The current player can be derived from the existing turn state.
+* The board piece component or renderer can determine whether a rendered player is the current player.
+* The existing multiple-player-on-one-square layout can be preserved while adding higher visual stacking for the current player.
+* A CSS animation is enough for the pulsing glow.
+
+Completion Notes
+
+* Increased board piece images from `25px` to `40px` while keeping the existing board square size and shared-square offset positions unchanged.
+* The board renderer now accepts the current player id from gameplay state so the active player's board piece can be identified without changing movement or turn logic.
+* Added a simple CSS pulsing glow to the current player's board piece using the existing board piece image element rather than creating a separate indicator system.
+* The current player's board piece now uses a higher `z-index`, so it appears visually in front when multiple players share the same square.
+* Reuse check: reviewed the existing `BoardGrid`, `GameplayPage`, board piece image mapping, and gameplay turn flow; reused the current board renderer, shared-square positioning logic, gameplay current-player state, and existing piece image mapping, and only added the smallest board-specific current-player prop plus focused tests because there was no existing board glow/high-stack behavior to extend.
+
+Stop Point
+
+* Stop once board pieces are 40px tall, the current player’s board piece has a pulsing light white/yellowish glow, and the current player’s piece appears in front when multiple players share a square.
+
+Testing Checkpoints
+
+* Confirm board player pieces are 40px tall.
+* Confirm board square size remains 30px by 30px.
+* Confirm the board remains 31x31.
+* Confirm the board remains 930px by 930px.
+* Confirm the current player’s piece has a pulsing light white/yellowish glow.
+* Confirm non-current player pieces do not have the glow.
+* Confirm the glow appears on the correct player at the start of a turn.
+* Confirm the glow moves to the next player when the turn changes.
+* Confirm the glow stays on the current player after that player moves.
+* Confirm multiple players can still appear on the same square.
+* Confirm when multiple players are on the same square, the current player’s piece appears in front.
+* Confirm non-current pieces on the same square remain visible where possible.
+* Confirm movement still works.
+* Confirm legal move highlighting still works.
+* Confirm dice rolling still works.
+* Confirm start-of-turn modal still works.
+* Confirm the right-side current player image still works.
+* Confirm Spells modal still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-006: Reusable committed spell slot display and reusable token component
+
+Status
+
+* done
+
+Goal
+
+* Refactor the data and structure currently inside `committed-spell-slot-list` into its own reusable component.
+* Create a reusable styled token component.
+* Improve the visual style of the committed spell slot display so it has a fantasy wizard/witch feel.
+* Consolidate matching tokens inside spell slots.
+* Keep the Spells modal unchanged for now.
+
+Scope
+
+* Create a reusable component for the committed spell slot display.
+* The new component should contain the structure and display logic currently handled by `committed-spell-slot-list`.
+* This component will be reused in several places around the game later.
+* Create a reusable token display component.
+* The token component should be usable outside the spell display in future features.
+* Apply fantasy wizard/witch styling to the committed spell slot display.
+* Apply fantasy-style token styling to the reusable token component.
+* Keep the committed spell slot display fixed at:
+
+  * 300px wide.
+  * 200px tall.
+* Consolidate duplicate tokens inside each spell slot.
+* Improve spacing and sizing of spell slot numbers.
+* Do not change the Spells modal yet.
+
+Related Existing Element
+
+```txt id="p3f9m2"
+committed-spell-slot-list
+```
+
+Required New Components
+
+* Create a reusable committed spell slot display component.
+* Suggested component name:
+
+```txt id="7evp42"
+CommittedSpellSlotList
+```
+
+* Create a reusable token component.
+* Suggested component name:
+
+```txt id="bb76h9"
+Token
+```
+
+* Exact component names can follow the existing project naming pattern if different.
+* Components that render JSX must use `.jsx`.
+* Styling should be kept in component-specific CSS files where practical.
+
+Suggested File Structure
+
+```txt id="28clbn"
+src/components/spells/committedSpellSlotList/committedSpellSlotList.jsx
+src/components/spells/committedSpellSlotList/committedSpellSlotList.css
+
+src/components/tokens/token/token.jsx
+src/components/tokens/token/token.css
+```
+
+* Adjust folder names only if needed to match the current project structure.
+* Keep the components easy to find and reuse.
+* Do not bury the reusable token component inside a spells-only folder if it will be used outside spells later.
+
+Committed Spell Slot Display Requirements
+
+* The committed spell slot display should be a reusable component.
+* It should receive spell slot data through props.
+* It should not directly mutate spell data.
+* It should not contain drag-and-drop logic.
+* It should not contain save/cancel logic.
+* It should not depend on the Spells modal.
+* It should render six spell columns.
+* It should keep the existing read-only committed spell behaviour.
+* It should be fixed at:
+
+```txt id="z3f9hk"
+width: 300px;
+height: 200px;
+```
+
+* The six spell columns should fit within the 300px width.
+* Each column should remain approximately 50px wide.
+* Each column should be able to visually handle up to 7 consolidated token entries.
+* The component should not overflow awkwardly when a slot contains its maximum possible tokens.
+* Keep the display read-only.
+
+Fantasy Styling Requirement
+
+* This feature is allowed to add more style than previous lo-fi features.
+* The committed spell slot display should have a fantasy wizard/witch style.
+* Styling can include simple touches such as:
+
+  * parchment-like panel feel.
+  * dark magical border.
+  * subtle gold or bronze accents.
+  * slightly rounded corners.
+  * simple shadowing.
+  * magical but readable slot styling.
+* Keep the style functional and readable.
+* Do not introduce heavy animations.
+* Do not add complex visual effects.
+* Do not add external styling libraries.
+* Do not redesign the wider gameplay UI.
+
+Spell Slot Number Requirement
+
+* Slot labels should still be numbers only:
+
+  * 1
+  * 2
+  * 3
+  * 4
+  * 5
+  * 6
+* Do not use `Slot 1`, `Slot 2`, etc.
+* The numbers should be inside the column border.
+* The numbers should look visually connected to the tokens in that column.
+* The numbers should have better spacing than the current version.
+* The numbers should be a bit bigger.
+* The numbers should remain readable within the fixed 300px by 200px display.
+
+Token Consolidation Requirement
+
+* Tokens inside each committed spell slot should be consolidated by token type.
+* If a slot contains more than one token of the same type, show one token for that type.
+* The number of matching tokens should appear in the centre of the token.
+* Example:
+
+  * If a spell slot contains 2 red tokens, show one red token with `2` in the centre.
+  * If a spell slot contains 3 blue tokens, show one blue token with `3` in the centre.
+  * If a spell slot contains 1 purple token, show one purple token with no number or with `1`, whichever is cleaner and consistent.
+* Prefer not showing a number for a single token unless the existing token design works better with always showing a number.
+* Consolidation should be display-only.
+* Do not change the underlying spell slot data.
+* Do not combine, delete, or mutate saved token objects in state.
+* Only the rendered display should be consolidated.
+
+Token Component Requirements
+
+* Tokens should be rendered through a reusable token component.
+* The token component should support all current token colours:
+
+  * Red
+  * Blue
+  * Orange
+  * Green
+  * Light Blue
+  * Light Green
+  * Black
+  * White
+  * Purple
+  * Yellow
+  * Grey
+* The token component should render as a styled token circle.
+* The token should visually reflect its colour.
+* The token component should optionally show a count number in the centre.
+* The count number should be readable.
+* The token component should be usable by other parts of the game later.
+* Do not make the token component depend on committed spell slots.
+* Do not add drag-and-drop behaviour to the token component in this feature unless the existing display already requires no extra work.
+* Do not change the Spells modal token rendering yet.
+
+Token Styling Requirement
+
+* Tokens should look more styled than plain coloured circles.
+* Styling can include simple fantasy-like polish such as:
+
+  * subtle border.
+  * inner shadow.
+  * small highlight.
+  * readable centre number.
+  * colour-appropriate contrast.
+* Keep tokens clear and functional.
+* Do not use image assets for tokens.
+* Do not add animations.
+* Do not add decorative effects that make token colour or count hard to read.
+
+Maximum Slot Capacity Display Requirement
+
+* Each spell column should be able to handle up to 7 tokens.
+* This means up to 7 consolidated entries visually, not necessarily 7 raw token objects.
+* The fixed 200px height should account for:
+
+  * slot number.
+  * token display area.
+  * up to 7 token entries.
+* Tokens should remain readable at this size.
+* The display should not break if a slot has fewer tokens.
+* Empty spell slots should remain empty apart from the slot number.
+* Do not reintroduce placeholder text such as `No committed tokens`.
+
+Spells Modal Exclusion
+
+* Do not change the Spells modal in this feature.
+* Do not change Spells modal layout.
+* Do not change Spells modal drag-and-drop.
+* Do not change Spells modal token bag display.
+* Do not change Starting Tokens display.
+* Do not change Save or Cancel behaviour.
+* This feature applies only to the reusable committed spell display and reusable token component.
+
+Expected Behaviour
+
+* The gameplay UI still shows the committed spell display.
+* The committed spell display is now rendered through its own reusable component.
+* The committed spell display is fixed at 300px wide and 200px tall.
+* The display has a fantasy wizard/witch style.
+* The display still shows six spell columns.
+* The slot labels are numbers only.
+* The slot numbers are better spaced and slightly larger.
+* Empty columns show only the slot number and empty space.
+* Tokens in the same slot are consolidated by token type.
+* Duplicate token counts appear in the centre of the token.
+* The token display uses the new reusable token component.
+* Token colours remain easy to identify.
+* The component remains read-only.
+* The Spells modal is unchanged.
+
+Out Of Scope
+
+* No changes to the Spells modal.
+* No changes to drag-and-drop behaviour.
+* No changes to token bag behaviour.
+* No changes to Starting Tokens behaviour.
+* No changes to Save or Cancel behaviour.
+* No changes to first-turn forced setup.
+* No changes to committed spell data.
+* No mutation of token arrays for consolidation.
+* No spell effects.
+* No battle system.
+* No potions.
+* No token images.
+* No token animations.
+* No wider gameplay UI redesign.
+* No board changes.
+* No movement changes.
+* No dice changes.
+* No turn order changes.
+* No save/load functionality.
+* No persistence.
+* No unrelated refactors.
+
+Assumptions
+
+* `committed-spell-slot-list` currently refers to the committed spell display on the gameplay UI.
+* The display is read-only and should remain read-only.
+* The current saved spell slot data can be passed into the new component through props.
+* Token consolidation can be calculated at render time.
+* The maximum possible number of raw tokens in a spell slot is 7.
+* The fixed 300px by 200px display is more important than preserving previous flexible column height behaviour.
+* The reusable token component should be generic enough to use later in debug tools, token bags, rewards, and other token-related UI.
+
+Stop Point
+
+* Stop once the committed spell display has been moved into its own reusable component, tokens are rendered through a reusable token component, duplicate token types are consolidated with counts, the display is fixed at 300px by 200px, the styling has a clear fantasy wizard/witch feel, and the Spells modal remains unchanged.
+
+Testing Checkpoints
+
+* Confirm the gameplay UI still shows the committed spell display.
+* Confirm the committed spell display is rendered through a reusable component.
+* Confirm the committed spell display is 300px wide.
+* Confirm the committed spell display is 200px tall.
+* Confirm the display shows six spell columns.
+* Confirm each spell column fits within the 300px display.
+* Confirm slot labels show only numbers.
+* Confirm slot numbers are inside their column borders.
+* Confirm slot numbers have improved spacing.
+* Confirm slot numbers are larger than before.
+* Confirm empty spell slots do not show placeholder text.
+* Confirm empty spell slots remain visually empty apart from their slot number.
+* Confirm tokens are rendered through the reusable token component.
+* Confirm duplicate tokens in the same slot are consolidated.
+* Confirm 2 red tokens render as one red token with `2` in the centre.
+* Confirm 3 blue tokens render as one blue token with `3` in the centre.
+* Confirm single tokens render clearly.
+* Confirm token counts are readable.
+* Confirm all supported token colours render correctly.
+* Confirm each column can visually handle up to 7 token entries.
+* Confirm tokens do not overflow awkwardly from the fixed 200px display.
+* Confirm the display has a fantasy wizard/witch style.
+* Confirm the display remains read-only.
+* Confirm saved spell data is not mutated by display consolidation.
+* Confirm the Spells modal layout has not changed.
+* Confirm Spells modal drag-and-drop still works.
+* Confirm Save and Cancel still work.
+* Confirm first-turn forced setup still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* The gameplay committed spell sidebar is now rendered through the reusable `CommittedSpellSlotList` component in `src/components/spells/CommittedSpellSlotList.jsx`.
+* The reusable `Token` component in `src/components/tokens/Token.jsx` now handles the read-only token circles and optional duplicate-count display for all current token colours.
+* Duplicate token consolidation is display-only and happens at render time per slot, so committed spell data is not mutated.
+* The committed spell display now keeps its fixed `300px` by `200px` footprint, keeps number-only slot labels, and applies the requested fantasy-style panel/token treatment only within the shared committed-display components.
+* `src/features/spells/CommittedSpellSlots.jsx` now reuses the shared committed display instead of owning the committed-slot markup directly.
+* Reuse check: reviewed the existing committed spell sidebar component, existing spell token display, spell-related tests, and the unchanged Spells modal flow; reused the current spell-slot data shape and gameplay sidebar entry point, and created only the two new shared components required for immediate reuse by this feature.
+* Intentionally not changed in this slice:
+  * Spells modal layout
+  * Spells modal drag-and-drop
+  * Starting Tokens and Token Bag behaviour
+  * Save and Cancel behaviour
+  * first-turn forced spell setup

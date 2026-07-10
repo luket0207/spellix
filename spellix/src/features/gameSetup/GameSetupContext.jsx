@@ -8,6 +8,7 @@ import {
   createTurnOrder,
   getCurrentPlayer,
 } from './gameSetup';
+import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
 
 const GameSetupContext = createContext(null);
@@ -34,7 +35,31 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
       players: currentSetup.players.map((player) =>
-        player.id === playerId ? { ...player, colour } : player
+        player.id === playerId
+          ? {
+              ...player,
+              colour,
+              pieceImage: getPlayerPieceImageName({ colour, gender: player.gender }),
+            }
+          : player
+      ),
+      turnOrder: [],
+      currentTurnIndex: 0,
+      board: null,
+    }));
+  };
+
+  const setPlayerGender = (playerId, gender) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              gender,
+              pieceImage: getPlayerPieceImageName({ colour: player.colour, gender }),
+            }
+          : player
       ),
       turnOrder: [],
       currentTurnIndex: 0,
@@ -124,6 +149,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         resetGame,
         setPlayerPosition,
         setPlayerColour,
+        setPlayerGender,
         setPlayerCount,
         updatePlayerSpells,
       }}

@@ -1148,3 +1148,501 @@ Testing Required
 * Confirm first-turn forced setup still works.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-010: Current player piece image in main gameplay UI is stretching to full container width
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Replace player colour markers with gameplay piece images
+
+Bug Summary
+
+* The current player piece image in the main gameplay UI is incorrectly stretching to the full width of its container.
+* The image is rendered inside `gameplay-current-player-piece`.
+* It should remain 150px tall.
+* Its width should be its natural proportional width.
+* The image should not stretch horizontally.
+
+Repro Steps
+
+* Start a game.
+* Complete player setup with a selected piece image.
+* Enter the gameplay screen.
+* Look at the current player piece image in the right-side gameplay UI.
+* Inspect or observe the image inside `gameplay-current-player-piece`.
+
+Expected Behaviour
+
+* The current player piece image should be rendered at:
+
+```txt id="430y9m"
+height: 150px
+```
+
+* The image width should be automatic.
+* The image should keep its natural aspect ratio.
+* The image should not fill the full width of the container.
+* The image should not be horizontally stretched or distorted.
+* The image should update correctly when the current turn changes.
+
+Actual Behaviour
+
+* The current player piece image is taking up the full width of the container.
+* This makes the piece image too wide or distorted.
+* The height may be correct, but the width is not being preserved naturally.
+
+Required Fix
+
+* Update the styling for the current player piece image inside `gameplay-current-player-piece`.
+* Keep the image height at 150px.
+* Set the image width to auto or otherwise preserve natural aspect ratio.
+* Remove or override any styling that forces the image to stretch to full container width.
+* Check for inherited styles such as:
+
+  * `width: 100%`
+  * `display: block` combined with full-width sizing
+  * generic image rules affecting all images
+  * flex/grid styles causing stretching
+* Keep the fix focused only on the main gameplay UI current player image.
+* Do not change the board piece image size.
+* Do not change the start-of-turn modal image size.
+* Do not change the Spells modal image size.
+
+Out Of Scope
+
+* No changes to player setup.
+* No changes to piece image mapping.
+* No changes to board piece rendering.
+* No changes to current player glow.
+* No changes to start-of-turn modal layout.
+* No changes to Spells modal layout.
+* No changes to spell token logic.
+* No changes to turn order.
+* No changes to movement.
+* No decorative redesign.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* A generic image style may be applying `width: 100%`.
+* The `gameplay-current-player-piece` container may be forcing child images to stretch.
+* The current player image may not have an explicit `width: auto`.
+* The image may be inheriting styles intended for other gameplay UI elements.
+
+Attempted Fixes
+
+* Updated the sidebar current-player piece styling so it opts out of cross-axis flex stretching with `align-self: flex-start`.
+* Explicitly set the sidebar current-player piece width to `auto` while keeping its existing `150px` height.
+* Added focused gameplay-page test coverage for the sidebar piece sizing props so the proportional width behavior stays locked down.
+
+Final Fix
+
+* The main gameplay sidebar current-player piece now keeps its `150px` height while using automatic proportional width, so it no longer stretches to fill the full sidebar width.
+
+Testing Required
+
+* Confirm the current player piece image in `gameplay-current-player-piece` is 150px tall.
+* Confirm the image width is automatic and proportional.
+* Confirm the image does not stretch to the full container width.
+* Confirm the image is not distorted.
+* Confirm the image updates correctly when the current turn changes.
+* Confirm board piece images remain 40px tall if Feature-005 has been completed.
+* Confirm start-of-turn modal piece images remain 150px tall.
+* Confirm Spells modal piece images remain 100px tall.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-011: Current player board glow should be radial behind the piece, not a rectangular pulse
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-005: Improve board piece visibility and highlight current player
+
+Bug Summary
+
+* The current pulsing glow around the current player’s board piece looks low quality.
+* The glow appears as a rectangle around the piece.
+* The glow should instead come from behind the piece itself.
+* The effect should use a radial gradient centred behind the piece.
+* The glow should pulse outward from behind the piece.
+
+Repro Steps
+
+* Start a game.
+* Reach the gameplay screen.
+* Observe the current player’s piece on the board.
+* Look at the pulsing glow effect.
+* Check whether the glow appears as a rectangular outline or box around the image.
+
+Expected Behaviour
+
+* The current player’s piece should have a glow that appears behind the piece.
+* The glow should be centred behind the piece image.
+* The glow should use a radial gradient.
+* The glow should pulse outward from the centre.
+* The glow should look like it is coming from behind the player piece itself.
+* The glow should not appear as a rectangular border, box, or outline.
+* Only the current player’s board piece should have the glow.
+* The glow should still update when the current turn changes.
+* The glow should still move with the player after movement.
+
+Actual Behaviour
+
+* The current player glow looks like a rectangular pulse around the piece.
+* The effect looks low quality and visually disconnected from the piece.
+
+Required Fix
+
+* Replace the current rectangular pulse effect.
+* Use a pseudo-element, extra background element, or equivalent simple CSS approach to render the glow behind the piece.
+* The glow should be a radial gradient centred behind the piece image.
+* The glow should pulse outward from behind the piece.
+* The player piece image itself should remain above the glow.
+* The glow should not distort the piece image.
+* The glow should not affect movement logic.
+* The glow should not affect board square layout.
+* Keep the glow light white/yellowish.
+* Keep the animation simple and functional.
+
+Suggested Implementation Direction
+
+* Wrap the board piece image in a positioned container.
+* Add the glow using `::before` or a child element behind the image.
+* Position the glow absolutely behind the image.
+* Use a radial gradient similar to:
+
+```css id="z5i81p"
+radial-gradient(circle, rgba(255, 245, 180, 0.8) 0%, rgba(255, 245, 180, 0.35) 45%, rgba(255, 245, 180, 0) 75%)
+```
+
+* Animate scale and opacity rather than using a rectangular `box-shadow`.
+* Keep the piece image above the glow with a higher `z-index`.
+
+Out Of Scope
+
+* No new piece images.
+* No image editing.
+* No sprite animation.
+* No directional facing.
+* No attack animations.
+* No sound effects.
+* No changes to player setup.
+* No changes to board generation.
+* No changes to movement logic.
+* No changes to turn order.
+* No changes to dice logic.
+* No changes to spell logic.
+* No broad visual redesign.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The current effect likely uses `box-shadow` or a rectangular container animation.
+* The glow is probably applied directly to the image or wrapper box instead of being rendered as a radial element behind the piece.
+
+Attempted Fixes
+
+* Replaced the direct image glow styling with a separate `board-player-marker-glow` element rendered behind only the current player's piece.
+* Swapped the old rectangular `box-shadow` pulse for a radial-gradient glow that animates opacity and scale from behind the piece.
+* Kept the current player's higher wrapper `z-index` and the existing board movement/rendering flow unchanged so the glow still follows turn changes without affecting layout.
+
+Final Fix
+
+* The current player's board glow is now rendered as a radial element behind the piece image, so the pulse comes from behind the piece instead of appearing as a rectangular outline around it.
+
+Testing Required
+
+* Confirm the current player’s board piece no longer has a rectangular pulse.
+* Confirm the glow appears centred behind the piece.
+* Confirm the glow uses a radial gradient or visually equivalent radial effect.
+* Confirm the glow pulses outward from behind the piece.
+* Confirm the piece image remains above the glow.
+* Confirm only the current player has the glow.
+* Confirm the glow updates when the turn changes.
+* Confirm the glow stays with the piece after movement.
+* Confirm non-current player pieces do not have the glow.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-012: Board pieces should sit on the current square baseline and cascade correctly when stacked
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Replace player colour markers with gameplay piece images
+* Feature-005: Improve board piece visibility and highlight current player
+
+Bug Summary
+
+* With the new larger player piece images, pieces look like they are placed on the square above their actual board position.
+* Pieces should visually sit on the baseline of the square they occupy.
+* Pieces should not be positioned from the top corner in a way that makes them look attached to the square above.
+* When multiple pieces are on the same square, they should cascade to the right first.
+* Once they run out of width, they should then start moving up the square.
+* They should not cascade downward.
+
+Repro Steps
+
+* Start a game using the new piece images.
+* Move or observe a player piece on the board.
+* Check whether the piece appears visually connected to its actual square.
+* Place or observe multiple player pieces on the same square.
+* Check how the pieces are offset from each other.
+
+Expected Behaviour
+
+* Each board piece should visually sit on the square it actually occupies.
+* The bottom of the piece should align with the baseline of the current square.
+* The piece should not look like it belongs to the square above.
+* Pieces should be positioned from the bottom of the square rather than the top corner.
+* If only one piece is on a square, it should sit naturally on that square’s baseline.
+* If multiple pieces are on the same square:
+
+  * The first piece should sit on the square baseline.
+  * Additional pieces should cascade to the right of the first piece.
+  * Once there is no more useful horizontal width, additional pieces should move upward.
+  * Pieces should not cascade downward.
+* The current player’s piece should still appear visually in front of the others when multiple players share a square.
+
+Actual Behaviour
+
+* Player pieces look like they are positioned on the square above their real square.
+* Piece positioning appears based on the corner rather than the square baseline.
+* Multiple pieces may currently cascade downward, which makes the visual placement worse.
+
+Required Fix
+
+* Update board piece positioning so piece images are aligned to the baseline of the current square.
+* Stop positioning pieces from the top corner if that causes them to appear on the wrong square.
+* Anchor piece placement from the bottom of the board square.
+* Preserve the actual player position data.
+* Do not change movement coordinates.
+* Do not change legal move calculations.
+* Update the multiple-player-on-same-square visual offset rules.
+* Cascade multiple pieces to the right first.
+* After horizontal space is used, cascade additional pieces upward.
+* Do not cascade pieces downward.
+* Keep the current player visually in front using the existing or updated stacking order.
+* Keep board pieces 40px tall if Feature-005 has already been completed.
+
+Suggested Positioning Direction
+
+* Treat the board square as the anchor point.
+* Position the piece wrapper absolutely within or relative to the square.
+* Align the piece to the bottom of the square using a baseline-style rule.
+* Example direction only:
+
+```css id="5gpnpo"
+bottom: 0;
+```
+
+* For multiple pieces, use offsets that move right first, then upward.
+* Avoid offsets that move pieces below the square’s baseline.
+
+Multiple Piece Offset Requirement
+
+* The visual stacking order should be predictable.
+* Example conceptual layout:
+
+  * Piece 1: baseline position.
+  * Piece 2: shifted right.
+  * Piece 3: shifted further right if space allows.
+  * Later pieces: shifted upward instead of downward.
+* The exact pixel offsets can be adjusted to fit the 40px board pieces and 30px board squares.
+* The current player’s piece should use the highest visual stacking order.
+
+Out Of Scope
+
+* No changes to the player’s actual board coordinates.
+* No changes to board square size.
+* No changes to board dimensions.
+* No changes to board generation.
+* No changes to movement rules.
+* No changes to legal move highlighting.
+* No changes to turn order.
+* No changes to dice logic.
+* No changes to piece image files.
+* No changes to setup page.
+* No sprite animation.
+* No decorative redesign.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* The larger 40px piece images may still be positioned as if they were small circles.
+* The piece wrapper may be anchored to the top-left corner of the 30px square.
+* Existing multiple-piece offsets may move pieces downward, which makes them look even further detached from their actual square.
+
+Attempted Fixes
+
+* Switched board piece positioning from top-based offsets to bottom-based offsets so each piece is anchored from the square baseline instead of the top corner.
+* Updated the shared-square offsets so pieces still cascade to the right first and then move upward, without any downward cascade.
+* Kept the current-player stacking order and radial glow behavior unchanged while adding focused board tests for baseline anchoring and the new shared-square cascade order.
+
+Final Fix
+
+* Board pieces now anchor from the bottom of their current square, so they visually sit on the occupied square baseline, and shared-square pieces now cascade right first and then upward without cascading downward.
+
+Testing Required
+
+* Confirm each board piece visually sits on its actual square.
+* Confirm the bottom of each piece aligns with the baseline of its current square.
+* Confirm pieces no longer look like they belong to the square above.
+* Confirm board coordinates are unchanged.
+* Confirm movement still moves pieces to the correct squares.
+* Confirm legal move highlighting still works.
+* Confirm board squares remain 30px by 30px.
+* Confirm board pieces remain 40px tall if Feature-005 has already been completed.
+* Confirm multiple pieces on the same square cascade to the right first.
+* Confirm additional pieces move upward once horizontal space is used.
+* Confirm pieces do not cascade downward.
+* Confirm the current player’s piece appears in front when multiple players share a square.
+* Confirm the current player radial glow from Bug-011 still appears behind the current player’s piece.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-013: Committed spell slot columns spill out of the spells component container
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Reusable committed spell slot display and reusable token component
+
+Bug Summary
+
+* The columns inside the committed spells component are spilling out of their container.
+* The committed spell slot display should remain fixed at 300px wide.
+* The individual `committed-spell-slot-item` columns are currently too wide or spaced too far apart.
+* Each `committed-spell-slot-item` should be reduced to 40px wide.
+* Spacing should be adjusted so all six columns fit properly inside the container.
+
+Repro Steps
+
+* Start a game.
+* Complete initial spell setup for a player.
+* Return to the gameplay UI.
+* Look at the committed spells component.
+* Check whether the spell slot columns fit inside the 300px container.
+* Inspect the `committed-spell-slot-item` elements if needed.
+
+Expected Behaviour
+
+* The committed spells component should remain fixed at:
+
+```txt id="dczv0s"
+width: 300px;
+height: 200px;
+```
+
+* All six committed spell slot columns should fit inside the 300px container.
+* Each `committed-spell-slot-item` should be 40px wide.
+* Column spacing should be small enough that all six columns fit cleanly.
+* No columns should spill outside the container.
+* No horizontal overflow should be visible.
+* The fantasy-style committed spells component should remain intact.
+* Token consolidation should still work.
+* Slot numbers should remain readable.
+* Tokens should remain readable.
+
+Actual Behaviour
+
+* The committed spell slot columns spill out of the component container.
+* The columns do not fit cleanly within the fixed 300px width.
+* The current `committed-spell-slot-item` width and/or spacing is too large.
+
+Required Fix
+
+* Reduce `committed-spell-slot-item` width to:
+
+```txt id="wm9udu"
+40px
+```
+
+* Adjust the committed spell slot list spacing so all six columns fit within the 300px container.
+* Review any `gap`, `padding`, `margin`, `border`, or `box-sizing` values that may be causing overflow.
+* Use `box-sizing: border-box` where appropriate.
+* Keep the parent committed spells component fixed at 300px wide and 200px tall.
+* Keep all six columns visible.
+* Keep the slot numbers inside their column borders.
+* Keep tokens vertically arranged inside each column.
+* Keep duplicate-token consolidation working.
+* Keep the reusable token component unchanged unless a minimal sizing adjustment is strictly required.
+* Do not change the Spells modal.
+
+Out Of Scope
+
+* No changes to the Spells modal.
+* No changes to drag-and-drop behaviour.
+* No changes to token bag behaviour.
+* No changes to Starting Tokens behaviour.
+* No changes to Save or Cancel behaviour.
+* No changes to first-turn forced setup.
+* No changes to committed spell data.
+* No changes to token consolidation logic unless strictly required by layout.
+* No changes to token colours.
+* No changes to token effects.
+* No battle system.
+* No potions.
+* No wider gameplay UI redesign.
+* No board changes.
+* No movement changes.
+* No dice changes.
+* No turn order changes.
+* No unrelated bug fixes.
+
+Suspected Cause
+
+* `committed-spell-slot-item` is still using a previous 50px width.
+* The combined column widths, gaps, padding, margins, and borders exceed the 300px container width.
+* The component may not be using `box-sizing: border-box`, causing borders and padding to add extra width.
+
+Attempted Fixes
+
+* Updated the shared committed-display stylesheet so the reusable `committed-spell-slot-list` now uses six `40px` columns, `space-between` spacing, and `border-box` sizing within the fixed `300px` panel.
+* Reduced the shared `committed-spell-slot-item` width from the previous wider layout to `40px` and tightened the inner column padding slightly.
+* Updated the older global committed-slot selectors in `src/features/spells/spells.css` to the same `40px` sizing so the reused class names no longer pull the shared component back to the old `50px` layout.
+
+Final Fix
+
+* The committed spell sidebar now keeps all six columns inside the fixed `300px` by `200px` container by using `40px` slot items and tighter spacing, and the legacy spell stylesheet no longer overrides the shared component back to the old overflowing widths.
+
+Testing Required
+
+* Confirm the committed spells component remains 300px wide.
+* Confirm the committed spells component remains 200px tall.
+* Confirm each `committed-spell-slot-item` is 40px wide.
+* Confirm all six spell slot columns fit inside the container.
+* Confirm no column spills outside the container.
+* Confirm there is no unwanted horizontal overflow.
+* Confirm slot numbers remain inside their column borders.
+* Confirm slot numbers remain readable.
+* Confirm tokens remain readable inside each column.
+* Confirm duplicate-token consolidation still works.
+* Confirm token count numbers still appear correctly in the centre of consolidated tokens.
+* Confirm empty spell slots remain empty apart from their slot number.
+* Confirm the fantasy styling still appears correctly.
+* Confirm the Spells modal has not changed.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

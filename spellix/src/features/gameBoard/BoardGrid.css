@@ -49,10 +49,46 @@
 }
 
 .board-player-marker {
-  border: 1px solid #000000;
-  border-radius: 999px;
   position: absolute;
   z-index: 1;
+}
+
+.board-player-marker-image {
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.board-player-marker-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 245, 180, 0.8) 0%,
+    rgba(255, 245, 180, 0.35) 45%,
+    rgba(255, 245, 180, 0) 75%
+  );
+  opacity: 0.7;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.85);
+  z-index: 0;
+  animation: board-player-piece-glow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes board-player-piece-glow {
+  from {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+
+  to {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.35);
+  }
 }
 
 .environment-variation {

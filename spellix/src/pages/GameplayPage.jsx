@@ -3,6 +3,7 @@ import Modal from '../components/Modal';
 import BoardGrid from '../features/gameBoard/BoardGrid';
 import { getHighlightedNodeIds, getMovementNodeIdFromCoordinates } from '../features/gameBoard/movement';
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
+import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellsModal from '../features/spells/SpellsModal';
@@ -181,11 +182,30 @@ function GameplayPage() {
     setSpellValidationMessage('');
   };
 
+  const renderPlayerPiece = ({ ariaLabel, className, height, player, style = {} }) => {
+    const pieceImageSource = player ? getPieceImageSource(player.pieceImage) : '';
+
+    if (pieceImageSource) {
+      return (
+        <img
+          alt={ariaLabel}
+          aria-label={ariaLabel}
+          className={className}
+          src={pieceImageSource}
+          style={{ height, ...style }}
+        />
+      );
+    }
+
+    return player ? <span aria-label={ariaLabel}>{player.colour}</span> : null;
+  };
+
   return (
     <main className="gameplay-layout">
       {gameSetup.board ? (
         <BoardGrid
           board={gameSetup.board}
+          currentPlayerId={currentPlayer?.id ?? ''}
           highlightedColour={currentPlayer?.colour ?? ''}
           highlightedNodeIds={highlightedNodeIds}
           onSquareClick={handleSquareClick}
@@ -194,11 +214,18 @@ function GameplayPage() {
       ) : null}
 
       <section aria-label="Gameplay panel" className="gameplay-sidebar">
-        <p>
-          {currentPlayer
-            ? `It is currently ${currentPlayer.colour} player's turn.`
-            : 'Preparing turn order.'}
-        </p>
+        {currentPlayer
+          ? renderPlayerPiece({
+              ariaLabel: 'Current player piece',
+              className: 'gameplay-current-player-piece',
+              height: '150px',
+              player: currentPlayer,
+              style: {
+                alignSelf: 'flex-start',
+                width: 'auto',
+              },
+            })
+          : <p>Preparing turn order.</p>}
 
         <button
           type="button"
@@ -300,6 +327,12 @@ function GameplayPage() {
           isOpen={showTurnModal}
         >
           <p>{`It is now ${currentPlayer.colour} player's turn.`}</p>
+          {renderPlayerPiece({
+            ariaLabel: 'Turn change player piece',
+            className: 'turn-change-player-piece',
+            height: '150px',
+            player: currentPlayer,
+          })}
         </Modal>
       ) : null}
     </main>

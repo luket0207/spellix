@@ -232,3 +232,393 @@ Notes
 
 * `npm run lint` was not run because there is no `lint` script in `package.json`.
 * The debug token flow reuses the existing spell token circles for functional token-type visibility rather than introducing a separate visual system.
+
+---
+
+Feature-004: Replace player colour markers with gameplay piece images
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Player setup now stores each player's `gender` plus a derived `pieceImage` filename alongside the existing unique colour selection.
+* The setup page now includes `Player X gender` selectors using `boy` and `girl`.
+* Setup colour choices now stay exclusive by colour only, so another player cannot select the same colour even if they choose a different gender.
+* Changing either gender or colour in setup now updates the stored piece-image filename for that player.
+* The board now renders each player using the selected `pieceImage` instead of a coloured circle, while keeping the existing shared-square offsets for players on the same square.
+* Board piece images now use the required `25px` height and fall back to a simple colour-text label if a mapped image source is missing.
+* The gameplay sidebar now shows the current player's selected piece image instead of the old current-turn sentence.
+* The turn-change modal now keeps the colour-name text and also shows the selected current-player piece image at the required size.
+* The Spells modal now shows a visible `Spells` title plus the selected current-player piece image during both forced setup and later normal visits.
+
+Manual Test Steps
+
+1. Open `/setup`.
+Expected result: Each player section now shows both a gender selector and a colour selector.
+
+2. Inspect the default values for Player 1 and Player 2.
+Expected result: Each player has a default gender selection, each player still has a unique default colour, and setup remains usable without console errors.
+
+3. Change Player 1 from `boy` to `girl`.
+Expected result: The selection updates immediately, and the stored piece-image mapping for Player 1 changes from the male filename for that colour to the matching female filename.
+
+4. Change Player 2's colour to another available colour, then inspect Player 1's colour options again.
+Expected result: Colour exclusivity updates by colour only, so colours already taken by other players are not available while newly freed colours become available.
+
+5. Start the game after changing setup selections.
+Expected result: The game still starts normally with the updated player setup data.
+
+6. After starting the game, inspect the player pieces on the board.
+Expected result: Each player now appears as their selected gameplay piece image instead of a plain coloured circle.
+
+7. Move or otherwise inspect a square with more than one player piece if available in the current test setup.
+Expected result: Shared-square player pieces still use the existing offset positions, so multiple pieces remain at least partially visible.
+
+8. Check the gameplay sidebar after the game starts.
+Expected result: The old `It is currently X player's turn.` sentence is gone, and the current player's selected piece image is shown at `150px`.
+
+9. End a move so the next player's turn begins.
+Expected result: The turn-change modal still says `It is now X player's turn.` using the colour name, and it also shows that player's selected piece image at `150px`.
+
+10. Open the Spells modal during initial forced spell setup for a player who has not saved spells yet.
+Expected result: The modal title is exactly `Spells`, the correct current-player piece image appears at `100px`, and the existing drag/drop plus Save/Cancel behaviour still works.
+
+11. Open the Spells modal later for a player who has already committed spells.
+Expected result: The modal title is still `Spells`, the correct current-player piece image still appears at `100px`, and the existing drag/drop plus Save/Cancel behaviour still works.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/gameSetup.test.js` passes and now verifies:
+  * players are created with default `boy` piece-selection data
+  * the piece-image filename helper maps Boy/Girl plus colour combinations to the expected filenames
+* `src/pages/GameSetupPage.test.jsx` passes and now verifies:
+  * the setup page renders gender selectors with default piece-image-backed state
+  * changing gender updates the stored piece-image filename
+  * colour options remain exclusive based on colour only
+* `src/features/gameBoard/BoardGrid.test.jsx` passes and now verifies:
+  * board player markers render the mapped Boy/Girl piece images
+  * board piece images use the required `25px` height
+  * shared-square offsets still apply when two players occupy the same square
+  * missing piece-image mappings fall back safely to a simple label instead of crashing
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * the gameplay sidebar shows the current player's selected piece image instead of the old sentence
+  * the turn-change modal shows the next player's colour-name text plus the correct selected piece image
+  * the sidebar image updates when the turn changes
+  * the later-visit Spells modal still keeps Save disabled and closes immediately on Cancel when there are no unsaved changes
+* `src/features/spells/SpellsModal.test.jsx` passes and now verifies:
+  * the visible modal title is exactly `Spells`
+  * the current-player piece image is shown during forced spell setup
+  * the current-player piece image is shown during later normal Spells visits
+  * the spell-slot and token-source layout remains unchanged
+
+Checks Run
+
+* `npm run build` passed.
+* Focused CRA test commands such as `$env:CI='true'; npm test -- --watchAll=false --runInBand src/pages/GameplayPage.test.jsx` and `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/spells/SpellsModal.test.jsx` could not be used for focused verification because the current Windows CRA/Jest setup still hits an `EPERM: operation not permitted, lstat 'C:\Users\PC'` startup error for that command shape.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the setup, board, gameplay, Spells, and debug focused suites for this feature, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* Feature-004 remains intentionally lo-fi and does not add previews, persistence, or any spell/movement rule changes beyond replacing colour markers with the selected piece images in the required UI locations.
+
+---
+
+Feature-005: Improve board piece visibility and highlight current player
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Board player piece images now render at `40px` instead of `25px`.
+* The board still uses the existing shared-square offset positions and still keeps the same board square size.
+* The current player's board piece now gets a simple pulsing light glow.
+* The current player's board piece now receives a higher stacking order so it appears in front when multiple players share a square.
+* Gameplay now passes the active current player id into the board renderer so the glow and front-layering move when the turn changes.
+
+Manual Test Steps
+
+1. Start a game and inspect the board player pieces.
+Expected result: Player pieces now appear larger at `40px` tall while the board squares remain `30px` by `30px`.
+
+2. Check which player's turn it is at the start of gameplay, then inspect that player's board piece.
+Expected result: Only the current player's board piece has the pulsing light glow.
+
+3. End a move so the next player's turn begins.
+Expected result: The glow moves from the previous current player to the new current player.
+
+4. Inspect or create a case where more than one player shares the same square.
+Expected result: The current player's piece appears visually in front of the others while non-current pieces remain at least partially visible.
+
+5. Roll dice, inspect legal move highlights, and complete a move.
+Expected result: Dice rolling, move highlighting, movement, the turn-change modal, the right-side current-player image, and the Spells modal all still work as before.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/BoardGrid.test.jsx` passes and now verifies:
+  * board player markers render the selected piece images at `40px`
+  * shared-square offsets still apply
+  * the current player's board piece gets the current-player glow class
+  * the current player's board piece gets the higher stacking order on a shared square
+  * missing piece-image mappings still fall back safely without crashing
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * gameplay passes the current player id through to the board renderer
+  * the board current-player id updates when the turn changes
+  * the existing sidebar image, turn-change modal image, and Spells modal behavior still work
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the setup, board, gameplay, Spells, and debug focused suites for this feature, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* Feature-005 stays intentionally lo-fi and limits visual work to the requested board piece size increase, current-player glow, and current-player front stacking.
+
+---
+
+Bug-010: Current player piece image in main gameplay UI is stretching to full container width
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game and inspect the current player piece in the right-side gameplay UI.
+Expected result: The piece image stays `150px` tall, keeps its proportional width, and does not stretch across the full sidebar width.
+
+2. End a move so the next player's turn begins.
+Expected result: The current player piece updates to the next player's image and still keeps the same proportional non-stretched sizing.
+
+3. Open the turn-change modal and the Spells modal.
+Expected result: The turn-change modal image still renders at `150px`, the Spells modal image still renders at `100px`, and neither flow regresses because of the sidebar image fix.
+
+Automated Tests Completed
+
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * the current player sidebar image still renders at `150px`
+  * the current player sidebar image now keeps `align-self: flex-start` and `width: auto`
+  * the current player image still updates correctly when the turn changes
+  * the turn-change modal and Spells modal image behavior still works
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the gameplay suite that covers this sidebar image fix, along with the other existing focused suites, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix stays narrowly scoped to the main gameplay sidebar image and does not change board, turn-change modal, or Spells modal image sizing rules.
+
+---
+
+Bug-011: Current player board glow should be radial behind the piece, not a rectangular pulse
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game and inspect the current player's piece on the board.
+Expected result: The glow appears behind the piece as a radial light rather than as a rectangular outline around the image.
+
+2. End a move so the next player's turn begins.
+Expected result: The radial glow moves to the new current player's piece and remains behind that piece.
+
+3. Inspect a non-current player piece on the board.
+Expected result: Non-current player pieces do not show the glow.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/BoardGrid.test.jsx` passes and now verifies:
+  * only the current player's wrapper renders a `board-player-marker-glow` element
+  * the glow element is rendered behind the current player's piece within the same marker wrapper
+  * the current player's wrapper still gets the higher stacking order on a shared square
+  * non-current pieces still do not get the glow
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the board, gameplay, setup, Spells, and debug focused suites for this bug, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix stays narrowly scoped to the board glow rendering and does not change piece selection, movement logic, or board coordinates.
+
+---
+
+Bug-012: Board pieces should sit on the current square baseline and cascade correctly when stacked
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game and inspect a single player piece on the board.
+Expected result: The piece visually sits on the baseline of its actual square instead of looking attached to the square above.
+
+2. Move a player piece to another square.
+Expected result: The piece still lands on the correct square baseline, and movement plus legal move highlighting still behave the same.
+
+3. Inspect or create a case where multiple players share the same square.
+Expected result: Shared-square pieces cascade to the right first, then upward once horizontal space is used, and they do not cascade downward.
+
+4. Inspect the current player on a shared square.
+Expected result: The current player still appears in front, and the radial glow still renders behind that piece.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/BoardGrid.test.jsx` passes and now verifies:
+  * single and shared-square board pieces anchor from the square baseline with `bottom` offsets
+  * shared-square pieces cascade to the right first
+  * later shared-square pieces move upward instead of downward
+  * the current player's higher stacking order and radial glow behavior still remain intact
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the board, gameplay, setup, Spells, and debug focused suites for this bug, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix stays narrowly scoped to board piece positioning and does not change movement coordinates, board dimensions, or piece image selection.
+
+---
+
+Feature-006: Reusable committed spell slot display and reusable token component
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The gameplay sidebar still shows committed spell slots, but the read-only display now renders through the shared `CommittedSpellSlotList` component.
+* The committed spell display now keeps the required fixed `300px` by `200px` size in its own component CSS and preserves the six-column read-only layout.
+* Duplicate committed tokens now consolidate by token type for display only, with counts shown only when more than one matching token exists.
+* The shared `Token` component now supports all current token colours and is used by the committed spell display instead of feature-local token markup.
+* The Spells modal flow, layout, drag-and-drop, Save/Cancel flow, and first-turn forced setup remain unchanged.
+
+Manual Test Steps
+
+1. Start a game, complete a player's initial spell setup, and return to the normal gameplay sidebar.
+Expected result: The right-side gameplay UI still shows the committed `Spells` display below the existing spell controls without console errors.
+
+2. Inspect the committed spell display size and layout.
+Expected result: The display keeps a fixed `300px` width and `200px` height, shows six narrow spell columns, and each slot label is a larger number-only label inside its column.
+
+3. Save a spell setup that places duplicate token colours in the same slot, such as two red tokens in one slot and three blue tokens in another.
+Expected result: The committed display shows one token per matching colour in each slot, with `2` centred on the red token and `3` centred on the blue token.
+
+4. Inspect a slot that contains only one committed token and at least one empty slot.
+Expected result: The single token remains clearly readable without a forced `1` count, and empty slots show only their slot number with no placeholder text.
+
+5. Inspect a slot that contains many different committed token colours and then open the Spells modal again.
+Expected result: The committed sidebar remains readable within the fixed height, the display is still read-only, and the Spells modal layout plus drag-and-drop behavior are unchanged.
+
+Automated Tests Completed
+
+* `src/features/spells/CommittedSpellSlots.test.jsx` passes and now verifies:
+  * the gameplay committed spell area renders through the shared committed-display classes
+  * six number-only slot labels still render
+  * duplicate token types consolidate into one rendered token with the correct count label
+  * consolidation does not mutate the saved spell-slot data
+  * one slot can render up to 7 consolidated token entries
+  * empty slots stay visible without `No committed tokens`
+* `src/components/tokens/Token.test.jsx` passes and now verifies:
+  * duplicate counts render only when `count > 1`
+  * all supported token colour variants map to the shared token classes
+* The existing regression coverage still passes for unchanged surrounding flows:
+  * `src/features/spells/SpellsModal.test.jsx`
+  * `src/pages/GameplayPage.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed `src/features/spells/CommittedSpellSlots.test.jsx`, `src/components/tokens/Token.test.jsx`, and the other focused spell/gameplay suites, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+* Optional DOM-level measurement coverage if the project later needs automated proof of the committed display's exact CSS dimensions instead of manual verification.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* The fixed committed-display dimensions are covered manually here because this Jest setup does not reliably assert stylesheet-driven layout measurements from imported CSS.
+
+---
+
+Bug-013: Committed spell slot columns spill out of the spells component container
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a game, complete a player's initial spell setup, and inspect the committed `Spells` display on the gameplay sidebar.
+Expected result: The committed spell display still renders inside its fixed `300px` by `200px` panel without any horizontal spill.
+
+2. Inspect all six committed spell slot columns across the display.
+Expected result: All six columns fit inside the container, each `committed-spell-slot-item` uses the reduced `40px` width, and no column extends past the panel edge.
+
+3. Save or inspect a setup with several token colours, including duplicate token types in one slot.
+Expected result: Token consolidation still works, token counts remain readable, slot numbers remain inside their column borders, and the fantasy sidebar styling is still intact.
+
+4. Open the Spells modal again after checking the sidebar.
+Expected result: The Spells modal layout, drag-and-drop behavior, Save/Cancel flow, and first-turn setup behavior are unchanged.
+
+Automated Tests Completed
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passes the existing committed-spell and surrounding regression suites:
+  * `src/features/spells/CommittedSpellSlots.test.jsx`
+  * `src/components/tokens/Token.test.jsx`
+  * `src/features/spells/SpellsModal.test.jsx`
+  * `src/pages/GameplayPage.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the focused committed-spell, token, gameplay, board, setup, and debug suites, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+* Optional DOM/CSS measurement coverage if the project later needs automated proof of the exact `40px` committed-slot width instead of manual verification.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix stays layout-only: committed spell data, token consolidation logic, the reusable token component behavior, and the Spells modal flow were intentionally left unchanged.

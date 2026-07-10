@@ -1,6 +1,7 @@
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import Modal from '../../components/Modal';
+import { getPieceImageSource } from '../gameSetup/pieceImages';
 import SpellToken from './SpellToken';
 import { TOKEN_BAG_DROP_ZONE_ID } from './spellSetup';
 import './spells.css';
@@ -80,6 +81,7 @@ function SpellsModal({
 
     onTokenDrop(String(active.id), String(over.id));
   };
+  const pieceImageSource = currentPlayer ? getPieceImageSource(currentPlayer.pieceImage) : '';
 
   return (
     <Modal
@@ -100,7 +102,20 @@ function SpellsModal({
       {currentPlayer ? (
         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
           <div className="spells-layout">
-            <p>{`Spells for ${currentPlayer.colour} player.`}</p>
+            <div className="spells-header">
+              <h2>Spells</h2>
+              {pieceImageSource ? (
+                <img
+                  alt="Spell player piece"
+                  aria-label="Spell player piece"
+                  className="spells-player-piece"
+                  src={pieceImageSource}
+                  style={{ height: '100px' }}
+                />
+              ) : (
+                <span aria-label="Spell player piece">{currentPlayer.colour}</span>
+              )}
+            </div>
             {isForcedSetup ? (
               <p>You must place all 7 starting tokens into spell slots before rolling dice.</p>
             ) : null}
