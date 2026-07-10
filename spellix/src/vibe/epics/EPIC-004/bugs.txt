@@ -1,0 +1,359 @@
+Bug-001: River movement blocking should not apply when the player starts on a river square
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-007: Rivers block movement beyond them unless landed on
+
+Bug Summary
+
+* River movement blocking is too strict when a player starts their turn on a river square.
+* If a player starts their turn on a river square, river squares should not block that player’s movement for that move.
+* River blocking should only apply when the player starts their movement from a non-river square.
+
+Repro Steps
+
+* Move a player onto a river square.
+* End their turn.
+* Start that same player’s next turn while their piece is on the river square.
+* Roll the dice.
+* Check available movement highlights.
+* Observe whether other river squares block movement during that move.
+
+Expected Behaviour
+
+* If the player starts their movement on a river square:
+
+  * River squares should not block movement for that move.
+  * The player should be able to move away from the river normally.
+  * The player should be able to move through river squares normally during that move.
+  * Available movement should continue beyond river squares.
+* If the player starts their movement on a non-river square:
+
+  * River blocking should still apply.
+  * The player can land on a river square.
+  * Movement should not continue beyond a river square on that path.
+* Streams should remain unaffected.
+* Streams should continue to behave like normal passable squares.
+
+Actual Behaviour
+
+* River squares may still block movement when the player starts their turn on a river square.
+* This makes river movement feel wrong after a player lands on a river.
+
+Required Fix
+
+* Update the movement calculation from Feature-007.
+* Before calculating legal destinations, check whether the current player’s starting square is a river square.
+* If the player starts on a river square:
+
+  * Disable river-blocking logic for that movement calculation.
+  * Allow movement expansion through river squares normally.
+* If the player starts on a non-river square:
+
+  * Keep the existing river-blocking rule.
+  * Allow landing on river squares.
+  * Stop movement expansion beyond river squares.
+* Keep this rule based on the player’s starting square for the current dice roll.
+* Do not change the player’s actual coordinates.
+* Do not change river generation.
+* Do not change stream behaviour.
+
+Implementation Requirement
+
+* River blocking should be conditional.
+* Suggested logic:
+
+```txt id="t5v6ba"
+if starting square is river:
+  rivers do not block movement for this roll
+else:
+  rivers block movement beyond the river square
+```
+
+* Do not handle this only in the click handler.
+* The legal movement highlights must also follow this rule.
+* Do not highlight squares incorrectly blocked by rivers when the player started on a river.
+* Do not allow crossing rivers when the player started off the river.
+
+Expected Movement Examples
+
+* Player starts on Field and rolls 4:
+
+  * A river 2 spaces away can be highlighted.
+  * Squares beyond that river should not be highlighted through that path.
+* Player starts on River and rolls 4:
+
+  * Movement should continue normally through river squares.
+  * River squares should not stop path expansion.
+* Player starts on Stream and rolls 4:
+
+  * River blocking still applies, because the player did not start on a river.
+* Player starts on Field and reaches a Stream:
+
+  * Stream does not block movement.
+
+Out Of Scope
+
+* No changes to river generation.
+* No changes to stream generation.
+* No changes to river visuals.
+* No changes to stream visuals.
+* No bridge mechanics.
+* No swimming mechanics.
+* No terrain movement cost system.
+* No spell effects.
+* No token effects.
+* No changes to dice rolling.
+* No changes to turn order.
+* No changes to board generation.
+* No changes to player pieces.
+* No changes to spells.
+* No save/load functionality.
+* No persistence.
+* No unrelated movement changes.
+
+Suspected Cause
+
+* The river-blocking movement logic may be checking every river square during path expansion without first checking whether the player started the move on a river square.
+* Feature-007 may have preserved the earlier assumption that later river squares still block movement even when starting on a river, but the desired rule is now broader.
+
+Attempted Fixes
+
+* Reviewed the `getHighlightedNodeIds` river-stop logic from Feature-007 and confirmed it still stopped expansion from later river squares even when the move started on a river square.
+* Added focused movement regression coverage for both starting-on-river and starting-on-stream cases so the bug fix stays tied to the move origin rule.
+
+Final Fix
+
+* The movement calculation now checks whether the starting movement node is a river square before expanding legal destinations.
+* If the move starts on a river square, river blocking is disabled for that roll and movement can continue through later river squares normally.
+* If the move starts on any non-river square, the existing river-blocking rule still applies and movement stops after entering a river square.
+
+Testing Required
+
+* Confirm a player starting on a non-river square is blocked by rivers.
+* Confirm a player starting on a non-river square can still land on a river.
+* Confirm a player starting on a non-river square cannot move beyond a river through that path.
+* Confirm a player starting on a river square is not blocked by rivers during that move.
+* Confirm a player starting on a river square can move through river squares normally.
+* Confirm legal move highlights reflect the correct rule.
+* Confirm clicking highlighted destinations works correctly.
+* Confirm streams remain unaffected.
+* Confirm a player starting on a stream is still blocked by rivers.
+* Confirm dice rolling still works.
+* Confirm turn progression still works.
+* Confirm movement coordinates remain correct.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-002: River blocking should ignore only the river chain the player starts on
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-007: Rivers block movement beyond them unless landed on
+
+Related Bug
+
+* Bug-001: River movement blocking should not apply when the player starts on a river square
+
+Bug Summary
+
+* Bug-001 was too broad.
+* A player starting their turn on a river square should not ignore all river blocking.
+* They should only ignore blocking from the same river chain they are currently standing on.
+* Different river chains should still block movement normally.
+* The whole connected river chain the player is standing on should be treated as non-blocking for that move.
+* Any other separate river chain should still block movement.
+
+Repro Steps
+
+* Generate or create a board with at least two separate river chains.
+* Move a player onto one river chain.
+* End their turn.
+* Start that player’s next turn while they are standing on a river square.
+* Roll the dice.
+* Check available movement highlights.
+* Check movement through the river chain they started on.
+* Check movement through a different river chain.
+
+Expected Behaviour
+
+* If the player starts their movement on a river square:
+
+  * Identify the full connected river chain that contains that starting square.
+  * River squares in that same chain should not block that player’s movement for this move.
+  * The player should be able to move through any river square in that same chain normally.
+  * Any separate river chain should still block movement normally.
+* If the player starts their movement on a non-river square:
+
+  * All river chains should block movement normally.
+  * The player can land on a river square.
+  * Movement should not continue beyond that river square on that path.
+* Streams should remain unaffected.
+* Streams should continue to behave like normal passable squares.
+
+Actual Behaviour
+
+* Bug-001 may have disabled all river blocking whenever the player starts on any river square.
+* This means the player can move through different river chains that should still block them.
+
+Required Fix
+
+* Replace the broad “starting square is river means rivers do not block” rule.
+* Before calculating legal destinations, check whether the current player’s starting square is a river square.
+* If the starting square is not a river square:
+
+  * Keep existing river blocking for all river squares.
+* If the starting square is a river square:
+
+  * Determine which river chain contains the starting square.
+  * Treat only that river chain as non-blocking for this movement calculation.
+  * Keep all other river chains blocking movement normally.
+* Do not disable river blocking globally.
+* Do not treat streams as rivers.
+* Do not change river generation.
+* Do not change stream behaviour.
+
+River Chain Requirement
+
+* A river chain means the connected ordered river path that contains the player’s starting river square.
+* The chain should include every river square connected to that same river path.
+* The chain should not include separate river paths.
+* The chain should not include streams.
+* If river path IDs already exist, use the river path ID to identify the current river chain.
+* If river path IDs do not exist, determine the connected river chain from the starting river square using orthogonal river adjacency.
+* Orthogonal adjacency means:
+
+  * above.
+  * below.
+  * left.
+  * right.
+* Do not use diagonal adjacency to merge separate river chains.
+
+Movement Rule
+
+* When evaluating a candidate river square during movement calculation:
+
+  * If it is part of the same river chain that the player started on, it should not block expansion.
+  * If it is part of a different river chain, it should be a valid destination but should stop movement expansion beyond it.
+* A player should be able to move along or across their starting river chain during that move.
+* A player should not be able to move through a different river chain during that move.
+* This must be enforced in legal movement highlighting, not only in the click handler.
+
+Expected Movement Examples
+
+* Player starts on River Chain A and rolls 4:
+
+  * River Chain A does not block movement.
+  * Movement can continue through River Chain A.
+* Player starts on River Chain A and reaches River Chain B:
+
+  * River Chain B can be highlighted as a valid destination.
+  * Movement should not continue beyond River Chain B on that path.
+* Player starts on Field and reaches River Chain A:
+
+  * River Chain A can be highlighted as a valid destination.
+  * Movement should not continue beyond River Chain A on that path.
+* Player starts on Stream and reaches a river:
+
+  * River blocking applies normally because the player did not start on a river.
+* Player starts on River Chain A and reaches a stream:
+
+  * Stream does not block movement.
+
+Implementation Requirement
+
+* Update the movement calculation from Feature-007 and Bug-001.
+* Avoid a simple global flag like:
+
+```txt id="6w8v2q"
+startedOnRiver = true
+```
+
+* Instead use a current starting river chain check, such as:
+
+```txt id="av9wks"
+startingRiverChainId = river chain containing the player's starting square
+```
+
+* Then during movement expansion:
+
+```txt id="l9mq5s"
+if candidate square is river:
+  if candidate river is in startingRiverChainId:
+    continue movement expansion
+  else:
+    allow landing here but stop expansion beyond this square
+```
+
+* If river chain IDs are not present in board data, calculate the connected river chain at movement time.
+* Keep the logic focused and readable.
+* Do not mutate board generation data unless adding stable river chain IDs is the simplest clean fix.
+
+Out Of Scope
+
+* No changes to river generation unless adding river chain IDs is the smallest clean implementation.
+* No changes to stream generation.
+* No changes to river visuals.
+* No changes to stream visuals.
+* No bridge mechanics.
+* No swimming mechanics.
+* No terrain movement cost system.
+* No spell effects.
+* No token effects.
+* No changes to dice rolling.
+* No changes to turn order.
+* No changes to board generation balance.
+* No changes to player pieces.
+* No changes to spells.
+* No save/load functionality.
+* No persistence.
+* No unrelated movement changes.
+
+Suspected Cause
+
+* Bug-001 likely implemented the rule by disabling all river blocking when the starting square was a river.
+* The intended rule is more specific: disable blocking only for the connected river chain the player is currently on.
+
+Attempted Fixes
+
+* Verified that the Bug-001 logic disabled river blocking for every river square whenever the starting square was any river square.
+* Added focused movement regressions for same-chain traversal, different-chain blocking, and diagonal river non-merging so the fix stays tied to connected river-chain behavior.
+
+Final Fix
+
+* The movement calculation now determines the connected orthogonal river chain containing the starting square when a move begins on a river.
+* Only that connected starting river chain is treated as non-blocking for that move.
+* Any separate river chain still behaves like a blocking river: it can be landed on, but movement does not continue beyond it.
+
+Testing Required
+
+* Confirm a player starting on a non-river square is blocked by rivers normally.
+* Confirm a player starting on a non-river square can land on a river.
+* Confirm a player starting on a non-river square cannot move beyond a river through that path.
+* Confirm a player starting on River Chain A is not blocked by River Chain A.
+* Confirm a player starting on River Chain A can move through River Chain A normally.
+* Confirm a player starting on River Chain A is still blocked by River Chain B.
+* Confirm River Chain B can still be landed on.
+* Confirm movement does not continue beyond River Chain B on that path.
+* Confirm separate river chains are not incorrectly merged.
+* Confirm diagonal river proximity does not merge river chains.
+* Confirm streams remain unaffected.
+* Confirm a player starting on a stream is still blocked by rivers.
+* Confirm legal move highlights reflect the correct river-chain rule.
+* Confirm clicking highlighted destinations works correctly.
+* Confirm dice rolling still works.
+* Confirm turn progression still works.
+* Confirm movement coordinates remain correct.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

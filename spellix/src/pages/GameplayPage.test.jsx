@@ -3,6 +3,8 @@ import { createPlayers } from '../features/gameSetup/gameSetup';
 import { GameSetupProvider } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
 
+const mockGetHighlightedNodeIds = jest.fn();
+
 jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareClick }) => (
   <div aria-label="game board">
     <p>{`Current board player: ${currentPlayerId}`}</p>
@@ -13,15 +15,16 @@ jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareC
 ));
 
 jest.mock('../features/gameBoard/movement', () => ({
-  getHighlightedNodeIds: () => ['square-1-28'],
-  getMovementNodeIdFromCoordinates: (x, y) => `square-${x}-${y}`,
+  getHighlightedNodeIds: (...args) => mockGetHighlightedNodeIds(...args),
+  getMovementNodeIdFromCoordinates: (x, y) =>
+    x >= 0 && x <= 1 && y >= 29 && y <= 30 ? 'start-area' : `square-${x}-${y}`,
 }));
 
 jest.mock('../features/gameBoard/board', () => ({
   assignStartingPositions: (players) =>
     players.map((player, index) => ({
       ...player,
-      position: { x: index, y: 28 },
+      position: { x: index, y: 29 },
     })),
   createBoard: () => ({
     height: 0,
@@ -60,6 +63,11 @@ function createCommittedGameplaySetup() {
     turnOrder: ['player-1', 'player-2'],
   };
 }
+
+beforeEach(() => {
+  mockGetHighlightedNodeIds.mockReset();
+  mockGetHighlightedNodeIds.mockReturnValue(['square-1-28']);
+});
 
 function renderGameplayPage() {
   return render(
@@ -133,5 +141,44 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /cancel spells confirmation/i })).not.toBeInTheDocument();
+  });
+
+  test('blocks the start area only for a player who has already left it', async () => {
+    renderGameplayPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Object),
+      { x: 0, y: 29 },
+      expect.any(Number),
+      { blockedNodeIds: [] }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Object),
+      { x: 1, y: 29 },
+      expect.any(Number),
+      { blockedNodeIds: [] }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
+      3,
+      expect.any(Object),
+      { x: 1, y: 28 },
+      expect.any(Number),
+      { blockedNodeIds: ['start-area'] }
+    );
   });
 });

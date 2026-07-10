@@ -6,7 +6,7 @@ const GROUPED_AREA_NODE_IDS = {
 };
 
 function getGroupedAreaNodeId(x, y) {
-  if (x >= 0 && x <= 2 && y >= 28 && y <= 30) {
+  if (x >= 0 && x <= 1 && y >= 29 && y <= 30) {
     return GROUPED_AREA_NODE_IDS.startArea;
   }
 
@@ -47,6 +47,35 @@ function getAdjacentCoordinates(x, y, board) {
   return adjacentCoordinates;
 }
 
+function getConnectedRiverNodeIds(startingNodeId, adjacentRiverNodeIdsByNodeId) {
+  if (!startingNodeId) {
+    return new Set();
+  }
+
+  const connectedRiverNodeIds = new Set();
+  const pendingNodeIds = [startingNodeId];
+
+  while (pendingNodeIds.length > 0) {
+    const nodeId = pendingNodeIds.pop();
+
+    if (connectedRiverNodeIds.has(nodeId)) {
+      continue;
+    }
+
+    connectedRiverNodeIds.add(nodeId);
+
+    const adjacentRiverNodeIds = adjacentRiverNodeIdsByNodeId.get(nodeId) ?? new Set();
+
+    adjacentRiverNodeIds.forEach((adjacentNodeId) => {
+      if (!connectedRiverNodeIds.has(adjacentNodeId)) {
+        pendingNodeIds.push(adjacentNodeId);
+      }
+    });
+  }
+
+  return connectedRiverNodeIds;
+}
+
 export function getMovementNodeIdFromCoordinates(x, y) {
   const groupedAreaNodeId = getGroupedAreaNodeId(x, y);
 
@@ -61,19 +90,33 @@ export function getMovementNodeIdFromPosition(position) {
   return getMovementNodeIdFromCoordinates(position.x, position.y);
 }
 
-export function getHighlightedNodeIds(board, position, steps) {
+export function getHighlightedNodeIds(board, position, steps, options = {}) {
   if (!board || !position || steps < 1) {
     return [];
   }
 
+  const { blockedNodeIds = [] } = options;
   const startingNodeId = getMovementNodeIdFromPosition(position);
+  const squareByCoordinateKey = new Map(
+    board.squares.map((square) => [`${square.x}-${square.y}`, square])
+  );
   const adjacencyByNodeId = new Map();
+  const adjacentRiverNodeIdsByNodeId = new Map();
+  const blockedNodeIdSet = new Set(blockedNodeIds.filter((nodeId) => nodeId !== startingNodeId));
+  const riverNodeIds = new Set();
 
   board.squares.forEach((square) => {
     const nodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
 
     if (!adjacencyByNodeId.has(nodeId)) {
       adjacencyByNodeId.set(nodeId, new Set());
+    }
+
+    if (square.environmentType === 'river') {
+      riverNodeIds.add(nodeId);
+      if (!adjacentRiverNodeIdsByNodeId.has(nodeId)) {
+        adjacentRiverNodeIdsByNodeId.set(nodeId, new Set());
+      }
     }
 
     getAdjacentCoordinates(square.x, square.y, board).forEach((adjacentCoordinate) => {
@@ -85,19 +128,44 @@ export function getHighlightedNodeIds(board, position, steps) {
       if (adjacentNodeId !== nodeId) {
         adjacencyByNodeId.get(nodeId).add(adjacentNodeId);
       }
+
+      const adjacentSquare = squareByCoordinateKey.get(
+        `${adjacentCoordinate.x}-${adjacentCoordinate.y}`
+      );
+
+      if (
+        square.environmentType === 'river' &&
+        adjacentSquare?.environmentType === 'river' &&
+        adjacentNodeId !== nodeId
+      ) {
+        adjacentRiverNodeIdsByNodeId.get(nodeId)?.add(adjacentNodeId);
+      }
     });
   });
 
+  const startsOnRiver = riverNodeIds.has(startingNodeId);
+  const nonBlockingRiverNodeIds = startsOnRiver
+    ? getConnectedRiverNodeIds(startingNodeId, adjacentRiverNodeIdsByNodeId)
+    : new Set();
   let currentNodeIds = new Set([startingNodeId]);
 
   for (let step = 0; step < steps; step += 1) {
     const nextNodeIds = new Set();
 
     currentNodeIds.forEach((nodeId) => {
+      const isBlockingRiverNode =
+        riverNodeIds.has(nodeId) && !nonBlockingRiverNodeIds.has(nodeId);
+
+      if (nodeId !== startingNodeId && isBlockingRiverNode) {
+        return;
+      }
+
       const adjacentNodeIds = adjacencyByNodeId.get(nodeId) ?? new Set();
 
       adjacentNodeIds.forEach((adjacentNodeId) => {
-        nextNodeIds.add(adjacentNodeId);
+        if (!blockedNodeIdSet.has(adjacentNodeId)) {
+          nextNodeIds.add(adjacentNodeId);
+        }
       });
     });
 

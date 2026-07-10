@@ -60,6 +60,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
       id: playerId,
       colour,
       gender,
+      hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
       spellSlots: existingPlayer

@@ -6,8 +6,10 @@ describe('game setup player piece selection foundation', () => {
     const players = createPlayers(2);
 
     expect(players[0].gender).toBe('boy');
+    expect(players[0].hasLeftStartArea).toBe(false);
     expect(players[0].pieceImage).toBe('m-red.png');
     expect(players[1].gender).toBe('boy');
+    expect(players[1].hasLeftStartArea).toBe(false);
     expect(players[1].pieceImage).toBe('m-blue.png');
   });
 

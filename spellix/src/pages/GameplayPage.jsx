@@ -90,7 +90,11 @@ function GameplayPage() {
     const diceRoll = Math.floor(Math.random() * 6) + 1;
 
     setCurrentDiceRoll(diceRoll);
-    setHighlightedNodeIds(getHighlightedNodeIds(gameSetup.board, currentPlayer.position, diceRoll));
+    setHighlightedNodeIds(
+      getHighlightedNodeIds(gameSetup.board, currentPlayer.position, diceRoll, {
+        blockedNodeIds: currentPlayer.hasLeftStartArea ? ['start-area'] : [],
+      })
+    );
     setShowDiceModal(true);
   };
 
@@ -100,6 +104,10 @@ function GameplayPage() {
     }
 
     const destinationNodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
+    const currentNodeId = getMovementNodeIdFromCoordinates(
+      currentPlayer.position.x,
+      currentPlayer.position.y
+    );
 
     if (!highlightedNodeIds.includes(destinationNodeId)) {
       return;
@@ -108,8 +116,15 @@ function GameplayPage() {
     const nextTurnIndex = (gameSetup.currentTurnIndex + 1) % gameSetup.turnOrder.length;
     const nextPlayerId = gameSetup.turnOrder[nextTurnIndex];
     const nextPlayer = gameSetup.players.find((player) => player.id === nextPlayerId) ?? null;
+    const hasLeftStartArea =
+      currentPlayer.hasLeftStartArea ||
+      (currentNodeId === 'start-area' && destinationNodeId !== 'start-area');
 
-    setPlayerPosition(currentPlayer.id, { x: square.x, y: square.y });
+    setPlayerPosition(
+      currentPlayer.id,
+      { x: square.x, y: square.y },
+      { hasLeftStartArea }
+    );
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
     advanceTurn();

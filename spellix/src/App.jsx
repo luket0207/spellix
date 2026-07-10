@@ -47,6 +47,12 @@ function App() {
     setIsDebugOpen(true);
   };
 
+  const handleOpenSettings = () => {
+    setIsDebugOpen(false);
+    resetDebugState();
+    setIsSettingsOpen(true);
+  };
+
   const handleCloseDebug = () => {
     setIsDebugOpen(false);
     resetDebugState();
@@ -130,7 +136,7 @@ function App() {
         aria-label="Open settings"
         className="app-settings-button"
         type="button"
-        onClick={() => setIsSettingsOpen(true)}
+        onClick={handleOpenSettings}
       >
         <FontAwesomeIcon icon={faGear} />
       </button>

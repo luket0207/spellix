@@ -108,11 +108,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
-  const setPlayerPosition = (playerId, position) => {
+  const setPlayerPosition = (playerId, position, playerUpdates = {}) => {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
       players: currentSetup.players.map((player) =>
-        player.id === playerId ? { ...player, position } : player
+        player.id === playerId ? { ...player, ...playerUpdates, position } : player
       ),
     }));
   };

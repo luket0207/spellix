@@ -1,0 +1,557 @@
+Feature-001: Reduce Start Area to 2x2 and force surrounding field zone
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The board still builds at `31x31` with `30px` squares, but the Start Area now occupies only `x: 0-1`, `y: 29-30`.
+* The surrounding `5x5` zone at `x: 0-4`, `y: 26-30` now stays protected as Field terrain outside the Start Area itself.
+* Land clusters, water paths, and generated features no longer overwrite that protected field zone.
+* Starting-player placement now keeps all 1-6 players inside the new `2x2` Start Area, with the 5th and 6th players stacked onto existing Start Area squares.
+* Movement grouping now treats only the new `2x2` Start Area as the shared `start-area` node.
+
+Manual Test Steps
+
+1. Start a new game and inspect the bottom-left corner of the board.
+Expected result: The Start Area is only a `2x2` block at `x: 0-1`, `y: 29-30`, and the board still renders at `31x31`.
+
+2. Inspect the surrounding squares in the `5x5` zone from `x: 0-4`, `y: 26-30`.
+Expected result: Every square in that zone outside the `2x2` Start Area shows Field terrain and does not show generated features, streams, rivers, hills, gravel, mud, woods, forest, or mountains.
+
+3. Start games with 2, 4, 5, and 6 players and inspect their opening positions.
+Expected result: 2 players start inside the Start Area, 4 players occupy the four Start Area squares, and 5th/6th players stack onto existing Start Area squares without being placed outside the Start Area.
+
+4. Begin movement from the Start Area in gameplay.
+Expected result: Movement still works normally from the new `2x2` Start Area, and the old `3x3` footprint no longer behaves as one grouped Start Area node.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` passes and now verifies:
+  * the board still uses the shared width, height, and square size constants
+  * the Start Area is exactly the new `2x2` block
+  * the surrounding `5x5` protected zone stays Field terrain with no feature placement
+  * 6-player starting positions stay inside the four Start Area squares with stacked extras
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * only the new `2x2` Start Area squares map to the grouped `start-area` movement node
+  * squares from the old removed footprint map as normal board squares instead
+* Existing focused regressions still pass:
+  * `src/features/gameBoard/BoardGrid.test.jsx`
+  * `src/pages/GameplayPage.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the new board/movement tests and the existing focused board, gameplay, setup, spells, and debug suites, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside board generation, starting-position assignment, and grouped Start Area movement boundaries only.
+
+---
+
+Feature-002: Increase generated map features and add stricter spacing rules
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The board now generates `6` normal grouped features total: `3` in the easy section and `3` in the hard section.
+* Generated feature placement now enforces the new edge rule, so generated `2x2` features stay at least `2` squares away from the map edge.
+* Generated features now keep the stricter spacing from all fixed corner areas and from each other using the grouped-area distance rule.
+* Generated features still avoid the protected Start Area field zone from Feature-001 and still respect the existing easy/hard section split.
+
+Manual Test Steps
+
+1. Start a new game and inspect the board for grouped generated feature areas.
+Expected result: The board still includes the fixed Start Area, both Elite Battle areas, and the Boss Battle area, plus `6` normal generated feature areas total.
+
+2. Count the generated feature areas by section.
+Expected result: `3` generated features appear in the easy section and `3` generated features appear in the hard section.
+
+3. Inspect the outer edge bands and the fixed corner areas.
+Expected result: No generated feature occupies `x: 0-1`, `x: 29-30`, `y: 0-1`, or `y: 29-30`, and generated features stay clearly separated from the Start Area, both Elite Battle areas, and the Boss Battle area.
+
+4. Inspect the protected Start Area field zone and the spacing between generated features.
+Expected result: No generated feature appears inside the protected Start Area field zone, and generated features remain visibly separated from each other rather than clustering too closely.
+
+5. Move around the board in gameplay after the board is generated.
+Expected result: Board rendering and movement still work normally around the newly placed grouped features.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` passes and now verifies:
+  * the board generates `6` grouped features total
+  * the feature list contains `3` easy features and `3` hard features
+  * generated feature origins stay within the valid `2`-square edge inset
+  * generated features keep the stricter grouped-area distance from fixed areas and from each other
+  * generated feature squares stay outside the protected Start Area field zone and match their recorded section
+* Existing focused board/gameplay regressions still pass:
+  * `src/features/gameBoard/movement.test.js`
+  * `src/features/gameBoard/BoardGrid.test.jsx`
+  * `src/pages/GameplayPage.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the updated board-generation tests and the existing focused board, gameplay, setup, spells, and debug suites, but `src/App.test.jsx` still failed to start because of the existing Jest `source-map-support` error.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the existing `src/App.test.jsx` startup issue is resolved.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside generated-feature placement rules and did not change feature visuals, interactions, or unrelated board systems.
+
+---
+
+Feature-003: Make settings button always accessible during gameplay
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* The gameplay settings button now stays reachable while gameplay modals are open because it is layered above the modal overlay stack.
+* Opening settings during forced spell setup still keeps the Spells modal active, so required first-turn setup is not bypassed.
+* Opening settings during a dice-result flow still keeps the dice-result modal present underneath the settings modal.
+* Opening settings while Debug is open now closes Debug first and then opens Settings so the settings modal is still reachable.
+
+Manual Test Steps
+
+1. Start a game and confirm the settings button is visible on the gameplay screen.
+Expected result: The settings button remains visible in its normal fixed position during gameplay.
+
+2. Start a game state where the forced Spells modal is open, then click the settings button.
+Expected result: The Settings modal opens, the Spells modal still exists underneath it, and the player still cannot roll dice until spell setup is completed.
+
+3. Roll the dice so the dice-result modal opens, then click the settings button.
+Expected result: The Settings modal opens while the dice-result modal remains present underneath it.
+
+4. Open Settings, then open Debug from the settings modal, then click the gameplay settings button again.
+Expected result: The Debug modal closes and the Settings modal opens again without leaving the settings button blocked.
+
+5. Close the Settings modal and continue gameplay.
+Expected result: Normal gameplay/modal behavior resumes, and non-settings gameplay interactions remain blocked whenever a modal is still open.
+
+Automated Tests Completed
+
+* `src/AppSettingsButton.test.jsx` passes and verifies:
+  * settings opens while the forced Spells modal is already open
+  * settings opens while the dice-result modal is already open
+  * pressing the settings button during a Debug flow closes Debug and opens Settings
+  * forced spell setup still blocks dice rolling when setup is incomplete
+* Existing focused regressions still pass:
+  * `src/pages/GameplayPage.test.jsx`
+  * `src/features/debug/DebugModal.test.jsx`
+  * `src/features/spells/SpellsModal.test.jsx`
+
+Checks Run
+
+* `npm run build` passed.
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand` passed the new settings-button coverage and the focused gameplay, debug, spells, board, movement, setup, and token suites.
+* `src/App.test.jsx` still failed in that full Jest run because it contains stale app-level assertions from older gameplay and board expectations unrelated to this feature.
+
+Automated Tests Still Needed
+
+* A clean full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* Modal visual stacking itself is only partly provable in jsdom, so the automated coverage focuses on reachability and modal-state behavior while the z-index behavior should also be sanity-checked manually in the browser.
+* This slice intentionally stayed inside the app-level settings button behavior and did not redesign modal content or broader gameplay flows.
+
+---
+
+Feature-004: Prevent rivers and streams from forming loops
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* River and Stream squares now only connect as ordered orthogonal paths instead of reconnecting into loops or side-touching older water.
+* Separate water paths no longer merge into each other because new path origins and expansions reject adjacent existing water.
+* Completed water paths are validated before commit, so looped, branching, or 2x2-block water paths are discarded and retried instead of being written into the board.
+* Existing river hard-section placement, fixed-area protection, and rendering remain intact.
+
+Manual Test Steps
+
+1. Start several new games and inspect every visible River and Stream path.
+Expected result: Each water path reads as a single one-square-wide line with two ends, not a loop, ring, branch, or blob.
+
+2. Check points where water paths come near other water paths.
+Expected result: Separate River and Stream paths do not edge-touch, merge into each other, or reconnect to earlier parts of themselves.
+
+3. Inspect any 2x2 group of squares that contains water.
+Expected result: No 2x2 block is fully water.
+
+4. Inspect River squares near the map edge and near fixed areas.
+Expected result: River squares still stay inside the existing edge inset and fixed/protected areas remain untouched.
+
+5. Confirm the board still renders and gameplay still starts normally after the board is generated.
+Expected result: Board generation completes without hanging, and existing River/Stream visuals and animation still display.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` passes and now verifies across `25` deterministic board samples that:
+  * every orthogonally adjacent water square matches the same environment type
+  * each connected River or Stream component forms a simple path with two ends instead of a loop or branch
+  * no water component creates a 2x2 water block as part of its shape
+  * River squares still remain in the hard section and water still avoids fixed areas
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the older stale expectations in `src/App.test.jsx` are refreshed to current board and gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice enforces the required orthogonal water-path rule; diagonal water proximity was left unchanged because the feature requirement marked diagonal avoidance as optional where practical.
+* This slice intentionally stayed inside water generation and did not change water rendering, animation, colours, or unrelated board systems.
+
+---
+
+Feature-005: Ensure minimum Woods coverage in easy map section
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Board generation now guarantees at least `150` Woods squares in the easy section after the final environment map is assembled.
+* If the normal map already has enough easy-section Woods, the balancing pass does nothing.
+* If the easy section is short on Woods, extra Woods are added as cluster-like orthogonal growth that replaces `field` first and `gravel` only when field alone is not enough.
+* Fixed areas, protected Start Area field-zone squares, feature squares, and water squares remain untouched during this balancing pass.
+
+Manual Test Steps
+
+1. Start several new games and inspect the easy section of each board.
+Expected result: The easy section consistently contains dense Woods coverage rather than occasionally sparse Woods generation.
+
+2. Inspect the protected Start Area field zone, fixed corner areas, and generated feature areas after board generation.
+Expected result: Those protected/fixed areas still remain unchanged and are not converted into Woods by the balancing pass.
+
+3. Inspect Woods added near ordinary easy-section terrain.
+Expected result: Extra Woods appear as connected cluster-like groups rather than isolated scattered single replacements where space allows.
+
+4. Inspect easy-section non-Woods terrain after a board that appears Woods-heavy.
+Expected result: Additional Woods replacement comes from ordinary `field` squares first, with `gravel` only used when needed, while Mud, Hills, water, and other protected terrain remain unchanged.
+
+5. Start gameplay and move around the generated board.
+Expected result: Board generation completes normally, environment rendering still works, and gameplay movement still functions.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` passes and now verifies:
+  * across `25` deterministic board samples, the easy section always ends with at least `150` Woods squares
+  * the balancing helper prefers replacing `field` before `gravel` when enough field squares exist
+  * the balancing helper falls back to `gravel` when field alone is insufficient
+  * protected and fixed easy-section squares are not replaced during the balancing pass
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the older stale expectations in `src/App.test.jsx` are refreshed to current board and gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside post-generation easy-section Woods balancing and did not change hard-section balance, water generation, feature placement, rendering, or gameplay rules.
+
+---
+
+Feature-006: Ensure minimum Forest coverage in hard map section
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Board generation now guarantees at least `150` Forest squares in the hard section after the full environment map is assembled.
+* If the normal map already has enough hard-section Forest, the balancing pass does nothing.
+* If the hard section is short on Forest, extra Forest is added as cluster-like orthogonal growth that replaces `field` first, then `woods`, then `mud` only when necessary.
+* Mountains, water, fixed areas, generated features, and protected Start Area squares remain untouched during this balancing pass, and the easy-section Woods minimum from Feature-005 still holds.
+
+Manual Test Steps
+
+1. Start several new games and inspect the hard section of each board.
+Expected result: The hard section consistently contains dense Forest coverage rather than occasionally sparse Forest generation.
+
+2. Inspect the Boss Battle mountain-surround area, hard-section water paths, fixed corner areas, and generated feature areas after board generation.
+Expected result: Those protected or special areas remain unchanged and are not converted into Forest by the balancing pass.
+
+3. Inspect Forest added near ordinary hard-section terrain.
+Expected result: Extra Forest appears as connected cluster-like groups rather than isolated scattered single replacements where space allows.
+
+4. Inspect hard-section non-Forest terrain after a board that appears Forest-heavy.
+Expected result: Additional Forest replacement comes from ordinary `field` squares first, then `woods`, then `mud` only when needed, while Mountains, Rivers, Streams, and protected terrain remain unchanged.
+
+5. Start gameplay and move around the generated board.
+Expected result: Board generation completes normally, environment rendering still works, and gameplay movement still functions.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` passes and now verifies:
+  * across `25` deterministic board samples, the hard section always ends with at least `150` Forest squares
+  * the easy section still keeps at least `150` Woods squares after the hard-section Forest pass runs
+  * the balancing helper prefers replacing hard-section `field` before `woods` when enough field squares exist
+  * the balancing helper can fall back to `woods` and then `mud` when higher-priority hard-section replacements are insufficient
+  * protected, fixed, feature, water, and mountain hard-section squares are not replaced during the balancing pass
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/board.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the older stale expectations in `src/App.test.jsx` are refreshed to current board and gameplay behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside post-generation hard-section Forest balancing and did not change easy-section balance rules beyond preserving Feature-005, or change water, feature, rendering, or gameplay systems.
+
+---
+
+Feature-007: Rivers block movement beyond them unless landed on
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* River squares are valid highlighted destinations, but movement expansion stops when a path reaches a blocking river square.
+* A player starting on a river square can still move away from it normally and can continue through that same connected river chain.
+* Streams remain passable and do not stop movement expansion.
+* A square beyond a river can still be highlighted when another non-river path reaches it.
+* Existing grouped movement rules stay in the same movement-graph flow.
+
+Manual Test Steps
+
+1. Start gameplay, roll enough movement to reach a nearby River square, and inspect the highlighted destinations.
+Expected result: The River square is highlighted as a legal destination, but squares that require continuing through that River on the same path are not highlighted.
+
+2. Move onto a River square and end the move there.
+Expected result: The move succeeds normally, the player lands on the River square, and turn flow continues.
+
+3. Find a nearby Stream square and roll movement that would pass through it.
+Expected result: Stream squares do not block movement, and destinations beyond the Stream still highlight normally.
+
+4. Start a turn from a player already standing on a River square and roll movement.
+Expected result: The player can move away from that starting River square normally and can continue through the same connected River chain, but a different River chain still stops further expansion.
+
+5. Check a route where a destination beyond a River can also be reached by another legal non-river path.
+Expected result: That destination can still highlight through the alternate legal path.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * grouped start-area movement ids still behave the same
+  * river squares can be valid destinations without allowing path expansion beyond them
+  * alternate non-river routes can still reach destinations beyond a river
+  * streams remain passable
+  * starting on a river still allows leaving it, with connected starting-river-chain traversal and different-river-chain blocking covered by focused regressions
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/movement.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside legal movement calculation and did not change water generation, river visuals, stream visuals, dice flow, turn order, or unrelated movement rules.
+
+---
+
+Bug-001: River movement blocking should not apply when the player starts on a river square
+
+Test Status
+
+* passed
+
+Bug Coverage
+
+* Starting a move on a river square no longer leaves the player stuck on that starting river square.
+* Starting a move on any non-river square still keeps the normal river-blocking rule.
+* Streams remain passable and do not change whether river blocking is active.
+* The exact connected-river-chain scope is refined further in Bug-002.
+
+Manual Regression Steps
+
+1. Move a player onto a River square and end the turn there.
+Expected result: The player finishes the turn on the River square normally.
+
+2. Start that same player’s next turn on the River square and roll enough movement to reach another River square and continue past it.
+Expected result: Legal movement highlighting continues through River squares normally for that roll, including destinations beyond later River squares.
+
+3. Start a different move from a non-River square and roll enough movement to reach a River square.
+Expected result: The River square is still a legal destination, but movement does not continue beyond it on that path.
+
+4. Start a move from a Stream square or pass through a Stream before reaching a River.
+Expected result: Streams remain passable, but river blocking still applies because the move did not start on a River square.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * river squares remain valid destinations for moves that start off-river
+  * alternate non-river routes can still reach destinations beyond a river
+  * streams remain passable without disabling river blocking by themselves
+  * starting on a river no longer causes the current river square to trap movement at the start of the roll
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/movement.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix intentionally stayed inside legal movement calculation and its focused regressions only.
+
+---
+
+Bug-002: River blocking should ignore only the river chain the player starts on
+
+Test Status
+
+* passed
+
+Bug Coverage
+
+* Starting on a river now exempts only the connected orthogonal river chain containing that starting square.
+* A different river chain still blocks movement normally even when the player started on a river.
+* Diagonal river contact does not merge separate river chains.
+* Streams remain unaffected.
+
+Manual Regression Steps
+
+1. Move a player onto one River chain and end the turn there.
+Expected result: The player finishes the turn on that River square normally.
+
+2. Start that player's next turn on the same River chain and roll enough movement to travel along it.
+Expected result: Legal movement highlighting can continue through River squares in that same connected starting chain.
+
+3. During that same move, inspect a different separate River chain if it is reachable.
+Expected result: The separate River chain can still be highlighted as a destination, but movement does not continue beyond it.
+
+4. Inspect River squares that are only diagonally adjacent to the starting River chain.
+Expected result: Diagonal River contact does not make those separate River squares non-blocking.
+
+5. Repeat a move that starts on a non-River square or a Stream square.
+Expected result: Normal river blocking still applies, and Streams remain passable.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * a connected starting river chain can be traversed without blocking expansion
+  * a different river chain still blocks expansion when reached later in the move
+  * diagonal river contact does not merge separate river chains
+  * off-river and stream-start movement still use the normal river-blocking rule
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/movement.test.js` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This bug fix intentionally stayed inside legal movement calculation and its focused regressions only.
+
+---
+
+Feature-008: Prevent players from returning to the Start Area after leaving it
+
+Test Status
+
+* passed
+
+Feature Coverage
+
+* Each player now tracks whether they have left the grouped Start Area independently.
+* A player who has not left the Start Area can still move out of it normally.
+* Once a player has left the Start Area, legal movement no longer highlights or routes through the grouped `start-area` node for that player.
+* Other players still inside the Start Area are unaffected until they leave it themselves.
+* Existing river and stream movement rules remain in place.
+
+Manual Test Steps
+
+1. Start a new game and confirm players begin inside the Start Area.
+Expected result: Players still spawn in the fixed Start Area as before.
+
+2. Roll movement for a player who is still inside the Start Area and move them to a non-Start-Area square.
+Expected result: The move succeeds normally and that player leaves the Start Area.
+
+3. Continue play until that same player gets another turn, then roll movement again.
+Expected result: Start Area squares are no longer highlighted for that player, and routes do not pass back through the Start Area.
+
+4. Check another player who is still in the Start Area before they leave it.
+Expected result: That player can still roll and move out normally, showing the leave state is tracked per player rather than globally.
+
+5. Repeat movement near rivers and streams after a player has left the Start Area.
+Expected result: River blocking and the start-on-river exception still behave the same, and streams remain passable.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/movement.test.js` passes and now verifies:
+  * the grouped `start-area` node can be excluded from legal destinations and path expansion
+  * river and stream movement rules still behave correctly alongside the new movement option
+* `src/features/gameSetup/gameSetup.test.js` passes and now verifies:
+  * newly created players start with `hasLeftStartArea: false`
+* `src/pages/GameplayPage.test.jsx` passes and now verifies:
+  * leaving the Start Area causes only that playerâ€™s later movement calculation to receive `blockedNodeIds: ['start-area']`
+  * another player still inside the Start Area does not receive that block yet
+
+Checks Run
+
+* `$env:CI='true'; npm test -- --watchAll=false --runInBand src/features/gameBoard/movement.test.js src/features/gameSetup/gameSetup.test.js src/pages/GameplayPage.test.jsx` passed.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* A broader full Jest run after the stale expectations in `src/App.test.jsx` are updated to match the current gameplay and board behavior.
+
+Notes
+
+* `npm run lint` was not run because there is no `lint` script in `package.json`.
+* This slice intentionally stayed inside player movement state and legal destination calculation, and did not change board generation, start placement, spells, tokens, or other gameplay systems.

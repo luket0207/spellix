@@ -1,0 +1,1326 @@
+Feature-001: Reduce Start Area to 2x2 and force surrounding field zone
+
+Status
+
+* done
+
+Goal
+
+* Revisit board generation around the Start Area.
+* Reduce the Start Area from 3x3 to 2x2.
+* Ensure the area immediately around the Start Area is safe field terrain.
+* Preserve valid player placement for 2–6 player games.
+
+Scope
+
+* Update the fixed Start Area size.
+* The Start Area should now be a 2x2 fixed area instead of a 3x3 fixed area.
+* The Start Area should remain in the bottom-left corner of the board.
+* The board should remain 31x31.
+* The board should remain 930px by 930px.
+* Board squares should remain 30px by 30px.
+* Create a 5x5 field zone around the Start Area.
+* The 2x2 Start Area should sit in the bottom-left corner of that 5x5 zone.
+* Every non-Start-Area square inside that 5x5 zone should be a Field environment square.
+* This protected field zone should not be overwritten by other generated environments.
+* This protected field zone should not be overwritten by streams, rivers, features, hills, gravel, mud, woods, forest, or mountains.
+* Update initial player placement to work with the smaller 2x2 Start Area.
+
+Coordinate Requirement
+
+* The Start Area should be the bottom-left 2x2 area:
+
+```txt
+x: 0-1
+y: 29-30
+```
+
+* The surrounding protected 5x5 zone should be:
+
+```txt
+x: 0-4
+y: 26-30
+```
+
+* Squares inside the protected 5x5 zone that are not part of the Start Area should be Field environment squares.
+
+Player Placement Requirement
+
+* Players should still begin in the Start Area.
+* The Start Area now only has 4 squares.
+* In games with 1–4 players, place players on unique Start Area squares where possible.
+* In games with 5–6 players, there is not enough space for every player to have a unique Start Area square.
+* For 5–6 player games, place the extra players on the same square as existing players.
+* For a 6 player game:
+
+  * 4 players should occupy the 4 Start Area squares.
+  * The last 2 players should share squares with 2 of the already placed players.
+* Do not expand the Start Area to fit more players.
+* Do not place players outside the Start Area.
+
+Generation Rules
+
+* Fixed areas should be added before procedural environment generation.
+* The protected 5x5 Start Area field zone should be reserved before random clusters are generated.
+* Environment generation should not overwrite the Start Area.
+* Environment generation should not overwrite the protected field zone around the Start Area.
+* Feature generation should not place features inside the Start Area.
+* Feature generation should not place features inside the protected field zone around the Start Area.
+
+Expected Behaviour
+
+* The Start Area is 2x2 instead of 3x3.
+* The Start Area remains in the bottom-left corner.
+* The 5x5 zone around the Start Area is visible as safe Field terrain, except for the 2x2 Start Area itself.
+* Hills, gravel, mud, streams, rivers, woods, forest, mountains, and generated features do not appear inside the protected 5x5 zone.
+* Player pieces start inside the 2x2 Start Area.
+* 5 and 6 player games still start correctly by stacking extra players on existing Start Area squares.
+* Existing movement still works.
+* Existing turn order still works.
+* Existing board rendering still works.
+
+Out Of Scope
+
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to generated feature count.
+* No changes to generated feature spacing rules.
+* No changes to environment image rendering.
+* No changes to river or stream animation.
+* No changes to player piece images.
+* No changes to dice logic.
+* No changes to movement rules.
+* No changes to spells.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated board generation changes.
+
+Assumptions
+
+* The bottom-left corner remains the intended Start Area location.
+* The protected field zone should be a 5x5 block with the 2x2 Start Area in its bottom-left corner.
+* “First 3 rows around the starting square” means the extra surrounding rows and columns inside that 5x5 block should be Field terrain.
+* Player stacking already exists visually from earlier player-piece work and can be reused for 5–6 player starts.
+
+Stop Point
+
+* Stop once the Start Area is 2x2, the protected 5x5 field zone is enforced, and player placement works for up to 6 players without placing anyone outside the Start Area.
+
+Testing Checkpoints
+
+* Confirm the board remains 31x31.
+* Confirm board squares remain 30px by 30px.
+* Confirm the Start Area is exactly 2x2.
+* Confirm the Start Area is at `x: 0-1`, `y: 29-30`.
+* Confirm the protected 5x5 zone is at `x: 0-4`, `y: 26-30`.
+* Confirm every non-Start-Area square inside the protected 5x5 zone is Field.
+* Confirm no generated environment overwrites the protected field zone.
+* Confirm no generated feature appears inside the protected field zone.
+* Confirm a 2 player game places both players inside the Start Area.
+* Confirm a 4 player game places all players on unique Start Area squares.
+* Confirm a 5 player game places all players inside the Start Area, with one shared square.
+* Confirm a 6 player game places all players inside the Start Area, with two shared placements.
+* Confirm player stacking visuals still work.
+* Confirm movement from the Start Area still works.
+* Confirm turn order still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* The Start Area is now reduced to the bottom-left `2x2` block at `x: 0-1`, `y: 29-30`.
+* The surrounding `5x5` zone at `x: 0-4`, `y: 26-30` is now protected as Field terrain outside the Start Area and is blocked from land clusters, water paths, and generated features.
+* Starting-player placement now uses only the four Start Area squares and stacks the 5th and 6th players onto existing Start Area squares instead of placing anyone outside the Start Area.
+* Start Area movement grouping now matches the new `2x2` region so movement logic no longer treats the old `3x3` footprint as one grouped node.
+* Reuse check: reviewed the existing `createBoard`, `assignStartingPositions`, movement grouped-area helpers, and current board/gameplay tests; reused the existing board generation flow, fixed-area model, and player stacking behavior, and added only focused board/movement tests because the feature fit the current architecture without new UI components.
+* Intentionally not changed in this slice:
+  * Elite Battle areas
+  * Boss Battle area
+  * feature counts or spacing rules
+  * board rendering styles
+  * movement rules outside the Start Area boundary update
+  * spells, dice, and debug behavior
+
+---
+
+Feature-002: Increase generated map features and add stricter spacing rules
+
+Status
+
+* done
+
+Goal
+
+* Revisit generated feature placement on the map.
+* Increase generated feature count from 4 total to 6 total.
+* Generate 3 features in the easy section and 3 features in the hard section.
+* Add stricter spacing rules so generated features are not too close to each other, fixed corner areas, or the edge of the map.
+
+Scope
+
+* Update generated feature placement rules only.
+* This feature does not include the Start Area, Elite Battle areas, or Boss Battle area as generated features.
+* Start Area, Elite Battle areas, and Boss Battle area should remain fixed in the corners.
+* The existing fixed corner areas should remain unchanged except for any Start Area change already made by Feature-001.
+* Increase generated map features:
+
+  * Easy section: 3 generated features.
+  * Hard section: 3 generated features.
+  * Total generated features: 6.
+* Generated features should remain 2x2 grouped feature areas unless the current implementation already defines a different generated feature size.
+* Generated features should still be visually distinct from normal environment squares.
+* Apply new spacing rules to generated features.
+
+Generated Feature Count Requirement
+
+* The map should generate:
+
+  * 3 generated features in the easy section.
+  * 3 generated features in the hard section.
+* This replaces the previous rule:
+
+  * 2 generated features in the easy section.
+  * 2 generated features in the hard section.
+* The fixed Start Area, fixed Elite Battle areas, and fixed Boss Battle area do not count toward this generated feature total.
+
+Feature Spacing Requirement
+
+* Generated features must be at least 4 squares away from any other feature.
+* This includes distance from:
+
+  * Other generated features.
+  * The fixed Start Area.
+  * The fixed top-left Elite Battle area.
+  * The fixed bottom-right Elite Battle area.
+  * The fixed top-right Boss Battle area.
+* Use the outer edge of each grouped area when checking distance.
+* Do not check only centre points.
+* A generated 2x2 feature should be rejected if its area is too close to the bounding box of another generated feature or fixed corner area.
+* “At least 4 squares away” means there should be at least 4 clear board squares between the edges of the grouped areas.
+
+Edge Spacing Requirement
+
+* Generated features must be at least 2 squares away from the edge of the map.
+* The fixed corner areas are exempt from this rule because they intentionally sit in the corners.
+* For a 31x31 board using zero-based coordinates, generated feature squares should not occupy:
+
+  * `x: 0-1`
+  * `x: 29-30`
+  * `y: 0-1`
+  * `y: 29-30`
+* If generated features are 2x2, valid top-left coordinates should usually be within:
+
+```txt
+x: 2-27
+y: 2-27
+```
+
+* Also apply the section and spacing rules after checking the edge rule.
+
+Easy And Hard Section Requirement
+
+* Keep the existing easy/hard diagonal section logic.
+* Place 3 generated features in the easy section.
+* Place 3 generated features in the hard section.
+* A generated feature should count as easy or hard based on the existing section logic.
+* If grouped feature placement spans multiple section squares, keep the existing project convention or use the section of the feature’s anchor square.
+* Do not place easy features in the hard section.
+* Do not place hard features in the easy section.
+
+Placement Failure Handling
+
+* The generator should make a reasonable number of placement attempts.
+* If a valid placement cannot be found, the generator should fail safely rather than entering an infinite loop.
+* Do not relax the fixed corner area rules.
+* Do not place features on the protected Start Area field zone from Feature-001.
+* Do not place features on fixed Start, Elite, or Boss areas.
+* Prefer clear, deterministic fallback behaviour if placement fails.
+* Do not silently place invalid features that break the spacing rules.
+
+Expected Behaviour
+
+* The board generates 6 normal generated features total.
+* There are 3 generated features in the easy section.
+* There are 3 generated features in the hard section.
+* Generated features remain separate from the fixed Start Area, Elite Battle areas, and Boss Battle area.
+* Generated features are at least 4 squares away from each other.
+* Generated features are at least 4 squares away from fixed corner areas.
+* Generated features are at least 2 squares away from the map edge.
+* Generated features do not appear inside the protected Start Area field zone from Feature-001.
+* Existing environment generation still works.
+* Existing board rendering still works.
+* Existing movement still works.
+
+Out Of Scope
+
+* No changes to Start Area size except what Feature-001 handles.
+* No changes to Elite Battle area size.
+* No changes to Boss Battle area size.
+* No changes to Boss Battle mountain-surround rules unless existing generation requires preserving them.
+* No changes to feature behaviour.
+* No feature interaction logic.
+* No battle system.
+* No reward system.
+* No changes to environment cluster values.
+* No changes to river or stream generation unless required to avoid overwriting features.
+* No changes to player placement.
+* No changes to player movement.
+* No changes to dice logic.
+* No changes to spells.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated board generation changes.
+
+Assumptions
+
+* “Feature squares” means the generated 2x2 orange feature areas from earlier board generation work.
+* The fixed corner areas are not part of the generated feature count.
+* The phrase “including the 4 fixed features in the corners” refers to the fixed Start Area, two Elite Battle areas, and Boss Battle area.
+* Distance checks should be based on grouped-area edges rather than centre points.
+* The existing easy/hard diagonal split remains unchanged.
+
+Stop Point
+
+* Stop once the board reliably generates 3 easy generated features and 3 hard generated features, while respecting the 4-square spacing rule from other features and fixed corner areas, and the 2-square edge spacing rule.
+
+Testing Checkpoints
+
+* Confirm the board still includes the fixed Start Area.
+* Confirm the board still includes the fixed top-left Elite Battle area.
+* Confirm the board still includes the fixed bottom-right Elite Battle area.
+* Confirm the board still includes the fixed top-right Boss Battle area.
+* Confirm the board generates 3 generated features in the easy section.
+* Confirm the board generates 3 generated features in the hard section.
+* Confirm there are 6 generated features total.
+* Confirm fixed corner areas do not count toward the 6 generated features.
+* Confirm generated features are at least 4 squares away from each other.
+* Confirm generated features are at least 4 squares away from the fixed Start Area.
+* Confirm generated features are at least 4 squares away from the fixed top-left Elite Battle area.
+* Confirm generated features are at least 4 squares away from the fixed bottom-right Elite Battle area.
+* Confirm generated features are at least 4 squares away from the fixed top-right Boss Battle area.
+* Confirm generated features are at least 2 squares away from the map edge.
+* Confirm generated features do not appear inside the protected Start Area field zone from Feature-001.
+* Confirm generated features remain in their correct easy or hard section.
+* Confirm generated features still render correctly.
+* Confirm environment generation still fills the rest of the board correctly.
+* Confirm movement still works around generated features.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Generated feature placement now creates `3` easy-section features and `3` hard-section features for `6` total generated features.
+* Generated feature origins are now constrained to stay at least `2` squares away from the map edge, so generated `2x2` feature areas do not occupy the outermost edge bands.
+* Generated features now require stricter spacing from all fixed corner areas and from each other by using the grouped-area distance check with the new `4` clear-square requirement.
+* Generated features still stay out of the protected Start Area field zone from Feature-001 and still use the existing easy/hard grouped-area logic.
+* Reuse check: reviewed the existing `createFeatureAreas`, grouped-area distance helpers, fixed-area board model, and current board-generation tests; reused the current feature-area data shape and generation loop, and only tightened the existing placement rules plus focused board tests because no new UI or board-rendering code was needed.
+* Intentionally not changed in this slice:
+  * Start Area size or player placement
+  * Elite Battle area size
+  * Boss Battle area size
+  * feature visuals or behaviour
+  * river/stream generation rules
+  * movement, dice, spells, or debug behavior
+
+
+---
+
+Feature-003: Make settings button always accessible during gameplay
+
+Status
+
+* done
+
+Goal
+
+* Update the gameplay settings button so it can always be reached during gameplay.
+* The settings button should remain clickable even when a modal is present.
+* The settings button should be available 100% of the time while on the gameplay screen.
+
+Scope
+
+* Update the settings button UI behaviour on the gameplay page.
+* The settings button should stay visible above normal gameplay content.
+* The settings button should stay visible above modal overlays.
+* The settings button should remain clickable when any gameplay modal is open.
+* This includes, but is not limited to:
+
+  * start-of-turn modal.
+  * dice result modal.
+  * Spells modal.
+  * Debug modal.
+  * settings modal.
+  * save confirmation modal.
+  * cancel confirmation modal.
+  * token bag full choice modal.
+* The settings button should remain in a consistent location.
+* Keep the existing settings button purpose.
+* Keep the existing settings menu contents.
+* Keep the UI functional and simple.
+
+Expected Behaviour
+
+* The settings button is always visible during gameplay.
+* The settings button is always clickable during gameplay.
+* The settings button can be clicked even when a modal overlay is present.
+* Clicking the settings button opens the settings menu.
+* If another modal is already open, the settings menu should still be reachable.
+* The settings button should not be blocked by modal overlays.
+* The settings button should not disappear behind modals.
+* The settings button should not become unclickable because of overlay pointer handling.
+* The settings button should still work after closing modals.
+* The settings button should still work after turn changes.
+* The settings button should still work during spell setup.
+* The settings button should still work during debug flows.
+
+Layering Requirement
+
+* The settings button should have a higher stacking layer than modal overlays if needed.
+* The modal overlay should not intercept clicks intended for the settings button.
+* Use a clear `z-index` structure.
+* Avoid random very high `z-index` values unless required.
+* Keep stacking rules understandable and documented in the relevant CSS if needed.
+* The settings modal itself should still appear correctly when opened.
+* Other modals should still block normal gameplay interactions behind them.
+* This feature should only exempt the settings button from being blocked.
+
+Click Behaviour Requirement
+
+* The settings button should remain clickable even when:
+
+  * the start-of-turn modal is open.
+  * the Spells modal is open.
+  * the Debug modal is open.
+  * a confirmation modal is open.
+* If opening the settings modal while another modal is open creates modal conflicts, use the smallest sensible solution.
+* Acceptable simple solutions include:
+
+  * opening settings above the current modal.
+  * closing the current settings modal if it is already open.
+  * keeping settings as a top-layer modal.
+* Do not break required forced-flow rules.
+* For example, if the first-turn Spells modal is forced, opening settings should not allow the player to bypass required spell setup.
+* The player should still need to complete required spell setup before rolling dice.
+
+Out Of Scope
+
+* No redesign of the settings menu.
+* No changes to settings menu options.
+* No new settings menu buttons.
+* No changes to the Debug modal content.
+* No changes to spell setup rules.
+* No changes to Save or Cancel behaviour.
+* No changes to token bag logic.
+* No changes to turn order.
+* No changes to dice logic.
+* No changes to movement.
+* No changes to board generation.
+* No changes to player pieces.
+* No save/load functionality.
+* No persistence.
+* No unrelated modal redesign.
+
+Assumptions
+
+* “Settings button” means the existing gameplay settings button added in EPIC-001.
+* “Always able to be reached” means visible and clickable above modal overlays during gameplay.
+* Normal gameplay interactions should still be blocked by modal overlays.
+* Only the settings button should remain interactive above modal overlays.
+* Forced gameplay modals, such as first-turn spell setup, should not be bypassed by opening settings.
+
+Stop Point
+
+* Stop once the settings button is visible and clickable 100% of the time during gameplay, including while modals are open, without allowing required gameplay flows to be bypassed.
+
+Testing Checkpoints
+
+* Confirm the settings button is visible on the gameplay screen.
+* Confirm the settings button opens the settings menu during normal gameplay.
+* Confirm the settings button is visible when the start-of-turn modal is open.
+* Confirm the settings button is clickable when the start-of-turn modal is open.
+* Confirm the settings button is visible when the dice result modal is open.
+* Confirm the settings button is clickable when the dice result modal is open.
+* Confirm the settings button is visible when the Spells modal is open.
+* Confirm the settings button is clickable when the Spells modal is open.
+* Confirm the settings button is visible when the Debug modal is open.
+* Confirm the settings button is clickable when the Debug modal is open.
+* Confirm the settings button is visible when a save confirmation modal is open.
+* Confirm the settings button is clickable when a save confirmation modal is open.
+* Confirm the settings button is visible when a cancel confirmation modal is open.
+* Confirm the settings button is clickable when a cancel confirmation modal is open.
+* Confirm modal overlays still block normal gameplay interactions.
+* Confirm the settings button is the only gameplay control that remains clickable above modal overlays.
+* Confirm opening settings does not bypass forced first-turn spell setup.
+* Confirm opening settings does not allow dice rolling while spell setup is incomplete.
+* Confirm closing settings returns to the previous gameplay/modal state cleanly.
+* Confirm there are no modal layering issues.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* The app-level gameplay settings button now opens the settings modal from gameplay even while other gameplay modals are present, because the button is layered above modal overlays.
+* The settings button now also resolves the settings-vs-debug modal conflict by closing the Debug modal and opening the Settings modal when the button is pressed during a debug flow.
+* The existing settings menu contents, gameplay modal flows, and forced spell-setup rules remain unchanged.
+* Reuse check: reviewed the existing app-level settings button, shared `Modal`, app-level Debug modal flow, gameplay modal stack, and focused gameplay tests; reused the current app-level settings modal and existing gameplay modal structure, and only added a small settings-open handler plus focused accessibility tests because no new components or routes were needed.
+* Intentionally not changed in this slice:
+  * settings menu contents
+  * debug modal contents
+  * spell setup rules
+  * dice, movement, board generation, and player piece behavior
+  * broader modal redesign
+
+
+---
+
+Feature-004: Prevent rivers and streams from forming loops
+
+Status
+
+* done
+
+Goal
+
+* Revisit river and stream generation.
+* Prevent rivers and streams from ever forming loops.
+* Ensure each river or stream behaves like a single ordered path.
+* A river or stream square should only touch the water square directly before it or directly after it in that same path order.
+
+Scope
+
+* Update river and stream generation logic.
+* Apply this rule to both rivers and streams.
+* A generated river or stream should be treated as an ordered path.
+* Each water square in the path should know, or be checkable against, its position in that path.
+* Water path squares must not form loops.
+* Water path squares must not branch.
+* Water path squares must not reconnect to earlier parts of the same path.
+* Water path squares must not touch unrelated river or stream paths.
+* Keep existing river and stream environment rendering.
+* Keep existing river and stream animation.
+* Keep existing river and stream colour styling.
+* Keep existing river and stream length rules unless a path must be retried because it would create a loop.
+
+Water Touching Rule
+
+* For any river or stream path, a water square may only touch:
+
+  * the previous square in that same path.
+  * the next square in that same path.
+* A water square must not touch:
+
+  * any earlier square in the same path that is not the direct previous square.
+  * any later square in the same path that is not the direct next square.
+  * any water square from another river path.
+  * any water square from another stream path.
+  * any water square from a different water cluster.
+* This means water paths should behave like clean, one-square-wide lines.
+
+Path Validity Rules
+
+* Rivers and streams must not form loops.
+* Rivers and streams must not form rings.
+* Rivers and streams must not form closed paths.
+* Rivers and streams must not self-intersect.
+* Rivers and streams must not double back into themselves.
+* Rivers and streams must not create branches or junctions.
+* Rivers and streams must not create 2x2 blocks of water.
+* Rivers and streams must remain one square wide.
+* Each path should have two path ends unless the path length is 1.
+* A middle square in a path should normally touch exactly two water squares:
+
+  * the square before it.
+  * the square after it.
+* An end square in a path should normally touch exactly one water square:
+
+  * either the square after it or the square before it.
+* A newly placed water square should be rejected if it touches any water square other than the direct previous square in the path being generated.
+
+Generation Requirement
+
+* When generating a river or stream, track the ordered list of squares in that path.
+* Before placing a candidate next square, check all neighbouring water squares.
+* The candidate square is only valid if the only water square it touches is the current end of the same path.
+* The candidate square must not touch any other water square.
+* The generator should not rely only on checking the candidate square.
+* It should also ensure the new placement does not cause existing nearby water squares to become invalid.
+* After a river or stream path is generated, validate the finished path.
+* If the finished path contains a loop, branch, invalid touch, or 2x2 water block, discard that path and retry.
+* Use a reasonable retry limit.
+* Do not enter an infinite loop if valid water placement is difficult.
+* If a valid path cannot be generated, fail safely by skipping that path or using the smallest existing safe fallback.
+
+Neighbour Checking Requirement
+
+* Check orthogonal neighbours when determining whether water squares touch.
+* Orthogonal neighbours are:
+
+  * above.
+  * below.
+  * left.
+  * right.
+* If the current visual rendering makes diagonal water look connected, also avoid diagonal contact where practical.
+* The core required rule is that no water square should edge-touch another water square unless it is directly before or after it in the same ordered path.
+
+Expected Behaviour
+
+* Rivers no longer generate as loops.
+* Streams no longer generate as loops.
+* Rivers no longer reconnect to themselves.
+* Streams no longer reconnect to themselves.
+* Rivers and streams do not form circular or ring-like shapes.
+* Rivers and streams do not branch.
+* Rivers and streams do not form 2x2 water blocks.
+* A river square only touches the river square before or after it in the same river path.
+* A stream square only touches the stream square before or after it in the same stream path.
+* Separate water paths do not touch each other.
+* Existing river and stream visuals still render correctly.
+* Existing board generation still completes safely.
+
+Out Of Scope
+
+* No changes to river or stream colours.
+* No changes to river or stream animation.
+* No changes to river or stream image assets.
+* No changes to non-water environment generation.
+* No changes to Start Area rules.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to generated feature count.
+* No changes to generated feature spacing.
+* No changes to player placement.
+* No changes to movement rules.
+* No changes to dice logic.
+* No changes to spells.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated board generation changes.
+
+Assumptions
+
+* “The ones directly before or after it in the order” means the previous and next squares in the generated river or stream path array.
+* Rivers and streams are generated as one-square-wide paths.
+* The board uses orthogonal movement and orthogonal water adjacency for path connection.
+* Existing water generation can be retried if a candidate path creates invalid touching.
+* It is acceptable to skip a water path after repeated failed attempts rather than placing an invalid loop.
+
+Stop Point
+
+* Stop once generated rivers and streams are guaranteed not to create loops, branches, self-intersections, 2x2 water blocks, or water-square contact outside the direct previous/next path order.
+
+Testing Checkpoints
+
+* Generate several boards and inspect every river.
+* Generate several boards and inspect every stream.
+* Confirm no river forms a loop.
+* Confirm no stream forms a loop.
+* Confirm no river reconnects to an earlier part of itself.
+* Confirm no stream reconnects to an earlier part of itself.
+* Confirm no river branches.
+* Confirm no stream branches.
+* Confirm no 2x2 water blocks are created.
+* Confirm each river square only touches its direct previous and/or next river square.
+* Confirm each stream square only touches its direct previous and/or next stream square.
+* Confirm separate river paths do not touch each other.
+* Confirm separate stream paths do not touch each other.
+* Confirm rivers and streams do not touch each other unless that is already explicitly allowed elsewhere.
+* Confirm invalid candidate water squares are rejected during generation.
+* Confirm invalid completed water paths are discarded and retried.
+* Confirm board generation does not enter an infinite loop.
+* Confirm board generation still completes.
+* Confirm river and stream rendering still works.
+* Confirm river and stream animation still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* River and Stream generation now treats each new water path as an ordered list of squares and only allows a new square when it touches the direct previous square in that same path.
+* New water origins now reject any square that already touches existing water, so separate river and stream paths no longer merge into, reconnect with, or side-touch older water paths.
+* Completed water paths are now validated before commit so loops, branches, self-reconnections, and 2x2 water blocks are discarded and retried instead of being written into the board.
+* Reuse check: reviewed the existing `createWaterEnvironmentPaths`, `canPlaceWaterSquare`, water candidate scoring, and board-generation tests; reused the current water config structure and overwrite rules, and only tightened path-validation helpers plus focused board tests because no renderer or gameplay-flow changes were needed.
+* Intentionally not changed in this slice:
+  * river and stream rendering
+  * river and stream animation or colours
+  * non-water environment generation
+  * Start Area, fixed areas, feature placement, movement, spells, and debug behavior
+
+---
+
+Feature-005: Ensure minimum Woods coverage in easy map section
+
+Status
+
+* done
+
+Goal
+
+* Balance environment generation in the easy section of the map.
+* Ensure the easy section always contains at least 150 Woods environment squares.
+* Keep the existing generation behaviour unchanged unless the final generated map does not contain enough easy-section Woods squares.
+
+Scope
+
+* Update board environment generation for the easy section only.
+* Count Woods environment squares in the easy section after normal board generation has completed.
+* If the easy section contains at least 150 Woods squares, do nothing.
+* If the easy section contains fewer than 150 Woods squares, add more Woods by replacing Field or Gravel squares with additional Woods clusters.
+* Continue adding Woods clusters until the easy section has at least 150 Woods squares.
+* Do not change hard-section environment balancing.
+* Do not change existing cluster limits except where extra Woods clusters are needed to meet the minimum.
+* Do not change fixed areas.
+* Do not change generated feature placement.
+* Do not change rivers or streams.
+* Do not change movement, dice, spells, tokens, or player pieces.
+
+Minimum Woods Requirement
+
+* The easy section of the map must contain at least:
+
+```txt id="dq7xb8"
+150
+```
+
+Woods environment squares.
+
+* There may be more than 150 Woods squares if normal generation already produces more.
+* Do not cap Woods at 150.
+* Existing upper limits and normal generation rules should still apply where possible.
+* This requirement is a minimum safety pass after normal generation.
+
+Easy Section Requirement
+
+* This feature applies only to the easy section of the map.
+* Use the existing easy/hard section logic.
+* Do not count hard-section Woods squares toward the 150 minimum.
+* Do not add extra Woods to the hard section for this feature.
+* Do not move the easy/hard diagonal split.
+
+Post-Generation Balancing Requirement
+
+* Run normal board generation first.
+* After the final generated map exists, count Woods squares in the easy section.
+* If the count is below 150:
+
+  * Find valid Field or Gravel squares in the easy section.
+  * Replace them with a new Woods cluster.
+  * Recount Woods squares.
+  * Repeat until the easy section has at least 150 Woods squares or no valid replacement squares remain.
+* Prefer replacing Field first if both Field and Gravel are available.
+* Replacing Gravel is allowed if there are not enough Field squares available.
+* Do not replace Mud, Hills, Streams, Rivers, Mountains, Forest, fixed areas, or generated features for this balancing pass.
+* Do not replace Start Area squares.
+* Do not replace Elite Battle squares.
+* Do not replace Boss Battle squares.
+* Do not replace generated feature squares.
+* Do not replace protected Start Area field-zone squares from Feature-001.
+* Do not replace river or stream squares.
+* Do not replace squares that are already Woods.
+
+Additional Woods Cluster Requirement
+
+* Extra Woods added during the balancing pass should be added as clusters, not as isolated single random squares.
+* The added Woods clusters should still look like normal Woods clusters.
+* Use the existing Woods cluster generation logic if practical.
+* If the existing Woods cluster generator cannot be reused cleanly, create a small focused helper for adding Woods clusters to valid easy-section replacement squares.
+* Added Woods clusters should only use valid replacement squares:
+
+  * Easy section.
+  * Field or Gravel environment.
+  * Not fixed.
+  * Not feature.
+  * Not protected Start Area field-zone.
+  * Not water.
+* Added clusters may be smaller than normal if the remaining valid replacement space is limited.
+* Avoid infinite retry loops if valid cluster placement is difficult.
+
+Replacement Priority
+
+* When extra Woods are needed, replacement should prefer:
+
+  * Field squares first.
+  * Gravel squares second.
+* Do not replace other environments unless a future feature explicitly allows it.
+* Do not alter rivers, streams, features, or fixed areas to create more Woods.
+
+Expected Behaviour
+
+* The easy section always has at least 150 Woods environment squares after generation.
+* If normal generation already creates 150 or more easy-section Woods squares, the board is unchanged by this balancing pass.
+* If normal generation creates fewer than 150 easy-section Woods squares, additional Woods clusters are added.
+* Extra Woods clusters replace Field or Gravel squares only.
+* The final map still respects fixed areas.
+* The final map still respects the protected Start Area field zone.
+* Generated features still remain in place.
+* Rivers and streams still remain in place.
+* Hard-section generation is not affected.
+* Existing board rendering still works.
+* Existing movement still works.
+
+Out Of Scope
+
+* No changes to hard-section environment balance.
+* No changes to Forest generation.
+* No changes to Mountain generation.
+* No changes to Hills generation.
+* No changes to Mud generation.
+* No changes to River generation.
+* No changes to Stream generation.
+* No changes to generated feature count.
+* No changes to generated feature spacing.
+* No changes to Start Area size.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to protected Start Area field zone.
+* No changes to player placement.
+* No changes to movement rules.
+* No changes to dice logic.
+* No changes to spells.
+* No changes to tokens.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated board generation changes.
+
+Assumptions
+
+* Woods squares are identified by the existing environment type for Woods.
+* The easy section is determined by the existing diagonal easy/hard split.
+* Field and Gravel are safe environments to replace for this balancing pass.
+* The protected Start Area field zone should remain Field even though this feature allows replacing Field elsewhere.
+* The balancing pass should happen late enough that it sees the final environment map, but before rendering and player movement begin.
+* If there are not enough valid Field or Gravel squares available to reach 150 Woods squares, the generator should add as many as possible and avoid crashing.
+
+Stop Point
+
+* Stop once the easy section always has at least 150 Woods squares where valid replacement space exists, using extra Woods clusters that replace only Field or Gravel squares and do not affect other board systems.
+
+Testing Checkpoints
+
+* Generate several boards and count Woods squares in the easy section.
+* Confirm every generated board has at least 150 Woods squares in the easy section where valid replacement space exists.
+* Confirm hard-section Woods squares are not counted toward the 150 minimum.
+* Confirm extra Woods are only added in the easy section.
+* Confirm if normal generation already produces 150 or more easy-section Woods squares, no extra balancing changes are needed.
+* Confirm if normal generation produces fewer than 150 easy-section Woods squares, extra Woods clusters are added.
+* Confirm extra Woods replace Field squares first.
+* Confirm extra Woods can replace Gravel squares if needed.
+* Confirm extra Woods do not replace Mud.
+* Confirm extra Woods do not replace Hills.
+* Confirm extra Woods do not replace Streams.
+* Confirm extra Woods do not replace Rivers.
+* Confirm extra Woods do not replace Mountains.
+* Confirm extra Woods do not replace Forest.
+* Confirm extra Woods do not replace generated features.
+* Confirm extra Woods do not replace the Start Area.
+* Confirm extra Woods do not replace Elite Battle areas.
+* Confirm extra Woods do not replace the Boss Battle area.
+* Confirm extra Woods do not replace the protected Start Area field zone from Feature-001.
+* Confirm extra Woods are added as clusters rather than scattered single squares where possible.
+* Confirm board generation does not enter an infinite loop.
+* Confirm board generation still completes.
+* Confirm environment images still render correctly.
+* Confirm movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Board generation now runs a post-generation Woods balancing pass that recounts easy-section Woods after normal terrain, water, and feature placement are finished.
+* If the easy section is below `150` Woods squares, the balancing pass adds extra Woods clusters by replacing valid easy-section `field` squares first and then `gravel` squares only when needed.
+* The balancing pass reuses cluster-style orthogonal growth, keeps protected/fixed/feature/water squares untouched, and stops safely if no valid replacement space remains.
+* Reuse check: reviewed the existing Woods environment config, easy/hard section logic, protected-area flags, and board-generation tests; reused the current Woods cluster size range and board square model, and only added a focused post-generation balancing helper plus board tests because no rendering or gameplay-flow changes were needed.
+* Intentionally not changed in this slice:
+  * hard-section balancing
+  * non-Woods terrain rules beyond valid `field`/`gravel` replacement
+  * rivers, streams, features, fixed areas, movement, spells, tokens, and debug behavior
+
+
+---
+
+Feature-006: Ensure minimum Forest coverage in hard map section
+
+Status
+
+* done
+
+Goal
+
+* Balance environment generation in the hard section of the map.
+* Ensure the hard section always contains at least 150 Forest environment squares.
+* Use the same post-generation balancing logic as Feature-005, but for Forest squares in the hard section.
+
+Scope
+
+* Update board environment generation for the hard section only.
+* Count Forest environment squares in the hard section after normal board generation has completed.
+* If the hard section contains at least 150 Forest squares, do nothing.
+* If the hard section contains fewer than 150 Forest squares, add more Forest by replacing valid environment squares with additional Forest clusters.
+* Do not change easy-section environment balancing.
+* Do not change the Woods minimum rule from Feature-005.
+* Do not change fixed areas.
+* Do not change generated feature placement.
+* Do not change rivers or streams.
+* Do not change movement, dice, spells, tokens, or player pieces.
+
+Minimum Forest Requirement
+
+* The hard section of the map must contain at least:
+
+```txt id="wvef7m"
+150
+```
+
+Forest environment squares.
+
+* There may be more than 150 Forest squares if normal generation already produces more.
+* Do not cap Forest at 150.
+* Existing upper limits and normal generation rules should still apply where possible.
+* This requirement is a minimum safety pass after normal generation.
+
+Hard Section Requirement
+
+* This feature applies only to the hard section of the map.
+* Use the existing easy/hard section logic.
+* Do not count easy-section Forest squares toward the 150 minimum.
+* Do not add extra Forest to the easy section for this feature.
+* Do not move the easy/hard diagonal split.
+
+Post-Generation Balancing Requirement
+
+* Run normal board generation first.
+* After the final generated map exists, count Forest squares in the hard section.
+* If the count is below 150:
+
+  * Find valid replacement squares in the hard section.
+  * Replace them with a new Forest cluster.
+  * Recount Forest squares.
+  * Repeat until the hard section has at least 150 Forest squares or no valid replacement squares remain.
+* Extra Forest clusters should use the same general balancing approach as Feature-005.
+* Do not replace fixed areas, generated features, rivers, streams, or protected areas.
+* Do not replace Start Area squares.
+* Do not replace Elite Battle squares.
+* Do not replace Boss Battle squares.
+* Do not replace generated feature squares.
+* Do not replace protected Start Area field-zone squares from Feature-001.
+* Do not replace river or stream squares.
+* Do not replace squares that are already Forest.
+
+Replacement Rules
+
+* Valid replacement squares should be in the hard section only.
+* Prefer replacing ordinary lower-priority environment squares.
+* Do not replace:
+
+  * Start Area.
+  * Elite Battle areas.
+  * Boss Battle area.
+  * generated features.
+  * protected Start Area field zone.
+  * rivers.
+  * streams.
+  * existing Forest squares.
+* Do not replace Mountain squares if doing so would break the Boss Battle mountain-surround rule.
+* Avoid replacing Mountains generally unless the existing generator already treats them as safe replacement targets.
+* Keep this logic conservative and avoid disrupting other hard-zone generation rules.
+
+Additional Forest Cluster Requirement
+
+* Extra Forest added during the balancing pass should be added as clusters, not as isolated single random squares.
+* The added Forest clusters should still look like normal Forest clusters.
+* Use the existing Forest cluster generation logic if practical.
+* If the existing Forest cluster generator cannot be reused cleanly, create a small focused helper for adding Forest clusters to valid hard-section replacement squares.
+* Added Forest clusters should only use valid replacement squares:
+
+  * hard section.
+  * not fixed.
+  * not feature.
+  * not protected Start Area field-zone.
+  * not water.
+* Added clusters may be smaller than normal if the remaining valid replacement space is limited.
+* Avoid infinite retry loops if valid cluster placement is difficult.
+
+Expected Behaviour
+
+* The hard section always has at least 150 Forest environment squares after generation where valid replacement space exists.
+* If normal generation already creates 150 or more hard-section Forest squares, the board is unchanged by this balancing pass.
+* If normal generation creates fewer than 150 hard-section Forest squares, additional Forest clusters are added.
+* Extra Forest clusters are added only in the hard section.
+* Extra Forest clusters do not overwrite fixed areas.
+* Extra Forest clusters do not overwrite generated features.
+* Extra Forest clusters do not overwrite rivers or streams.
+* Extra Forest clusters do not break the Boss Battle mountain-surround rule.
+* Easy-section generation is not affected.
+* The Woods balancing rule from Feature-005 still works.
+* Existing board rendering still works.
+* Existing movement still works.
+
+Out Of Scope
+
+* No changes to easy-section environment balance.
+* No changes to Woods generation except preserving Feature-005.
+* No changes to Mountain generation except avoiding invalid replacement.
+* No changes to Hills generation.
+* No changes to Mud generation.
+* No changes to River generation.
+* No changes to Stream generation.
+* No changes to generated feature count.
+* No changes to generated feature spacing.
+* No changes to Start Area size.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to protected Start Area field zone.
+* No changes to player placement.
+* No changes to movement rules.
+* No changes to dice logic.
+* No changes to spells.
+* No changes to tokens.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated board generation changes.
+
+Assumptions
+
+* Forest squares are identified by the existing environment type for Forest.
+* The hard section is determined by the existing diagonal easy/hard split.
+* The same balancing approach from Feature-005 should be reused for hard-section Forest coverage.
+* The balancing pass should happen late enough that it sees the final environment map, but before rendering and player movement begin.
+* If there are not enough valid replacement squares available to reach 150 Forest squares, the generator should add as many as possible and avoid crashing.
+
+Stop Point
+
+* Stop once the hard section always has at least 150 Forest squares where valid replacement space exists, using extra Forest clusters that do not affect fixed areas, generated features, water paths, or other protected board rules.
+
+Testing Checkpoints
+
+* Generate several boards and count Forest squares in the hard section.
+* Confirm every generated board has at least 150 Forest squares in the hard section where valid replacement space exists.
+* Confirm easy-section Forest squares are not counted toward the 150 minimum.
+* Confirm extra Forest is only added in the hard section.
+* Confirm if normal generation already produces 150 or more hard-section Forest squares, no extra balancing changes are needed.
+* Confirm if normal generation produces fewer than 150 hard-section Forest squares, extra Forest clusters are added.
+* Confirm extra Forest does not replace generated features.
+* Confirm extra Forest does not replace the Start Area.
+* Confirm extra Forest does not replace Elite Battle areas.
+* Confirm extra Forest does not replace the Boss Battle area.
+* Confirm extra Forest does not replace the protected Start Area field zone from Feature-001.
+* Confirm extra Forest does not replace rivers.
+* Confirm extra Forest does not replace streams.
+* Confirm extra Forest does not break the Boss Battle mountain-surround rule.
+* Confirm extra Forest is added as clusters rather than scattered single squares where possible.
+* Confirm Feature-005 still gives the easy section at least 150 Woods squares.
+* Confirm board generation does not enter an infinite loop.
+* Confirm board generation still completes.
+* Confirm environment images still render correctly.
+* Confirm movement still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Board generation now runs a post-generation Forest balancing pass after the Woods minimum pass, so the hard section is also checked against a `150`-square Forest minimum.
+* If the hard section is below `150` Forest squares, the balancing pass adds extra Forest clusters conservatively by replacing valid hard-section `field` squares first, then `woods`, then `mud` only when needed.
+* The balancing pass keeps mountains, water, fixed areas, protected Start Area squares, and generated feature squares untouched so the Boss Battle mountain surround and other protected rules stay intact.
+* Reuse check: reviewed the existing easy-section Woods balancing helper, Forest environment config, hard-section board rules, and board-generation tests; reused the same cluster-growth approach and square-protection flags, and only added a focused hard-section Forest balancing helper plus board tests because no rendering or gameplay-flow changes were needed.
+* Intentionally not changed in this slice:
+  * easy-section balancing beyond preserving Feature-005
+  * mountain generation or Boss Battle mountain-surround rules
+  * rivers, streams, features, fixed areas, movement, spells, tokens, and debug behavior
+
+---
+
+Feature-007: Rivers block movement beyond them unless landed on
+
+Status
+
+* done
+
+Goal
+
+* Update player movement rules so rivers act as movement blockers.
+* A player can land on a river square.
+* A player cannot move through a river square and continue beyond it in the same dice movement.
+* This rule applies only to Rivers.
+* Streams should not block movement.
+
+Scope
+
+* Update legal movement calculation after a player rolls the dice.
+* Apply this rule only to available movement highlighting and destination calculation.
+* River squares can be valid destinations.
+* River squares stop movement expansion beyond that square.
+* Streams should behave like normal passable squares.
+* Existing orthogonal movement rules should remain unchanged.
+* Existing grouped area movement rules should remain unchanged unless a river interaction already overlaps.
+* Existing dice rolling flow should remain unchanged.
+* Existing player movement execution should remain unchanged except that invalid destinations beyond rivers should no longer be selectable.
+
+Movement Rule
+
+* When calculating available movement after a dice roll:
+
+  * A player may move onto a river square.
+  * If a movement path reaches a river square, that path stops there.
+  * The movement calculation must not continue past that river square.
+* This means a river cannot be crossed unless the player lands on the river square.
+* The player cannot use one movement point to enter the river and then keep moving out the other side during the same dice roll.
+* The player may be able to move away from the river on a later turn after starting from that river square.
+* Streams do not use this rule.
+* Streams can be moved through normally.
+
+Example Behaviour
+
+* If the player rolls 4 and a river is 2 spaces away:
+
+  * The river square can be highlighted as a valid destination.
+  * Squares beyond the river on that same path should not be highlighted from that path.
+* If the player rolls exactly enough to land on a river:
+
+  * The river square should be selectable.
+* If the player rolls more than enough to reach a river:
+
+  * The river square should still be selectable.
+  * Movement should not continue beyond the river.
+* If the same destination beyond a river can be reached by another legal path that does not cross a river:
+
+  * That destination may still be highlighted through the non-river path.
+* If the movement path hits a stream:
+
+  * Movement should continue normally.
+  * Stream squares should not stop movement expansion.
+
+Implementation Requirement
+
+* Update the legal destination calculation, not just the click handler.
+* The UI should not highlight unreachable squares beyond a river.
+* Do not allow selecting destinations that require crossing a river.
+* Treat river blocking as path-based.
+* Do not simply remove all squares behind rivers globally.
+* A square beyond a river may still be legal if reachable by another route that does not cross a river.
+* The movement search should stop expanding from a river square unless that river square is the starting square.
+* If the player starts their turn already on a river square:
+
+  * They should be able to move away from the river normally.
+  * The starting river square should not block all movement.
+  * Once the path leaves the river and later hits another river square, that later river square should stop movement expansion.
+
+Expected Behaviour
+
+* River squares can be highlighted as valid destinations.
+* River squares can be landed on.
+* Movement paths do not continue beyond river squares.
+* Players cannot cross rivers in one move unless the river square itself is their destination.
+* Streams do not block movement.
+* Streams can still be crossed normally.
+* Legal move highlighting accurately reflects the river-blocking rule.
+* Clicking highlighted destinations still moves the player correctly.
+* Existing dice rolling still works.
+* Existing turn progression still works.
+
+Out Of Scope
+
+* No changes to river generation.
+* No changes to stream generation.
+* No changes to river visuals.
+* No changes to stream visuals.
+* No bridge mechanics.
+* No swimming mechanics.
+* No spell effects that cross rivers.
+* No token effects.
+* No movement cost changes.
+* No terrain movement cost system.
+* No changes to grouped Start, Elite, Boss, or feature area movement unless required by the existing movement graph.
+* No changes to dice rolling.
+* No changes to turn order.
+* No changes to board generation.
+* No changes to player pieces.
+* No changes to spells.
+* No save/load functionality.
+* No persistence.
+* No unrelated movement changes.
+
+Assumptions
+
+* River squares are identified by the existing river environment type.
+* Stream squares are identified separately from river squares.
+* Movement is currently calculated through an orthogonal search or movement graph.
+* “Cannot go further than that” means the river square may be included as a destination, but movement expansion stops from that square.
+* Starting a turn on a river should still allow the player to leave the river normally.
+
+Stop Point
+
+* Stop once legal movement highlighting and destination selection prevent movement beyond rivers while still allowing players to land on river squares, and streams remain unaffected.
+
+Testing Checkpoints
+
+* Confirm a river square can be highlighted as a valid movement destination.
+* Confirm a player can land on a river square.
+* Confirm squares beyond a river are not highlighted when the only route requires crossing that river.
+* Confirm a player cannot select a destination that requires crossing a river.
+* Confirm if a square beyond a river is reachable by a different non-river route, it can still be highlighted.
+* Confirm streams do not stop movement.
+* Confirm players can move through stream squares normally.
+* Confirm a player starting on a river square can move away from it normally.
+* Confirm a later river square in the same movement path still stops further movement.
+* Confirm grouped movement rules still work.
+* Confirm dice rolling still works.
+* Confirm turn progression still works after landing on a river.
+* Confirm legal move highlighting still excludes the current player’s current square.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Legal movement highlighting now treats river squares as valid destinations and applies river blocking unless the current path is still on the same connected river chain the move started on.
+* Streams remain fully passable, and squares beyond a river can still be highlighted when another non-river path reaches them.
+* If a move starts on a river square, only that connected starting river chain becomes non-blocking for the roll; separate river chains still stop movement normally.
+* Reuse check: reviewed the existing movement graph and `getHighlightedNodeIds` flow, reused the current adjacency search, and added only a small river-stop rule plus focused movement tests.
+* Intentionally not changed: river or stream generation, movement execution after destination selection, grouped area definitions, dice flow, turn order, rendering, spells, tokens, and other board rules.
+
+---
+
+Feature-008: Prevent players from returning to the Start Area after leaving it
+
+Status
+
+* done
+
+Goal
+
+* Update movement rules so that once a player has moved out of the Start Area, they can never move back onto it.
+* The Start Area should only be used as the initial player spawn area.
+
+Scope
+
+* Update legal movement calculation.
+* Apply this rule to the fixed Start Area only.
+* Once a player leaves the Start Area, Start Area squares should no longer be valid movement destinations for that player.
+* Start Area squares should not be highlighted for that player after they have left the Start Area.
+* A player who has left the Start Area should not be able to move through the Start Area.
+* A player who has left the Start Area should not be able to land on the Start Area.
+* This should apply to each player individually.
+* Existing movement rules should remain unchanged everywhere else.
+
+Start Area Requirement
+
+* The Start Area is the fixed starting area from board generation.
+* If Feature-001 has already been completed, the Start Area is the 2x2 area:
+
+```txt id="jmbj48"
+x: 0-1
+y: 29-30
+```
+
+* If the current implementation still has the previous Start Area size, use the existing Start Area definition from board data rather than hardcoding assumptions.
+* The rule should identify Start Area squares by their area type or equivalent board data where possible.
+
+Player State Requirement
+
+* Track whether each player has left the Start Area.
+* This should be tracked per player.
+* Suggested player state:
+
+```js id="v81d7s"
+{
+  hasLeftStartArea: false
+}
+```
+
+* A player should start with `hasLeftStartArea` set to `false`.
+* When a player moves from a Start Area square to a non-Start-Area square, set `hasLeftStartArea` to `true`.
+* Once `hasLeftStartArea` becomes `true`, it should not return to `false`.
+* Do not apply this state globally to all players.
+* One player leaving the Start Area should not affect another player who is still inside the Start Area.
+
+Movement Rule
+
+* If the current player has not yet left the Start Area:
+
+  * They may move from the Start Area to non-Start-Area squares.
+  * They may move within the Start Area if the existing movement rules allow it.
+  * They may choose a legal destination outside the Start Area.
+* If the current player has already left the Start Area:
+
+  * Start Area squares should not be valid destinations.
+  * Start Area squares should not be highlighted.
+  * Movement paths should not pass through the Start Area.
+  * The player should not be able to click or select Start Area squares.
+* This rule should apply during legal destination calculation, not only in the click handler.
+
+Expected Behaviour
+
+* Players begin in the Start Area as normal.
+* A player can leave the Start Area on their turn.
+* After leaving the Start Area, that player can never move back onto the Start Area.
+* Start Area squares are not highlighted for players who have already left.
+* Start Area squares cannot be selected by players who have already left.
+* Movement routes should not pass through the Start Area once the player has left it.
+* Players who have not yet left the Start Area are not blocked by this rule.
+* Each player’s Start Area leave state is independent.
+* Existing river movement rules still work.
+* Existing stream movement rules still work.
+* Existing dice rolling still works.
+* Existing turn order still works.
+
+Out Of Scope
+
+* No changes to Start Area size.
+* No changes to player initial placement.
+* No changes to board generation.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to generated features.
+* No changes to river generation.
+* No changes to stream generation.
+* No changes to river blocking rules except preserving them alongside this feature.
+* No changes to dice rolling.
+* No changes to turn order.
+* No changes to spells.
+* No changes to tokens.
+* No changes to debug menu.
+* No save/load functionality.
+* No persistence.
+* No unrelated movement changes.
+
+Assumptions
+
+* “Starting square” refers to the fixed Start Area, not the individual exact square each player spawned on.
+* If the Start Area is a grouped area, all squares in that grouped Start Area are blocked after the player leaves.
+* The player should be considered to have left the Start Area only when they successfully move from a Start Area square to a non-Start-Area square.
+* If a player is still inside the Start Area, they should not be blocked from using the Start Area yet.
+* The legal movement search can check board square area type or an equivalent property to identify Start Area squares.
+
+Stop Point
+
+* Stop once each player can leave the Start Area normally, but after doing so can no longer move back onto or through any Start Area square.
+
+Testing Checkpoints
+
+* Confirm players still start inside the Start Area.
+* Confirm a player who has not left the Start Area can move out of it.
+* Confirm moving from the Start Area to a non-Start-Area square marks that player as having left the Start Area.
+* Confirm once a player has left the Start Area, Start Area squares are no longer highlighted for that player.
+* Confirm once a player has left the Start Area, that player cannot select a Start Area square as a destination.
+* Confirm once a player has left the Start Area, movement paths do not pass through the Start Area.
+* Confirm one player leaving the Start Area does not mark all players as having left.
+* Confirm another player still inside the Start Area can still move out normally.
+* Confirm the leave state does not reset on later turns.
+* Confirm river movement blocking from Feature-007 still works.
+* Confirm Bug-001 river starting behaviour still works if already implemented.
+* Confirm streams remain unaffected.
+* Confirm dice rolling still works.
+* Confirm turn progression still works.
+* Confirm movement coordinates remain correct.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Note
+
+* Each player now tracks `hasLeftStartArea`, which starts as `false` and flips to `true` only after that player successfully moves from the grouped Start Area to a non-Start-Area destination.
+* Legal movement highlighting now supports blocking the grouped `start-area` movement node, and Gameplay uses that only for players who have already left the Start Area so they cannot move onto or through it afterward.
+* Reuse check: reviewed the existing grouped Start Area movement node, `getHighlightedNodeIds`, `GameplayPage` move flow, and current setup/gameplay tests; reused the current movement graph and player state flow, and added only a small blocked-node option plus focused state and gameplay tests.
+* Intentionally not changed: Start Area size or placement, board generation, Elite/Boss areas, river or stream generation, river rules beyond preserving Features 007 and Bug-001, dice flow, turn order, spells, tokens, debug behavior, and persistence.

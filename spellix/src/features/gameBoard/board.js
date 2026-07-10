@@ -94,9 +94,16 @@ export const WATER_ENVIRONMENT_CONFIGS = [
 ];
 
 const FEATURE_AREA_CONFIGS = [
-  { section: 'easy', count: 2 },
-  { section: 'hard', count: 2 },
+  { section: 'easy', count: 3 },
+  { section: 'hard', count: 3 },
 ];
+const FEATURE_AREA_WIDTH = 2;
+const FEATURE_AREA_HEIGHT = 2;
+const FEATURE_AREA_EDGE_INSET = 2;
+const FEATURE_AREA_MINIMUM_CLEAR_SPACING = 4;
+const FEATURE_AREA_MINIMUM_SQUARE_DISTANCE = FEATURE_AREA_MINIMUM_CLEAR_SPACING + 1;
+const EASY_SECTION_MINIMUM_WOODS_SQUARES = 150;
+const HARD_SECTION_MINIMUM_FOREST_SQUARES = 150;
 
 const ORTHOGONAL_DIRECTIONS = [
   { x: -1, y: 0 },
@@ -107,19 +114,20 @@ const ORTHOGONAL_DIRECTIONS = [
 const ENVIRONMENT_VARIATION_VALUES = [1, 2, 3, 4, 5, 6];
 
 const START_AREA_POSITION_SEQUENCE = [
-  { x: 0, y: 28 },
-  { x: 1, y: 28 },
-  { x: 2, y: 28 },
   { x: 0, y: 29 },
   { x: 1, y: 29 },
-  { x: 2, y: 29 },
   { x: 0, y: 30 },
   { x: 1, y: 30 },
-  { x: 2, y: 30 },
+  { x: 0, y: 29 },
+  { x: 1, y: 29 },
 ];
 
 function isStartAreaSquare(x, y) {
-  return x >= 0 && x <= 2 && y >= 28 && y <= 30;
+  return x >= 0 && x <= 1 && y >= 29 && y <= 30;
+}
+
+function isProtectedStartFieldSquare(x, y) {
+  return x >= 0 && x <= 4 && y >= 26 && y <= 30 && !isStartAreaSquare(x, y);
 }
 
 function isTopLeftEliteBattleSquare(x, y) {
@@ -156,9 +164,26 @@ function canAssignEnvironment(square, allowedSections) {
   return (
     square &&
     !square.isFixedArea &&
+    !square.isProtectedStartFieldZone &&
     square.environmentType === null &&
     allowedSections.includes(square.section)
   );
+}
+
+function isEasySectionWoodsSquare(square) {
+  return square.section === 'easy' && square.environmentType === 'woods';
+}
+
+function countEasySectionWoodsSquares(squares) {
+  return squares.filter(isEasySectionWoodsSquare).length;
+}
+
+function isHardSectionForestSquare(square) {
+  return square.section === 'hard' && square.environmentType === 'forest';
+}
+
+function countHardSectionForestSquares(squares) {
+  return squares.filter(isHardSectionForestSquare).length;
 }
 
 function isWithinEdgeInset(square, edgeInset) {
@@ -178,6 +203,7 @@ function canOverwriteWithWater(square, allowedSections) {
   return (
     square &&
     !square.isFixedArea &&
+    !square.isProtectedStartFieldZone &&
     square.featureId === null &&
     !isWaterEnvironmentType(square.environmentType) &&
     allowedSections.includes(square.section)
@@ -209,6 +235,38 @@ function countAdjacentWaterSquares(square, squareLookup, pathWaterKeys) {
   ).length;
 }
 
+function isOrderedWaterPath(pathKeys, squareLookup) {
+  const pathWaterKeys = new Set(pathKeys);
+
+  return pathKeys.every((pathKey, index) => {
+    const square = squareLookup.get(pathKey);
+
+    if (!square) {
+      return false;
+    }
+
+    const allowedAdjacentKeys = new Set();
+
+    if (index > 0) {
+      allowedAdjacentKeys.add(pathKeys[index - 1]);
+    }
+
+    if (index < pathKeys.length - 1) {
+      allowedAdjacentKeys.add(pathKeys[index + 1]);
+    }
+
+    const adjacentWaterKeys = getAdjacentSquares(square, squareLookup)
+      .filter((adjacentSquare) => isWaterSquare(adjacentSquare, pathWaterKeys))
+      .map((adjacentSquare) => getSquareKey(adjacentSquare.x, adjacentSquare.y));
+
+    return (
+      adjacentWaterKeys.length === allowedAdjacentKeys.size &&
+      adjacentWaterKeys.every((adjacentKey) => allowedAdjacentKeys.has(adjacentKey)) &&
+      !createsTwoByTwoWaterBlock(square, squareLookup, pathWaterKeys)
+    );
+  });
+}
+
 function createsTwoByTwoWaterBlock(square, squareLookup, pathWaterKeys) {
   const blockOffsets = [
     { x: 0, y: 0 },
@@ -232,7 +290,7 @@ function createsTwoByTwoWaterBlock(square, squareLookup, pathWaterKeys) {
   });
 }
 
-function canPlaceWaterSquare(square, squareLookup, pathWaterKeys, config) {
+function canPlaceWaterSquare(square, squareLookup, pathKeys, config) {
   if (!canOverwriteWithWater(square, config.sections)) {
     return false;
   }
@@ -241,13 +299,21 @@ function canPlaceWaterSquare(square, squareLookup, pathWaterKeys, config) {
     return false;
   }
 
-  const nextPathWaterKeys = new Set(pathWaterKeys);
-  nextPathWaterKeys.add(getSquareKey(square.x, square.y));
+  const previousSquareKey = pathKeys[pathKeys.length - 1] ?? null;
+  const nextPathKeys = [...pathKeys, getSquareKey(square.x, square.y)];
+  const nextPathWaterKeys = new Set(nextPathKeys);
   const adjacentWaterSquares = getAdjacentSquares(square, squareLookup).filter((adjacentSquare) =>
     isWaterSquare(adjacentSquare, nextPathWaterKeys)
   );
 
-  if (adjacentWaterSquares.length > 2) {
+  if (previousSquareKey === null) {
+    if (adjacentWaterSquares.length !== 0) {
+      return false;
+    }
+  } else if (
+    adjacentWaterSquares.length !== 1 ||
+    getSquareKey(adjacentWaterSquares[0].x, adjacentWaterSquares[0].y) !== previousSquareKey
+  ) {
     return false;
   }
 
@@ -255,9 +321,14 @@ function canPlaceWaterSquare(square, squareLookup, pathWaterKeys, config) {
     return false;
   }
 
-  return adjacentWaterSquares.every(
-    (adjacentSquare) =>
-      countAdjacentWaterSquares(adjacentSquare, squareLookup, nextPathWaterKeys) <= 2
+  return (
+    countAdjacentWaterSquares(square, squareLookup, nextPathWaterKeys) <=
+      (previousSquareKey === null ? 0 : 1) &&
+    adjacentWaterSquares.every(
+      (adjacentSquare) =>
+        countAdjacentWaterSquares(adjacentSquare, squareLookup, nextPathWaterKeys) <= 2
+    ) &&
+    isOrderedWaterPath(nextPathKeys, squareLookup)
   );
 }
 
@@ -331,13 +402,18 @@ function canPlaceFeatureArea(candidateSquares, section, fixedSquares, placedFeat
       (square) =>
         square &&
         !square.isFixedArea &&
+        !square.isProtectedStartFieldZone &&
         square.areaType === 'normal' &&
         square.featureId === null &&
-        square.section === section
+        square.section === section &&
+        isWithinEdgeInset(square, FEATURE_AREA_EDGE_INSET)
     ) &&
-    getMinimumDistanceBetweenSquareSets(candidateSquares, fixedSquares) >= 3 &&
+    getMinimumDistanceBetweenSquareSets(candidateSquares, fixedSquares) >=
+      FEATURE_AREA_MINIMUM_SQUARE_DISTANCE &&
     placedFeatures.every(
-      (feature) => getMinimumDistanceBetweenSquareSets(candidateSquares, feature.squares) >= 3
+      (feature) =>
+        getMinimumDistanceBetweenSquareSets(candidateSquares, feature.squares) >=
+        FEATURE_AREA_MINIMUM_SQUARE_DISTANCE
     )
   );
 }
@@ -350,11 +426,14 @@ function createFeatureAreas(squares, randomFn) {
   FEATURE_AREA_CONFIGS.forEach((config) => {
     const candidateOrigins = [];
 
-    for (let y = 0; y < BOARD_HEIGHT - 1; y += 1) {
-      for (let x = 0; x < BOARD_WIDTH - 1; x += 1) {
+    for (let y = FEATURE_AREA_EDGE_INSET; y <= BOARD_HEIGHT - FEATURE_AREA_HEIGHT - FEATURE_AREA_EDGE_INSET; y += 1) {
+      for (let x = FEATURE_AREA_EDGE_INSET; x <= BOARD_WIDTH - FEATURE_AREA_WIDTH - FEATURE_AREA_EDGE_INSET; x += 1) {
         const candidateSquares = getFeatureSquares(x, y, squareLookup);
 
-        if (candidateSquares.every(Boolean) && candidateSquares.every((square) => square.section === config.section)) {
+        if (
+          candidateSquares.every(Boolean) &&
+          candidateSquares.every((square) => square.section === config.section)
+        ) {
           candidateOrigins.push({ x, y });
         }
       }
@@ -376,8 +455,8 @@ function createFeatureAreas(squares, randomFn) {
           id: `feature-${placedFeatures.length + 1}`,
           x: candidateOrigin.x,
           y: candidateOrigin.y,
-          width: 2,
-          height: 2,
+          width: FEATURE_AREA_WIDTH,
+          height: FEATURE_AREA_HEIGHT,
           section: config.section,
           areaType: 'feature',
           squares: candidateSquares,
@@ -401,19 +480,224 @@ function createFeatureAreas(squares, randomFn) {
 function getAvailableWaterNeighbors(
   currentSquare,
   squareLookup,
-  visitedPathKeys,
-  previousSquareKey,
+  pathKeys,
   config
 ) {
   return getAdjacentSquares(currentSquare, squareLookup).filter((neighborSquare) => {
     const neighborKey = getSquareKey(neighborSquare.x, neighborSquare.y);
 
     return (
-      neighborKey !== previousSquareKey &&
-      !visitedPathKeys.has(neighborKey) &&
-      canPlaceWaterSquare(neighborSquare, squareLookup, visitedPathKeys, config)
+      !pathKeys.includes(neighborKey) &&
+      canPlaceWaterSquare(neighborSquare, squareLookup, pathKeys, config)
     );
   });
+}
+
+function getAdjacentValidReplacementSquares(
+  clusterSquares,
+  squareLookup,
+  clusterKeys,
+  isValidReplacementSquare
+) {
+  return Array.from(
+    new Map(
+      clusterSquares
+        .flatMap((square) => getAdjacentSquares(square, squareLookup))
+        .filter((square) => {
+          const squareKey = getSquareKey(square.x, square.y);
+
+          return !clusterKeys.has(squareKey) && isValidReplacementSquare(square);
+        })
+        .map((square) => [getSquareKey(square.x, square.y), square])
+    ).values()
+  );
+}
+
+function isValidEasySectionWoodsReplacementSquare(square) {
+  return (
+    square.section === 'easy' &&
+    !square.isFixedArea &&
+    !square.isProtectedStartFieldZone &&
+    square.featureId === null &&
+    ['field', 'gravel'].includes(square.environmentType)
+  );
+}
+
+function isValidHardSectionForestReplacementSquare(square) {
+  return (
+    square.section === 'hard' &&
+    !square.isFixedArea &&
+    !square.isProtectedStartFieldZone &&
+    square.featureId === null &&
+    ['field', 'woods', 'mud'].includes(square.environmentType)
+  );
+}
+
+export function balanceEasySectionWoodsCoverage(squares, randomFn = Math.random) {
+  if (countEasySectionWoodsSquares(squares) >= EASY_SECTION_MINIMUM_WOODS_SQUARES) {
+    return;
+  }
+
+  const woodsConfig = LAND_ENVIRONMENT_CONFIGS.find(
+    (config) => config.environmentType === 'woods'
+  );
+
+  if (!woodsConfig) {
+    return;
+  }
+
+  const squareLookup = new Map(squares.map((square) => [getSquareKey(square.x, square.y), square]));
+
+  while (countEasySectionWoodsSquares(squares) < EASY_SECTION_MINIMUM_WOODS_SQUARES) {
+    const remainingRequiredWoods =
+      EASY_SECTION_MINIMUM_WOODS_SQUARES - countEasySectionWoodsSquares(squares);
+    const fieldCandidates = squares.filter((square) =>
+      isValidEasySectionWoodsReplacementSquare(square) && square.environmentType === 'field'
+    );
+    const gravelCandidates =
+      fieldCandidates.length === 0
+        ? squares.filter((square) =>
+            isValidEasySectionWoodsReplacementSquare(square) && square.environmentType === 'gravel'
+          )
+        : [];
+    const seedCandidates = fieldCandidates.length > 0 ? fieldCandidates : gravelCandidates;
+
+    if (seedCandidates.length === 0) {
+      return;
+    }
+
+    const startingSquare =
+      seedCandidates[getRandomInteger(0, seedCandidates.length - 1, randomFn)];
+    const clusterSquares = [startingSquare];
+    const clusterKeys = new Set([getSquareKey(startingSquare.x, startingSquare.y)]);
+    const targetClusterSize = Math.min(
+      getRandomInteger(woodsConfig.minimumClusterSize, woodsConfig.maximumClusterSize, randomFn),
+      remainingRequiredWoods
+    );
+
+    while (clusterSquares.length < targetClusterSize) {
+      const expansionCandidates = getAdjacentValidReplacementSquares(
+        clusterSquares,
+        squareLookup,
+        clusterKeys,
+        isValidEasySectionWoodsReplacementSquare
+      );
+      const preferredExpansionCandidates = expansionCandidates.filter(
+        (square) => square.environmentType === 'field'
+      );
+      const nextSquareCandidates =
+        preferredExpansionCandidates.length > 0
+          ? preferredExpansionCandidates
+          : expansionCandidates.filter((square) => square.environmentType === 'gravel');
+
+      if (nextSquareCandidates.length === 0) {
+        break;
+      }
+
+      const nextSquare =
+        nextSquareCandidates[getRandomInteger(0, nextSquareCandidates.length - 1, randomFn)];
+      const nextSquareKey = getSquareKey(nextSquare.x, nextSquare.y);
+
+      clusterKeys.add(nextSquareKey);
+      clusterSquares.push(nextSquare);
+    }
+
+    clusterSquares.forEach((square) => {
+      square.environmentType = 'woods';
+    });
+  }
+}
+
+export function balanceHardSectionForestCoverage(squares, randomFn = Math.random) {
+  if (countHardSectionForestSquares(squares) >= HARD_SECTION_MINIMUM_FOREST_SQUARES) {
+    return;
+  }
+
+  const forestConfig = LAND_ENVIRONMENT_CONFIGS.find(
+    (config) => config.environmentType === 'forest'
+  );
+
+  if (!forestConfig) {
+    return;
+  }
+
+  const squareLookup = new Map(squares.map((square) => [getSquareKey(square.x, square.y), square]));
+
+  while (countHardSectionForestSquares(squares) < HARD_SECTION_MINIMUM_FOREST_SQUARES) {
+    const remainingRequiredForest =
+      HARD_SECTION_MINIMUM_FOREST_SQUARES - countHardSectionForestSquares(squares);
+    const fieldCandidates = squares.filter((square) =>
+      isValidHardSectionForestReplacementSquare(square) && square.environmentType === 'field'
+    );
+    const woodsCandidates =
+      fieldCandidates.length === 0
+        ? squares.filter((square) =>
+            isValidHardSectionForestReplacementSquare(square) && square.environmentType === 'woods'
+          )
+        : [];
+    const mudCandidates =
+      fieldCandidates.length === 0 && woodsCandidates.length === 0
+        ? squares.filter((square) =>
+            isValidHardSectionForestReplacementSquare(square) && square.environmentType === 'mud'
+          )
+        : [];
+    const seedCandidates =
+      fieldCandidates.length > 0
+        ? fieldCandidates
+        : woodsCandidates.length > 0
+          ? woodsCandidates
+          : mudCandidates;
+
+    if (seedCandidates.length === 0) {
+      return;
+    }
+
+    const startingSquare =
+      seedCandidates[getRandomInteger(0, seedCandidates.length - 1, randomFn)];
+    const clusterSquares = [startingSquare];
+    const clusterKeys = new Set([getSquareKey(startingSquare.x, startingSquare.y)]);
+    const targetClusterSize = Math.min(
+      getRandomInteger(forestConfig.minimumClusterSize, forestConfig.maximumClusterSize, randomFn),
+      remainingRequiredForest
+    );
+
+    while (clusterSquares.length < targetClusterSize) {
+      const expansionCandidates = getAdjacentValidReplacementSquares(
+        clusterSquares,
+        squareLookup,
+        clusterKeys,
+        isValidHardSectionForestReplacementSquare
+      );
+      const preferredFieldExpansionCandidates = expansionCandidates.filter(
+        (square) => square.environmentType === 'field'
+      );
+      const preferredWoodsExpansionCandidates =
+        preferredFieldExpansionCandidates.length === 0
+          ? expansionCandidates.filter((square) => square.environmentType === 'woods')
+          : [];
+      const nextSquareCandidates =
+        preferredFieldExpansionCandidates.length > 0
+          ? preferredFieldExpansionCandidates
+          : preferredWoodsExpansionCandidates.length > 0
+            ? preferredWoodsExpansionCandidates
+            : expansionCandidates.filter((square) => square.environmentType === 'mud');
+
+      if (nextSquareCandidates.length === 0) {
+        break;
+      }
+
+      const nextSquare =
+        nextSquareCandidates[getRandomInteger(0, nextSquareCandidates.length - 1, randomFn)];
+      const nextSquareKey = getSquareKey(nextSquare.x, nextSquare.y);
+
+      clusterKeys.add(nextSquareKey);
+      clusterSquares.push(nextSquare);
+    }
+
+    clusterSquares.forEach((square) => {
+      square.environmentType = 'forest';
+    });
+  }
 }
 
 function createLandEnvironmentClusters(squares, randomFn) {
@@ -556,7 +840,7 @@ function createWaterEnvironmentPaths(squares, randomFn) {
   const tryCreatePath = (config) => {
     const originCandidates = squares.filter(
       (square) =>
-        canPlaceWaterSquare(square, squareLookup, new Set(), config) &&
+        canPlaceWaterSquare(square, squareLookup, [], config) &&
         hasAdjacentEnvironment(square, squareLookup, config.originEnvironmentTypes)
     );
 
@@ -577,16 +861,13 @@ function createWaterEnvironmentPaths(squares, randomFn) {
         randomFn
       );
       const pathKeys = [getSquareKey(startingSquare.x, startingSquare.y)];
-      const visitedPathKeys = new Set(pathKeys);
       let currentSquare = startingSquare;
-      let previousSquareKey = null;
 
       while (pathKeys.length < targetLength) {
         const availableNeighbors = getAvailableWaterNeighbors(
           currentSquare,
           squareLookup,
-          visitedPathKeys,
-          previousSquareKey,
+          pathKeys,
           config
         );
 
@@ -602,13 +883,11 @@ function createWaterEnvironmentPaths(squares, randomFn) {
         );
         const nextSquareKey = getSquareKey(nextSquare.x, nextSquare.y);
 
-        previousSquareKey = getSquareKey(currentSquare.x, currentSquare.y);
         currentSquare = nextSquare;
         pathKeys.push(nextSquareKey);
-        visitedPathKeys.add(nextSquareKey);
       }
 
-      if (pathKeys.length >= config.minimumPathLength) {
+      if (pathKeys.length >= config.minimumPathLength && isOrderedWaterPath(pathKeys, squareLookup)) {
         return pathKeys.map((squareKey) => squareLookup.get(squareKey));
       }
     }
@@ -695,6 +974,7 @@ export function createBoard(randomFn = Math.random) {
         environmentVariation: null,
         featureId: null,
         isFixedArea,
+        isProtectedStartFieldZone: isProtectedStartFieldSquare(x, y),
       });
     }
   }
@@ -709,6 +989,8 @@ export function createBoard(randomFn = Math.random) {
 
   createWaterEnvironmentPaths(squares, randomFn);
   const features = createFeatureAreas(squares, randomFn);
+  balanceEasySectionWoodsCoverage(squares, randomFn);
+  balanceHardSectionForestCoverage(squares, randomFn);
   assignEnvironmentVariations(squares, randomFn);
 
   return {
@@ -723,6 +1005,6 @@ export function createBoard(randomFn = Math.random) {
 export function assignStartingPositions(players) {
   return players.map((player, index) => ({
     ...player,
-    position: START_AREA_POSITION_SEQUENCE[index],
+    position: START_AREA_POSITION_SEQUENCE[index] ?? START_AREA_POSITION_SEQUENCE[index % 4],
   }));
 }
