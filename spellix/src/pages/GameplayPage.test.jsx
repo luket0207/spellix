@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { createPlayers } from '../features/gameSetup/gameSetup';
 import { GameSetupProvider } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
@@ -72,11 +72,24 @@ function createCommittedGameplaySetup() {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
   mockGetAnywhereModeHighlightedNodeIds.mockReset();
   mockGetAnywhereModeHighlightedNodeIds.mockReturnValue(['square-1-28']);
   mockGetHighlightedNodeIds.mockReset();
   mockGetHighlightedNodeIds.mockReturnValue(['square-1-28']);
 });
+
+afterEach(() => {
+  jest.clearAllTimers();
+  jest.useRealTimers();
+  jest.restoreAllMocks();
+});
+
+function finishDiceSequence() {
+  act(() => {
+    jest.advanceTimersByTime(3000);
+  });
+}
 
 function renderGameplayPage() {
   return render(
@@ -87,6 +100,51 @@ function renderGameplayPage() {
 }
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
+  test('locks the temporary dice modal for the full sequence and uses its result for movement', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    renderGameplayPage();
+
+    expect(screen.queryByRole('button', { name: /force [1-6]/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    const diceDialog = screen.getByRole('dialog', { name: /dice result/i });
+
+    expect(within(diceDialog).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('modal-overlay'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('img', { name: /dice face 4/i })).toBeInTheDocument();
+    expect(screen.getByText(/dice result: 4/i)).toHaveClass('dice-roll-result--visible');
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      4,
+      { blockedNodeIds: [] }
+    );
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1499);
+    });
+
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.queryByRole('dialog', { name: /dice result/i })).not.toBeInTheDocument();
+  });
+
   test('shows the current player piece in the sidebar and the next player piece in the turn-change modal', async () => {
     renderGameplayPage();
 
@@ -106,7 +164,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(screen.getByText('100 / 100')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    finishDiceSequence();
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
 
     expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
@@ -123,9 +181,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
-    });
+    expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
 
     expect(screen.getByLabelText(/current player piece/i)).toHaveAttribute(
       'src',
@@ -154,9 +210,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
 
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: /spells/i })).not.toBeInTheDocument();
-    });
+    expect(screen.queryByRole('dialog', { name: /spells/i })).not.toBeInTheDocument();
 
     expect(screen.queryByRole('dialog', { name: /cancel spells confirmation/i })).not.toBeInTheDocument();
   });
@@ -165,6 +219,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     renderGameplayPage();
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
     expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
       1,
       expect.any(Object),
@@ -173,11 +228,11 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       { blockedNodeIds: [] }
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
     expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
       2,
       expect.any(Object),
@@ -186,11 +241,11 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       { blockedNodeIds: [] }
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
     expect(mockGetHighlightedNodeIds).toHaveBeenNthCalledWith(
       3,
       expect.any(Object),
@@ -216,22 +271,26 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
 
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toHaveTextContent(/anywhere mode/i);
+    expect(mockGetAnywhereModeHighlightedNodeIds).not.toHaveBeenCalled();
+
+    finishDiceSequence();
+
     expect(mockGetAnywhereModeHighlightedNodeIds).toHaveBeenCalledWith(
       expect.any(Object),
       { x: 0, y: 29 }
     );
     expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog', { name: /dice result/i })).toHaveTextContent(/anywhere mode/i);
 
-    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    finishDiceSequence();
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
 
     expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
       expect.any(Object),

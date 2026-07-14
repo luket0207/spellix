@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
@@ -381,23 +381,32 @@ describe('App routing flow', () => {
   });
 
   test('shows the dice result and ends the turn after moving', async () => {
-    const randomSpy = jest
-      .spyOn(Math, 'random')
-      .mockReturnValueOnce(0.9)
-      .mockReturnValueOnce(0.5)
-      .mockReturnValueOnce(0.9);
+    jest.useFakeTimers();
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
 
     renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
-    await userEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
 
     expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
-    expect(screen.getByText(/dice result: 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^ok$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
-    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByText(/dice result: 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
     expect(screen.queryByRole('dialog', { name: /dice result/i })).not.toBeInTheDocument();
+    jest.useRealTimers();
 
     await userEvent.click(screen.getByLabelText(/square 0, 27/i));
 
@@ -766,13 +775,17 @@ describe('App routing flow', () => {
   });
 
   test('does not regenerate the board when turns change', async () => {
+    jest.useFakeTimers();
     renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
     const startingSquare = screen.getByLabelText(/square 0, 28/i);
     const startingVariation = startingSquare.getAttribute('data-environment-variation');
 
-    await userEvent.click(screen.getByRole('button', { name: /roll dice/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    jest.useRealTimers();
 
     expect(screen.getByLabelText(/square 0, 28/i)).toBe(startingSquare);
     expect(screen.getByLabelText(/square 0, 28/i)).toHaveAttribute(
@@ -826,12 +839,16 @@ describe('App routing flow', () => {
   });
 
   test('highlights legal destinations after rolling and moves the current player', async () => {
-    const randomSpy = jest.spyOn(Math, 'random').mockReturnValueOnce(0.9).mockReturnValueOnce(0.5);
+    jest.useFakeTimers();
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
 
     renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
 
-    await userEvent.click(screen.getByRole('button', { name: /roll dice/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    jest.useRealTimers();
 
     expect(screen.getByLabelText(/square 0, 28/i)).toHaveAttribute('data-highlighted', 'false');
     expect(screen.getByLabelText(/square 0, 27/i)).toHaveAttribute('data-highlighted', 'true');

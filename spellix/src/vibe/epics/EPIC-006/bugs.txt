@@ -1,0 +1,1598 @@
+Bug-001: Dice roll animation should look like a 3D dice
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Create reusable dice roll component with persistent and temporary modes
+
+Bug Summary
+
+* The current dice roll animation is not good enough.
+* The dice should look like a 3D dice.
+* The animation should feel more like a physical dice rolling, rather than a flat or low-quality number/face change.
+
+Repro Steps
+
+* Open the battle page.
+* Use the persistent dice component.
+* Roll the dice.
+* Observe the dice animation.
+* Open the gameplay dice roll modal.
+* Observe the temporary dice animation.
+* Check whether the dice looks like a 3D dice while rolling and when it lands.
+
+Expected Behaviour
+
+* The dice should visually look like a 3D six-sided dice.
+* The dice should have visible depth.
+* The dice should appear to rotate or tumble while rolling.
+* The final resting face should still clearly show the rolled number.
+* The dice face shown at rest should match the result.
+* The animation should work in both:
+
+  * persistent mode.
+  * temporary mode.
+* The dice should still return the correct roll result to the parent component.
+* The improved animation should not break timing, callbacks, or gameplay movement.
+
+Actual Behaviour
+
+* The dice animation currently does not look good enough.
+* The dice does not convincingly look like a 3D dice.
+* The animation feels too flat or low quality.
+
+Required Fix
+
+* Improve the dice component animation so it looks like a 3D dice.
+* Use CSS transforms and perspective where practical.
+* The dice should have six visible/logical faces.
+* The dice should rotate during the rolling animation.
+* The final dice orientation should match the rolled result.
+* Keep the implementation focused inside the reusable dice component.
+* Do not create separate dice components for persistent and temporary modes.
+* Do not use an external 3D library.
+* Do not use a complex animation package.
+* Do not use image assets unless absolutely necessary.
+* Keep the dice reusable inside and outside modals.
+
+Suggested Implementation Direction
+
+* Use a cube-style CSS dice.
+* Use a wrapper with perspective.
+* Use six dice faces positioned with 3D transforms.
+* Use CSS transforms such as:
+
+  * `rotateX`
+  * `rotateY`
+  * `translateZ`
+* Use CSS animation to tumble the cube while rolling.
+* When the roll finishes, set the final transform to the correct face for the rolled value.
+* Keep dice dots readable on each face.
+* Keep the final dice state stable after the roll.
+
+Result Integrity Requirement
+
+* The visual result and returned result must always match.
+* If the dice returns `1`, the dice should show the 1 face at rest.
+* If the dice returns `2`, the dice should show the 2 face at rest.
+* If the dice returns `3`, the dice should show the 3 face at rest.
+* If the dice returns `4`, the dice should show the 4 face at rest.
+* If the dice returns `5`, the dice should show the 5 face at rest.
+* If the dice returns `6`, the dice should show the 6 face at rest.
+
+Out Of Scope
+
+* No battle logic integration.
+* No spell execution.
+* No dice sound effects.
+* No external 3D library.
+* No external animation library.
+* No changes to dice result values.
+* No changes to movement rules.
+* No changes to river movement rules.
+* No changes to Start Area movement rules.
+* No changes to battle debug buttons.
+* No changes to reward flow.
+* No changes to respawn flow.
+* No unrelated UI redesign.
+
+Suspected Cause
+
+* The current dice may be using a flat face swap, simple rotation, or basic animation that does not create enough depth.
+* The dice may not be using perspective or true cube-style face positioning.
+
+Attempted Fixes
+
+* Reproduced the cause in the reusable dice component: it rendered one flat face and used a two-dimensional rotate-and-scale animation.
+* Replaced the flat face with one perspective scene containing six cube faces positioned with CSS 3D transforms.
+* Added a result-specific cube orientation and a 3D tumble that settles on the same face value returned through the existing callback.
+
+Final Fix
+
+* The shared `DiceRoll` now uses a six-face CSS cube with perspective, visible depth, and `rotateX`, `rotateY`, `rotateZ`, and `translateZ` transforms.
+* Persistent and temporary modes reuse the same cube and retain their existing timing, numerical result display, callbacks, and gameplay behavior.
+* The pending result selects the cube's animation target at roll start, and the completed result keeps that same orientation at rest.
+
+Testing Required
+
+* Confirm the dice visually looks like a 3D dice.
+* Confirm the dice has visible depth.
+* Confirm the dice appears to rotate or tumble while rolling.
+* Confirm the final resting dice face matches the roll result.
+* Confirm the persistent dice still works on the battle page.
+* Confirm the temporary dice still works in the gameplay dice modal.
+* Confirm persistent mode can still roll repeatedly.
+* Confirm temporary mode still auto-rolls.
+* Confirm dice results are still always between 1 and 6.
+* Confirm the returned result matches the displayed dice face.
+* Confirm the numerical result still appears after rolling.
+* Confirm the result is hidden while rolling.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-002: Temporary dice roll timing should be faster
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Create reusable dice roll component with persistent and temporary modes
+
+Bug Summary
+
+* The temporary version of the dice component takes too long.
+* Only the temporary version should be sped up.
+* The temporary dice animation time should be reduced to 1.5 seconds.
+* The temporary dice result display time should be reduced to 1.5 seconds.
+* Persistent dice timing should remain unchanged.
+
+Repro Steps
+
+* Click the gameplay `Roll Dice` button.
+* Observe the temporary dice modal.
+* Time the dice animation.
+* Time how long the result is shown before the modal closes.
+* Compare this with the desired temporary timing.
+
+Expected Behaviour
+
+* Temporary dice mode should use:
+
+  * 1.5 seconds animation time.
+  * 1.5 seconds result display time.
+* The total temporary dice modal sequence should be 3 seconds.
+* The temporary dice modal should still auto-close after the result display finishes.
+* The temporary dice modal should still not be closable early.
+* Persistent dice mode should continue using the existing timing:
+
+  * 2 seconds animation time.
+  * 2 seconds result display time.
+* Only temporary mode timing should change.
+
+Actual Behaviour
+
+* Temporary dice mode currently uses the same 2 second animation and 2 second result display timing as persistent mode.
+* The gameplay dice roll modal therefore takes 4 seconds.
+
+Required Fix
+
+* Update the dice component timing logic so temporary mode can use different timing from persistent mode.
+* Set temporary mode animation duration to:
+
+```txt id="2skf9d"
+1.5 seconds
+```
+
+* Set temporary mode result display duration to:
+
+```txt id="ye52vu"
+1.5 seconds
+```
+
+* Keep persistent mode animation duration at:
+
+```txt id="xl3ssy"
+2 seconds
+```
+
+* Keep persistent mode result display duration at:
+
+```txt id="nse31r"
+2 seconds
+```
+
+* Ensure the gameplay dice modal auto-closes after the new 3 second temporary sequence.
+* Ensure the roll result is still returned correctly.
+* Ensure legal movement highlighting still uses the returned result.
+* Keep the temporary modal locked until the full 3 second sequence has completed.
+
+Implementation Requirement
+
+* Avoid hardcoding one shared timing value for both modes if that makes the modes impossible to tune separately.
+* Use clear timing values per mode.
+* Suggested values:
+
+```js id="3lwfel"
+const PERSISTENT_ROLL_DURATION = 2000;
+const PERSISTENT_RESULT_DURATION = 2000;
+
+const TEMPORARY_ROLL_DURATION = 1500;
+const TEMPORARY_RESULT_DURATION = 1500;
+```
+
+* Exact names can differ if they fit the project better.
+* Clear any timers on unmount to avoid state updates after the modal closes.
+
+Out Of Scope
+
+* No changes to persistent dice timing.
+* No changes to the 3D dice animation requirement from Bug-001 except ensuring timing still works.
+* No changes to dice result values.
+* No changes to movement rules.
+* No changes to battle page dice behaviour.
+* No changes to battle debug buttons.
+* No changes to reward flow.
+* No changes to respawn flow.
+* No unrelated UI changes.
+
+Suspected Cause
+
+* The dice component likely uses one shared 2 second animation duration and one shared 2 second result duration for both modes.
+* Temporary mode needs its own timing values.
+
+Attempted Fixes
+
+* Reproduced the issue in `DiceRoll`: both modes used the same 2,000 ms roll timer, 2,000 ms result timer, and 2-second CSS animation duration.
+* Split the JavaScript timing into explicit persistent and temporary constants.
+* Added mode-specific dice classes so the CSS animation duration matches the JavaScript roll duration.
+
+Final Fix
+
+* Temporary mode now animates for 1,500 ms and displays its result for 1,500 ms, closing the gameplay modal after 3 seconds total.
+* Persistent mode remains unchanged at a 2,000 ms animation and 2,000 ms result display.
+* Existing timer cleanup, result callbacks, 3D cube behavior, modal locking, and movement highlighting remain unchanged.
+
+Testing Required
+
+* Confirm temporary dice mode animates for 1.5 seconds.
+* Confirm temporary dice mode shows the result for 1.5 seconds.
+* Confirm the gameplay dice modal auto-closes after about 3 seconds total.
+* Confirm the temporary dice modal cannot be closed early.
+* Confirm the temporary roll result is still returned correctly.
+* Confirm legal movement highlighting still appears after the modal closes.
+* Confirm the result display still appears after rolling.
+* Confirm the result remains hidden while rolling.
+* Confirm persistent dice mode still animates for 2 seconds.
+* Confirm persistent dice mode still shows the result for 2 seconds.
+* Confirm persistent dice mode can still be rolled repeatedly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-003: Enemy images are not appearing on the battle page
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+* EPIC-005 Feature-004: Add enemy data, enemy selection, and enemy display on battle page
+
+Bug Summary
+
+* Enemy images are no longer appearing on the battle page.
+* The enemy area is showing text of the enemy’s name instead of the enemy image.
+* The user player image is still displaying correctly.
+* Enemy images should be displayed using the enemy image files.
+
+Repro Steps
+
+* Start a battle from the debug menu.
+* Observe the battle page.
+* Look at the enemy side of the battle page.
+* Check whether the enemy image appears.
+* Check whether only the enemy name text appears instead.
+
+Expected Behaviour
+
+* The enemy image should appear on the battle page.
+* Enemy images should load from:
+
+```txt
+src/images/enemies/XX.png
+```
+
+* `XX.png` should come from the enemy’s `imageFileName` value.
+* Example:
+
+```txt
+src/images/enemies/VR.png
+```
+
+* The enemy name text should not be used as a replacement for the image unless the image genuinely cannot be loaded.
+* If a fallback is needed, it should fail safely without breaking the battle page.
+* The player image should continue to display correctly.
+
+Actual Behaviour
+
+* The enemy image is not appearing.
+* The battle page is displaying text of the enemy’s name instead.
+
+Required Fix
+
+* Restore enemy image rendering on the battle page.
+* Check the enemy image import or dynamic image path logic.
+* Ensure the selected battle enemy has access to its `imageFileName`.
+* Ensure the battle page resolves that file name to the correct image in `src/images/enemies`.
+* Ensure enemy display uses an `img` element or existing image rendering component.
+* Do not replace the enemy image with the enemy name unless the image fails to load.
+* Keep the user player image unchanged.
+* Keep enemy spell and health display unchanged.
+
+Out Of Scope
+
+* No changes to enemy data values unless an image file name is incorrect.
+* No changes to player image rendering.
+* No changes to battle turn logic.
+* No changes to enemy health logic.
+* No changes to spell logic.
+* No changes to animations.
+* No unrelated battle page redesign.
+
+Suspected Cause
+
+* Enemy image paths may have been broken during battle turn implementation.
+* Enemy display may now be rendering `enemy.englishName` where the image should be.
+* Enemy data may not be passing `imageFileName` into the active battle state correctly.
+* Dynamic imports may not be resolving the `src/images/enemies` files correctly.
+
+Attempted Fixes
+
+* Reproduced the existing enemy and BattlePage test path before editing; 2 suites and 11 tests passed, including the current `HR.png` battle image assertion.
+* Compared all 20 `imageFileName` values with `src/images/enemies`; every value has a matching non-empty PNG asset.
+* Confirmed `src/features/battle/enemyImages.js` statically imports and maps all 20 files and returns an empty string only for unknown filenames.
+* Confirmed the production build emits all 20 hashed enemy PNG assets.
+* The reported text fallback could not be reproduced in the current workspace, so the working production rendering path was left unchanged.
+
+Final Fix
+
+* Added `src/features/battle/enemyImages.test.js` to verify every enemy resolves its exact image asset and unknown filenames fail safely.
+* Added BattlePage regression coverage for manually selected Level 1, 2, 3, and 4 enemies, verifying each selected enemy renders an `img` with the expected filename rather than the name fallback.
+* The page tests also preserve player image, enemy health, and enemy spell display coverage.
+* Bug-003 is fixed through verified existing behavior plus comprehensive regression protection; no production-code change was required.
+
+Testing Required
+
+* Confirm Level 1 battles show enemy images.
+* Confirm Level 2 battles show enemy images.
+* Confirm Level 3 battles show enemy images.
+* Confirm Level 4 battles show enemy images.
+* Confirm manually selected enemy battles show the selected enemy image.
+* Confirm enemy images load from `src/images/enemies`.
+* Confirm enemy name text is not shown instead of the image.
+* Confirm the user player image still displays correctly.
+* Confirm enemy health still displays correctly.
+* Confirm enemy spells still display correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: Guard animation is not playing
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* Guard is being applied, or should be applied, when Blue tokens are used.
+* However, the Blue guard animation does not appear to play.
+* When Blue tokens grant guard, a blue circle should radiate from behind the actor who cast the spell.
+
+Repro Steps
+
+* Start a battle.
+* Use a player or enemy spell slot that contains Blue tokens.
+* Roll the dice so that the Blue token spell slot is selected.
+* Observe the actor who cast the Blue spell.
+* Check whether the guard animation plays.
+
+Expected Behaviour
+
+* When Blue tokens grant guard, a guard animation should play.
+* The animation should be a blue circle radiating from the centre behind the actor who cast the spell.
+* The blue circle should grow to 120% of the height of that actor’s image.
+* The animation should last 1 second.
+* The animation should be part of the battle animation queue.
+* The dice roll button should remain disabled while the animation is playing.
+* If other animations also happen, the guard animation should play sequentially, not at the same time.
+
+Actual Behaviour
+
+* No visible guard animation plays when guard is applied.
+
+Required Fix
+
+* Check whether Blue token effects are being added to the animation queue.
+* Ensure a `blueGuard` or equivalent animation type is created when Blue tokens grant guard.
+* Ensure the battle page renders the Blue guard animation state.
+* Ensure the animation is positioned behind the correct actor image.
+* Ensure the animation lasts 1 second.
+* Ensure it works for both:
+
+  * player guard.
+  * enemy guard.
+* Ensure it does not play if no Blue guard is applied.
+* Keep the existing blue shield guard indicator separate from the animation.
+
+Out Of Scope
+
+* No changes to Blue token guard amount.
+* No changes to guard expiry rules.
+* No changes to Red damage animation.
+* No changes to Orange counter animation.
+* No changes to Green reduction animation unless needed to preserve animation queue behaviour.
+* No changes to enemy image rendering except if required for animation positioning.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* Blue guard may be updating state but not creating an animation queue item.
+* The animation queue may be skipping `blueGuard`.
+* The CSS class or animation element for guard may not exist.
+* The animation may be rendering behind the wrong layer or with no visible size.
+
+Attempted Fixes
+
+* Confirmed Blue tokens already created `blueGuard` queue items and the queue kept each item active for exactly 1 second.
+* Confirmed the page rendered a Blue effect node, but it was an absolute child of the full battle display rather than the actor panel.
+* Reproduced the structural positioning defect for both directions: the effect used battle-display corners, so it could become detached from the actor when panels wrapped or changed width.
+* Moved each Blue effect into the player or enemy panel that owns the casting actor and explicitly layered actor images above it.
+
+Final Fix
+
+* The Blue guard animation now renders inside the correct actor panel instead of the shared battle display.
+* Player and enemy effects retain their actor-side alignment while remaining positioned behind the actor image.
+* The existing 150px circle, 120% scale, 1-second duration, sequential queue order, and disabled dice behavior remain unchanged.
+* Added integration assertions that both actor directions use the correct panel and that rolling remains disabled during the Blue animation.
+* Bug-004 is fixed.
+
+Testing Required
+
+* Confirm Blue tokens grant guard.
+* Confirm 1 Blue token grants 10 guard.
+* Confirm multiple Blue tokens stack guard correctly.
+* Confirm the Blue guard animation plays when guard is applied.
+* Confirm the Blue guard animation is centred behind the actor who cast it.
+* Confirm the Blue guard animation grows to around 120% of the actor image height.
+* Confirm the Blue guard animation lasts 1 second.
+* Confirm the animation plays for the player.
+* Confirm the animation plays for the enemy.
+* Confirm the dice roll button is disabled while the animation plays.
+* Confirm the animation queue continues after the guard animation.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-005: Battle win/loss condition is not triggering at 0 health
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* The battle does not end when either the user player or the enemy reaches 0 health.
+* When either battle participant reaches 0 health, the battle should immediately resolve.
+* The result should be resolved from the user player’s perspective.
+
+Repro Steps
+
+* Start a battle.
+* Use battle turns, debug controls, or damage effects to reduce the enemy to 0 health.
+* Observe whether the battle ends.
+* Start another battle.
+* Reduce the user player to 0 health.
+* Observe whether the battle ends.
+
+Expected Behaviour
+
+* If the enemy reaches 0 health:
+
+  * the battle ends.
+  * the player wins.
+  * trigger the same response as the existing `Win` debug button.
+* If the user player reaches 0 health:
+
+  * the battle ends.
+  * the player loses.
+  * trigger the same response as the existing `Lose` debug button.
+* Health should never display below 0.
+* No next turn modal should appear after battle end.
+* The dice should not be rollable after battle end.
+* No further animations should continue after the battle has been resolved unless already safely queued and required.
+* Battle end should be checked after:
+
+  * Red damage.
+  * Orange counter damage.
+  * Remove 5 health if still present.
+  * any other health-changing action.
+
+Actual Behaviour
+
+* A participant can reach 0 health and the battle does not end.
+* The win or lose flow is not triggered.
+
+Required Fix
+
+* Add or fix battle end checks after health changes.
+* Clamp health to 0 before displaying it.
+* If enemy health is 0 or below, call the existing player win handler.
+* If player health is 0 or below, call the existing player lose handler.
+* Ensure this check runs after Red damage is applied.
+* Ensure this check runs after Orange counter damage is applied.
+* Ensure this check runs after any debug health removal still present on the battle page.
+* Prevent the battle from advancing to the next turn after the battle has ended.
+* Disable the dice after battle end.
+* Avoid duplicate win/loss triggers if multiple state updates happen quickly.
+
+Out Of Scope
+
+* No changes to damage values.
+* No changes to guard values.
+* No changes to token effect rules.
+* No changes to reward page behaviour except using the existing win flow.
+* No changes to respawn behaviour except using the existing lose flow.
+* No changes to enemy selection.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* Health may be updated but battle end checks are not running afterwards.
+* Enemy health may be stored in battle instance state while the win check reads a different value.
+* Player health may be updated asynchronously and checked before the updated value is available.
+* The battle may still advance turns even after health reaches 0.
+
+Attempted Fixes
+
+* Confirmed dice-driven Red and Orange damage already clamp health and set `reward` or `lost` terminal state.
+* Reproduced the remaining failure through `Remove 5 health`: player health reached 0 and the loss modal opened, but battle phase remained `active`.
+* Added a failing regression that required `lost` phase, stopped resolution, disabled dice, and no later turn modal at 0 health.
+* Updated terminal phase changes to set the matching outcome, stop resolution, and clear pending effects.
+* Routed both zero-health removal and the existing `Lose` button through the finalized loss path.
+
+Final Fix
+
+* Reaching 0 through `Remove 5 health` now finalizes the battle as a player loss instead of only opening a local modal.
+* Existing debug Win and Lose terminal phases now store their matching outcome and cancel pending battle resolution consistently.
+* Remove-health, Win, and Lose controls cannot trigger again after battle end, and the dice remains disabled.
+* Existing Red and Orange terminal calculation behavior remains unchanged and covered by regression tests.
+* Bug-005 is fixed.
+
+Testing Required
+
+* Confirm enemy health reaching 0 triggers the player win flow.
+* Confirm enemy health going below 0 still displays as 0 and triggers the player win flow.
+* Confirm player health reaching 0 triggers the player lose flow.
+* Confirm player health going below 0 still displays as 0 and triggers the player lose flow.
+* Confirm Red damage can trigger battle end.
+* Confirm Orange counter damage can trigger battle end.
+* Confirm Remove 5 health can still trigger battle end if that debug button remains.
+* Confirm no next turn modal appears after battle end.
+* Confirm dice cannot be rolled after battle end.
+* Confirm the reward page still appears after player win.
+* Confirm the lose modal still appears after player loss.
+* Confirm duplicate win/loss flows do not trigger.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Display active guard amount next to the blue shield icon
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* When guard is active, a blue shield appears under the guarded actor’s image.
+* The amount of active guard is not currently displayed.
+* The active guard amount should be shown next to the blue shield.
+
+Repro Steps
+
+* Start a battle.
+* Use a Blue token spell to apply guard.
+* Observe the guarded actor’s image area.
+* Check the blue shield display.
+* Check whether the guard amount appears next to the shield.
+
+Expected Behaviour
+
+* When guard is active, show:
+
+  * a blue shield icon.
+  * the amount of guard currently active.
+* The guard amount should appear next to the blue shield.
+* Example:
+
+```txt
+🛡 20
+```
+
+* Use the existing Font Awesome shield icon, not emoji, if Font Awesome is already being used.
+* The displayed number should match the actual active guard value.
+* If guard is 0, do not show the shield or guard amount.
+* When guard expires, both the shield and number should disappear.
+* The display should work for:
+
+  * player guard.
+  * enemy guard.
+
+Actual Behaviour
+
+* The shield appears when guard is active, but the amount is not shown.
+
+Required Fix
+
+* Update the guard indicator display.
+* Render the current guard amount next to the blue shield icon.
+* Ensure the number is based on the actual guard state.
+* Ensure stacked Blue tokens display the correct total.
+* Example:
+
+  * 1 Blue = shield with 10.
+  * 2 Blue = shield with 20.
+  * 3 Blue = shield with 30.
+* Ensure the amount updates if guard changes.
+* Ensure the amount is removed when guard expires.
+
+Out Of Scope
+
+* No changes to guard calculation.
+* No changes to guard expiry.
+* No changes to Blue animation.
+* No changes to damage calculation.
+* No changes to Font Awesome setup unless the shield icon is not already available.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* Guard state is tracked but only used as a boolean to display the shield.
+* The UI may need to render the guard value as text next to the icon.
+
+Attempted Fixes
+
+* Confirmed `playerGuard` and `enemyGuard` already hold the live accumulated values used to conditionally render each shield.
+* Added a failing regression that reproduced the missing amount while enemy guard was 50.
+* Rendered each live guard value as text beside its existing Font Awesome shield within the same indicator.
+* Extended the existing battle flow assertions for zero guard, stacked enemy guard, player guard, and expiry.
+
+Final Fix
+
+* Player guard now displays the current `playerGuard` value beside the player shield.
+* Enemy guard now displays the current `enemyGuard` value beside the enemy shield.
+* The existing `> 0` condition controls the complete indicator, so both icon and amount disappear together at 0 or expiry.
+* No guard calculation, expiry, animation, or visual style was changed.
+* Bug-006 is fixed.
+
+Testing Required
+
+* Confirm 1 Blue token applies 10 guard and displays shield with 10.
+* Confirm 2 Blue tokens apply 20 guard and displays shield with 20.
+* Confirm multiple Blue tokens display the correct stacked guard amount.
+* Confirm player guard amount displays correctly.
+* Confirm enemy guard amount displays correctly.
+* Confirm guard amount updates when guard changes.
+* Confirm shield and guard amount disappear when guard expires.
+* Confirm no guard indicator appears when guard is 0.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-007: Enemy battle turns should roll automatically after the turn modal closes
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* Enemy turns currently require the user to click the roll dice button.
+* Enemy turns should be automatic.
+* When it is the enemy’s turn, the dice roll should trigger automatically as soon as the enemy turn modal disappears.
+
+Repro Steps
+
+* Start a battle.
+* Complete the player’s turn.
+* Wait for the enemy turn modal.
+* Let the enemy turn modal auto-close.
+* Observe whether the enemy dice roll starts automatically.
+* Check whether the user still has to click the roll dice button.
+
+Expected Behaviour
+
+* When the battle switches to the enemy’s turn:
+
+  * show the enemy turn modal.
+  * auto-close the enemy turn modal after 2 seconds.
+  * immediately trigger the dice roll automatically.
+* The user should not need to click the dice roll button for the enemy.
+* The dice roll button should be disabled during the enemy’s turn.
+* The enemy dice roll should still use the persistent dice component.
+* The dice result should resolve the enemy’s spell slot exactly like a player roll.
+* Enemy turn effects should still animate sequentially.
+* After the enemy turn resolves, control should return to the player’s next turn if the battle has not ended.
+
+Actual Behaviour
+
+* Enemy turns wait for the user to manually click the dice roll button.
+
+Required Fix
+
+* Detect when the current battle actor is the enemy.
+* After the enemy turn modal auto-closes, trigger the persistent dice roll programmatically.
+* Keep the dice button disabled for enemy turns.
+* Ensure this automatic roll only happens once per enemy turn.
+* Prevent duplicate enemy rolls caused by rerenders or repeated effects.
+* Ensure the automatic roll waits until:
+
+  * the enemy turn modal has closed.
+  * no animation is running.
+  * no turn resolution is already active.
+  * the battle has not ended.
+* Use the same dice result handling path as manual player rolls.
+* Do not create a separate enemy dice result system.
+
+Out Of Scope
+
+* No enemy AI choices.
+* No automatic player rolling.
+* No new enemy action types.
+* No changes to token effect values.
+* No changes to battle turn order.
+* No changes to turn modal duration.
+* No changes to animations except preserving the existing flow.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* The battle dice is currently manual for both player and enemy turns.
+* There may be no effect or callback that starts the dice after the enemy turn modal closes.
+* The dice component may need an exposed trigger method or prop-based trigger for parent-controlled rolls.
+
+Attempted Fixes
+
+* Added failing dice and BattlePage regressions that reproduced the missing persistent auto-roll and enabled enemy roll button.
+* Added an `autoRoll` input to the persistent dice component that uses its existing roll, animation, random result, and completion callback path while leaving its button disabled.
+* Initially gated the battle trigger on the modal visibility boolean; integration testing exposed a transient render that started rolling when the enemy modal opened.
+* Replaced that timing gate with the identity of the actor whose two-second modal timeout completed, so the enemy roll starts only after that actor's modal closes.
+* Removed manual enemy clicks from battle integration flows and added lethal automatic enemy-turn coverage.
+
+Final Fix
+
+* Enemy turns now trigger the persistent dice automatically immediately after the enemy turn modal closes.
+* The roll button remains disabled for the entire enemy turn, while player turns remain manual.
+* Each false-to-true `autoRoll` activation starts at most one persistent roll; rerenders do not duplicate it.
+* Auto-roll requires an active, unresolved enemy turn with no open modal and a confirmed completed modal timeout for that enemy actor.
+* Automatic results use the existing `onRollComplete` battle path, preserving effects, turn progression, and terminal win/loss behavior.
+* Bug-007 is fixed.
+
+Testing Required
+
+* Confirm the player still takes the first battle turn.
+* Confirm the player still rolls manually.
+* Confirm after the player turn resolves, the enemy turn modal appears.
+* Confirm the enemy turn modal auto-closes after 2 seconds.
+* Confirm the enemy dice roll starts automatically after the modal closes.
+* Confirm the user does not need to click the dice button on enemy turns.
+* Confirm the dice button is disabled during enemy turns.
+* Confirm the automatic enemy roll happens only once per enemy turn.
+* Confirm the enemy dice result resolves enemy spell effects.
+* Confirm enemy Red, Blue, Orange, and Green interactions still calculate correctly.
+* Confirm enemy animations still play sequentially.
+* Confirm after the enemy turn resolves, the player turn modal appears if battle continues.
+* Confirm battle win/loss still triggers correctly during enemy turns.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-008: Green weaken animation should appear behind the actor who weakened the attack
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* When an attack is weakened by the opponent’s Green token, the correct Green animation is not happening.
+* When the attack hits, a green radial circle should animate behind the actor who weakened the attack.
+* This should work similarly to the Blue guard animation.
+
+Repro Steps
+
+* Start a battle.
+* Make the current actor roll a spell slot containing Red tokens.
+* Ensure the opponent has one or more Green tokens in the matching spell slot.
+* Let the attack resolve.
+* Observe the opponent, who weakened the incoming attack.
+* Check whether a green radial animation appears behind them.
+
+Expected Behaviour
+
+* When Green tokens reduce incoming damage, a green radial animation should play.
+* The animation should appear behind the actor who weakened the attack.
+* The animation should be centred behind that actor’s image.
+* The green radial circle should grow outward, similar to the Blue guard animation.
+* The green circle should grow to around 120% of the actor image height.
+* The animation should happen when the attack hits.
+* The animation should last 1 second.
+* The animation should be part of the normal battle animation queue.
+* The dice roll button should remain disabled while the animation is playing.
+* The animation should work when:
+
+  * the player weakens an enemy attack.
+  * the enemy weakens a player attack.
+
+Actual Behaviour
+
+* The Green weaken animation is missing, incorrect, or not clearly appearing behind the actor who weakened the attack.
+
+Required Fix
+
+* Add or fix the Green weaken animation.
+* Ensure the animation is triggered when opponent Green tokens reduce incoming Red damage.
+* Ensure the animation appears behind the actor whose Green tokens weakened the attack.
+* Do not place the animation behind the attacker.
+* Do not place the animation behind the wrong actor.
+* Use a green radial circle animation similar to the Blue guard animation.
+* Add the Green animation to the sequential animation queue.
+* Ensure the Green animation lasts 1 second.
+* Ensure the Green animation plays only when Green actually reduces damage.
+* If incoming Red damage is 0 before Green reduction, do not play the Green animation.
+
+Animation Placement Requirement
+
+* If the player attacks and the enemy has Green tokens in the matching spell slot:
+
+  * the Green animation should appear behind the enemy.
+* If the enemy attacks and the player has Green tokens in the matching spell slot:
+
+  * the Green animation should appear behind the player.
+* The animation should visually communicate that the defender weakened the attack.
+
+Out Of Scope
+
+* No changes to Green token damage reduction value.
+* No changes to Green token calculation rules.
+* No changes to Red damage calculation except preserving Green reduction.
+* No changes to Blue guard animation except reusing a similar approach if helpful.
+* No changes to Orange counter animation.
+* No changes to win/loss logic except preserving animation order.
+* No external animation library.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* Green reduction may be calculated but not added to the animation queue.
+* The Green animation may be attached to the wrong actor.
+* The animation may be using the wrong positioning layer.
+* The animation may not share the same radial rendering approach as the Blue guard animation.
+
+Attempted Fixes
+
+* Confirmed Green reduction calculation and queue metadata already identify the defending opponent and run only when reduction is greater than 0.
+* Added a failing placement regression that showed the Green effect was a child of the shared battle display rather than the enemy defender panel.
+* Added reverse-direction coverage for an automatic enemy attack weakened by four player Green tokens.
+* Moved Green rendering into the player or enemy panel selected by the existing effect target, matching the actor-relative approach used by Blue guard.
+
+Final Fix
+
+* Green reduction now renders inside and behind the actor panel whose Green tokens weakened the incoming attack.
+* Player attacks weakened by enemy Green display the radial effect behind the enemy.
+* Enemy attacks weakened by player Green display the radial effect behind the player.
+* Existing reduction values, effect metadata, Red-then-Green queue order, one-second duration, and 120% radial animation remain unchanged.
+* Bug-008 is fixed.
+
+Testing Required
+
+* Confirm Green tokens reduce incoming Red damage by 5 each.
+* Confirm 1 Green token reduces incoming damage by 5.
+* Confirm 4 Green tokens reduce incoming damage by 20.
+* Confirm the Green radial animation plays when Green reduces damage.
+* Confirm the Green animation appears behind the actor who weakened the attack.
+* Confirm the Green animation appears behind the enemy when the enemy weakens a player attack.
+* Confirm the Green animation appears behind the player when the player weakens an enemy attack.
+* Confirm the Green animation lasts 1 second.
+* Confirm the Green animation is centred behind the correct actor image.
+* Confirm the Green animation grows to around 120% of the actor image height.
+* Confirm the dice roll button is disabled while the Green animation plays.
+* Confirm the Green animation plays sequentially with other animations.
+* Confirm the Green animation does not play when no damage is reduced.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-009: Final battle animations should complete before win or lose flow triggers
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* When a player or enemy reaches 0 health, the battle win/loss flow may trigger too early.
+* The final round of animations should still play before the battle ends.
+* Only after the final animations are complete should the existing win or lose flow trigger.
+
+Repro Steps
+
+* Start a battle.
+* Use a spell that reduces either the enemy or the player to 0 health.
+* Observe whether the final attack/counter/guard/weaken animations play.
+* Check whether the battle immediately jumps to the win or lose flow before animations finish.
+
+Expected Behaviour
+
+* If a battle-ending action occurs, all animations from that final turn should still play.
+* Final-turn animations should play sequentially as normal.
+* Each animation should still last 1 second.
+* The dice roll button should remain disabled during the final animations.
+* After the final animations finish, the battle should trigger the correct end flow.
+* From the user player’s perspective:
+
+  * if the enemy reaches 0 health, trigger the existing Win flow.
+  * if the player reaches 0 health, trigger the existing Lose flow.
+* No next turn modal should appear after a battle-ending turn.
+* No further dice roll should be allowed after battle end has been decided.
+
+Actual Behaviour
+
+* The battle may trigger Win or Lose before the final animations finish.
+* The user may not see the final attack or counter effect that caused the battle to end.
+
+Required Fix
+
+* Separate battle-end detection from immediate battle-end navigation/modal triggering.
+* When damage calculation determines that the battle has ended:
+
+  * store the pending battle result.
+  * allow the final animation queue to complete.
+  * keep the dice roll button disabled.
+  * do not show the next turn modal.
+  * after the final animations complete, trigger the correct existing Win or Lose flow.
+* Do not skip final Red, Blue, Orange, or Green animations just because health reached 0.
+* Do not trigger the reward page or lose modal until the final animation queue has completed.
+* Avoid duplicate win/loss triggers.
+
+Pending Battle Result Requirement
+
+* Use a simple pending result state if helpful.
+* Suggested state concept:
+
+```js id="0ag8n8"
+pendingBattleResult: "playerWin" | "playerLose" | null
+```
+
+* If the enemy reaches 0:
+
+  * set pending result to `playerWin`.
+* If the player reaches 0:
+
+  * set pending result to `playerLose`.
+* After animations finish:
+
+  * if pending result is `playerWin`, call the same handler as the Win debug button.
+  * if pending result is `playerLose`, call the same handler as the Lose debug button.
+* Clear the pending result safely once handled.
+
+Animation Flow Requirement
+
+* The final turn should still use the normal animation queue.
+* Animations should still play sequentially.
+* Animations should not play simultaneously.
+* The 1 second post-animation pause is optional for a battle-ending turn.
+* Do not show the next actor’s turn modal after a battle-ending turn.
+* Do not enable the battle dice after a battle-ending turn.
+
+Out Of Scope
+
+* No changes to damage values.
+* No changes to token effect rules.
+* No changes to guard expiry except preserving current behaviour.
+* No changes to reward page content.
+* No changes to respawn content.
+* No changes to enemy selection.
+* No changes to spell display components.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* The win/loss handler may be called immediately after health is set to 0.
+* The animation queue may be skipped when the battle result is detected.
+* Turn advancement and battle end handling may not be separated cleanly.
+
+Attempted Fixes
+
+* Added lethal-turn BattlePage regressions for a player win with Red and Green effects, a player loss with Blue and Orange effects, and an automatic enemy loss with Red damage.
+* The pre-fix regressions confirmed that battle state moved immediately to `reward` or `lost`, cleared the effect queue, and showed the end flow before any final animation could run.
+
+Final Fix
+
+* Battle result calculation now stores the existing `outcome` while keeping the battle active, the turn resolving, and every calculated final effect in the normal queue.
+* BattlePage keeps the dice disabled and runs final Red, Green, Blue, and Orange effects sequentially for their existing one-second intervals.
+* After the final effect, BattlePage changes the phase to `reward` or `lost` instead of advancing the actor, so the existing win or loss flow starts once with no next-turn modal or further roll.
+* Debug Win and Lose controls retain their existing immediate behavior.
+
+Testing Required
+
+* Confirm Red damage that defeats the enemy still plays its final Red animation.
+* Confirm Red damage that defeats the player still plays its final Red animation.
+* Confirm Orange counter damage that defeats the player still plays its final Orange animation.
+* Confirm Orange counter damage that defeats the enemy still plays its final Orange animation if applicable.
+* Confirm Green weaken animation still plays on a battle-ending turn if it reduced damage.
+* Confirm Blue guard animation still plays on a battle-ending turn if it was part of the final action.
+* Confirm final animations play sequentially.
+* Confirm the dice roll button remains disabled during final animations.
+* Confirm the Win flow triggers only after final animations complete.
+* Confirm the Lose flow triggers only after final animations complete.
+* Confirm no next turn modal appears after a battle-ending turn.
+* Confirm the dice cannot be rolled again after a battle-ending turn.
+* Confirm duplicate Win or Lose flows do not trigger.
+* Confirm enemy health displays as 0 if the enemy is defeated.
+* Confirm player health displays as 0 if the player is defeated.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-010: Reduce Blue token guard value from 10 to 5 per token
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Bug Summary
+
+* Blue tokens currently grant 10 guard per token.
+* This is too high.
+* Blue tokens should now grant 5 guard per token instead.
+
+Repro Steps
+
+* Start a battle.
+* Roll a spell slot that contains one or more Blue tokens.
+* Observe the amount of guard applied.
+* Check the guard value displayed next to the blue shield.
+
+Expected Behaviour
+
+* Each Blue token should grant:
+
+```txt id="fs2m6e"
+5 guard
+```
+
+* Guard should stack based on the number of Blue tokens.
+* Examples:
+
+  * 1 Blue token = 5 guard.
+  * 2 Blue tokens = 10 guard.
+  * 3 Blue tokens = 15 guard.
+  * 4 Blue tokens = 20 guard.
+  * 5 Blue tokens = 25 guard.
+* The guard amount displayed next to the blue shield should use the new value.
+* Guard should still last for the next opponent turn only.
+* Guard should still reduce incoming Red damage.
+* Guard should still expire after the next opponent turn.
+* Guard should still not reduce Orange counter damage.
+
+Actual Behaviour
+
+* Each Blue token currently grants 10 guard.
+* Example:
+
+  * 1 Blue token = 10 guard.
+  * 2 Blue tokens = 20 guard.
+
+Required Fix
+
+* Change the Blue token guard value from 10 to 5.
+* Update the battle calculation logic.
+* Update any constants, helper functions, or copied values that still use 10 guard per Blue token.
+* Update the displayed guard amount so it reflects the new calculated value.
+* Keep Blue animation behaviour unchanged.
+* Keep guard expiry behaviour unchanged.
+* Keep shield display behaviour unchanged except for the displayed value.
+
+Out Of Scope
+
+* No changes to Red damage.
+* No changes to Orange counter damage.
+* No changes to Green damage reduction.
+* No changes to guard duration.
+* No changes to guard animation.
+* No changes to shield icon styling.
+* No changes to spell data.
+* No changes to enemy data.
+* No changes to battle turn order.
+* No unrelated battle logic changes.
+
+Suspected Cause
+
+* Feature-002 originally specified Blue as 10 guard per token.
+* The balancing value now needs to be reduced to 5 per Blue token.
+
+Attempted Fixes
+
+* Updated focused calculation and BattlePage regressions to expect 5 guard per Blue token before changing production code.
+* The pre-fix run confirmed the calculation returned 10, 20, and 30 guard for 1, 2, and 3 Blue tokens, while the BattlePage displayed 50 for five tokens.
+
+Final Fix
+
+* Changed the centralized Blue guard value in `battleTurn.js` from 10 to 5 per token.
+* Existing state persistence and shield rendering now display the recalculated value without separate UI changes.
+* Guard damage reduction, next-opponent-turn expiry, Orange counter bypass, Blue animation, and battle sequencing remain unchanged.
+
+Testing Required
+
+* Confirm 1 Blue token grants 5 guard.
+* Confirm 2 Blue tokens grant 10 guard.
+* Confirm 3 Blue tokens grant 15 guard.
+* Confirm stacked Blue guard values calculate correctly.
+* Confirm the guard amount next to the blue shield shows the correct new value.
+* Confirm guard still reduces incoming Red damage.
+* Confirm guard still expires after the next opponent turn.
+* Confirm guard still does not reduce Orange counter damage.
+* Confirm Blue guard animation still plays.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-011: Health should only be removed after hit animations finish
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+* Feature-004: Implement remaining battle token effects
+
+Bug Summary
+
+* Health is currently being removed too early during battle attacks.
+* Health should not be removed from the damaged actor until the relevant hit animation has finished.
+* This applies to normal damage and counter damage.
+* The health bar should update after the animation lands, not before.
+
+Repro Steps
+
+* Start a battle.
+* Roll a spell slot that deals Red damage.
+* Watch the Red attack animation.
+* Observe when the target’s health bar changes.
+* Roll or force a scenario where Orange counter damage occurs.
+* Watch the Orange counter animation.
+* Observe when the counter target’s health bar changes.
+
+Expected Behaviour
+
+* When Red damage is dealt:
+
+  * the Red attack animation should play first.
+  * the circle should travel to the target.
+  * the hit/explosion should complete.
+  * only then should the target’s health be reduced.
+* When Orange counter damage is dealt:
+
+  * the Orange counter animation should play first.
+  * the circle should travel to the original spell caster.
+  * the hit/explosion should complete.
+  * only then should the original spell caster’s health be reduced.
+* Each hit animation should still last 1 second.
+* Health bars should not visually change before the hit lands.
+* Battle win/loss checks should happen after the delayed health update.
+* If the delayed health update reduces someone to 0, the battle should resolve after the final animation sequence as required by Bug-009.
+
+Actual Behaviour
+
+* Health may be removed as soon as damage is calculated.
+* The health bar can change before the attack visually hits the target.
+* This makes the animation feel disconnected from the damage.
+
+Required Fix
+
+* Separate damage calculation from damage application.
+* Calculate the damage values at the start of the turn resolution.
+* Queue the relevant animations.
+* Apply health changes only when the matching damage animation finishes.
+* Red damage should be applied after the Red attack animation finishes.
+* Orange counter damage should be applied after the Orange counter animation finishes.
+* Do not apply damage before the animation starts.
+* Do not apply damage halfway through the animation unless the animation clearly represents the hit at that moment.
+* The simplest rule is: apply the damage after the full 1 second animation completes.
+* Ensure health never displays below 0.
+* Ensure battle win/loss checks use the health value after the delayed damage is applied.
+* Ensure final battle animations still complete before triggering win or lose flow.
+
+Animation And Damage Timing Requirement
+
+* Red animation:
+
+  * 1 second animation.
+  * then apply Red damage to the target.
+* Orange counter animation:
+
+  * 1 second animation.
+  * then apply Orange counter damage to the original caster.
+* Green weakening animation does not directly remove health.
+* Blue guard animation does not directly remove health.
+* Freeze, Purple, and Yellow do not directly remove health.
+* If multiple damage animations happen in one turn, apply each damage amount after its own animation finishes.
+
+Out Of Scope
+
+* No changes to damage values.
+* No changes to guard values.
+* No changes to Red token rules.
+* No changes to Orange token rules.
+* No changes to Green token rules.
+* No changes to Blue token rules.
+* No changes to Light Blue, Purple, or Yellow token rules.
+* No changes to health bar styling.
+* No changes to battle page layout.
+* No unrelated battle logic changes.
+
+Suspected Cause
+
+* Battle damage may currently be applied immediately during calculation before the animation queue runs.
+* Health updates and animation sequencing may not be separated.
+
+Attempted Fixes
+
+* Added a regression assertion that exposed the existing early health update while the Red animation was still visible.
+* Kept damage calculation in the existing battle turn resolver, but deferred applying its Red and Orange health changes until the matching queued animation completed.
+
+Final Fix
+
+* `applyBattleDiceResult` now stores the calculated effect queue without immediately changing player or enemy health.
+* `BattlePage` applies each Red or Orange damage amount after that effect's full 1 second animation, while Green, Blue, Freeze, Purple, and Yellow remain non-health effects.
+* A final battle-effect step checks the actual delayed health values only after the complete animation queue, clamps health at 0, and enters the existing win or loss flow without starting another turn transition.
+
+Testing Required
+
+* Confirm Red damage does not reduce health before the Red animation starts.
+* Confirm Red damage does not reduce health during the Red animation before it finishes.
+* Confirm Red damage reduces health after the Red animation finishes.
+* Confirm Orange counter damage does not reduce health before the Orange animation starts.
+* Confirm Orange counter damage does not reduce health during the Orange animation before it finishes.
+* Confirm Orange counter damage reduces health after the Orange animation finishes.
+* Confirm health bars update only after the relevant hit animation lands.
+* Confirm battle win/loss checks still trigger after delayed health updates.
+* Confirm final battle animations still complete before Win or Lose flow starts.
+* Confirm health never displays below 0.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-012: Used Light Blue and Yellow battle tokens should be visually faded for that battle only
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement remaining battle token effects
+
+Bug Summary
+
+* Light Blue and Yellow tokens have limited uses during a battle.
+* When those uses are consumed, the battle spell display should visually show that the token has been used up.
+* If there are no uses left for that token in that column during the current battle, the token should display with opacity `0.5`.
+* This should only affect the current battle.
+* Tokens should not be removed permanently from the player or enemy spell data.
+
+Repro Steps
+
+* Start a battle with a spell column containing Light Blue or Yellow tokens.
+* Roll that column enough times to use one or more Light Blue or Yellow uses.
+* Observe the spell display.
+* Continue until that column has no Light Blue or Yellow uses left.
+* Check whether the used-up token display fades.
+* End the battle and start another battle.
+* Check whether the original tokens still exist normally.
+
+Expected Behaviour
+
+* Light Blue token uses are tracked for the current battle only.
+* Yellow token uses are tracked for the current battle only.
+* When one Light Blue use is consumed, the remaining available use count for that column decreases for this battle.
+* When one Yellow use is consumed, the remaining available use count for that column decreases for this battle.
+* If there are still uses left, the token should remain fully visible.
+* If there are no uses left for that token type in that column, the token should display with:
+
+```txt id="eo0e4s"
+opacity: 0.5
+```
+
+* The faded state should appear only in the battle spell display.
+* The original player/enemy spell data should not be permanently changed.
+* The tokens should not be deleted from the player.
+* The tokens should not be deleted from the enemy.
+* Starting a new battle should reset Light Blue and Yellow battle-use tracking.
+
+Actual Behaviour
+
+* Used Light Blue and Yellow tokens may not visually change when their battle uses are consumed.
+* It may not be clear that the token has no uses left for the current battle.
+* There is a risk that implementation could remove or mutate the original token data instead of only tracking battle-instance uses.
+
+Required Fix
+
+* Track Light Blue and Yellow remaining uses in battle-instance state.
+* Do not mutate original spell token arrays.
+* Do not remove tokens from player or enemy spell data.
+* Update the battle spell display so it can show a faded token state for used-up limited-use tokens.
+* Apply opacity `0.5` when a Light Blue token type in a column has no uses left for this battle.
+* Apply opacity `0.5` when a Yellow token type in a column has no uses left for this battle.
+* This should work for:
+
+  * player spell display.
+  * enemy spell display.
+* The faded state should reset when a new battle starts.
+* The Spells modal should not change.
+
+Limited-Use Display Requirement
+
+* If a column has 2 Light Blue tokens:
+
+  * before use, display normally.
+  * after 1 freeze use, there is still 1 use left, so display as available.
+  * after 2 freeze uses, there are 0 uses left, so display Light Blue as opacity `0.5`.
+* If a column has 1 Yellow token:
+
+  * before use, display normally.
+  * after 1 Charge use, there are 0 uses left, so display Yellow as opacity `0.5`.
+* If a column has 3 Yellow tokens:
+
+  * after 1 use, still available.
+  * after 2 uses, still available.
+  * after 3 uses, faded.
+* If the display consolidates tokens, the consolidated token should reflect whether that token type still has uses remaining for that column.
+
+Out Of Scope
+
+* No changes to Light Blue freeze rules.
+* No changes to Yellow charge rules.
+* No changes to Purple buff rules.
+* No changes to Red, Blue, Orange, or Green rules.
+* No permanent spell data mutation.
+* No token removal from player data.
+* No token removal from enemy data.
+* No changes to the Spells modal.
+* No changes to drag-and-drop.
+* No changes to battle win/loss flow.
+* No unrelated UI redesign.
+
+Suspected Cause
+
+* Light Blue and Yellow use counts may be tracked for battle logic but not passed into the spell display.
+* The reusable token component may not yet support an opacity or disabled/used-up visual state.
+* The battle logic may need a clear separation between original tokens and battle-use availability.
+
+Attempted Fixes
+
+* Added failing regressions showing that exhausted Yellow and Light Blue tokens received no faded state in the reusable display or either battle panel.
+* Reused the existing per-column `playerFreezeUses`, `enemyFreezeUses`, `playerChargeUses`, and `enemyChargeUses` battle state instead of changing token data or battle rules.
+
+Final Fix
+
+* `CommittedSpellSlotList` now accepts optional Light Blue and Yellow use arrays and marks only a consolidated limited-use token whose current column has no uses remaining.
+* `Token` supports that optional state with the required opacity `0.5`; tokens remain fully visible when the state is absent or a use remains.
+* `BattlePage` passes each actor's battle-instance use arrays to its own spell display. The default Spells display passes no use arrays, original token collections remain unchanged, and starting another battle continues to rebuild fresh use counts from those tokens.
+
+Testing Required
+
+* Confirm Light Blue uses are tracked per battle.
+* Confirm Yellow uses are tracked per battle.
+* Confirm Light Blue tokens are not removed from original spell data.
+* Confirm Yellow tokens are not removed from original spell data.
+* Confirm a Light Blue token remains fully visible while uses remain.
+* Confirm a Yellow token remains fully visible while uses remain.
+* Confirm Light Blue displays at opacity `0.5` when no uses remain in that column.
+* Confirm Yellow displays at opacity `0.5` when no uses remain in that column.
+* Confirm faded limited-use token display works for the player.
+* Confirm faded limited-use token display works for the enemy.
+* Confirm starting a new battle resets the faded limited-use display.
+* Confirm the Spells modal has not changed.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-013: Frozen snowflake icon should overlay the frozen actor image and animate in/out
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement remaining battle token effects
+
+Bug Summary
+
+* The snowflake icon that shows an actor is frozen is currently too small and positioned in the corner.
+* It should be the same width as the image of the frozen actor.
+* It should be positioned over the centre of that actor’s image.
+* It should animate into view and out of view.
+* The animation can be a simple grow/shrink from the centre.
+
+Repro Steps
+
+* Start a battle.
+* Apply freeze to either the player or enemy using Light Blue.
+* Observe the frozen actor’s image.
+* Check the snowflake icon size and position.
+* Resolve the freeze.
+* Observe how the snowflake disappears.
+
+Expected Behaviour
+
+* When an actor is frozen, a Font Awesome snowflake icon should appear over their image.
+* The snowflake icon should be centred over the frozen actor’s image.
+* The snowflake icon should be the same width as the frozen actor’s image.
+* The snowflake should overlay the image, not sit in a small corner.
+* The snowflake should animate into view.
+* The snowflake should animate out of view.
+* The animation can be a simple scale animation:
+
+  * grow out from the centre when appearing.
+  * shrink back into the centre when disappearing.
+* The snowflake should remain visible while the actor is frozen.
+* The snowflake should disappear when freeze is resolved.
+* This should work for:
+
+  * frozen player.
+  * frozen enemy.
+
+Actual Behaviour
+
+* The snowflake is currently just a small icon in the corner.
+* It does not clearly cover or mark the frozen actor.
+* It does not animate in or out as desired.
+
+Required Fix
+
+* Update the frozen status display.
+* Position the snowflake overlay relative to the frozen actor image container.
+* Centre the snowflake over the actor image.
+* Size the snowflake to match the actor image width.
+* Add a simple animation for appearing.
+* Add a simple animation for disappearing.
+* Ensure the snowflake remains above the image while frozen.
+* Ensure the snowflake does not permanently affect layout.
+* Ensure the snowflake does not push other UI elements around.
+* Use Font Awesome for the snowflake icon.
+* Keep the styling local to the battle/frozen actor display where practical.
+
+Suggested Styling Direction
+
+```css id="uwqdam"
+.frozen-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  transform: translate(-50%, -50%) scale(1);
+}
+```
+
+* Exact CSS can differ based on the current battle image container.
+* The image wrapper may need `position: relative`.
+* Use opacity and transform for the in/out animation.
+* Keep the animation simple and readable.
+
+Animation Requirement
+
+* Animate into view when freeze is applied.
+* Animate out of view when freeze is removed.
+* The animation can be short and simple.
+* Use a grow/shrink effect from the centre.
+* Do not add complex animation libraries.
+* Do not block battle logic waiting for the snowflake exit animation unless needed for clean state.
+* Do not let the snowflake linger after freeze has resolved.
+
+Out Of Scope
+
+* No changes to freeze mechanics.
+* No changes to freeze roll rules.
+* No changes to Light Blue use tracking.
+* No changes to battle damage rules.
+* No changes to battle turn order.
+* No changes to player or enemy image files.
+* No unrelated battle UI redesign.
+* No external animation library.
+
+Suspected Cause
+
+* The current snowflake status indicator may be rendered like a small guard icon or corner badge.
+* The frozen display needs to be treated as an overlay on the actor image instead.
+
+Attempted Fixes
+
+* Added failing regressions showing the existing player and enemy snowflakes had no actor-image wrapper or enter animation class.
+* Added exit assertions showing the icon was immediately removed instead of remaining for a short shrink animation.
+
+Final Fix
+
+* Player and enemy images now reuse a relative `BattleActorImage` wrapper that contains the Font Awesome snowflake overlay without changing surrounding layout.
+* The overlay is centred over the image, uses the full image-container width and height, and remains above the image while frozen.
+* Applying freeze runs a 200 ms grow/fade-in animation. Resolving freeze updates battle state immediately, runs a 200 ms shrink/fade-out animation, and then unmounts the overlay without blocking turn logic.
+
+Testing Required
+
+* Confirm freezing the player shows a snowflake over the centre of the player image.
+* Confirm freezing the enemy shows a snowflake over the centre of the enemy image.
+* Confirm the snowflake width matches the frozen actor image width.
+* Confirm the snowflake is not a small corner icon.
+* Confirm the snowflake animates into view when freeze is applied.
+* Confirm the snowflake animates out of view when freeze is removed.
+* Confirm the snowflake remains visible while the actor is frozen.
+* Confirm the snowflake disappears after freeze is resolved.
+* Confirm the overlay does not push layout around.
+* Confirm the overlay appears above the actor image.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

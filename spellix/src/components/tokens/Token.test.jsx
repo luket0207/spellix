@@ -43,4 +43,17 @@ describe('Token', () => {
 
     expect(container.querySelectorAll('.token-display')).toHaveLength(tokenTypes.length);
   });
+
+  test('supports an optional faded state at half opacity', () => {
+    const { rerender } = render(
+      <Token ariaLabel="yellow token" faded tokenType="yellow" />
+    );
+
+    expect(screen.getByLabelText(/yellow token/i)).toHaveClass('token-display--faded');
+    expect(screen.getByLabelText(/yellow token/i)).toHaveStyle({ opacity: '0.5' });
+
+    rerender(<Token ariaLabel="yellow token" tokenType="yellow" />);
+    expect(screen.getByLabelText(/yellow token/i)).not.toHaveClass('token-display--faded');
+  });
+
 });

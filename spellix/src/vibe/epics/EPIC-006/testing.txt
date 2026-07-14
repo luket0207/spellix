@@ -1,0 +1,1145 @@
+Feature-001: Create reusable dice roll component with persistent and temporary modes
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a gameplay turn for a player who has committed their initial spells, then select `Roll Dice`.
+   Expected: The Dice result modal opens, the dice immediately animates, the numerical result is hidden, and there is no modal close or OK button.
+2. While the dice is rolling or showing its result, click outside the modal and press Escape.
+   Expected: The modal remains open for the full sequence.
+3. Wait 1.5 seconds after opening the modal.
+   Expected: The animation stops on a face from 1 to 6, the matching numerical result appears, and the modal remains open for another 1.5 seconds.
+4. Wait until 3 seconds have elapsed in total.
+   Expected: The modal closes automatically and legal movement destinations for that exact result are highlighted.
+5. Move to a highlighted destination and continue through the turn-change modal.
+   Expected: Existing movement and turn progression still work, including Start Area blocking after a player has left it.
+6. Enable Anywhere Mode, roll, wait for the same 3 second sequence, and move.
+   Expected: The Anywhere Mode label remains visible during the modal, Anywhere Mode destinations are used once, and later rolls return to normal dice movement.
+7. Start a debug battle.
+   Expected: A persistent dice appears at the bottom centre above `Remove 5 health`, `Win`, and `Lose`.
+8. Select the battle dice `Roll Dice` button several times, waiting for each sequence to finish.
+   Expected: Each roll animates for 2 seconds, shows its matching result for 2 seconds, keeps the final face at rest, disables the button for both timed phases, and re-enables it afterward.
+9. Use the existing battle debug buttons after rolling.
+   Expected: They retain their existing behavior, and dice rolls do not change health, battle turns, attacks, or spells.
+
+Automated Tests Completed
+
+* `src/components/dice/DiceRoll.test.jsx` verifies repeated persistent rolls, results at both 1 and 6, matching final faces, button locking, temporary auto-roll, callback values, and mode-specific timing.
+* `src/pages/GameplayPage.test.jsx` verifies the locked modal, no close button, outside-click and Escape behavior, exact returned movement value, automatic close after 3 seconds, Anywhere Mode, Start Area blocking, movement, and turn progression.
+* `src/pages/BattlePage.test.jsx` verifies the persistent dice is present, enabled at rest, centred in its battle wrapper, and ordered above the debug controls.
+* `src/AppSettingsButton.test.jsx` verifies the existing settings flow still coexists with an open temporary dice modal and battle setup.
+* `src/features/gameBoard/movement.test.js` and `src/features/gameBoard/board.test.js` verify existing movement, river, Start Area, and board behavior.
+* Focused command result: 6 suites passed, 40 tests passed.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* `src/App.test.jsx` was updated for the automatic four-second flow, but its standalone suite could not execute any tests because the installed Jest `source-map-support` failed while parsing generated mappings with `Cannot read properties of undefined (reading 'generatedLine')`. Clearing Jest's generated cache did not resolve this tooling failure. The same gameplay behavior is covered by the passing focused page and movement suites above.
+
+---
+
+Bug-001: Dice roll animation should look like a 3D dice
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open a debug battle and view the persistent dice while it is at rest.
+   Expected: The dice has visible cube depth, and the front face clearly shows its dot value.
+2. Select the persistent dice `Roll Dice` button.
+   Expected: The six-face cube tumbles in three dimensions for 2 seconds, settles on the rolled face, and shows the matching numerical result.
+3. Wait for the result to disappear, then roll the persistent dice repeatedly.
+   Expected: Each roll can settle on any face from 1 to 6, the resting face always matches the returned number, and the button follows its existing lock timing.
+4. Return to gameplay and select `Roll Dice`.
+   Expected: The same 3D cube tumbles inside the temporary modal, settles on the matching face, returns that value for movement, and closes using the existing timing.
+5. Move to a highlighted destination and continue the turn.
+   Expected: Existing movement and turn progression remain unchanged.
+
+Automated Tests Completed
+
+* `src/components/dice/DiceRoll.test.jsx` verifies the perspective-scene wrapper, all six cube faces, the 3D rolling class, result-specific target and resting face classes, repeated persistent rolls, temporary auto-roll, callback integrity, and existing timing.
+* `src/pages/GameplayPage.test.jsx`, `src/pages/BattlePage.test.jsx`, and `src/AppSettingsButton.test.jsx` verify both dice integrations, movement result handling, repeated battle availability, and modal coexistence.
+* Focused command result: 4 suites passed, 15 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser visual check should confirm the subjective tumble quality and visible depth at normal display size. Automated tests confirm the required six-face 3D structure and result alignment but cannot judge visual quality.
+
+---
+
+Bug-002: Temporary dice roll timing should be faster
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a gameplay turn and select `Roll Dice`.
+   Expected: The temporary 3D dice starts rolling automatically, the result is hidden, and the modal has no close button.
+2. Observe the modal just before and at 1.5 seconds.
+   Expected: The dice is still rolling before 1.5 seconds, then settles on the rolled face and shows the matching numerical result at 1.5 seconds.
+3. Click outside the modal and press Escape while the result is visible.
+   Expected: The modal remains open and cannot be closed early.
+4. Observe the modal just before and at 3 seconds total.
+   Expected: The result remains visible before 3 seconds, then the modal closes automatically at 3 seconds and legal movement destinations remain available.
+5. Open a debug battle and roll the persistent dice.
+   Expected: Persistent mode remains unchanged: it rolls for 2 seconds, shows the result for 2 seconds, and re-enables its button after 4 seconds total.
+
+Automated Tests Completed
+
+* `src/components/dice/DiceRoll.test.jsx` verifies temporary callbacks do not fire before 1,500 ms, temporary completion does not fire before the following 1,500 ms, and persistent mode retains both 2,000 ms phases.
+* `src/pages/GameplayPage.test.jsx` verifies the result appears at 1.5 seconds, the locked modal remains open through 2.999 seconds, closes at 3 seconds, and returns the same value used for movement.
+* `src/pages/BattlePage.test.jsx` and `src/AppSettingsButton.test.jsx` verify persistent battle dice and modal coexistence regressions.
+* Focused command result: 4 suites passed, 15 tests passed.
+* `npm run build` completed successfully.
+
+Automated Test Limitation
+
+* Timing expectations in `src/App.test.jsx` were updated to the 3-second temporary sequence, but its standalone suite was not rerun because the previously documented Jest `source-map-support` generated-mapping failure prevents that suite from starting. The passing focused component and gameplay page suites cover this timing change directly.
+
+---
+
+Feature-002 Slice 1: Deterministic battle turn calculation
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a debug battle and confirm the existing player, enemy, health bars, spells, dice, and debug controls appear.
+   Expected: The battle page remains unchanged while the calculation helper is not yet connected to page state.
+2. Roll the persistent battle dice.
+   Expected: The existing dice still completes its normal visual sequence and does not yet apply health, guard, animations, or turn transitions.
+3. Use `Remove 5 health`, `Win`, and `Lose` through their existing flows.
+   Expected: Existing debug health, reward, and respawn behavior remains available.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` verifies stacked Red, Blue, Orange, and Green token counts from the raw slot tokens.
+* The calculation tests verify one dice result selects the same slot for both actors, unsupported and role-inactive token colors are ignored, and empty/joined slots are misses.
+* The calculation tests verify Green reduction occurs before guard, opponent guard expires even on a miss, Orange counter damage bypasses guard, effect descriptors use the required Red/Green/Blue/Orange order, and health cannot fall below 0.
+* `src/features/battle/enemies.test.js`, `src/pages/BattlePage.test.jsx`, and `src/components/dice/DiceRoll.test.jsx` passed as focused regressions.
+* Focused command result: 4 suites passed, 12 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Battle page integration tests for initial player turn, actor alternation, turn modals, applying calculated health and guard, guard shields and expiry, sequential animation timing, dice locking, and win/loss resolution.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 2: Initial battle turn state and modal
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a debug battle with any player colour.
+   Expected: A buttonless turn modal immediately shows the player's colour followed by `'s Turn` and the matching player piece image.
+2. Try to select `Roll Dice` while the turn modal is visible.
+   Expected: The persistent battle dice button is disabled and no roll begins.
+3. Observe the battle just before 2 seconds have elapsed.
+   Expected: The player turn modal remains visible and the dice remains disabled.
+4. Observe the battle at 2 seconds.
+   Expected: The modal closes automatically and the persistent battle dice button becomes enabled.
+5. Use the existing `Remove 5 health`, `Win`, and `Lose` debug controls.
+   Expected: Their existing health, reward, and respawn flows remain available.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies a new battle starts with the triggering player as the actor, zero guard for both actors, and no turn currently resolving.
+* `src/pages/BattlePage.test.jsx` verifies the player turn modal text and image, its exact 2-second lifetime, and the persistent dice lock while the modal is visible.
+* `src/components/dice/DiceRoll.test.jsx` verifies persistent mode respects an external disabled state and becomes rollable when that state is removed.
+* `src/features/battle/battleTurn.test.js` and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 16 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Applying calculated health and guard to battle state, actor alternation and enemy turn modals, guard shields and expiry, sequential animation timing and pause, dice locking during resolution, and win/loss resolution.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 3: Apply completed dice calculations to battle state
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start the level 4 debug battle and wait for the initial player turn modal to close.
+   Expected: The battle dice becomes available with the enemy at 120 health and both guards at 0.
+2. Roll a 1 for the Red player whose first spell slot contains 2 Red tokens.
+   Expected: When the 2-second roll completes, the same first slot is evaluated for both actors and the enemy health changes from 120 to 100.
+3. Wait for the result phase to finish, then roll a 2 for the player whose second spell slot contains 1 Blue token.
+   Expected: When the roll completes, player guard becomes 5 while health remains unchanged.
+4. Observe the battle after either calculation completes.
+   Expected: The current battle actor remains the player because actor alternation is not part of this slice.
+5. Use the existing `Remove 5 health`, `Win`, and `Lose` controls.
+   Expected: Their existing health, reward, and respawn flows remain available.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies no battle mutation occurs before the dice animation completes, 2 Red tokens reduce enemy health by 20 at completion, and a later Blue token persists 5 player guard.
+* The BattlePage integration test also verifies both guard values and confirms the battle actor intentionally remains the player in this slice.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 17 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Actor alternation and enemy turn modals, guard shield display, sequential animation timing and pause, dice locking throughout resolution, and automatic win/loss resolution.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 4: Alternate player and enemy battle turns
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a debug battle, wait for the player turn modal to close, and roll the battle dice.
+   Expected: The matching player and enemy slots resolve when the 2-second dice animation completes, and the dice remains disabled.
+2. Observe the battle for the next 999 milliseconds.
+   Expected: The current actor remains the player, `isResolvingTurn` remains active, and no next-turn modal appears.
+3. Observe the battle at the full 1-second pause.
+   Expected: The actor changes to the enemy and a buttonless 2-second modal shows the enemy English name plus `'s Turn` and the enemy image.
+4. Wait for the enemy modal to close, then manually roll the same persistent dice.
+   Expected: The enemy spell is treated as the current actor spell, its result persists, and the same 1-second pause leads back to the player turn modal.
+5. Complete a player-to-enemy-to-player cycle involving guard.
+   Expected: Guard remains available through the opponent turn and expires after that opponent turn, including when no damage is dealt.
+6. Use the existing `Remove 5 health`, `Win`, and `Lose` controls outside a turn modal.
+   Expected: Their existing health, reward, and respawn flows remain available.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies a completed player roll enters resolving state, waits exactly 1 second, changes to the enemy actor, and shows the correct enemy modal text and image for 2 seconds.
+* The BattlePage integration test verifies the dice stays disabled through the pause and modal, an enemy roll uses enemy spells and grants enemy guard, the actor returns to the player, and guard expires on the following player turn.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 17 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Guard shield display, sequential 1-second Red/Green/Blue/Orange effect animations, dice locking throughout those animations, and automatic win/loss resolution without a following turn modal.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 5: Display active guard shields
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a debug battle before either actor has guard.
+   Expected: No guard shield appears under the player or enemy image.
+2. Complete an enemy turn whose selected spell grants Blue guard.
+   Expected: A blue Font Awesome shield appears directly under the enemy image and no player shield appears.
+3. Continue to a player turn whose selected spell grants Blue guard while the enemy guard expires.
+   Expected: The enemy shield disappears and a blue Font Awesome shield appears directly under the player image.
+4. Continue through a turn where the guarded actor's guard expires without replacement.
+   Expected: That actor's shield disappears as soon as its stored guard reaches 0.
+5. Observe health, spells, dice, turn modals, and debug controls throughout the cycle.
+   Expected: Their existing behavior and layout remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies neither shield renders at 0 guard, the enemy shield renders with the Font Awesome `shield` icon when enemy guard reaches 25, and no player shield renders at that point.
+* The same integration test verifies the enemy shield disappears when its guard expires and the player shield renders when player guard reaches 5.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 17 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Sequential 1-second Red/Green/Blue/Orange effect animations, dice locking throughout those animations, and automatic win/loss resolution without a following turn modal.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 6: Sequence the Red damage animation
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a player battle turn whose rolled slot contains one or more Red tokens, then roll the matching value.
+   Expected: When the dice animation completes, one combined red circle begins travelling from the player toward the enemy regardless of the number of Red tokens.
+2. Observe the Red effect just before and at 1 second.
+   Expected: The circle remains present before 1 second, expands and fades at the opponent as a simple explosion, and is removed at exactly 1 second.
+3. Observe the following 999 milliseconds.
+   Expected: No battle effect or next-turn modal appears, the actor remains unchanged, and the dice remains disabled during the separate pause.
+4. Observe the battle at the full 1-second pause.
+   Expected: The actor changes and the existing next-turn modal begins.
+5. Complete a turn whose calculated effects contain no Red damage.
+   Expected: No Red animation renders and the existing 1-second pause still occurs before the next turn.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies a completed player Red roll renders one `player-to-enemy` Red effect, keeps it present through 999 milliseconds, removes it at 1 second, and retains the current actor throughout the animation.
+* The BattlePage integration test verifies the separate pause lasts another full second before actor transition and the next-turn modal.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 17 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Green, Blue, and Orange effect animations in the required one-second sequence, including reverse direction for enemy-originating travel effects.
+* Automatic win/loss resolution without a following effect, pause, actor transition, or turn modal after battle end.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 7: Sequence the Green reduction animation
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a battle against Boneveil Acolyte and roll the player's first slot containing 2 Red tokens against the enemy's 1 Green token.
+   Expected: Green reduces the 20 raw Red damage by 5, enemy health changes from 40 to 25, and the Red animation starts first.
+2. Observe the first effect for 1 second.
+   Expected: Only the Red animation is present and no Green animation overlaps it.
+3. Observe the next 1-second effect.
+   Expected: Red is removed and one green circle radiates from behind the protected enemy, growing to 120% of the image height before disappearing.
+4. Observe the following 1-second pause.
+   Expected: No effect or next-turn modal appears until the pause completes, and the dice remains disabled.
+5. Resolve Red damage against a matching slot where Green does not reduce damage.
+   Expected: No Green animation is added to the sequence.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` uses the existing Boneveil Acolyte first slot to verify 1 Green reduces 2 Red from 20 to 15 applied damage and targets the enemy side for the Green animation.
+* The integration test verifies Red appears alone for its first second, Green replaces it for exactly the next second, neither overlaps, and the actor transitions only after the separate final pause.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 18 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Blue and Orange effect animations in the required one-second sequence, including reverse direction for enemy-originating Orange travel effects.
+* Automatic win/loss resolution without a following effect, pause, actor transition, or turn modal after battle end.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 8: Sequence the Blue guard animation
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Complete an enemy turn whose selected slot contains multiple Blue tokens.
+   Expected: One combined blue circle radiates from behind the enemy regardless of token count and the enemy guard shield appears from the persisted guard value.
+2. Observe the Blue effect just before and at 1 second.
+   Expected: The circle remains present before 1 second, grows to 120% of the enemy image height, and disappears at exactly 1 second without changing actor yet.
+3. Observe the following 1-second pause.
+   Expected: No effect or next-turn modal appears until the pause completes, and the dice remains disabled.
+4. Complete a later player turn whose selected slot contains a Blue token.
+   Expected: The same one-second Blue effect radiates behind the player and the player guard shield appears.
+5. Complete a turn with Red, Green, and Blue effects together.
+   Expected: Each effect occupies its own one-second interval in Red, Green, then Blue order with no overlap.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies the enemy's 5 Blue tokens create one enemy-targeted Blue animation, keep it present through 999 milliseconds, remove it at exactly 1 second, and delay actor transition until the following pause ends.
+* The same integration flow verifies a later player Blue spell targets the player side while preserving guard shield behavior and expiry.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 18 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Orange counter animation in the final required one-second queue position, including travel from the countering opponent toward the original caster in both actor directions.
+* Automatic win/loss resolution without a following effect, pause, actor transition, or turn modal after battle end.
+* Full user-facing manual testing remains pending until those integration slices are implemented.
+
+---
+
+Feature-002 Slice 9: Sequence the Orange counter animation
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a player turn against Vilewhisker Rat and roll slot 2, where the player has Blue and the enemy has Orange.
+   Expected: Orange deals 5 counter damage without being reduced by the newly gained guard, and the Blue animation runs first.
+2. Observe the next effect after Blue finishes.
+   Expected: One small orange circle travels from the enemy toward the player, expands and fades at the player, and no Blue effect remains visible.
+3. Observe the Orange effect just before and at 1 second.
+   Expected: The Orange circle remains present before 1 second and is removed at exactly 1 second without changing actor yet.
+4. Observe the following 1-second pause.
+   Expected: No effect or turn modal appears until the pause completes, and the dice remains disabled.
+5. On the enemy turn, use a matching player Orange slot against an empty enemy actor slot.
+   Expected: Orange counter damage reduces enemy health and the circle travels in reverse from the player toward the enemy.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies Blue precedes Orange, Orange counter damage bypasses player guard, the enemy-to-player Orange effect occupies its own exact one-second interval, and actor transition waits for the separate pause.
+* The same integration test verifies an enemy turn reads the player's matching Orange slot, damages the enemy current actor, and renders the reverse player-to-enemy Orange direction.
+* `src/features/battle/battleTurn.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 5 suites passed, 19 tests passed.
+* `npm run build` completed successfully.
+
+Testing Still Needed For Feature-002
+
+* Automatic player-win and player-loss resolution through the existing flows, with no following effect, pause, actor transition, turn modal, or further dice roll after battle end.
+* Full user-facing manual testing remains pending until battle-end integration is implemented.
+
+---
+
+Feature-002 Slice 10: Resolve automatic battle wins and losses
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a battle where the enemy has 20 health, then resolve a player slot containing 2 Red tokens.
+   Expected: Enemy health clamps to 0, the reward page opens immediately, and no Red effect, pause, actor transition, or next-turn modal begins.
+2. On the reward page, wait longer than any normal battle animation and modal sequence.
+   Expected: The reward page remains stable and no battle dice or turn modal appears.
+3. Select `Continue` on the reward page.
+   Expected: The active battle clears, the board turn advances, and gameplay resumes through the existing win flow.
+4. Start a battle where the player has 10 health, then resolve a matching opponent slot containing 2 Orange tokens.
+   Expected: Player health clamps to 0, the existing loss modal opens immediately, and no Orange effect, pause, actor transition, or next-turn modal begins.
+5. Wait longer than the normal resolution sequence while the loss modal is open.
+   Expected: The actor remains unchanged, the dice remains disabled, and no turn modal appears.
+6. Select `Respawn`.
+   Expected: The active battle clears, player health resets, the player returns to the first Start Area position, the board turn advances, and gameplay resumes through the existing loss flow.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies lethal player Red damage routes directly to reward with enemy health at 0, no queued Red animation, no battle dice, and no later turn modal.
+* The win test verifies the existing reward `Continue` action clears battle state and advances the board turn.
+* The loss test verifies lethal opponent Orange damage sets player health to 0, opens the existing loss modal, clears Orange effects, disables the dice, and prevents actor/modal progression after an extended timer advance.
+* The loss test verifies the existing `Respawn` action clears battle state, resets position and health, and advances the board turn.
+* `src/features/battle/battleTurn.test.js`, `src/features/battle/enemies.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, `src/components/dice/DiceRoll.test.jsx`, and `src/AppSettingsButton.test.jsx` passed as focused regressions.
+* Focused command result: 6 suites passed, 25 tests passed.
+* `npm run build` completed successfully.
+
+Verification Notes
+
+* Feature-002 now covers player-first alternating turns, matching-slot calculations, stacked Red/Blue/Orange/Green rules, guard display and expiry, sequential one-second effects, the final pause and turn modal, and terminal win/loss flows.
+* `npm run lint` was not run because this project does not define a `lint` script in `package.json`; the Create React App production build completed without compile errors.
+* Manual browser verification of the subjective animation appearance remains recommended; automated tests verify animation structure, direction, ordering, and timing.
+
+---
+
+Bug-003: Enemy images are not appearing on the battle page
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* The reported fallback-text behavior did not reproduce in the current workspace before changes.
+* Existing BattlePage and enemy tests passed before the regression additions: 2 suites and 11 tests passed.
+* All 20 enemy data filenames matched non-empty files in `src/images/enemies`, and the production build contained all 20 emitted enemy image assets.
+
+Manual Regression Steps And Expected Results
+
+1. Start a manually selected Level 1 battle.
+   Expected: The selected enemy image appears from `src/images/enemies/XX.png`; the enemy name fallback is absent.
+2. Repeat with manually selected Level 2, Level 3, and Level 4 enemies.
+   Expected: Each level displays the exact selected enemy image rather than fallback text.
+3. Inspect the player side during each battle.
+   Expected: The player image remains visible and unchanged.
+4. Inspect the enemy health and spell slots during each battle.
+   Expected: Enemy health and all six spell slots remain visible and unchanged.
+5. Start battles with additional enemies from the debug selector.
+   Expected: Each enemy's `imageFileName` resolves through the static image map without console errors.
+
+Automated Tests Completed
+
+* `src/features/battle/enemyImages.test.js` verifies all 20 enemies resolve an imported source containing their exact `imageFileName` and verifies unknown filenames return the safe empty fallback.
+* `src/pages/BattlePage.test.jsx` verifies selected Vilewhisker Rat, Harvestrot Scarecrow, Gravechant Necromancer, and Hellcrown Reaper battles render the expected enemy `img` for Levels 1 through 4.
+* The BattlePage tests verify enemy fallback text is absent while player image, enemy health, and six enemy spell slots remain present.
+* `src/features/battle/enemies.test.js` passed as a focused enemy-data regression.
+* Focused command result: 3 suites passed, 36 tests passed.
+* `npm run build` completed successfully and emitted all 20 enemy PNG assets.
+
+Manual Testing Still Needed
+
+* A browser check is recommended to confirm the deployed environment serves the emitted image URLs correctly; source mapping, page rendering, and production bundling are covered automatically.
+
+---
+
+Bug-004: Guard animation is not playing
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* Blue guard calculation, queue creation, and one-second scheduling were already working.
+* The Blue effect node was structurally attached to the full battle display instead of the casting actor's panel.
+* Its corner-based positioning could detach it from the actor when panel widths or wrapping changed, even though DOM-only animation timing tests passed.
+
+Manual Regression Steps And Expected Results
+
+1. Complete a player turn whose selected slot contains one or more Blue tokens.
+   Expected: Guard increases by 5 per Blue token and a blue circle radiates from behind the player image to 120% of its 150px height for 1 second.
+2. Complete an enemy turn whose selected slot contains one or more Blue tokens.
+   Expected: The same animation appears behind the enemy image rather than at the shared battle-display corner.
+3. Resize the battle page until the actor panels wrap.
+   Expected: Each Blue animation remains attached to the casting actor's panel.
+4. Observe the dice button during either Blue animation.
+   Expected: Rolling remains disabled for the full animation interval.
+5. Resolve a turn containing Blue and another supported effect.
+   Expected: Effects play sequentially for 1 second each, with no overlap, followed by the existing pause and actor transition.
+6. Resolve a turn that grants no Blue guard.
+   Expected: No Blue animation appears; the separate shield indicator continues to reflect stored guard only.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies player and enemy Blue effects render inside their respective actor panels, remain for exactly 1 second, and keep the dice disabled.
+* The BattlePage integration path verifies Blue guard values, shield state, player/enemy targeting, and queue continuation.
+* `src/features/battle/battleTurn.test.js` verifies 1 Blue token grants 5 guard, multiple tokens stack, and `blueGuard` is omitted when no guard is granted.
+* `src/features/gameSetup/GameSetupContext.test.jsx` and `src/components/dice/DiceRoll.test.jsx` passed as focused state and dice regressions.
+* Focused command result: 4 suites passed, 19 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser check is recommended for the subjective visibility and centering of the radiating circle; actor ownership, layer structure, direction, timing, queue order, and build output are covered automatically.
+
+---
+
+Bug-005: Battle win/loss condition is not triggering at 0 health
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* Dice-driven Red and Orange lethal damage already produced terminal battle outcomes in the current workspace.
+* The bug reproduced through `Remove 5 health`: health clamped to 0 and the loss modal appeared, but battle phase remained `active` and rolling was not terminally locked.
+* The added pre-fix regression failed at the missing `Battle phase: lost` assertion while the health bar already displayed `0 / 100`.
+
+Manual Regression Steps And Expected Results
+
+1. Reduce enemy health to exactly 0 with Red damage.
+   Expected: Health displays 0, the battle phase becomes `reward`, the reward flow opens, and no effect or next-turn transition continues.
+2. Apply Red damage greater than the enemy's remaining health.
+   Expected: Enemy health clamps to 0 and the same player-win flow runs once.
+3. Reduce player health to or below 0 with Orange counter damage.
+   Expected: Health clamps to 0, battle phase becomes `lost`, and the loss modal opens without another animation or turn transition.
+4. Use `Remove 5 health` until player health reaches 0.
+   Expected: The same finalized loss state occurs, the dice and debug controls are disabled, and repeated terminal actions cannot trigger.
+5. Select the existing `Lose` debug button during an active battle.
+   Expected: Pending resolution is stopped, queued effects are cleared, the battle becomes `lost`, and the loss modal opens.
+6. Wait longer than the normal animation, pause, and turn-modal sequence after either terminal result.
+   Expected: No next-turn modal appears and the dice remains unavailable or disabled.
+7. Continue from reward or respawn from loss.
+   Expected: The existing continuation and respawn flows still clear battle state and advance the board turn.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies exact-zero debug health removal sets `lost`, stops resolving, disables dice and terminal debug controls, preserves the loss modal, and prevents a later turn modal.
+* The BattlePage suite separately verifies the existing Lose button finalizes the same state, lethal Red routes to reward, and lethal Orange opens the loss flow without subsequent transition.
+* `src/features/battle/battleTurn.test.js` verifies overkill Red and Orange damage clamp health to 0.
+* `src/features/gameSetup/GameSetupContext.test.jsx` and `src/components/dice/DiceRoll.test.jsx` passed as focused state and dice regressions.
+* Focused command result: 4 suites passed, 20 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the complete user-facing reward and respawn flows; terminal state, clamping, control locking, transition cancellation, and routing are covered automatically.
+
+---
+
+Bug-006: Display active guard amount next to the blue shield icon
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* Guard state and the existing Font Awesome shield rendered correctly, but no text element displayed the active amount.
+* The added pre-fix regression failed when enemy guard reached 50 because `Enemy guard amount` was absent.
+
+Manual Regression Steps And Expected Results
+
+1. Start a battle with player and enemy guard at 0.
+   Expected: Neither actor displays a guard shield or guard amount.
+2. Grant the player guard with one Blue token.
+   Expected: The player displays the existing blue shield with `5` beside it.
+3. Grant either actor guard with two or more Blue tokens.
+   Expected: One shield appears with the actual stacked value, such as `10`, `15`, or `25`, beside it.
+4. Complete the opponent turn that expires active guard.
+   Expected: Both the shield and its amount disappear together when guard returns to 0.
+5. Continue through later guard gains and expiry.
+   Expected: The displayed number always matches the current player or enemy guard state and updates without console errors.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies no player or enemy amount renders at 0 guard.
+* The battle integration flow verifies five enemy Blue tokens display `25` beside the enemy shield and one player Blue token displays `5` beside the player shield.
+* The same flow verifies each amount shares its indicator with the correct shield and the enemy amount disappears when guard expires.
+* `src/features/battle/battleTurn.test.js` verifies Blue guard values accumulate at 5 per token.
+* `src/features/gameSetup/GameSetupContext.test.jsx` and `src/components/dice/DiceRoll.test.jsx` passed as focused state and dice regressions.
+* Focused command result: 4 suites passed, 20 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the number appears immediately beside the shield at normal viewport sizes; value accuracy, ownership, updates, expiry, and build output are covered automatically.
+
+---
+
+Bug-007: Enemy battle turns should roll automatically after the turn modal closes
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* After the enemy turn modal closed, the persistent Roll Dice button became enabled and no roll began until the user clicked it.
+* The added pre-fix dice regression showed that an `autoRoll` request was ignored, and the BattlePage regression failed because the enemy button was enabled.
+* The first implementation attempt exposed and corrected a timing race that could start rolling when the enemy modal opened rather than when it closed.
+
+Manual Regression Steps And Expected Results
+
+1. Start a battle and let the initial player turn modal close.
+   Expected: The player roll button becomes enabled and no automatic player roll starts.
+2. Roll manually and allow the player effects and transition pause to finish.
+   Expected: The enemy turn modal opens with the enemy name and image for the existing 2-second duration.
+3. Observe the enemy modal through 1,999 milliseconds.
+   Expected: The modal remains open, the dice has not started, and the roll button remains disabled.
+4. Observe the exact modal timeout.
+   Expected: The modal closes and the persistent dice immediately begins rolling without a click; the button remains disabled.
+5. Allow the enemy dice and queued effects to complete.
+   Expected: The selected enemy spell slot resolves through the normal Red, Blue, Orange, and Green rules, then the player turn modal appears if battle remains active.
+6. Continue through multiple enemy turns.
+   Expected: Exactly one automatic roll occurs after each enemy modal, with no duplicate rolls from rerenders.
+7. Allow an automatic enemy roll to reduce player health to 0.
+   Expected: The existing loss flow opens once, no next-turn modal appears, and no additional enemy roll starts.
+
+Automated Tests Completed
+
+* `src/components/dice/DiceRoll.test.jsx` verifies persistent mode auto-rolls through its existing path while externally disabled and triggers only once when `autoRoll` remains active across a rerender.
+* `src/pages/BattlePage.test.jsx` verifies the player still rolls manually, the enemy modal remains open for 1,999 milliseconds, and the enemy roll starts at exactly 2,000 milliseconds without a click.
+* The BattlePage flow verifies the enemy button stays disabled, the automatic result applies enemy Blue guard, queued animation completes, and control returns to the next manual player turn.
+* The Orange interaction test now resolves the enemy turn without a manual click and preserves reverse counter damage behavior.
+* A lethal enemy Red integration test verifies one automatic roll enters `lost`, disables rolling, and does not create a later turn modal or duplicate random roll.
+* `src/features/battle/battleTurn.test.js` and `src/features/gameSetup/GameSetupContext.test.jsx` passed as focused calculation and state regressions.
+* Focused command result: 4 suites passed, 22 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the automatic transition feels immediate at modal disappearance; timing, once-only behavior, button locking, calculations, effects, terminal cancellation, and build output are covered automatically.
+
+---
+
+Bug-008: Green weaken animation should appear behind the actor who weakened the attack
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* Green reduction calculation, queue insertion, timing, and side selection were already present.
+* The animation element was attached to the shared battle display, so it could be detached from the defending actor despite carrying the correct player/enemy side class.
+* The added pre-fix regression failed because the enemy-targeted Green animation was not a child of the enemy panel.
+
+Manual Regression Steps And Expected Results
+
+1. Roll a player Red spell against matching enemy Green tokens.
+   Expected: Damage is reduced by 5 per effective Green token, the Red animation runs first, and one Green radial animation then appears behind the enemy defender.
+2. Roll an enemy Red spell against matching player Green tokens.
+   Expected: The same Green radial animation appears behind the player defender, not behind the enemy attacker.
+3. Use four Green tokens against at least 20 incoming Red damage.
+   Expected: Damage is reduced by 20 and only one combined Green animation runs.
+4. Observe the Green effect through its queue interval.
+   Expected: It remains for 1 second, grows to around 120% of the defender image height, and the dice remains disabled.
+5. Resize the page until actor panels wrap.
+   Expected: The Green animation remains attached to the correct defending actor panel.
+6. Resolve a slot with no incoming Red damage or no effective Green reduction.
+   Expected: No Green animation is added to the queue.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies player Red damage reduced by enemy Green plays Red first and then places Green inside the enemy panel for exactly its existing one-second interval.
+* A reverse automatic enemy-turn test verifies four player Green tokens reduce 30 incoming damage by 20, leave player health at 90, and place Green inside the player panel.
+* Both direction tests verify the Green side class and disabled dice state while the effect is active.
+* `src/features/battle/battleTurn.test.js` verifies Green reduces damage by 5 per effective token, is ordered after Red, and is omitted when no reduction occurs.
+* `src/components/dice/DiceRoll.test.jsx` and `src/features/gameSetup/GameSetupContext.test.jsx` passed as focused dice and state regressions.
+* Focused command result: 4 suites passed, 23 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended for subjective centering and visibility behind both actor images; ownership, direction, reduction, queue order, duration, control locking, and build output are covered automatically.
+
+---
+
+Bug-009: Final battle animations should complete before win or lose flow triggers
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* A lethal dice result immediately changed battle phase to `reward` or `lost`, cleared pending effects, and triggered the existing end flow.
+* The added pre-fix regressions failed because the battle was no longer active and the first final animation was absent immediately after the lethal roll.
+
+Manual Regression Steps And Expected Results
+
+1. Defeat an enemy with a turn containing Red damage followed by Green reduction.
+   Expected: Enemy health displays 0, the battle stays active while resolving, Red runs for 1 second, Green then runs for 1 second, and only afterward does the reward flow begin.
+2. Lose with a turn containing Blue guard followed by lethal Orange counter damage.
+   Expected: Player health displays 0, Blue runs first, Orange runs second, and the lose modal remains closed until Orange completes.
+3. Allow an automatic enemy Red roll to reduce player health to 0.
+   Expected: Red completes before the lose modal opens, exactly one enemy roll occurs, and no player turn modal follows.
+4. Observe the dice during every final effect.
+   Expected: The roll button remains disabled and cannot start another roll.
+5. Observe battle state after the last final effect.
+   Expected: The correct existing win or loss flow triggers once without advancing the battle actor or showing another turn modal.
+6. Use the debug Win and Lose controls.
+   Expected: Their existing immediate end-flow behavior remains unchanged.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies a lethal player Red attack preserves sequential Red and Green animations before reward navigation.
+* The lethal player-loss regression verifies Blue and Orange run sequentially before the lose modal opens.
+* The lethal automatic enemy-turn regression verifies Red completes before loss, the dice stays disabled, and no next-turn modal or duplicate roll occurs.
+* Existing BattlePage coverage verifies debug Win and Lose still finalize immediately.
+* `src/components/dice/DiceRoll.test.jsx`, `src/features/battle/battleTurn.test.js`, and `src/features/gameSetup/GameSetupContext.test.jsx` passed as focused dice, calculation, and state regressions.
+* Focused command result: 4 suites passed, 23 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the final animation timing feels natural; queue order, one-second durations, control locking, terminal flow timing, duplicate prevention, and build output are covered automatically.
+
+---
+
+Bug-010: Reduce Blue token guard value from 10 to 5 per token
+
+Test Status
+
+* passed
+
+Reproduction Result
+
+* The calculation used a centralized value of 10 guard per Blue token.
+* The added pre-fix regressions received 10, 20, and 30 guard instead of 5, 10, and 15, and the BattlePage displayed 50 instead of 25 for five Blue tokens.
+
+Manual Regression Steps And Expected Results
+
+1. Roll a spell slot containing one Blue token.
+   Expected: The actor gains 5 guard and the shield amount displays `5`.
+2. Roll slots containing two, three, and five Blue tokens.
+   Expected: Guard stacks to 10, 15, and 25 respectively, with the same values displayed beside the shield.
+3. Let a guarded actor receive Red damage on the next opponent turn.
+   Expected: The stored guard reduces incoming Red damage by up to its current amount and cannot make damage negative.
+4. Complete the next opponent turn, including a miss or a turn with no Red damage.
+   Expected: The guard expires after that turn as before.
+5. Resolve Orange counter damage against an actor who gains or holds guard.
+   Expected: Orange damage bypasses guard unchanged.
+6. Observe a Blue effect during resolution.
+   Expected: The existing one-second Blue animation plays once, rolling remains disabled, and shield styling is unchanged.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` explicitly verifies 1, 2, and 3 Blue tokens grant 5, 10, and 15 guard and produce matching `blueGuard` effect amounts.
+* The stacked four-effect calculation verifies two Blue tokens grant 10 guard while Red, Green, and Orange values and effect order remain unchanged.
+* Existing calculation regressions verify guard reduces Red damage, expires after the opponent turn, and does not reduce Orange counter damage.
+* `src/pages/BattlePage.test.jsx` verifies five enemy Blue tokens display 25 and one player Blue token displays 5 while preserving shields, animations, expiry, and disabled rolling.
+* `src/components/dice/DiceRoll.test.jsx` and `src/features/gameSetup/GameSetupContext.test.jsx` passed as focused dice and state regressions.
+* Focused command result: 4 suites passed, 26 tests passed.
+* `npm run build` completed successfully.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the new amounts during live play; calculation, display, stacking, reduction, expiry, Orange bypass, animation behavior, and build output are covered automatically.
+
+---
+
+Feature-003: Add battle-only debug buttons to force dice roll results
+
+Test Status
+
+* passed with one unrelated test-runner gap
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and observe the initial turn modal.
+   Expected: `Force 1` through `Force 6` appear beside the existing battle debug controls and remain disabled until the player turn is ready.
+2. Select each Force button on a ready player turn.
+   Expected: The existing persistent dice animates for its normal duration, lands on the selected face, and displays the selected numerical result without using a random value.
+3. Force a value whose matching slots contain Red, Blue, Orange, or Green tokens.
+   Expected: The same battle calculation, ordered effects, health and guard updates, animation queue, and next-turn behavior run as for a natural result.
+4. Observe all Force buttons during rolling, effect animations, the transition pause, turn modals, enemy automatic turns, and terminal battle states.
+   Expected: Every Force button remains disabled until a new manual player roll is ready, and repeated clicks cannot start overlapping rolls.
+5. Force a lethal result.
+   Expected: Final effects finish and the existing reward or loss flow triggers without a next-turn modal or another roll.
+6. Use the normal battle Roll Dice button.
+   Expected: It still uses random generation and follows the unchanged persistent dice and battle flow.
+7. Open the gameplay page and use its temporary dice modal.
+   Expected: No Force buttons appear and the temporary dice behavior is unchanged.
+
+Automated Tests Completed
+
+* `src/components/dice/DiceRoll.test.jsx` verifies forced requests 1 through 6 each animate, land on the selected face, display the selected result, invoke the normal start and completion callbacks, and never call `Math.random`.
+* Existing DiceRoll tests verify repeated natural persistent rolls, external disabling, automatic enemy activation, and temporary gameplay mode remain unchanged.
+* `src/pages/BattlePage.test.jsx` verifies all six Force buttons are grouped with existing debug controls, disabled during the turn modal, enabled when ready, and disabled again during rolling and effect resolution.
+* The BattlePage forced-roll regression verifies `Force 1` lands on face 1, displays result 1, bypasses a mocked natural result of 6, applies the matching slot's Red damage, and starts the existing Red animation.
+* Existing BattlePage calculation and terminal regressions cover Blue, Orange, Green, guard, actor transition, automatic enemy rolls, and win/loss behavior reached through the shared completion path.
+* `src/pages/GameplayPage.test.jsx` verifies Force buttons are absent while the existing temporary dice movement test continues to pass.
+* Focused command result: 3 suites passed, 25 tests passed.
+* Broader test attempt: 20 suites passed and 125 tests passed; `src/App.test.jsx` failed before running tests because `source-map-support` threw while parsing generated mappings.
+* The App suite reproduced the same zero-test runner error in isolation after clearing Jest's cache; installed ESLint parsed the file successfully and reported only its existing testing-style rule violations.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Rerun `src/App.test.jsx` after its source-map-support runner issue is resolved; no Feature-003 assertion failure was produced.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to exercise all six battle buttons and visually confirm each final face; request values, callbacks, battle integration, readiness locking, gameplay isolation, and production compilation are covered automatically.
+
+---
+
+Feature-004 Slice 1: Treat Light Green, Black, White, and Grey as battle misses
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle where the current actor has Light Green in the rolled spell slot and no other effective actor token.
+   Expected: The roll counts as a miss, creates no animation, damage, guard, buff, or opponent effect, then follows the normal empty-effect turn transition.
+2. Repeat with Black, White, and Grey as the only current-actor token in the rolled slot.
+   Expected: Each color behaves as the same no-effect battle miss.
+3. View committed spell columns containing these colors on the battle page.
+   Expected: Light Green, Black, White, and Grey tokens remain visible in their original columns despite having no battle effect.
+4. Roll a normal Red, Blue, Orange, or Green interaction afterward.
+   Expected: Existing battle calculations, animations, health, guard, and turn behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` explicitly verifies Light Green, Black, White, and Grey each produce zero damage values, no effect descriptors, unchanged actor health and guard, and `isMiss: true`.
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies all four no-effect colors remain rendered in a committed spell slot.
+* Existing `src/components/tokens/Token.test.jsx` coverage verifies every current token color retains its display class.
+* `src/pages/BattlePage.test.jsx` passed as the surrounding battle-flow regression.
+* Focused command result: 2 suites passed, 16 tests passed.
+* Related command result: 4 suites passed, 33 tests passed.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Light Blue freeze, Purple buffs, Yellow charge, limited uses, status displays, freeze-check rolls, and marked-column behavior require later Feature-004 slices and tests.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the four token colors remain visible during a no-effect battle turn; calculation and component visibility are covered automatically.
+
+---
+
+Feature-004 Slice 2: Implement Light Blue freeze
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new battle with Light Blue tokens in player and enemy spell columns.
+   Expected: Each column begins with one freeze use per Light Blue token, neither actor begins frozen, and starting another battle resets uses and frozen status.
+2. Roll a column with a remaining Light Blue use.
+   Expected: One use is consumed, the opponent becomes frozen, and a Light Blue Font Awesome snowflake appears over the opponent image without mutating the displayed spell tokens.
+3. Roll the same column after all its Light Blue uses are consumed.
+   Expected: No freeze is applied; Light Blue creates no animation, damage, or guard for that roll.
+4. Begin a frozen player turn and close the normal turn modal.
+   Expected: `Roll to see if you unfreeze` appears above the persistent dice and the player manually rolls a freeze check.
+5. Roll an even player freeze check.
+   Expected: The snowflake and message disappear, no spell slot resolves from the check, and the same player can make a separate normal attack roll.
+6. Roll an odd player freeze check.
+   Expected: Freeze clears, no spell slot resolves, and the enemy turn modal opens.
+7. Begin a frozen enemy turn.
+   Expected: The normal enemy turn modal appears first, then the freeze check rolls automatically.
+8. Let the enemy roll an even freeze check.
+   Expected: Freeze clears and, after the check result phase, the enemy automatically makes its normal attack roll.
+9. Let the enemy roll an odd freeze check.
+   Expected: Freeze clears, the enemy attack is skipped, and the player turn modal opens without a second enemy roll.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` verifies Light Blue token counts, successful freeze when a use is available, exhausted-use misses, and no separate animation descriptor.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies fresh per-column player/enemy uses, false frozen flags, one-use consumption, exhausted columns, turn skipping, and unchanged original Light Blue spell tokens.
+* `src/components/dice/DiceRoll.test.jsx` verifies persistent sequences now report completion after the result phase, allowing a passed automatic enemy check to trigger a separate normal roll without overlapping dice sequences.
+* `src/pages/BattlePage.test.jsx` verifies player and enemy snowflake icons, freeze-check text, manual player checks, automatic enemy checks, even continuation, odd skipping, no spell resolution from checks, and delayed automatic enemy follow-up attacks.
+* Existing BattlePage tests passed for forced dice, Red/Blue/Orange/Green effects, guard, final animations, automatic enemy turns, and win/loss flows.
+* Focused command result: 4 suites passed, 38 tests passed.
+* Related command result: 6 suites passed, 48 tests passed.
+* Changed production files passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Purple buffs, Yellow charge, their limited-use state, combined Red/Blue calculations, and spell-column markings require later Feature-004 slices.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm snowflake placement and the complete player/enemy freeze-check pacing; state, dice timing, branch behavior, limited uses, and production compilation are covered automatically.
+
+---
+
+Feature-004 Slice 3: Implement Purple adjacent-column buffs
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Roll one Purple token in column 2.
+   Expected: No Purple animation or immediate Red/Blue increase appears; after the turn resolves, columns 1 and 3 on that actor's battle spell display have purple backgrounds.
+2. Roll two or three Purple tokens in one column.
+   Expected: Each marked adjacent column stores +10 or +15 respectively for that actor's next turn.
+3. Roll Purple in column 1 and then in column 6 in separate battles or turns.
+   Expected: Only column 2 is marked from column 1, and only column 5 is marked from column 6; the Purple column itself is never marked by its own cast.
+4. On the caster's next turn, roll a marked column containing Red and Blue.
+   Expected: The stored flat Purple amount is added once to total Red attack and once to total Blue guard, while Orange counter, Green reduction, and Light Blue freeze keep their normal values.
+5. Observe the marked spell display while that next turn's effects resolve.
+   Expected: The purple background remains through all animations and the transition pause, then disappears when the turn changes unless new Purple was cast.
+6. Let the enemy cast Purple and later use a marked column.
+   Expected: The enemy spell display is marked independently and receives the same Red/Blue-only buff on its next own turn.
+7. Start a new battle after either actor has pending Purple buffs.
+   Expected: Both actors begin with no Purple-buffed columns.
+8. Begin a Purple-buffed actor's turn while frozen.
+   Expected: An even freeze check preserves the buff for the follow-up attack; an odd check skips the attack and clears the buff.
+9. Open the Spells modal outside battle.
+   Expected: Its existing committed spell display has no Purple status marking or other behavior change.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` verifies edge and middle adjacency, +5 stacking, no same-turn buff, Purple-only pending behavior without animation, and flat Red/Blue increases without changing Orange, Green, or Light Blue.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies fresh player/enemy battle state, stacked pending buffs, next-own-turn use, marking retention through resolution, expiry on turn advance, and expiry after an odd frozen-turn skip.
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies the reusable display optionally marks only supplied Purple columns and remains unchanged when the prop is absent.
+* `src/pages/BattlePage.test.jsx` verifies independent player/enemy purple backgrounds, buffed Red damage, marking retention during effect resolution, and removal when the actor's turn advances.
+* Related command result: 6 suites passed, 55 tests passed.
+* Changed production files passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Yellow charge, its limited-use state and yellow markings, and combined Purple/Yellow Red and Blue calculations require the remaining Feature-004 slice.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the lo-fi purple backgrounds remain readable on both battle spell displays through the complete turn transition; calculations, lifecycle, actor isolation, edge columns, freeze skipping, optional display behavior, and production compilation are covered automatically.
+
+---
+
+Feature-004 Slice 4: Implement Yellow charge and complete remaining battle token effects
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle where the player and enemy have Yellow tokens in different spell columns.
+   Expected: Each actor begins with one charge use per Yellow token in each column, no actor begins charged, and starting another battle resets all charge state and uses.
+2. Roll a column containing Yellow with at least one use remaining.
+   Expected: Exactly one use is consumed, Yellow creates no animation or immediate buff, and all six of that actor's battle spell columns become yellow after the current turn resolves.
+3. On the charged actor's next turn, roll any column containing Red or Blue.
+   Expected: Total Red attack receives a flat +10 and total Blue guard receives a flat +10; the yellow backgrounds remain through effect resolution and disappear when the turn advances.
+4. Trigger Charge from a column containing two or more Yellow tokens.
+   Expected: The charge amount remains +10, only one use is consumed per successful roll, and remaining tokens allow the column to trigger Charge again later in the battle.
+5. Roll the same Yellow column after its uses reach zero.
+   Expected: Yellow creates no pending charge and counts as no effect when no other effective token is present; the original Yellow spell tokens remain visible and unchanged.
+6. Use a spell column while both Yellow charge and a Purple buff affect it.
+   Expected: Red or Blue receives both flat bonuses, both status classes are present, and the permitted yellow visual priority provides one simple background.
+7. Resolve Orange counter, Green reduction, Light Blue freeze, Purple, Yellow, or a no-effect token while Charge is active.
+   Expected: Charge does not increase those effects; existing calculations and freeze behavior remain unchanged.
+8. Begin a charged actor's turn while frozen.
+   Expected: An even freeze check preserves Charge for the follow-up attack, while an odd check skips the action and clears Charge.
+9. Observe an independently charged player and enemy.
+   Expected: Each actor's six-column marking and lifecycle are isolated from the other actor.
+10. Open the Spells modal outside battle.
+   Expected: Its existing committed spell display has no Yellow or Purple battle-status marking and no behavior change.
+
+Automated Tests Completed
+
+* `src/features/battle/battleTurn.test.js` verifies successful and exhausted Yellow rolls, pending-effect miss handling, no immediate or stacked amount, no Yellow animation descriptor, the flat +10 Red/Blue buff, and additive Purple/Yellow calculations without changing Orange, Green, or Light Blue.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies player/enemy per-column use initialization, one-use consumption, multiple uses, exhausted behavior, unchanged token data, deferred next-turn activation, resolution-time retention, turn expiry, and even/odd freeze interactions.
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies all six optional Yellow classes, Purple overlap, and unchanged default Spells-modal behavior.
+* `src/pages/BattlePage.test.jsx` verifies independent player/enemy all-column yellow backgrounds, combined Purple and Yellow Red damage, retention during effect resolution, and player-only expiry on turn advance.
+* Existing focused regressions cover Light Blue freeze, Purple adjacency and stacking, no-effect misses, Red/Blue/Orange/Green calculations and animations, forced dice, automatic enemy turns, and terminal battle flow.
+* Related command result: 6 suites passed, 64 tests passed.
+* Changed production files passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Feature-004.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the required lo-fi yellow backgrounds on both actor displays and the complete Charge transition pacing; calculations, limited uses, status lifecycle, actor isolation, Purple combination, freeze interaction, default display behavior, and production compilation are covered automatically.
+
+---
+
+Bug-011: Health should only be removed after hit animations finish
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and roll or force a spell column that deals Red damage.
+   Expected: The target health remains unchanged when the Red animation starts and throughout its first 999 milliseconds, then decreases when the 1 second animation finishes.
+2. Resolve a turn where the opponent has Orange counter tokens.
+   Expected: The caster health remains unchanged before and during the Orange animation, then decreases when the full 1 second counter animation finishes.
+3. Resolve player and enemy turns containing Red or Orange damage.
+   Expected: Red damages the opposing target and Orange damages the original caster in both turn directions.
+4. Resolve a turn containing multiple effects such as Red followed by Green, or Blue followed by Orange.
+   Expected: Each effect remains sequential, Red or Orange health changes occur only at that effect's own animation boundary, and non-damage effects do not change health.
+5. Resolve a lethal Red attack followed by another animation.
+   Expected: Health clamps at 0 after Red lands, the remaining animation finishes, and only then does the win flow begin.
+6. Resolve lethal Orange counter damage or a lethal enemy Red attack.
+   Expected: Health clamps at 0 after the matching animation lands and the loss flow begins only after the final animation completes.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies unchanged health before and during Red and Orange animations, delayed health at each 1 second boundary, both turn directions, multi-effect ordering, health clamping, and delayed terminal win/loss flow.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies calculated Red damage remains pending until its matching effect is explicitly applied while existing Purple and Yellow state behavior remains intact.
+* Related battle, context, dice, spell-slot, and token regressions passed: 6 suites and 64 tests.
+* The two changed production files passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Bug-011.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused battle route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to visually confirm that each health bar changes at the perceived hit landing point; timer boundaries, damage targets, sequencing, health clamping, terminal flow, and production compilation are covered automatically.
+
+---
+
+Bug-012: Used Light Blue and Yellow battle tokens should be visually faded for that battle only
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle with two or more Light Blue tokens in one spell column.
+   Expected: The consolidated Light Blue token is fully visible before use and remains fully visible while at least one battle use remains.
+2. Use the final Light Blue use in that column.
+   Expected: The consolidated Light Blue token remains present and changes to opacity `0.5` in that actor's battle spell display.
+3. Start a battle with one or more Yellow tokens in one spell column and consume its uses one at a time.
+   Expected: The consolidated Yellow token remains fully visible while a use remains, then changes to opacity `0.5` when the column reaches zero Yellow uses.
+4. Consume limited-use tokens for both the player and enemy.
+   Expected: Each battle panel reflects only its own per-column Light Blue and Yellow use state.
+5. Finish the battle and start another battle with the same spells.
+   Expected: All original Light Blue and Yellow tokens are still present, their fresh battle use counts match the original token counts, and they begin fully visible again.
+6. Open the Spells modal outside battle.
+   Expected: Light Blue and Yellow tokens use the existing normal display with no faded battle state.
+
+Automated Tests Completed
+
+* `src/components/tokens/Token.test.jsx` verifies the optional faded state applies exact opacity `0.5` and is absent by default.
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies consolidated Light Blue and Yellow tokens remain visible while uses remain, fade at zero, and return to normal when battle-use props are absent.
+* `src/pages/BattlePage.test.jsx` verifies the player Yellow and enemy Light Blue displays independently receive exhausted battle-use state.
+* Existing `src/features/gameSetup/GameSetupContext.test.jsx` coverage verifies per-battle initialization, one-use consumption, zero-use exhaustion, unchanged original token counts, and fresh use counts from spell data.
+* Related battle, context, dice, spell-slot, and token regressions passed: 6 suites and 67 tests.
+* The three changed production components passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Bug-012.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused battle route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to confirm the required half-opacity state is visually clear on both battle spell displays; exact opacity, actor isolation, consolidated counts, reset behavior, token immutability, default display behavior, and production compilation are covered automatically.
+
+---
+
+Bug-013: Frozen snowflake icon should overlay the frozen actor image and animate in/out
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and freeze the player with a Light Blue effect.
+   Expected: A Font Awesome snowflake grows and fades into view from the centre of the player image, overlays that image at the same width, and does not move the surrounding layout.
+2. Leave the player frozen while other battle UI updates occur.
+   Expected: The full-size snowflake remains centred above the player image for the complete frozen state.
+3. Pass or fail the player's freeze check so the freeze resolves.
+   Expected: Freeze logic resolves immediately while the snowflake shrinks and fades out over 200 ms, then the overlay is removed.
+4. Freeze the enemy and observe its battle panel.
+   Expected: The same centred, full-image-width enter animation appears above the enemy image independently of the player.
+5. Resolve the enemy freeze.
+   Expected: The enemy snowflake uses the same 200 ms exit animation and disappears without delaying the next battle action.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies player and enemy snowflakes use Font Awesome, share the frozen actor's image wrapper, receive the enter class, remain mounted through 199 ms of the exit state, and unmount at 200 ms.
+* Existing BattlePage regressions verify player even/odd freeze checks, enemy automatic even/odd checks, dice timing, turn changes, effects, terminal flow, actor images, and spell displays remain unchanged.
+* Related battle, context, dice, spell-slot, and token regressions passed: 6 suites and 67 tests.
+* `src/pages/BattlePage.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Bug-013.
+* CSS geometry and animation interpolation require the manual browser check below because JSDOM does not perform visual layout or CSS animation rendering.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused battle route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm exact image-width alignment, centring, z-index, and smooth grow/shrink interpolation on the available player and enemy image aspect ratios; component lifecycle, timing boundaries, actor isolation, freeze behavior, and production compilation are covered automatically.

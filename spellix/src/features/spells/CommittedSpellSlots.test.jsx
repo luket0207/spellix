@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import CommittedSpellSlotList from '../../components/spells/CommittedSpellSlotList';
 import CommittedSpellSlots from './CommittedSpellSlots';
 
 function createSpellSlots() {
@@ -73,6 +74,23 @@ describe('CommittedSpellSlots', () => {
     expect(spellSlots[0].tokens).toHaveLength(7);
   });
 
+  test('keeps no-effect battle token colours visible in committed spell slots', () => {
+    const spellSlots = createSpellSlots();
+    const noEffectTokenTypes = ['light-green', 'black', 'white', 'grey'];
+
+    spellSlots[0].tokens = noEffectTokenTypes.map((type) => ({
+      committed: true,
+      id: `${type}-1`,
+      type,
+    }));
+
+    render(<CommittedSpellSlots spellSlots={spellSlots} />);
+
+    noEffectTokenTypes.forEach((type) => {
+      expect(screen.getByLabelText(`${type} token in slot 1`)).toBeInTheDocument();
+    });
+  });
+
   test('keeps empty committed spell slots visible without placeholder text', () => {
     const { container } = render(<CommittedSpellSlots spellSlots={createSpellSlots()} />);
     const columns = container.querySelectorAll('.committed-spell-slot-column');
@@ -82,4 +100,86 @@ describe('CommittedSpellSlots', () => {
     expect(columns[1].querySelector('.committed-spell-slot-number')).not.toBeNull();
     expect(columns[1].querySelector('.token-display')).toBeNull();
   });
+
+  test('optionally marks only Purple-buffed columns without changing the default display', () => {
+    const spellSlots = createSpellSlots();
+    const { container, rerender } = render(
+      <CommittedSpellSlotList purpleBuffs={[5, 0, 10, 0, 0, 0]} spellSlots={spellSlots} />
+    );
+
+    const markedColumns = container.querySelectorAll(
+      '.committed-spell-slot-column--purple-buffed'
+    );
+
+    expect(markedColumns).toHaveLength(2);
+    expect(markedColumns[0]).toHaveTextContent('1');
+    expect(markedColumns[1]).toHaveTextContent('3');
+
+    rerender(<CommittedSpellSlots spellSlots={spellSlots} />);
+    expect(container.querySelector('.committed-spell-slot-column--purple-buffed')).toBeNull();
+  });
+
+  test('optionally marks all Yellow-charged columns and supports a Purple overlap', () => {
+    const spellSlots = createSpellSlots();
+    const { container, rerender } = render(
+      <CommittedSpellSlotList
+        purpleBuffs={[5, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowCharged
+      />
+    );
+    const columns = container.querySelectorAll('.committed-spell-slot-column');
+
+    expect(container.querySelectorAll('.committed-spell-slot-column--yellow-charged')).toHaveLength(
+      6
+    );
+    expect(columns[0]).toHaveClass('committed-spell-slot-column--purple-buffed');
+    expect(columns[0]).toHaveClass('committed-spell-slot-column--yellow-charged');
+
+    rerender(<CommittedSpellSlots spellSlots={spellSlots} />);
+    expect(container.querySelector('.committed-spell-slot-column--yellow-charged')).toBeNull();
+  });
+
+  test('optionally fades exhausted limited-use tokens without changing the default display', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[0].tokens = [
+      { id: 'light-blue-1', type: 'light-blue', committed: true },
+      { id: 'light-blue-2', type: 'light-blue', committed: true },
+      { id: 'yellow-1', type: 'yellow', committed: true },
+    ];
+    const { rerender } = render(
+      <CommittedSpellSlotList
+        lightBlueUses={[1, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowUses={[0, 0, 0, 0, 0, 0]}
+      />
+    );
+
+    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).not.toHaveClass(
+      'token-display--faded'
+    );
+    expect(screen.getByLabelText(/yellow token in slot 1/i)).toHaveClass(
+      'token-display--faded'
+    );
+
+    rerender(
+      <CommittedSpellSlotList
+        lightBlueUses={[0, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowUses={[0, 0, 0, 0, 0, 0]}
+      />
+    );
+    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).toHaveClass(
+      'token-display--faded'
+    );
+
+    rerender(<CommittedSpellSlots spellSlots={spellSlots} />);
+    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).not.toHaveClass(
+      'token-display--faded'
+    );
+    expect(screen.getByLabelText(/yellow token in slot 1/i)).not.toHaveClass(
+      'token-display--faded'
+    );
+  });
+
 });

@@ -10,6 +10,171 @@
   gap: 24px;
   align-items: flex-start;
   justify-content: space-between;
+  position: relative;
+}
+
+.battle-red-effect {
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+  background: red;
+  border-radius: 50%;
+  height: 20px;
+  left: 10%;
+  pointer-events: none;
+  position: absolute;
+  top: 65px;
+  width: 20px;
+  z-index: 1;
+}
+
+.battle-red-effect--player-to-enemy {
+  animation-name: battle-red-player-to-enemy;
+}
+
+.battle-red-effect--enemy-to-player {
+  animation-name: battle-red-enemy-to-player;
+}
+
+@keyframes battle-red-player-to-enemy {
+  0% {
+    left: 10%;
+    transform: scale(1);
+  }
+
+  80% {
+    left: 90%;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    left: 90%;
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+@keyframes battle-red-enemy-to-player {
+  0% {
+    left: 90%;
+    transform: scale(1);
+  }
+
+  80% {
+    left: 10%;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    left: 10%;
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+.battle-radiating-effect {
+  border-radius: 50%;
+  height: 150px;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 150px;
+  z-index: 0;
+}
+
+.battle-radiating-effect--player {
+  left: 0;
+}
+
+.battle-radiating-effect--enemy {
+  right: 0;
+}
+
+.battle-green-effect,
+.battle-blue-effect {
+  animation: battle-effect-radiate 1s linear forwards;
+}
+
+.battle-green-effect {
+  background: green;
+}
+
+.battle-blue-effect {
+  background: blue;
+}
+
+@keyframes battle-effect-radiate {
+  0% {
+    opacity: 1;
+    transform: scale(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+.battle-orange-effect {
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+  background: orange;
+  border-radius: 50%;
+  height: 14px;
+  pointer-events: none;
+  position: absolute;
+  top: 68px;
+  width: 14px;
+  z-index: 1;
+}
+
+.battle-orange-effect--player-to-enemy {
+  animation-name: battle-orange-player-to-enemy;
+}
+
+.battle-orange-effect--enemy-to-player {
+  animation-name: battle-orange-enemy-to-player;
+}
+
+@keyframes battle-orange-player-to-enemy {
+  0% {
+    left: 10%;
+    transform: scale(1);
+  }
+
+  80% {
+    left: 90%;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    left: 90%;
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+@keyframes battle-orange-enemy-to-player {
+  0% {
+    left: 90%;
+    transform: scale(1);
+  }
+
+  80% {
+    left: 10%;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    left: 10%;
+    opacity: 0;
+    transform: scale(2);
+  }
 }
 
 .battle-side {
@@ -18,21 +183,96 @@
   flex-direction: column;
   gap: 12px;
   max-width: 320px;
+  position: relative;
+  z-index: 1;
 }
 
 .battle-side--enemy {
   align-items: flex-end;
 }
 
+.battle-actor-image {
+  align-items: center;
+  display: inline-flex;
+  height: 150px;
+  justify-content: center;
+  position: relative;
+  width: fit-content;
+}
+
+.battle-actor-image--player {
+  align-self: flex-start;
+}
+
+.battle-actor-image--enemy {
+  align-self: flex-end;
+}
+
 .battle-player-piece,
 .battle-enemy-piece {
-  height: 150px;
+  height: 100%;
+  position: relative;
   width: auto;
+  z-index: 1;
 }
 
 .battle-player-piece {
-  align-self: flex-start;
   transform: scaleX(-1);
+}
+
+.battle-guard-shield {
+  color: blue;
+}
+
+.battle-freeze-indicator {
+  animation-duration: 200ms;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+  color: lightblue;
+  height: 100%;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  width: 100%;
+  z-index: 2;
+}
+
+.battle-freeze-indicator--enter {
+  animation-name: battle-freeze-enter;
+}
+
+.battle-freeze-indicator--exit {
+  animation-name: battle-freeze-exit;
+}
+
+@keyframes battle-freeze-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes battle-freeze-exit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+}
+
+.battle-dice {
+  align-self: center;
 }
 
 .battle-debug-controls {

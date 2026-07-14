@@ -61,6 +61,14 @@
     rgba(255, 248, 229, 0.7);
 }
 
+.committed-spell-slot-column--purple-buffed {
+  background: purple;
+}
+
+.committed-spell-slot-column--yellow-charged {
+  background: yellow;
+}
+
 .committed-spell-slot-number {
   display: block;
   font-size: 15px;

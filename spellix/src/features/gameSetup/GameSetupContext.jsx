@@ -8,11 +8,18 @@ import {
   createTurnOrder,
   getCurrentPlayer,
 } from './gameSetup';
+import { calculateBattleTurn, createAdjacentPurpleBuffs } from '../battle/battleTurn';
 import { getEnemyById } from '../battle/enemies';
 import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
 
 const GameSetupContext = createContext(null);
+
+function createTokenUses(spellSlots, tokenType) {
+  return Array.from({ length: 6 }, (_, index) =>
+    (spellSlots?.[index]?.tokens ?? []).filter((token) => token.type === tokenType).length
+  );
+}
 
 export function GameSetupProvider({ children, initialGameSetup = null }) {
   const [gameSetup, setGameSetup] = useState(() => initialGameSetup ?? createInitialGameSetup());
@@ -163,16 +170,270 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       return;
     }
 
-    setGameSetup((currentSetup) => ({
-      ...currentSetup,
-      activeBattle: {
-        enemyCurrentHealth: enemy.currentHealth,
-        enemyId,
-        level,
-        phase: 'active',
-        playerId,
-      },
-    }));
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          currentBattleActor: 'player',
+          enemyChargeUses: createTokenUses(enemy.spellSlots, 'yellow'),
+          enemyCharged: false,
+          enemyCurrentHealth: enemy.currentHealth,
+          enemyFreezeUses: createTokenUses(enemy.spellSlots, 'light-blue'),
+          enemyFrozen: false,
+          enemyGuard: 0,
+          enemyId,
+          enemyNextCharged: null,
+          enemyNextPurpleBuffs: null,
+          enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
+          isResolvingTurn: false,
+          level,
+          outcome: null,
+          pendingEffects: [],
+          phase: 'active',
+          playerChargeUses: createTokenUses(player?.spellSlots, 'yellow'),
+          playerCharged: false,
+          playerFreezeUses: createTokenUses(player?.spellSlots, 'light-blue'),
+          playerFrozen: false,
+          playerGuard: 0,
+          playerId,
+          playerNextCharged: null,
+          playerNextPurpleBuffs: null,
+          playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
+        },
+      };
+    });
+  };
+
+  const applyBattleDiceResult = (diceResult) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (!activeBattle || activeBattle.phase !== 'active') {
+        return currentSetup;
+      }
+
+      const player = currentSetup.players.find(({ id }) => id === activeBattle.playerId);
+      const enemy = getEnemyById(activeBattle.enemyId);
+
+      if (!player || !enemy) {
+        return currentSetup;
+      }
+
+      const playerBattleState = {
+        ...player,
+        guard: activeBattle.playerGuard ?? 0,
+      };
+      const enemyBattleState = {
+        ...enemy,
+        currentHealth: activeBattle.enemyCurrentHealth ?? enemy.currentHealth,
+        guard: activeBattle.enemyGuard ?? 0,
+      };
+      const isPlayerActor = activeBattle.currentBattleActor !== 'enemy';
+      const chargeUsesKey = isPlayerActor ? 'playerChargeUses' : 'enemyChargeUses';
+      const chargedKey = isPlayerActor ? 'playerCharged' : 'enemyCharged';
+      const freezeUsesKey = isPlayerActor ? 'playerFreezeUses' : 'enemyFreezeUses';
+      const frozenOpponentKey = isPlayerActor ? 'enemyFrozen' : 'playerFrozen';
+      const nextPurpleBuffsKey = isPlayerActor
+        ? 'playerNextPurpleBuffs'
+        : 'enemyNextPurpleBuffs';
+      const purpleBuffsKey = isPlayerActor ? 'playerPurpleBuffs' : 'enemyPurpleBuffs';
+      const nextChargedKey = isPlayerActor ? 'playerNextCharged' : 'enemyNextCharged';
+      const chargeUses = activeBattle[chargeUsesKey] ?? [0, 0, 0, 0, 0, 0];
+      const freezeUses = activeBattle[freezeUsesKey] ?? [0, 0, 0, 0, 0, 0];
+      const purpleBuffs = activeBattle[purpleBuffsKey] ?? [0, 0, 0, 0, 0, 0];
+      const result = calculateBattleTurn({
+        chargeAvailable: (chargeUses[diceResult - 1] ?? 0) > 0,
+        currentActor: isPlayerActor ? playerBattleState : enemyBattleState,
+        diceResult,
+        freezeAvailable: (freezeUses[diceResult - 1] ?? 0) > 0,
+        opponent: isPlayerActor ? enemyBattleState : playerBattleState,
+        purpleBuff: purpleBuffs[diceResult - 1] ?? 0,
+        yellowCharged: Boolean(activeBattle[chargedKey]),
+      });
+      const nextPlayerState = isPlayerActor ? result.nextCurrentActor : result.nextOpponent;
+      const nextEnemyState = isPlayerActor ? result.nextOpponent : result.nextCurrentActor;
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          enemyGuard: nextEnemyState.guard,
+          ...(result.freezeApplied
+            ? {
+                [freezeUsesKey]: freezeUses.map((uses, index) =>
+                  index === diceResult - 1 ? Math.max(0, uses - 1) : uses
+                ),
+                [frozenOpponentKey]: true,
+              }
+            : {}),
+          ...(result.chargeApplied
+            ? {
+                [chargeUsesKey]: chargeUses.map((uses, index) =>
+                  index === diceResult - 1 ? Math.max(0, uses - 1) : uses
+                ),
+              }
+            : {}),
+          isResolvingTurn: true,
+          outcome: null,
+          pendingEffects: result.effects,
+          playerGuard: nextPlayerState.guard,
+          [nextChargedKey]: result.chargeApplied,
+          [nextPurpleBuffsKey]: createAdjacentPurpleBuffs(diceResult, result.purpleBuffGranted),
+        },
+      };
+    });
+  };
+
+  const applyBattleEffect = (effect) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'active' ||
+        !effect ||
+        (effect.type !== 'redDamage' && effect.type !== 'orangeCounter')
+      ) {
+        return currentSetup;
+      }
+
+      const isPlayerActor = activeBattle.currentBattleActor !== 'enemy';
+      const isPlayerTarget =
+        effect.target === 'currentActor' ? isPlayerActor : !isPlayerActor;
+      const damage = Math.max(0, effect.amount ?? 0);
+
+      if (isPlayerTarget) {
+        return {
+          ...currentSetup,
+          players: currentSetup.players.map((player) =>
+            player.id === activeBattle.playerId
+              ? { ...player, currentHealth: Math.max(0, player.currentHealth - damage) }
+              : player
+          ),
+        };
+      }
+
+      const enemy = getEnemyById(activeBattle.enemyId);
+      const enemyCurrentHealth = activeBattle.enemyCurrentHealth ?? enemy?.currentHealth ?? 0;
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          enemyCurrentHealth: Math.max(0, enemyCurrentHealth - damage),
+        },
+      };
+    });
+  };
+
+  const finalizeBattleEffects = () => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (!activeBattle || activeBattle.phase !== 'active') {
+        return currentSetup;
+      }
+
+      const player = currentSetup.players.find(({ id }) => id === activeBattle.playerId);
+      const enemy = getEnemyById(activeBattle.enemyId);
+      const enemyCurrentHealth = activeBattle.enemyCurrentHealth ?? enemy?.currentHealth ?? 0;
+      const outcome =
+        (player?.currentHealth ?? 0) <= 0 ? 'loss' : enemyCurrentHealth <= 0 ? 'win' : null;
+
+      if (!outcome) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          isResolvingTurn: false,
+          outcome,
+          pendingEffects: [],
+          phase: outcome === 'win' ? 'reward' : 'lost',
+        },
+      };
+    });
+  };
+
+  const resolveBattleFreezeCheck = (diceResult) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (!activeBattle || activeBattle.phase !== 'active') {
+        return currentSetup;
+      }
+
+      const isPlayerActor = activeBattle.currentBattleActor !== 'enemy';
+      const chargedKey = isPlayerActor ? 'playerCharged' : 'enemyCharged';
+      const frozenActorKey = isPlayerActor ? 'playerFrozen' : 'enemyFrozen';
+      const nextPurpleBuffsKey = isPlayerActor
+        ? 'playerNextPurpleBuffs'
+        : 'enemyNextPurpleBuffs';
+      const purpleBuffsKey = isPlayerActor ? 'playerPurpleBuffs' : 'enemyPurpleBuffs';
+      const nextChargedKey = isPlayerActor ? 'playerNextCharged' : 'enemyNextCharged';
+
+      if (!activeBattle[frozenActorKey]) {
+        return currentSetup;
+      }
+
+      const passedFreezeCheck = diceResult % 2 === 0;
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          [frozenActorKey]: false,
+          ...(passedFreezeCheck
+            ? {}
+            : {
+                currentBattleActor: isPlayerActor ? 'enemy' : 'player',
+                enemyGuard: isPlayerActor ? 0 : activeBattle.enemyGuard,
+                isResolvingTurn: false,
+                pendingEffects: [],
+                playerGuard: isPlayerActor ? activeBattle.playerGuard : 0,
+                [chargedKey]: false,
+                [nextChargedKey]: null,
+                [nextPurpleBuffsKey]: null,
+                [purpleBuffsKey]: [0, 0, 0, 0, 0, 0],
+              }),
+        },
+      };
+    });
+  };
+
+  const advanceBattleTurn = () => {
+    setGameSetup((currentSetup) => {
+      if (!currentSetup.activeBattle || currentSetup.activeBattle.phase !== 'active') {
+        return currentSetup;
+      }
+
+      const isPlayerActor = currentSetup.activeBattle.currentBattleActor !== 'enemy';
+      const chargedKey = isPlayerActor ? 'playerCharged' : 'enemyCharged';
+      const nextPurpleBuffsKey = isPlayerActor
+        ? 'playerNextPurpleBuffs'
+        : 'enemyNextPurpleBuffs';
+      const purpleBuffsKey = isPlayerActor ? 'playerPurpleBuffs' : 'enemyPurpleBuffs';
+      const nextChargedKey = isPlayerActor ? 'playerNextCharged' : 'enemyNextCharged';
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...currentSetup.activeBattle,
+          currentBattleActor:
+            currentSetup.activeBattle.currentBattleActor === 'enemy' ? 'player' : 'enemy',
+          isResolvingTurn: false,
+          pendingEffects: [],
+          [chargedKey]: currentSetup.activeBattle[nextChargedKey] ?? false,
+          [nextChargedKey]: null,
+          [nextPurpleBuffsKey]: null,
+          [purpleBuffsKey]: currentSetup.activeBattle[nextPurpleBuffsKey] ?? [0, 0, 0, 0, 0, 0],
+        },
+      };
+    });
   };
 
   const setActiveBattlePhase = (phase) => {
@@ -181,10 +442,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
+      const outcome = phase === 'reward' ? 'win' : phase === 'lost' ? 'loss' : null;
+
       return {
         ...currentSetup,
         activeBattle: {
           ...currentSetup.activeBattle,
+          ...(outcome
+            ? {
+                isResolvingTurn: false,
+                outcome,
+                pendingEffects: [],
+              }
+            : {}),
           phase,
         },
       };
@@ -206,6 +476,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     <GameSetupContext.Provider
       value={{
         activeBattle: gameSetup.activeBattle ?? null,
+        advanceBattleTurn,
         battleEnemy: gameSetup.activeBattle?.enemyId
           ? (() => {
               const enemy = getEnemyById(gameSetup.activeBattle.enemyId);
@@ -222,12 +493,16 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           ? gameSetup.players.find((player) => player.id === gameSetup.activeBattle.playerId) ?? null
           : null,
         gameSetup,
+        applyBattleEffect,
+        applyBattleDiceResult,
         clearActiveBattle,
         currentPlayer: getCurrentPlayer(gameSetup),
         advanceTurn,
         initializeBoard,
         initializeTurnOrder,
+        finalizeBattleEffects,
         resetGame,
+        resolveBattleFreezeCheck,
         setActiveBattlePhase,
         setPlayerAnywhereMode,
         setPlayerHealth,

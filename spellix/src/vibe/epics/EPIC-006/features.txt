@@ -1,0 +1,1731 @@
+Feature-001: Create reusable dice roll component with persistent and temporary modes
+
+Status
+
+* done
+
+Completion Notes
+
+* Added one shared `DiceRoll` component with persistent and temporary modes.
+* Persistent mode remains on the battle page, accepts repeated manual rolls, and reports each completed result to the page without changing battle state.
+* Temporary mode now owns the gameplay dice result, keeps the modal open for the full 2 second roll and 2 second result sequence, and returns the same result used for movement highlighting.
+* Reused the existing shared `Modal`, gameplay movement helpers, battle page layout, and existing turn flow.
+* Anywhere Mode keeps its existing one-use movement behavior and label while using the same locked temporary dice sequence; its numerical roll does not limit Anywhere Mode destinations.
+* Intentionally did not add battle attacks, turn advancement, spell execution, sound, persistence, dependencies, routes, or unrelated visual changes.
+
+Goal
+
+* Create a reusable six-sided dice roll component.
+* The dice component should support both persistent and temporary usage.
+* The component should be usable inside modals and outside modals.
+* The component should be easy to trigger.
+* The component should return the rolled value to whatever requested the roll.
+* Add the persistent dice component to the battle page.
+* Replace the existing gameplay dice result modal number with the temporary dice component.
+
+Scope
+
+* Create a reusable dice component.
+* The dice should be six-sided.
+* The dice should visually animate when rolling.
+* The dice should land on the side that represents the roll result.
+* The dice should provide the result value back to the parent component or calling flow.
+* The dice should support two modes:
+
+  * persistent.
+  * temporary.
+* Persistent mode should stay on screen and be manually rolled.
+* Temporary mode should perform one automatic roll and then finish.
+* Use the persistent dice component on the battle page.
+* Use the temporary dice component inside the gameplay dice roll modal.
+* Keep battle logic integration out of scope for this feature.
+* Keep the component reusable and not tied only to gameplay or battle.
+
+Suggested Component Name
+
+```txt id="rz35fu"
+DiceRoll
+```
+
+Suggested File Structure
+
+```txt id="z54owv"
+src/components/dice/diceRoll/diceRoll.jsx
+src/components/dice/diceRoll/diceRoll.css
+```
+
+* Adjust folder names only if needed to match the current project structure.
+* The component should use `.jsx` because it renders JSX.
+* CSS should be component-specific where practical.
+
+Component Requirements
+
+* The dice component should render a six-sided dice.
+* The dice should be able to roll and produce a value from 1 to 6.
+* The rolled value should be returned to the parent through a callback.
+* Suggested callback prop:
+
+```js id="sprkhr"
+onRollComplete(result)
+```
+
+* The component should support a `mode` prop.
+* Suggested mode prop:
+
+```js id="xmn47u"
+mode="persistent"
+mode="temporary"
+```
+
+* The component should not assume where it is being rendered.
+* It should work inside a modal.
+* It should work outside a modal.
+* It should not directly control global turn state.
+* It should not directly control battle state.
+* It should only report the roll result and manage its own animation/display sequence.
+
+Dice Visual Requirement
+
+* The dice should visually look like a six-sided dice.
+* The dice should show the face that landed upwards.
+* The visible face should correspond to the result.
+* A result of 1 should display the dice face for 1.
+* A result of 2 should display the dice face for 2.
+* A result of 3 should display the dice face for 3.
+* A result of 4 should display the dice face for 4.
+* A result of 5 should display the dice face for 5.
+* A result of 6 should display the dice face for 6.
+* The dice face can be created with CSS dots, simple markup, or another simple implementation.
+* Do not use external dice animation libraries.
+* Do not add complex 3D libraries.
+* Keep the dice functional and readable.
+
+Dice Animation Requirement
+
+* When rolling, the dice should animate for 2 seconds.
+* During the animation, it should look like the dice is rolling.
+* The final resting dice face should match the result.
+* The animation should work in both persistent and temporary modes.
+* The animation does not need to be physically realistic.
+* Keep the animation simple but clear.
+* Avoid animation that causes layout shifting.
+
+Result Display Requirement
+
+* The dice component should include a numerical result display.
+* The result display should be invisible while the dice is rolling.
+* This applies in both persistent and temporary modes.
+* When the roll result is decided, the numerical result should become visible.
+* The result should be displayed for 2 seconds.
+* When the result display is invisible, it should still maintain its height.
+* Do not remove the result element from layout while hidden.
+* This prevents surrounding UI from jumping around.
+* Use CSS visibility, opacity, fixed height, or equivalent.
+
+Roll Button Requirement
+
+* The roll button is only needed in persistent mode.
+* Persistent mode should include a button to trigger a roll.
+* Temporary mode should not show a roll button.
+* The persistent roll button should be inactive while the dice is rolling.
+* The persistent roll button should remain inactive while the result is visible.
+* The button should become active again only after the result disappears.
+* Keep the button simple and functional.
+
+Persistent Mode Requirement
+
+* Persistent mode means the dice remains on screen.
+* The dice should remain at rest until asked to roll.
+* The dice should keep showing the face from its last roll when at rest.
+* The dice should not automatically roll again.
+* The dice should not move unless the roll button is clicked or a parent explicitly triggers it.
+* Persistent mode should be suitable for repeated manual rolls.
+* The only current use of persistent mode is on the battle page.
+* Persistent mode will later drive the battle forward, but that battle integration is out of scope for this feature.
+
+Persistent Mode Sequence
+
+* The persistent dice sequence should be:
+
+```txt id="yw47mz"
+1. Dice is at rest, no result is shown, button is active.
+2. Button is clicked.
+3. Button becomes inactive.
+4. Dice starts animating for 2 seconds.
+5. Animation finishes.
+6. Dice is at rest on the rolled face.
+7. Result becomes visible for 2 seconds.
+8. Button remains inactive while result is visible.
+9. Result disappears.
+10. Button becomes active again.
+11. Dice is ready for the next roll.
+```
+
+Battle Page Persistent Dice Requirement
+
+* Add the persistent dice component to the battle page.
+* It should appear in the bottom centre of the battle page.
+* It should appear above the three existing debug buttons:
+
+  * Remove 5 health.
+  * Win.
+  * Lose.
+* The persistent dice should be rollable repeatedly.
+* Each roll should produce a value from 1 to 6.
+* Each completed roll should return the result to the battle page or parent handler.
+* For this feature, the result does not need to affect the battle.
+* Do not make the dice advance battle turns yet.
+* Do not make the dice trigger attacks yet.
+* Do not connect the dice to player or enemy spells yet.
+
+Temporary Mode Requirement
+
+* Temporary mode means the dice is used for one automatic roll.
+* Temporary mode should not show a roll button.
+* Temporary mode should automatically begin rolling when it is rendered or when the parent tells it to begin.
+* Temporary mode should animate for 2 seconds.
+* After animation finishes, temporary mode should display the numerical result for 2 seconds.
+* After the result display finishes, it should notify the parent that the temporary roll flow is complete.
+* Suggested callback:
+
+```js id="d9jjzw"
+onSequenceComplete(result)
+```
+
+* The parent should use this to close the modal and continue gameplay.
+* Temporary mode should be suitable for dice modals.
+
+Temporary Mode Sequence
+
+* The temporary dice sequence should be:
+
+```txt id="9vkwqx"
+1. Gameplay Roll Dice button is clicked.
+2. Dice result modal opens.
+3. Temporary dice component appears inside the modal.
+4. Dice automatically starts animating.
+5. Result is hidden while animating.
+6. Dice animates for 2 seconds.
+7. Animation finishes.
+8. Dice rests on the rolled face.
+9. Numerical result becomes visible for 2 seconds.
+10. Modal auto closes.
+```
+
+Gameplay Dice Modal Requirement
+
+* Replace the current gameplay dice modal result number with the temporary dice component.
+* The existing gameplay Roll Dice button should still open the dice modal.
+* The modal should no longer just show a static number.
+* The modal should show the temporary dice component rolling.
+* The roll result returned by the temporary dice component should be used as the actual gameplay dice result.
+* Existing legal movement highlighting should still happen after the roll is complete.
+* Existing movement rules should still work.
+* Existing turn flow should still work.
+
+Gameplay Dice Modal Lock Requirement
+
+* The gameplay dice modal must remain open for the full 4 second dice sequence.
+* The user should not be able to close the modal early.
+* Remove or disable anything that could close the modal prematurely.
+* The modal should not have a close button during this sequence.
+* Clicking outside the modal should not close it.
+* Pressing escape should not close it if escape close behaviour exists.
+* The modal should auto close only after:
+
+  * 2 seconds of dice animation.
+  * 2 seconds of visible result.
+* The full modal sequence should take 4 seconds total.
+
+Result Timing Requirement
+
+* Dice animation duration should be 2 seconds.
+* Result display duration should be 2 seconds.
+* Total temporary modal duration should be 4 seconds.
+* Persistent mode should also use:
+
+  * 2 seconds animation.
+  * 2 seconds result display.
+* Timing should be controlled clearly and not scattered across unrelated components.
+* Clear timeouts after unmounting where needed to avoid state updates on unmounted components.
+
+Reusable API Requirement
+
+* The dice component should have a simple reusable API.
+* Suggested props:
+
+```js id="4u47au"
+<DiceRoll
+  mode="persistent"
+  onRollComplete={handleRollComplete}
+/>
+
+<DiceRoll
+  mode="temporary"
+  autoRoll
+  onRollComplete={handleRollComplete}
+  onSequenceComplete={handleSequenceComplete}
+/>
+```
+
+* Exact prop names can vary if they fit the project better.
+* The component should expose enough behaviour for both current use cases without duplicating dice logic.
+* Do not create separate unrelated dice components for battle and gameplay.
+* If helper functions are needed, keep them focused and reusable.
+
+Expected Behaviour
+
+* A reusable six-sided dice component exists.
+* The dice can roll results from 1 to 6.
+* The dice visually animates for 2 seconds.
+* The dice rests on the face matching the result.
+* The numerical result is hidden while rolling.
+* The numerical result appears after rolling.
+* The result element does not cause layout jumping when hidden.
+* Persistent mode includes a roll button.
+* Persistent mode can be rolled repeatedly.
+* Persistent mode disables the button while rolling and while the result is visible.
+* Persistent mode appears bottom centre on the battle page above the debug buttons.
+* Temporary mode does not show a roll button.
+* Temporary mode auto-rolls inside the gameplay dice modal.
+* Temporary mode replaces the current static dice result number.
+* The gameplay dice modal cannot be closed early.
+* The gameplay dice modal auto closes after the 4 second sequence.
+* Existing gameplay movement still uses the returned dice result.
+* Existing battle debug buttons still work.
+
+Out Of Scope
+
+* No battle turn advancement.
+* No battle attack logic.
+* No spell execution.
+* No player or enemy damage from dice rolls.
+* No dice-based enemy AI.
+* No dice sound effects.
+* No complex 3D dice library.
+* No external animation library.
+* No changes to player movement rules except preserving existing dice result flow.
+* No changes to river movement rules.
+* No changes to Start Area movement rules.
+* No changes to board generation.
+* No changes to player health.
+* No changes to enemy data.
+* No changes to reward flow.
+* No changes to lose/respawn flow.
+* No save/load functionality.
+* No persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* The existing gameplay Roll Dice button currently opens a modal and stores a dice result.
+* The temporary dice component should replace only the displayed result inside that modal, not remove the existing gameplay roll flow.
+* The dice result should be generated by the dice component or passed into it before animation, whichever keeps the existing logic cleanest.
+* The result returned by the dice component must be the same result used for movement.
+* “The dice number facing upwards” means the final visible dice face should match the roll result.
+* A CSS-based dice face is acceptable.
+* The persistent battle dice is only visual/test functionality for now.
+
+Stop Point
+
+* Stop once the reusable dice component supports persistent and temporary modes, the persistent version is shown on the battle page and can be rolled repeatedly, and the temporary version replaces the gameplay dice modal number with a 4 second locked dice roll sequence that returns a movement result.
+
+Testing Checkpoints
+
+* Confirm `src/vibe/epics/EPIC-006/features.txt` exists.
+* Confirm a reusable dice component exists.
+* Confirm the dice component supports persistent mode.
+* Confirm the dice component supports temporary mode.
+* Confirm dice results are always between 1 and 6.
+* Confirm the dice visually shows the final face matching the result.
+* Confirm the dice animates for 2 seconds.
+* Confirm the result is hidden while rolling.
+* Confirm the result appears after rolling.
+* Confirm the result display keeps its layout height while hidden.
+* Confirm persistent mode shows a roll button.
+* Confirm persistent mode disables the roll button while rolling.
+* Confirm persistent mode disables the roll button while the result is visible.
+* Confirm persistent mode re-enables the roll button after the result disappears.
+* Confirm persistent mode can be rolled repeatedly.
+* Confirm persistent mode remains on screen on the battle page.
+* Confirm persistent mode is positioned bottom centre on the battle page.
+* Confirm persistent mode appears above Remove 5 health, Win, and Lose.
+* Confirm persistent battle dice rolls do not affect battle logic yet.
+* Confirm temporary mode does not show a roll button.
+* Confirm clicking the gameplay Roll Dice button opens the dice modal.
+* Confirm the temporary dice auto-starts when the modal opens.
+* Confirm the temporary dice animates for 2 seconds.
+* Confirm the temporary dice shows the result for 2 seconds.
+* Confirm the gameplay dice modal auto closes after the full 4 second sequence.
+* Confirm the gameplay dice modal cannot be closed early.
+* Confirm there is no close button during the gameplay dice modal roll.
+* Confirm clicking outside the gameplay dice modal does not close it early.
+* Confirm escape does not close the gameplay dice modal early if escape handling exists.
+* Confirm the returned temporary dice result is used for legal movement highlighting.
+* Confirm existing movement still works after the modal closes.
+* Confirm existing river movement rules still work.
+* Confirm existing Start Area movement rules still work.
+* Confirm existing turn progression still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Implement basic dice-driven battle turns with Red, Blue, Orange, and Green token effects
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first calculation slice in `src/features/battle/battleTurn.js`.
+* Added one pure `calculateBattleTurn` function that uses the same rolled slot for both actors and reads the existing shared spell-slot/token shape.
+* Required inputs are `diceResult`, `currentActor`, and `opponent`; each actor supplies `currentHealth`, `guard`, and `spellSlots`.
+* The result contains stacked token counts, detailed damage values, next health and guard values, miss status, and ordered Red, Green, Blue, and Orange effect descriptors.
+* This slice implements Red damage, Blue guard gain, opponent Orange counter damage, opponent Green reduction, Green-before-guard ordering, opponent guard expiry, health clamping, ignored unsupported colors, and empty/joined misses.
+* Completed the second integration slice by initializing every battle with the triggering player as `currentBattleActor`, zero player and enemy guard, and an unresolved turn state.
+* The battle page now shows a buttonless player turn modal with the player's colour and image for 2 seconds when an active battle begins.
+* The persistent battle dice now accepts an external disabled state and remains locked while the turn modal is visible or the battle is resolving.
+* Completed the third integration slice by connecting each completed persistent battle dice roll to `calculateBattleTurn` through one atomic context action.
+* Player and enemy health plus both guard values now persist from the selected matching spell slots, including Red damage, Blue guard, Orange counter damage, Green reduction, and opponent guard expiry calculated by the existing helper.
+* Completed the fourth integration slice by marking completed calculations as resolving, waiting the required 1-second pause, and alternating between player and enemy actors.
+* Every actor transition now reuses the 2-second turn modal with the correct player colour/image or enemy English name/image, and the persistent dice stays disabled until the modal closes.
+* Enemy turns use the same manual dice, slot calculation, health/guard persistence, and transition flow as player turns.
+* Guard expiry now persists through the full player-to-enemy-to-player integration flow, including an opponent turn that grants guard and a following turn that deals no damage.
+* Completed the fifth integration slice by showing the required blue Font Awesome shield directly under the player or enemy image whenever that actor's guard is greater than 0.
+* Guard shields are visual-only, use the existing stored guard values, do not render at 0 guard, and disappear immediately when guard expires.
+* Completed the sixth integration slice by persisting each calculation's ordered effect descriptors for the resolving turn and sequencing the implemented Red effect before the existing 1-second pause.
+* Red uses one combined circle per turn, travels from the current actor toward the opponent, expands and fades at the target as a simple explosion, and remains active for exactly 1 second.
+* The dice remains disabled throughout the Red animation and following pause, and the next actor modal does not begin until both have finished.
+* Completed the seventh integration slice by adding Green reduction to the same effect queue immediately after Red.
+* Green renders only when the calculation reports an actual reduction, radiates from behind the protected actor to 120% of the actor image height, and remains active for exactly 1 second without overlapping Red.
+* The separate 1-second pause begins only after all supported Red and Green effects finish.
+* Completed the eighth integration slice by adding Blue guard to the same effect queue immediately after Green.
+* Blue renders one combined blue circle behind the current actor, grows to 120% of the actor image height, and remains active for exactly 1 second for either player or enemy guard gain.
+* The separate 1-second pause now begins only after all supported Red, Green, and Blue effects finish.
+* Completed the ninth integration slice by adding Orange counter damage as the final effect in the required Red, Green, Blue, Orange queue.
+* Orange uses one combined small circle per turn, travels from the countering opponent toward the original caster, expands and fades at the target, lasts exactly 1 second, and supports both player-to-enemy and enemy-to-player directions.
+* The separate 1-second pause now begins only after every calculated supported effect finishes, with no simultaneous animations.
+* Completed the tenth and final integration slice by deriving a terminal win/loss outcome from the calculated post-turn health and reusing the existing reward and respawn flows.
+* Lethal results clamp health at 0, clear pending effects, stop resolution and actor transition, suppress the next turn modal, and prevent further dice rolls.
+* If both actors reach 0 in the same calculation, player loss takes precedence because the battle is resolved from the user player's perspective.
+* Feature-002 is complete without adding unsupported token effects, automatic enemy rolls, dependencies, routes, persistence, or unrelated UI changes.
+
+Goal
+
+* Implement the first working version of the battle turn system.
+* Use the persistent battle dice as the driver for battle turns.
+* The player who triggered the battle should always take the first turn.
+* On each battle turn, roll the dice, check the matching spell slot, calculate token effects, play required animations, then move to the next battle turn.
+* For this feature, implement only the first four token effects:
+
+  * Red
+  * Blue
+  * Orange
+  * Green
+
+Scope
+
+* Update the battle page and battle state.
+* Use the persistent dice component from EPIC-006 Feature-001.
+* The persistent dice roll should drive battle turns forward.
+* Add battle turn state.
+* Add player/enemy active turn handling.
+* Add battle turn start modal.
+* Add spell slot lookup based on dice result.
+* Add stacked token effect calculation.
+* Add basic battle effect calculation.
+* Add sequential battle animations.
+* Add temporary guard handling.
+* Add win/loss resolution when health reaches 0.
+* Use existing win and lose flows from EPIC-005 Feature-003.
+* Keep other battle actions out of scope.
+* Keep all token effects other than Red, Blue, Orange, and Green out of scope.
+
+Battle Turn Order Requirement
+
+* The player who triggered the battle should always go first.
+* Battle turns alternate between:
+
+  * player
+  * enemy
+* The battle should track whose turn it currently is.
+* Suggested battle state:
+
+```js id="ughl8t"
+{
+  activeBattle: {
+    playerId: "player-1",
+    enemyId: "vilewhisker-rat",
+    level: 1,
+    currentBattleActor: "player",
+    playerGuard: 0,
+    enemyGuard: 0,
+    isResolvingTurn: false
+  }
+}
+```
+
+* Exact data shape can vary if it fits the existing context better.
+* Keep the state simple and readable.
+* Do not build a full battle engine beyond what is required for this feature.
+
+Battle Turn Start Modal Requirement
+
+* At the start of each battle turn, show a modal for 2 seconds.
+* This modal should auto-close after 2 seconds.
+* The modal should not require a button.
+* The modal should show:
+
+  * the current actor’s image.
+  * the current actor’s turn text.
+* For the player, the text should use their colour name.
+* Example player modal text:
+
+```txt id="eipb8d"
+Red’s Turn
+```
+
+* For the enemy, the text should use the enemy’s English name.
+* Example enemy modal text:
+
+```txt id="7qckgs"
+Vilewhisker Rat’s Turn
+```
+
+* The modal should display the correct image:
+
+  * player piece image for the player.
+  * enemy image for the enemy.
+* The battle page should be at rest after the modal closes.
+* The dice roll button should not be usable while the turn start modal is visible.
+
+Battle Page Rest State Requirement
+
+* After the turn start modal closes, the battle page should wait for the current actor to roll the dice.
+* For now, the only available battle action is rolling the dice.
+* Other possible actions are out of scope.
+* The persistent dice roll button should be active only when:
+
+  * the turn start modal is closed.
+  * no battle animation is currently running.
+  * no turn resolution is currently running.
+  * the battle has not ended.
+* The roll button should be disabled while the battle is resolving.
+
+Dice Result Requirement
+
+* When the persistent dice returns a result, use that number to select the spell slot for the current actor.
+* Dice result 1 should use spell slot 1.
+* Dice result 2 should use spell slot 2.
+* Dice result 3 should use spell slot 3.
+* Dice result 4 should use spell slot 4.
+* Dice result 5 should use spell slot 5.
+* Dice result 6 should use spell slot 6.
+* The same dice result should also be used to check the opponent’s matching spell slot.
+* Do not roll a separate value for the opponent.
+
+Spell Slot Lookup Requirement
+
+* On a battle turn:
+
+  * Look at the current actor’s spell slot matching the dice result.
+  * Look at the opponent’s spell slot matching the same dice result.
+* The current actor’s Red and Blue tokens can create direct effects.
+* The current actor’s Orange and Green tokens count as misses for the current actor.
+* The opponent’s Orange and Green tokens can affect the current actor’s result.
+* The opponent’s Red and Blue tokens do not trigger as counter effects in this feature.
+* Empty slots count as a miss.
+* `Miss` slots count as a miss.
+* `Joined with X` slots should still display as `J`, but joined behaviour is out of scope for this feature.
+* If a joined slot is rolled, treat it as a miss for battle calculation for now.
+
+Stacking Requirement
+
+* If there are multiple tokens in the same spell column, their effects stack.
+* Each token should be counted individually.
+* Multiple Red tokens stack damage.
+* Multiple Blue tokens stack guard.
+* Multiple Orange tokens in the opponent’s matching slot stack counter damage.
+* Multiple Green tokens in the opponent’s matching slot stack damage reduction.
+* Different usable token types in the same slot can apply together.
+* Example:
+
+  * 3 Red tokens aim to deal 30 damage this turn.
+  * 2 Red and 2 Blue tokens aim to deal 20 damage this turn and grant 20 guard for the next opponent turn.
+  * 4 Green tokens in the opponent’s matching spell slot reduce incoming damage by 20.
+  * 2 Orange tokens in the opponent’s matching spell slot deal 10 counter damage.
+* Stacking should be calculated from the actual number of tokens, not from the consolidated visual spell display.
+
+No Token / Miss Requirement
+
+* If the current actor has no usable tokens in the rolled spell slot:
+
+  * classify the action as a miss.
+  * play no animations unless opponent counter effects require one.
+  * apply no outgoing damage.
+  * apply no guard.
+* If the current actor’s slot contains only Orange and/or Green tokens:
+
+  * these count as misses for the actor.
+  * they do not apply self-effects.
+  * they may still be relevant when they appear in the opponent’s matching slot on the opponent’s turn.
+* If there are no outgoing effects and no opponent counter effects, no animations should be played.
+* After a miss with no animations, move to the next battle turn using the normal transition flow.
+
+Red Token Requirement
+
+* Red tokens deal damage to the opponent.
+* Each Red token deals:
+
+```txt id="n3sq48"
+10 damage
+```
+
+* If the current actor has multiple Red tokens in the rolled slot, apply 10 damage per Red token.
+* Examples:
+
+  * 1 Red = 10 damage.
+  * 2 Red = 20 damage.
+  * 3 Red = 30 damage.
+  * 5 Red = 50 damage.
+* Red damage can be reduced by:
+
+  * the opponent’s Green tokens in the matching spell slot.
+  * the opponent’s guard.
+* Red damage cannot reduce health below 0 visually.
+* If Red damage reduces the opponent to 0 health, the current actor wins the battle.
+
+Red Animation Requirement
+
+* Red token animation:
+
+  * A circle travels from the actor who cast the spell toward the opponent.
+  * When it reaches the opponent, it explodes.
+* The animation should last 1 second.
+* If multiple Red tokens apply, use one combined Red animation for the total Red damage.
+* Do not play animations simultaneously.
+
+Blue Token Requirement
+
+* Blue tokens grant guard.
+* Each Blue token grants:
+
+```txt id="umf62j"
+10 guard
+```
+
+* Guard applies to the actor who cast the Blue token.
+* Guard lasts for the next opponent turn only.
+* When the next opponent turn calculates damage against the guarded actor, reduce incoming damage by the guard amount.
+* After that opponent turn has taken place, all guard on the guarded actor should be removed.
+* Guard should reduce damage but should not heal.
+* Guard should not make damage negative.
+* Examples:
+
+  * 1 Blue = 10 guard.
+  * 2 Blue = 20 guard.
+  * 3 Blue = 30 guard.
+* If a slot has 2 Red and 2 Blue:
+
+  * the actor aims to deal 20 damage.
+  * the actor gains 20 guard for the next opponent turn.
+* Guard should persist visually until it expires.
+* Guard should not reduce Orange counter damage unless a later feature says otherwise.
+
+Blue Shield Display Requirement
+
+* When a player or enemy has guard active, show a blue shield underneath their character image.
+* Use Font Awesome for the shield icon.
+* The shield should appear under:
+
+  * the player image if the player has guard.
+  * the enemy image if the enemy has guard.
+* The shield should disappear when that actor’s guard is removed.
+* Do not show the shield when guard is 0.
+* The shield is visual only.
+
+Blue Animation Requirement
+
+* Blue token animation:
+
+  * A blue circle radiates from the centre behind the actor who cast the spell.
+  * The circle grows to 120% of the height of that actor’s image.
+* The animation should last 1 second.
+* If multiple Blue tokens apply, use one combined Blue animation for the total guard gain.
+* Do not play animations simultaneously.
+
+Orange Token Requirement
+
+* Orange tokens have two different meanings depending on whose spell slot they are in.
+* If Orange is in the current actor’s rolled spell slot:
+
+  * it counts as a miss for the current actor.
+  * it does not deal damage.
+  * it does not create counter damage for themselves.
+* If Orange is in the opponent’s matching spell slot:
+
+  * it inflicts counter damage on the current actor.
+* Each opponent Orange token inflicts:
+
+```txt id="lfr69b"
+5 counter damage
+```
+
+* Examples:
+
+  * 1 opponent Orange = 5 counter damage.
+  * 2 opponent Orange = 10 counter damage.
+  * 4 opponent Orange = 20 counter damage.
+* Example flow:
+
+  * Player rolls 2.
+  * Player has 1 Red in spell slot 2.
+  * Enemy has 1 Orange in spell slot 2.
+  * Player deals Red damage to enemy.
+  * Enemy’s Orange counter deals 5 damage to player.
+* Counter damage can reduce health to 0.
+* If counter damage reduces the current actor to 0 health, the opponent wins the battle.
+* Orange counter damage should be calculated separately from Red damage.
+* Orange counter damage should not be reduced by Green.
+* Orange counter damage should not be reduced by guard unless a later feature says otherwise.
+
+Orange Animation Requirement
+
+* Orange counter animation:
+
+  * A small circle travels from the actor who countered the spell toward the original spell caster.
+  * When it reaches the original spell caster, it explodes.
+* The animation should last 1 second.
+* If multiple Orange tokens apply, use one combined Orange animation for the total counter damage.
+* Do not play animations simultaneously.
+
+Green Token Requirement
+
+* Green tokens have two different meanings depending on whose spell slot they are in.
+* If Green is in the current actor’s rolled spell slot:
+
+  * it counts as a miss for the current actor.
+  * it does not reduce their own outgoing damage.
+  * it does not create a shield.
+* If Green is in the opponent’s matching spell slot:
+
+  * it reduces damage taken by the opponent this turn.
+* Each opponent Green token reduces incoming damage by:
+
+```txt id="4wuqv7"
+5 damage
+```
+
+* Examples:
+
+  * 1 opponent Green = reduce incoming damage by 5.
+  * 2 opponent Green = reduce incoming damage by 10.
+  * 4 opponent Green = reduce incoming damage by 20.
+* Example flow:
+
+  * Player rolls 2.
+  * Player has 1 Red in spell slot 2.
+  * Enemy has 1 Green in spell slot 2.
+  * Player’s 10 damage is reduced by 5.
+  * Enemy takes 5 damage.
+* Green reduction should not make damage negative.
+* Green only reduces damage for this turn.
+* Green does not persist as guard.
+* Green should only reduce outgoing Red damage.
+* Green should not reduce Orange counter damage.
+
+Green Animation Requirement
+
+* Green token animation:
+
+  * A green circle radiates from the centre behind the actor who was hit by a spell this turn.
+  * The circle grows to 120% of the height of that actor’s image.
+* The animation should last 1 second.
+* Only play the Green animation if Green actually reduces incoming damage this turn.
+* If damage was already 0 before Green reduction, do not play the Green animation.
+* Do not play animations simultaneously.
+
+Guard And Damage Calculation Requirement
+
+* Calculate the current actor’s outgoing Red damage first.
+* Calculate any Blue guard gained by the current actor.
+* Calculate opponent Green reduction against the outgoing Red damage.
+* Apply opponent Green reduction to outgoing Red damage.
+* Apply opponent guard to the remaining outgoing Red damage.
+* Clamp final outgoing damage to a minimum of 0.
+* Apply final outgoing damage to the opponent.
+* Calculate opponent Orange counter damage separately.
+* Apply Orange counter damage to the current actor.
+* Clamp all health values so they never display below 0.
+* Guard should reduce incoming Red damage.
+* Guard should not reduce Orange counter damage.
+* Green should reduce incoming Red damage before guard is applied.
+* Blue guard gained this turn should be available for the next opponent turn, not retroactively applied to damage already received earlier this same turn.
+
+Suggested Calculation Order
+
+```txt id="1plq9e"
+1. Get dice result.
+2. Get current actor spell slot for that result.
+3. Get opponent spell slot for that result.
+4. Count current actor Red tokens.
+5. Count current actor Blue tokens.
+6. Count opponent Orange tokens.
+7. Count opponent Green tokens.
+8. Calculate outgoing Red damage.
+9. Calculate Blue guard to add to current actor.
+10. Apply opponent Green reduction to outgoing Red damage.
+11. Apply opponent existing guard to remaining outgoing Red damage.
+12. Apply final outgoing damage to opponent.
+13. Apply Blue guard to current actor for the next opponent turn.
+14. Apply Orange counter damage to current actor.
+15. Expire guard that has now been used for this opponent turn.
+16. Check for battle win/loss.
+17. If battle continues, move to the next actor turn.
+```
+
+Guard Expiry Requirement
+
+* Guard lasts for the next opponent turn only.
+* If the player gains guard:
+
+  * it should remain active through the enemy’s next turn.
+  * after the enemy’s next turn resolves, the player’s guard should be removed.
+* If the enemy gains guard:
+
+  * it should remain active through the player’s next turn.
+  * after the player’s next turn resolves, the enemy’s guard should be removed.
+* Guard should expire even if the opponent turn deals no damage.
+* Guard should expire even if the opponent misses.
+* Guard should expire after the opponent turn has taken place.
+
+Animation Sequencing Requirement
+
+* Animations should never play simultaneously.
+* Every battle animation should last 1 second.
+* If multiple effects happen in one turn, play them one after another.
+* The dice roll button should be disabled during all animations.
+* After all animations finish, wait for a brief 1 second pause.
+* The dice roll button should remain disabled during this 1 second pause.
+* After the 1 second pause, show the next turn modal.
+* Then the next turn modal auto-closes after 2 seconds.
+* After the modal closes, the dice roll button becomes active for the next actor.
+
+Animation Queue Requirement
+
+* Build a simple animation queue or equivalent sequential process.
+* Possible animation types:
+
+  * redDamage
+  * blueGuard
+  * orangeCounter
+  * greenReduction
+* Each animation should know:
+
+  * source actor.
+  * target actor where relevant.
+  * token colour.
+  * duration.
+* Keep this simple.
+* Do not introduce an external animation library.
+* Do not implement complex combat choreography.
+
+Animation Order Requirement
+
+* If several effects happen in the same turn, play them in a consistent order.
+* Use this order unless the existing implementation needs a small adjustment:
+
+  * Red damage animation.
+  * Green reduction animation.
+  * Blue guard animation.
+  * Orange counter animation.
+* Do not play two animations at the same time.
+* Each animation should finish before the next one starts.
+
+Battle End Requirement
+
+* If one actor reaches 0 health, the opposite actor wins the battle.
+* Resolve battle end from the user player’s perspective.
+* If the enemy reaches 0 health:
+
+  * this is a player win.
+  * trigger the same response as the existing `Win` debug button.
+* If the player reaches 0 health:
+
+  * this is a player loss.
+  * trigger the same response as the existing `Lose` debug button.
+* Health should never display below 0.
+* Do not continue to the next battle turn after battle end.
+* Do not show the next turn modal after battle end.
+* Do not allow another dice roll after battle end.
+
+Turn Transition Requirement
+
+* If no battle end occurs:
+
+  * switch currentBattleActor to the other actor.
+  * show the next turn modal.
+  * wait for that modal to auto-close.
+  * enable the dice roll button.
+* If the current actor misses and no opponent counter effect applies:
+
+  * no animations should play.
+  * still use the 1 second pause before the next turn modal if that keeps flow consistent.
+* The dice roll button should only be enabled during the at-rest decision state.
+
+Player Battle Display Requirement
+
+* Keep the battle page layout from previous EPIC-005 features.
+* Player remains on the left.
+* Enemy remains on the right.
+* Player spells remain displayed.
+* Enemy spells remain displayed.
+* Player health bar remains displayed.
+* Enemy health bar remains displayed.
+* Guard shield icons should appear under the correct character image when guard is active.
+* Avoid unnecessary labels.
+
+Enemy Turn Requirement
+
+* The enemy should use the same dice-driven process as the player.
+* For now, the user can still click the battle dice to progress the enemy turn.
+* Do not implement automatic enemy rolling yet.
+* Enemy turn should:
+
+  * show enemy turn modal.
+  * wait at rest.
+  * use the dice roll.
+  * evaluate enemy spell slot.
+  * evaluate player matching spell slot.
+  * apply token effects.
+  * animate effects.
+  * move back to player turn if battle continues.
+
+Out Of Scope
+
+* No token effects beyond Red, Blue, Orange, and Green.
+* No Light Blue token effect.
+* No Light Green token effect.
+* No Black token effect.
+* No White token effect.
+* No Purple token effect.
+* No Yellow token effect.
+* No Grey token effect.
+* No joined spell behaviour beyond treating joined slots as miss for now.
+* No player action choices other than rolling dice.
+* No enemy AI decision-making.
+* No automatic enemy dice roll.
+* No battle rewards beyond existing reward page.
+* No enemy damage debug button.
+* No changes to the debug Win/Lose buttons except reusing their existing handlers.
+* No changes to enemy data unless needed to read spell slots correctly.
+* No changes to player spell setup.
+* No changes to the Spells modal.
+* No changes to board movement.
+* No changes to board generation.
+* No save/load functionality.
+* No persistence.
+* No unrelated battle UI redesign.
+
+Assumptions
+
+* The persistent dice component from EPIC-006 Feature-001 is already on the battle page.
+* The battle page already has player and enemy spell displays.
+* Player and enemy spell slot data can be read in a common format or adapted before calculation.
+* Enemy current health exists in battle state or can be added as battle-instance state.
+* Player health uses player data from game context.
+* The enemy image and player image containers are available for animation positioning.
+* The turn start modal can reuse the existing modal component, but it must auto-close after 2 seconds.
+* All battle animations can be implemented with CSS classes and temporary animation state.
+* Consolidated spell display is visual only; battle calculations must use the underlying raw token counts.
+
+Stop Point
+
+* Stop once battle turns alternate between player and enemy, dice rolls resolve stacked Red, Blue, Orange, and Green token effects, animations play sequentially for 1 second each, guard displays and expires correctly, and battle win/loss resolves through the existing debug win/loss flows.
+
+Testing Checkpoints
+
+* Confirm the player who triggered the battle takes the first battle turn.
+* Confirm the player turn modal appears first.
+* Confirm the player turn modal shows the player image.
+* Confirm the player turn modal says colour name plus `’s Turn`, such as `Red’s Turn`.
+* Confirm the turn modal auto-closes after 2 seconds.
+* Confirm the battle dice button is disabled while the turn modal is visible.
+* Confirm the battle page waits at rest after the modal closes.
+* Confirm the battle dice can be rolled during the at-rest state.
+* Confirm the dice result selects the matching player spell slot.
+* Confirm the same dice result selects the matching enemy spell slot.
+* Confirm an empty spell slot counts as a miss.
+* Confirm a `Miss` slot counts as a miss.
+* Confirm a `Joined with X` slot counts as a miss for now.
+* Confirm Red tokens deal 10 damage each.
+* Confirm 3 Red tokens deal 30 damage before reductions.
+* Confirm Blue tokens grant 10 guard each.
+* Confirm 2 Blue tokens grant 20 guard.
+* Confirm a slot with 2 Red and 2 Blue deals 20 damage before reductions and grants 20 guard.
+* Confirm a blue Font Awesome shield appears under the guarded actor’s image.
+* Confirm the shield disappears when guard expires.
+* Confirm Orange tokens in the current actor’s slot count as a miss.
+* Confirm Orange tokens in the opponent’s matching slot deal 5 counter damage each.
+* Confirm 2 opponent Orange tokens deal 10 counter damage.
+* Confirm Green tokens in the current actor’s slot count as a miss.
+* Confirm Green tokens in the opponent’s matching slot reduce incoming damage by 5 each.
+* Confirm 4 opponent Green tokens reduce incoming damage by 20.
+* Confirm Green reduction is applied before guard.
+* Confirm guard reduces incoming Red damage after Green reduction.
+* Confirm guard does not reduce Orange counter damage.
+* Confirm guard expires after the next opponent turn.
+* Confirm guard expires even if the opponent misses.
+* Confirm damage never displays below 0 health.
+* Confirm Red damage animation plays for 1 second.
+* Confirm Blue guard animation plays for 1 second.
+* Confirm Orange counter animation plays for 1 second.
+* Confirm Green reduction animation plays for 1 second.
+* Confirm animations play sequentially, not simultaneously.
+* Confirm the dice roll button is disabled during all animations.
+* Confirm the dice roll button remains disabled during the 1 second pause after animations.
+* Confirm the next turn modal appears after animations and pause.
+* Confirm the enemy turn modal shows the enemy image.
+* Confirm the enemy turn modal shows the enemy English name plus `’s Turn`.
+* Confirm enemy turns use the same dice-driven process.
+* Confirm if the enemy reaches 0 health, the existing Win flow triggers.
+* Confirm if the player reaches 0 health, the existing Lose flow triggers.
+* Confirm no next turn modal appears after battle ends.
+* Confirm the dice cannot be rolled after battle end.
+* Confirm the reward page flow still works after a player win.
+* Confirm the respawn flow still works after a player loss.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-003: Add battle-only debug buttons to force dice roll results
+
+Status
+
+* done
+
+Completion Notes
+
+* Added six plain `Force 1` through `Force 6` buttons to the existing battle debug controls with the required debug-only removal comment.
+* Extended the shared persistent `DiceRoll` with an optional forced-roll request that supplies the selected result while preserving the existing roll animation, result phase, face display, timing, and completion callback.
+* Forced rolls use the same `handleDiceRollComplete` and battle calculation path as natural rolls; no alternate token, health, guard, animation, turn, or win/loss logic was added.
+* Force buttons use the normal battle dice readiness conditions and remain disabled during turn modals, dice rolling, effect resolution, enemy turns, and completed battles.
+* Normal random battle rolls, automatic enemy rolls, temporary gameplay dice, routes, styling, and non-battle controls remain unchanged.
+
+Goal
+
+* Add battle-only debug buttons that allow the developer/admin to force the next dice roll result.
+* The dice should still animate normally.
+* Battle resolution should still happen exactly as if the dice had naturally rolled that value.
+* This debug section should be clearly labelled in the code so it can be removed easily later.
+
+Scope
+
+* Update the battle page only.
+* Add six debug buttons to the battle component.
+* The buttons should force dice results:
+
+  * 1
+  * 2
+  * 3
+  * 4
+  * 5
+  * 6
+* These buttons should appear with the other existing battle debug buttons.
+* These buttons should only exist on the battle page.
+* These buttons should not appear on the gameplay page.
+* These buttons should not affect the normal gameplay dice modal.
+* These buttons should not affect non-battle dice rolls.
+* The forced result should still use the existing dice component animation.
+* The forced result should still trigger the existing battle turn resolution flow.
+* The forced result should still select the matching spell slot.
+* The forced result should still run token effects, animations, guard logic, health changes, and win/loss checks.
+
+Battle Debug Button Requirement
+
+* Add six battle debug buttons:
+
+  * Force 1
+  * Force 2
+  * Force 3
+  * Force 4
+  * Force 5
+  * Force 6
+* Button labels can be short and clear.
+* These should be grouped with the existing battle debug buttons:
+
+  * Remove 5 health.
+  * Win.
+  * Lose.
+* Keep the UI simple.
+* Do not add these buttons to the main gameplay UI.
+* Do not add these buttons to the debug menu unless that is already the only place battle debug controls live.
+* This feature is specifically for the battle component.
+
+Forced Dice Result Requirement
+
+* Clicking `Force 1` should make the dice roll resolve as 1.
+* Clicking `Force 2` should make the dice roll resolve as 2.
+* Clicking `Force 3` should make the dice roll resolve as 3.
+* Clicking `Force 4` should make the dice roll resolve as 4.
+* Clicking `Force 5` should make the dice roll resolve as 5.
+* Clicking `Force 6` should make the dice roll resolve as 6.
+* The dice should still animate before the result is shown.
+* The dice should visually land on the forced result.
+* The numerical result should show the forced result.
+* The battle calculation should use the forced result.
+* No separate battle calculation path should be created for forced rolls.
+
+Dice Animation Requirement
+
+* Forced dice rolls should use the same dice animation as normal battle rolls.
+* The dice should still look like it is rolling.
+* The final dice face should match the forced result.
+* The result display should behave the same as normal persistent dice rolls.
+* The normal dice button disabled timing should still apply.
+* The debug force buttons should also be disabled while the dice is rolling, while animations are resolving, or while the battle is not ready for a roll.
+
+Battle Resolution Requirement
+
+* A forced roll should behave exactly like a natural roll after the result is returned.
+* The forced result should:
+
+  * select the current actor’s matching spell slot.
+  * select the opponent’s matching spell slot.
+  * calculate Red token damage.
+  * calculate Blue token guard.
+  * calculate Orange counter damage.
+  * calculate Green weakening.
+  * run battle animations.
+  * update health and guard.
+  * check win/loss conditions.
+  * advance to the next battle turn if the battle continues.
+* The only difference should be that the result is chosen by the debug button instead of random generation.
+
+Code Labelling Requirement
+
+* Clearly label this section in the battle component code so it can be removed later.
+* Add a clear comment before the debug force-roll button section.
+* Suggested comment:
+
+```js id="q5a23c"
+// DEBUG ONLY: Forced dice roll buttons for battle testing. Remove before production.
+```
+
+* Keep the forced-roll logic easy to find.
+* Do not mix this debug-only UI into unrelated battle UI code where it becomes hard to remove.
+* If a helper function is needed, label that helper clearly as debug-only.
+
+Expected Behaviour
+
+* The battle page shows six forced dice result buttons.
+* The forced dice buttons are grouped with the other battle debug controls.
+* Clicking a forced dice button triggers the dice animation.
+* The dice lands on the forced value.
+* The numerical result shows the forced value.
+* The battle turn resolves using the forced value.
+* Token effects work exactly as they do with a normal dice roll.
+* Battle animations still play.
+* Guard logic still works.
+* Health updates still work.
+* Win/loss checks still work.
+* Enemy automatic turns still work if already implemented.
+* The forced dice buttons are easy to find and remove from the code later.
+
+Out Of Scope
+
+* No changes to normal dice randomisation.
+* No changes to gameplay dice modal.
+* No forced dice buttons outside battle.
+* No changes to dice animation quality.
+* No changes to dice timing.
+* No changes to token effects.
+* No changes to guard values.
+* No changes to health bar logic.
+* No changes to enemy data.
+* No changes to spell data.
+* No changes to battle win/loss flow.
+* No changes to reward page.
+* No changes to respawn flow.
+* No save/load functionality.
+* No persistence.
+* No unrelated battle UI redesign.
+
+Assumptions
+
+* The persistent dice component can accept a forced result prop, method, or trigger value.
+* The cleanest implementation may be to allow the dice component to receive an optional forced result for its next roll.
+* The dice component should still own the animation and result display sequence.
+* The battle page should still receive the result through the same roll-complete callback used by normal rolls.
+* The forced buttons are for development/debugging only and are expected to be removed later.
+
+Suggested Implementation Direction
+
+* Add a way for the persistent dice component to roll with a supplied value.
+* Keep the existing random roll path for normal dice clicks.
+* Possible API direction:
+
+```jsx id="h7y83n"
+<DiceRoll
+  mode="persistent"
+  forcedRollValue={forcedRollValue}
+  onRollComplete={handleBattleRollComplete}
+/>
+```
+
+* Or expose a battle-page handler such as:
+
+```js id="7z9ne0"
+handleForcedBattleRoll(rollValue)
+```
+
+* The exact implementation can vary.
+* The important rule is that forced rolls and natural rolls should use the same final battle result handling.
+
+Stop Point
+
+* Stop once the battle page has clearly labelled debug-only buttons for forcing dice results 1–6, each forced result still animates through the dice component, and the battle resolves exactly as if that number had been rolled naturally.
+
+Testing Checkpoints
+
+* Confirm the battle page shows forced dice buttons 1–6.
+* Confirm the forced dice buttons are grouped with the other battle debug buttons.
+* Confirm the forced dice button section is clearly labelled in the code as debug-only.
+* Confirm clicking Force 1 animates the dice and resolves a result of 1.
+* Confirm clicking Force 2 animates the dice and resolves a result of 2.
+* Confirm clicking Force 3 animates the dice and resolves a result of 3.
+* Confirm clicking Force 4 animates the dice and resolves a result of 4.
+* Confirm clicking Force 5 animates the dice and resolves a result of 5.
+* Confirm clicking Force 6 animates the dice and resolves a result of 6.
+* Confirm the dice visual face matches the forced result.
+* Confirm the numerical result matches the forced result.
+* Confirm the matching spell slot is used for the forced result.
+* Confirm Red token effects work after a forced roll.
+* Confirm Blue token effects work after a forced roll.
+* Confirm Orange token effects work after a forced roll.
+* Confirm Green token effects work after a forced roll.
+* Confirm battle animations still play after forced rolls.
+* Confirm guard display and expiry still work after forced rolls.
+* Confirm win/loss checks still work after forced rolls.
+* Confirm forced dice buttons are disabled while the dice is rolling.
+* Confirm forced dice buttons are disabled while battle animations are resolving.
+* Confirm forced dice buttons are disabled while a turn modal is visible.
+* Confirm normal battle dice rolling still works.
+* Confirm gameplay dice modal is unaffected.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-004: Implement remaining battle token effects
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first slice by verifying Light Green, Black, White, and Grey remain visible in committed spell displays but create no battle effect.
+* The existing resolver already ignores these actor token colors, reports the roll as a miss, creates no effect descriptors, and leaves health and guard unchanged; no production logic change was needed.
+* Added explicit calculation regressions for each no-effect color and a committed-spell visibility regression covering all four colors.
+* Completed the second slice by adding Light Blue freeze as a complete one-turn mechanic for players and enemies.
+* New battles derive separate six-column freeze-use counts from each actor's Light Blue tokens, consume one use only when freeze applies, keep original spell data unchanged, and reset all uses and frozen flags for each battle.
+* Frozen actors show the required Font Awesome snowflake and use the existing persistent dice for a freeze check after their normal turn modal; even results return to the same actor's attack state and odd results skip directly to the next actor.
+* Enemy freeze checks and successful follow-up attacks both roll automatically, while player checks remain manual and never resolve a spell slot.
+* Completed the third slice by adding stacked Purple buffs for the caster's directly adjacent spell columns, including the single adjacent column at each edge.
+* Purple grants a flat +5 per Purple token to Red attack and Blue guard only on that actor's next turn; it does not buff its own current column, Orange, Green, Light Blue, Purple, or no-effect tokens, and it creates no battle animation.
+* Player and enemy Purple buffs are stored separately for each battle, reset on a new battle, remain visibly marked with a purple column background through the next turn's resolution, and then expire or are replaced by newly cast Purple buffs.
+* A frozen actor retains Purple after an even freeze check and loses it when an odd check skips that actor's next turn.
+* Completed the fourth and final slice by adding Yellow charge for player and enemy spell columns.
+* Each Yellow token supplies one battle-instance use for its column; a successful Yellow roll consumes one use and stages one non-stacking +10 charge for that actor's next turn without mutating spell data.
+* Active charge applies once to Red attack and Blue guard in any rolled column, combines additively with Purple, and does not affect Orange, Green, Light Blue, Purple, Yellow, or no-effect tokens.
+* All six battle spell columns retain a yellow background through the charged turn's resolution and then clear or renew on turn advance; yellow takes the permitted visual priority where Purple and Yellow overlap.
+* Charge state and uses reset for each battle, remain actor-specific, survive an even freeze check, and expire when an odd freeze check skips the charged turn.
+* Feature-004 now covers Light Blue freeze, Purple adjacent buffs, Yellow charge, and all four no-effect battle misses with the required battle-only status displays.
+
+Goal
+
+* Add the remaining battle token effects as a continuation of Feature-002.
+* Implement battle behaviour for:
+
+  * Light Blue
+  * Purple
+  * Yellow
+* Treat tokens with no battle effect as misses.
+* Preserve the existing Red, Blue, Orange, and Green logic from Feature-002.
+* Keep battle calculations dice-driven.
+
+Scope
+
+* Update battle token resolution.
+* Add Light Blue freeze behaviour.
+* Add Purple adjacent-column buff behaviour.
+* Add Yellow charge behaviour.
+* Add battle-state tracking for limited-use token effects.
+* Add freeze status display.
+* Add freeze check roll flow.
+* Add spell-column visual marking for Purple buffs.
+* Add spell-column visual marking for Yellow charge.
+* Treat Light Green, Black, White, and Grey as misses for battle.
+* Keep all existing battle turn flow, animations, win/loss handling, and dice behaviour working.
+
+Token Effect Summary
+
+```txt id="42wnoq"
+Light Blue = Freeze opponent for their next turn
+Light Green = No battle effect, counts as miss
+Black = No battle effect, counts as miss
+White = No battle effect, counts as miss
+Purple = Buff adjacent columns for this player's next turn
+Yellow = Charge all columns for this player's next turn
+Grey = No battle effect, counts as miss
+```
+
+No-Effect Token Requirement
+
+* The following tokens have no battle effect for now:
+
+  * Light Green
+  * Black
+  * White
+  * Grey
+* If one of these tokens appears in the current actor’s rolled spell slot, it should count as a miss for battle.
+* These tokens should not trigger animations.
+* These tokens should not apply damage.
+* These tokens should not apply guard.
+* These tokens should not apply buffs.
+* These tokens should not affect the opponent.
+* These tokens should still remain visible in spell displays.
+* Do not remove these tokens from data.
+
+Light Blue Freeze Requirement
+
+* Light Blue freezes the opponent for their next turn.
+* When a player or enemy is frozen, they must roll to check whether they can attack that turn.
+* If the freeze check roll is even:
+
+  * the frozen actor can attack normally that turn.
+  * freeze is removed.
+* If the freeze check roll is odd:
+
+  * the frozen actor’s turn ends immediately.
+  * freeze is removed.
+  * no spell slot is resolved for that actor.
+  * no attack, guard, counter, weaken, charge, or buff effects should occur for that skipped turn.
+* Freeze only lasts for one turn.
+* Freeze applies to:
+
+  * player when enemy freezes player.
+  * enemy when player freezes enemy.
+
+Freeze Check Roll Requirement
+
+* When a frozen actor’s turn begins:
+
+  * show the normal turn modal first.
+  * after the modal closes, show text above the dice saying:
+
+```txt id="8byuqj"
+Roll to see if you unfreeze
+```
+
+* The dice roll at this point is a freeze check roll.
+* The freeze check roll should not resolve a spell slot.
+* The freeze check roll should only decide whether the actor can attack this turn.
+* If the roll is even:
+
+  * remove frozen status.
+  * allow the actor to proceed to their normal battle dice roll/action state.
+* If the roll is odd:
+
+  * remove frozen status.
+  * skip the actor’s battle action.
+  * move to the next actor’s turn using the normal transition flow.
+* If the frozen actor is the enemy and enemy turns are automatic:
+
+  * the freeze check roll should also happen automatically after the modal closes.
+  * if the roll is even, the enemy should then automatically perform their normal attack roll.
+  * if the roll is odd, the enemy turn should end and return to the player.
+* If the frozen actor is the player:
+
+  * the player should manually roll the freeze check unless the existing dice flow requires otherwise.
+  * if they roll even, the battle page should then wait for their normal attack roll.
+
+Light Blue Limited-Use Requirement
+
+* Light Blue tokens work differently from normal stacking.
+* The number of Light Blue tokens in a spell column represents how many times that column can freeze the opponent during this battle.
+* Example:
+
+  * If a player has 2 Light Blue tokens in spell slot 3:
+
+    * the first time they roll 3, they freeze the opponent and have 1 freeze use remaining for that column.
+    * the second time they roll 3, they freeze the opponent again and have 0 freeze uses remaining.
+    * the third time they roll 3, no freeze effect happens from that column.
+* Freeze uses should be tracked separately for each actor and spell column.
+* Freeze uses should persist during the battle.
+* Freeze uses should reset for a new battle.
+* Do not mutate the original spell slot token data.
+* Track battle-instance usage counts instead.
+
+Light Blue Freeze Display Requirement
+
+* When an actor is frozen, show a Light Blue snowflake icon over that actor.
+* Use Font Awesome for the snowflake icon.
+* The snowflake should remain visible until:
+
+  * the actor rolls even and unfreezes.
+  * or the actor rolls odd and their frozen turn ends.
+* The snowflake should appear over:
+
+  * the player image if the player is frozen.
+  * the enemy image if the enemy is frozen.
+* Do not show the snowflake when the actor is not frozen.
+
+Light Blue Animation Requirement
+
+* When freeze is successfully applied, show the snowflake status icon.
+* No separate travelling projectile animation is required for Light Blue in this feature unless a small visual cue is already simple to add.
+* The key required visual is the snowflake icon over the frozen actor.
+* The snowflake remains as a status indicator until freeze is resolved.
+
+Purple Buff Requirement
+
+* Purple buffs adjacent spell columns for the next turn this same actor takes.
+* Purple does not buff its own column.
+* Purple only buffs the columns directly next to the rolled column.
+* If the rolled column is on an edge, only one adjacent column is buffed.
+* Examples:
+
+  * If column 2 has Purple, then columns 1 and 3 are buffed.
+  * If column 1 has Purple, then column 2 is buffed.
+  * If column 6 has Purple, then column 5 is buffed.
+* Purple buffs apply to the actor who cast the Purple token.
+* Purple buffs are used on that actor’s next battle turn.
+* Purple buffs last for one turn only.
+* Purple buffs should then be removed.
+* Purple does not apply to the current turn.
+* Purple does not buff itself on the same turn it is rolled.
+
+Purple Stack Requirement
+
+* Purple tokens stack.
+* Each Purple token adds:
+
+```txt id="2dv1ps"
++5
+```
+
+to Red attack and Blue guard in the affected adjacent columns on that actor’s next turn.
+
+* Examples:
+
+  * 1 Purple in column 2 buffs columns 1 and 3 by +5.
+  * 2 Purple in column 2 buffs columns 1 and 3 by +10.
+  * 3 Purple in column 2 buffs columns 1 and 3 by +15.
+* Purple buff only affects:
+
+  * Red attack.
+  * Blue guard.
+* Purple buff does not affect:
+
+  * Orange counter damage.
+  * Green reduction.
+  * Light Blue freeze.
+  * Purple.
+  * Yellow charge.
+  * no-effect tokens.
+
+Purple Visual Requirement
+
+* When columns are buffed by Purple for the actor’s next turn, those spell columns should be visually marked.
+* The marked columns should have a purple background.
+* This should happen on that actor’s spell display.
+* The purple background should remain visible until that actor’s next turn resolves.
+* After the buff is used or expires, remove the purple marking.
+* Purple marking should work for:
+
+  * player spell display.
+  * enemy spell display.
+* Do not change the Spells modal yet unless the same reusable display component requires minimal prop support.
+* This marking is primarily for battle spell displays.
+
+Purple Animation Requirement
+
+* Purple has no battle animation.
+* Only the spell-column purple background marking is required.
+
+Yellow Charge Requirement
+
+* Yellow is Charge.
+* Charge buffs all columns for the player or enemy on their next turn.
+* Charge gives:
+
+```txt id="h6xm5z"
++10
+```
+
+to Red attack and Blue guard on the actor’s next turn.
+
+* Yellow does not stack the amount.
+* Multiple Yellow tokens do not increase the buff above +10.
+* Yellow tokens instead work like Light Blue tokens: each Yellow token represents one charge use for that column during the battle.
+* Example:
+
+  * If a player has 1 Yellow token in column 4:
+
+    * the first time they roll 4, Charge is applied for their next turn.
+    * if they roll column 4 again later, nothing happens in terms of Charge.
+  * If a player has 2 Yellow tokens in column 4:
+
+    * they can apply Charge from column 4 twice during that battle.
+* Charge uses should be tracked separately for each actor and spell column.
+* Charge uses should persist during the battle.
+* Charge uses should reset for a new battle.
+* Do not mutate original spell token data.
+
+Yellow Buff Requirement
+
+* When Charge is active for an actor’s next turn:
+
+  * all six columns are charged.
+  * Red attack in any rolled column gets +10.
+  * Blue guard in any rolled column gets +10.
+* Charge applies only on the actor’s next turn.
+* Charge lasts for one turn only.
+* Charge should be removed after that actor’s next turn resolves.
+* Charge should not buff:
+
+  * Orange counter damage.
+  * Green reduction.
+  * Light Blue freeze.
+  * Purple.
+  * Yellow.
+  * no-effect tokens.
+* Charge should combine with Purple if both affect the same Red or Blue token calculation.
+* Example:
+
+  * Red base damage = 10.
+  * Yellow charge active = +10.
+  * Purple buff active on that column = +5.
+  * Total Red damage for that one Red token calculation should include both buffs, where the implementation makes that clear and consistent.
+
+Yellow Visual Requirement
+
+* When Charge is active for the actor’s next turn, all six spell columns should be visually marked.
+* The columns should have a yellow background.
+* This should happen on that actor’s spell display.
+* The yellow background should remain visible until that actor’s next turn resolves.
+* After Charge is used or expires, remove the yellow marking.
+* Yellow marking should work for:
+
+  * player spell display.
+  * enemy spell display.
+* If a column is both Purple-buffed and Yellow-charged, use the simplest readable visual treatment.
+* Acceptable approaches:
+
+  * Yellow takes visual priority.
+  * Purple takes visual priority.
+  * use a split/combined style if simple.
+* Do not over-engineer combined styling.
+
+Yellow Animation Requirement
+
+* Yellow has no battle animation.
+* Only the yellow spell-column background marking is required.
+
+Battle State Requirement
+
+* Add battle-instance state to track:
+
+  * frozen status for player and enemy.
+  * remaining Light Blue freeze uses per actor and spell column.
+  * remaining Yellow charge uses per actor and spell column.
+  * pending Purple buffs per actor and spell column.
+  * pending Yellow charge per actor.
+* Do not mutate original player spell data.
+* Do not mutate original enemy spell data.
+* Usage counts should reset when a new battle starts.
+* Suggested state concept:
+
+```js id="wgk7la"
+{
+  playerFrozen: false,
+  enemyFrozen: false,
+  playerFreezeUses: { 1: 0, 2: 1, 3: 0, 4: 0, 5: 2, 6: 0 },
+  enemyFreezeUses: { 1: 0, 2: 0, 3: 1, 4: 0, 5: 0, 6: 0 },
+  playerChargeUses: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0 },
+  enemyChargeUses: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 1, 6: 0 },
+  playerPurpleBuffs: { 1: 0, 2: 5, 3: 0, 4: 0, 5: 0, 6: 0 },
+  enemyPurpleBuffs: { 1: 0, 2: 0, 3: 10, 4: 0, 5: 0, 6: 0 },
+  playerCharged: false,
+  enemyCharged: false
+}
+```
+
+* Exact data shape can vary if simpler.
+* Keep it readable and easy to reset per battle.
+
+Buff Calculation Requirement
+
+* Red and Blue effects should now consider:
+
+  * base token effect.
+  * active Purple buff for the rolled column.
+  * active Yellow charge for the actor.
+* Purple and Yellow only affect Red and Blue.
+* They do not affect Orange, Green, Light Blue, Purple, Yellow, Light Green, Black, White, or Grey.
+* Red base remains 10 damage per Red token before buffs.
+* Blue guard value should use the latest current balancing value from Bug-010:
+
+  * 5 guard per Blue token.
+* Green and guard reductions should still happen after Red damage is calculated.
+* Existing Red, Blue, Orange, and Green behaviour should remain otherwise unchanged.
+
+Usage Tracking Requirement
+
+* Light Blue and Yellow token uses should be consumed only when their effect successfully triggers.
+* If there are no remaining uses for the rolled column:
+
+  * the token has no effect for that roll.
+* If a Light Blue column has remaining uses:
+
+  * apply freeze to the opponent.
+  * reduce remaining freeze uses for that actor and column by 1.
+* If a Yellow column has remaining uses:
+
+  * apply charge to the actor’s next turn.
+  * reduce remaining charge uses for that actor and column by 1.
+* If the battle ends before the next turn, no extra cleanup beyond normal battle cleanup is needed.
+
+Miss Requirement
+
+* If a spell slot contains only tokens that do not currently create an immediate or pending effect, it should count as a miss.
+* No-effect tokens always count as miss.
+* Purple and Yellow do not cause damage or guard on the current turn, but they do create pending effects if uses remain.
+* Light Blue creates freeze if uses remain.
+* If Light Blue or Yellow has no uses remaining, it should behave as no effect.
+* If the current actor has no effective tokens and the opponent has no Orange or Green response, move to the next turn with no animations.
+
+Display Component Requirement
+
+* The reusable committed spell display component may need props to mark columns.
+* Add support for marking:
+
+  * purple-buffed columns.
+  * yellow-charged columns.
+  * joined columns already displaying `J`.
+* Keep this generic enough for both player and enemy spell displays.
+* Do not change the Spells modal.
+* Do not alter drag-and-drop token behaviour.
+* The battle display can pass active buff/charge state to the spell display.
+
+Expected Behaviour
+
+* Light Blue can freeze the opponent.
+* Frozen actors show a Font Awesome snowflake icon over their image.
+* Frozen actors must roll to see if they unfreeze.
+* The text `Roll to see if you unfreeze` appears above the dice during freeze checks.
+* Even freeze check rolls allow the actor to continue their turn.
+* Odd freeze check rolls end the actor’s turn.
+* Freeze lasts only one turn.
+* Light Blue uses are limited by token count in that column for the battle.
+* Light Green counts as miss.
+* Black counts as miss.
+* White counts as miss.
+* Grey counts as miss.
+* Purple buffs adjacent columns for the actor’s next turn.
+* Purple buffs Red attack and Blue guard only.
+* Purple buffs stack by +5 per Purple token.
+* Purple-buffed columns show a purple background.
+* Yellow charges all columns for the actor’s next turn.
+* Yellow gives +10 to Red attack and Blue guard.
+* Yellow amount does not stack.
+* Yellow uses are limited by token count in that column for the battle.
+* Yellow-charged columns show a yellow background.
+* Existing Red, Blue, Orange, and Green behaviour still works.
+* Existing win/loss handling still works.
+* Enemy automatic turns still work.
+* Debug forced dice buttons still work.
+
+Out Of Scope
+
+* No Light Green battle effect.
+* No Black battle effect.
+* No White battle effect.
+* No Grey battle effect.
+* No joined spell behaviour beyond existing `J` display.
+* No new enemy AI.
+* No new player action choices.
+* No spell editing in battle.
+* No Spells modal changes.
+* No new rewards.
+* No battle animations for Purple or Yellow.
+* No battle animations for no-effect tokens.
+* No new token images.
+* No save/load functionality.
+* No persistence.
+* No unrelated battle UI redesign.
+
+Assumptions
+
+* The repeated “Light Green tokens have no use in battle” rows for Black, White, and Grey mean those tokens also have no battle effect for now.
+* Purple and Yellow effects are pending buffs for the actor’s next own turn, not immediate current-turn buffs.
+* The battle display component can visually mark spell columns without changing underlying spell data.
+* Freeze and Charge use counts are battle-instance state and should reset every battle.
+* Existing token colour names are already normalised enough to check token type reliably.
+
+Stop Point
+
+* Stop once Light Blue freeze, Purple adjacent-column buff, Yellow charge, and no-effect token miss handling all work in battle, with correct status displays, limited uses, visual column markings, and no changes to the Spells modal.
+
+Testing Checkpoints
+
+* Confirm Light Blue freezes the opponent.
+* Confirm frozen player shows a Font Awesome snowflake over their image.
+* Confirm frozen enemy shows a Font Awesome snowflake over their image.
+* Confirm `Roll to see if you unfreeze` appears during freeze checks.
+* Confirm an even freeze check roll lets the actor attack.
+* Confirm an odd freeze check roll ends the actor’s turn.
+* Confirm freeze is removed after the freeze check.
+* Confirm enemy freeze checks happen automatically if the enemy is frozen.
+* Confirm player freeze checks do not resolve a spell slot.
+* Confirm Light Blue uses decrease each time freeze is applied from that column.
+* Confirm Light Blue does nothing once uses for that column reach 0.
+* Confirm Light Green counts as miss.
+* Confirm Black counts as miss.
+* Confirm White counts as miss.
+* Confirm Grey counts as miss.
+* Confirm Purple buffs only adjacent columns.
+* Confirm Purple does not buff its own column.
+* Confirm Purple on column 1 buffs only column 2.
+* Confirm Purple on column 6 buffs only column 5.
+* Confirm 1 Purple gives +5 to adjacent-column Red/Blue effects next turn.
+* Confirm 2 Purple gives +10 to adjacent-column Red/Blue effects next turn.
+* Confirm Purple-buffed columns have a purple background.
+* Confirm Purple buff is removed after that actor’s next turn resolves.
+* Confirm Yellow applies Charge for the actor’s next turn.
+* Confirm Yellow marks all columns yellow while Charge is active.
+* Confirm Yellow gives +10 to Red attack on the next turn.
+* Confirm Yellow gives +10 to Blue guard on the next turn.
+* Confirm multiple Yellow tokens do not stack the charge amount.
+* Confirm multiple Yellow tokens allow multiple uses across the battle.
+* Confirm Yellow use count decreases when Charge is applied.
+* Confirm Yellow does nothing once uses for that column reach 0.
+* Confirm Purple and Yellow only buff Red and Blue.
+* Confirm Orange counter damage is not increased by Purple or Yellow.
+* Confirm Green reduction is not increased by Purple or Yellow.
+* Confirm Blue uses the latest 5 guard per token value before buffs.
+* Confirm Red, Blue, Orange, and Green from Feature-002 still work.
+* Confirm battle win/loss still triggers correctly.
+* Confirm final animations still complete before battle end.
+* Confirm enemy automatic turns still work.
+* Confirm forced dice result buttons still work.
+* Confirm the Spells modal has not changed.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

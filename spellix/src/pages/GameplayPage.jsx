@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DiceRoll from '../components/dice/DiceRoll';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
 import BoardGrid from '../features/gameBoard/BoardGrid';
@@ -87,27 +88,35 @@ function GameplayPage() {
       showDiceModal ||
       showSpellsModal ||
       showTurnModal ||
-      currentDiceRoll
+      currentDiceRoll !== null
     ) {
       return;
     }
 
-    if (currentPlayer.anywhereMode) {
-      setCurrentDiceRoll('Anywhere Mode');
-      setHighlightedNodeIds(getAnywhereModeHighlightedNodeIds(gameSetup.board, currentPlayer.position));
-      setShowDiceModal(true);
+    setShowDiceModal(true);
+  };
+
+  const handleDiceRollComplete = (diceRoll) => {
+    if (!currentPlayer) {
       return;
     }
 
-    const diceRoll = Math.floor(Math.random() * 6) + 1;
-
     setCurrentDiceRoll(diceRoll);
+
+    if (currentPlayer.anywhereMode) {
+      setHighlightedNodeIds(getAnywhereModeHighlightedNodeIds(gameSetup.board, currentPlayer.position));
+      return;
+    }
+
     setHighlightedNodeIds(
       getHighlightedNodeIds(gameSetup.board, currentPlayer.position, diceRoll, {
         blockedNodeIds: currentPlayer.hasLeftStartArea ? ['start-area'] : [],
       })
     );
-    setShowDiceModal(true);
+  };
+
+  const handleDiceSequenceComplete = () => {
+    setShowDiceModal(false);
   };
 
   const handleSquareClick = (square) => {
@@ -343,15 +352,15 @@ function GameplayPage() {
       </Modal>
 
       <Modal
-        actions={
-          <button type="button" onClick={() => setShowDiceModal(false)}>
-            OK
-          </button>
-        }
         ariaLabel="Dice result"
         isOpen={showDiceModal}
       >
-        <p>{`Dice result: ${currentDiceRoll}`}</p>
+        {currentPlayer?.anywhereMode ? <p>Anywhere Mode</p> : null}
+        <DiceRoll
+          mode="temporary"
+          onRollComplete={handleDiceRollComplete}
+          onSequenceComplete={handleDiceSequenceComplete}
+        />
       </Modal>
 
       {currentPlayer ? (
