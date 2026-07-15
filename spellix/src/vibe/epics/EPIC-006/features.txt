@@ -2123,3 +2123,551 @@ Testing Checkpoints
 * Confirm battle win/loss still works.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Improve battle page structure, positioning, overlays, and bottom alignment
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first cohesive slice by removing only the visible `Battle` heading and battle-level line while preserving the level in active battle state.
+* Reused the existing `.battle-debug-controls` container and all existing button handlers; the container is now absolutely positioned at the top-right with the required debug-only removal comment, so it reserves no main-layout space.
+* No new component, route, state field, or dependency was created.
+* Completed the second cohesive slice by raising only Red and Orange attack effects to local layer `3`, above actor images at `1` and frozen overlays at `2`, while retaining debug controls at `50` and modals at `1000`.
+* Attack animation timing, paths, direction classes, effect sequencing, and battle calculations remain unchanged.
+* Completed the third cohesive slice by reusing the existing page, actor stage, and dice containers for the bottom layout without adding a wrapper or changing JSX structure.
+* The actor stage now consumes available space above it, and the dice container remains directly below it with the required 20px top margin, 10px bottom margin, responsive 950px width, 30px vertical padding, centred contents, rounded corners, and alpha background.
+* Completed the fourth cohesive slice by extending the existing `BattleActorImage` wrapper to render player and enemy guard shields directly over their images with exact `0.6` shield opacity and centred white bold values.
+* Guard overlays render only for positive current guard, disappear through the existing guard-expiry state, sit above actor images, remain below the later-rendered freeze overlay, and remain below Red/Orange attacks.
+* Feature-006 is complete without changing guard values, token effects, battle calculations, debug behavior, routes, shared components, dependencies, or unrelated UI.
+
+Goal
+
+* Improve the battle page structure and visual hierarchy.
+* Remove unnecessary battle header text.
+* Move debug controls out of the main layout flow.
+* Ensure attack animations layer above character images.
+* Align the main battle content to the bottom of the page.
+* Improve dice container sizing and spacing.
+* Restyle guard shield indicators so they behave more like frozen snowflake overlays.
+
+Scope
+
+* Update the battle page layout.
+* Remove the visible `Battle` title.
+* Remove the visible battle level line.
+* Move battle debug buttons into an absolutely positioned floating debug area.
+* Update z-index layering for Red and Orange attack animations.
+* Update the battle dice container width and padding.
+* Align battle elements to the bottom of the page.
+* Restyle guard shield indicators as image overlays.
+* Preserve all existing battle logic.
+* Preserve all existing token effects.
+* Preserve all existing debug behaviour.
+
+Remove Battle Text Requirement
+
+* Remove the visible title:
+
+```txt id="91ucif"
+Battle
+```
+
+* Remove the visible line that displays the battle level.
+* The battle level can still exist in state and debugging logic.
+* Do not remove battle level data if it is needed for enemy selection or battle state.
+* Only remove the visible UI text.
+
+Floating Debug Controls Requirement
+
+* Move the battle debug buttons to the top of the page.
+* The debug controls should be out of the way of the main battle layout.
+* The debug controls should be absolutely positioned.
+* Removing the debug controls later should not affect the battle page layout.
+* The debug controls should not reserve layout space.
+* The debug controls should float over the page.
+* The debug controls should remain usable while testing.
+* The debug controls include existing battle debug controls such as:
+
+  * Remove 5 health.
+  * Win.
+  * Lose.
+  * forced dice result buttons.
+* Keep any debug-only code clearly labelled.
+* Suggested code comment:
+
+```js id="4cektb"
+// DEBUG ONLY: Floating battle debug controls. Remove before production.
+```
+
+* Exact positioning can vary, but it should be near the top and out of the way.
+* Suggested CSS direction:
+
+```css id="0bztu3"
+.battle-debug-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 50;
+}
+```
+
+Attack Animation Layering Requirement
+
+* Red attack animations should appear above the character images.
+* Orange counter attack animations should appear above the character images.
+* The attack projectile and hit/explosion should not be hidden behind the player or enemy image.
+* Use z-index layering to ensure this.
+* The attack animations should still travel from the correct source actor to the correct target actor.
+* The attack animations should still hit the correct visual target after the layout changes from Feature-005.
+* Do not put the animations behind the battle background.
+* Do not put the animations behind the actor images.
+* Do not place the animations above modals.
+
+Dice Container Layout Requirement
+
+* The battle dice roll container should be:
+
+```txt id="ih8fb0"
+950px wide
+```
+
+* It should not exceed the viewport on smaller screens.
+* Use responsive sizing where needed.
+* Suggested sizing:
+
+```css id="p4jccx"
+width: min(950px, 100%);
+```
+
+* The battle dice roll container should have:
+
+```txt id="azf6fu"
+30px padding on the top and bottom
+```
+
+* The dice roll component should be centred horizontally inside the dice roll container.
+* The dice container should keep the semi-transparent white background from Feature-005.
+* Nothing inside the dice roll element should inherit opacity.
+* Use an alpha background colour instead of container opacity.
+* Suggested CSS:
+
+```css id="ywd2k1"
+background-color: rgba(255, 255, 255, 0.5);
+padding: 30px 0;
+border-radius: 8px;
+display: flex;
+justify-content: center;
+align-items: center;
+```
+
+* The dice itself, text, and buttons should remain fully opaque.
+
+Bottom Alignment Requirement
+
+* The main battle elements should be aligned to the bottom of the page.
+* The dice roll container should be at the very bottom of the page.
+* The dice roll container should have:
+
+```txt id="1de044"
+10px margin from the bottom
+```
+
+* There should be:
+
+```txt id="vq1ng1"
+20px margin above the dice roll container
+```
+
+* Above that 20px margin, display the two actor containers.
+* The visual order from bottom to top should be:
+
+  * bottom of page.
+  * 10px margin.
+  * dice roll container.
+  * 20px margin.
+  * player and enemy actor containers.
+* The battle stage should remain horizontally centred.
+* The actor containers should continue to respect the 950px max battle width from Feature-005.
+* The layout should still work on smaller screens.
+
+Suggested Page Structure Direction
+
+```txt id="glz8ms"
+battle page
+  background layer
+  floating debug controls
+  battle bottom content
+    actor stage
+      player actor container
+      enemy actor container
+    dice container
+```
+
+* Exact component structure can vary.
+* The important requirement is that debug controls are outside the main flow and the main battle content is bottom-aligned.
+
+Guard Shield Overlay Requirement
+
+* Guard shield icons should be restyled to behave more like the frozen snowflake overlay.
+* The guard shield should appear over the character image.
+* The shield should not sit as a small separate icon underneath the image anymore.
+* The shield should use opacity.
+* Use a similar overlay approach to the snowflake.
+* Suggested opacity:
+
+```txt id="t2tdqw"
+0.6
+```
+
+* The shield icon should be centred over the guarded actor’s image.
+* The guard amount should be centred to the shield icon.
+* The guard amount text should be white.
+* The guard amount should be bold enough to read clearly.
+* The shield and number should visually read as one status overlay.
+* The overlay should appear for:
+
+  * guarded player.
+  * guarded enemy.
+* The overlay should disappear when guard expires.
+
+Guard Shield Number Requirement
+
+* The active guard amount should remain visible.
+* The number should be positioned in the centre of the shield icon.
+* The text colour should be:
+
+```txt id="82wtjq"
+white
+```
+
+* The number should match the current active guard amount.
+* If guard is 0, do not show the shield or number.
+* Preserve the latest Blue guard value from Bug-010:
+
+  * 5 guard per Blue token before buffs.
+
+Guard Overlay Layering Requirement
+
+* The guard shield overlay should appear above the character image.
+* The frozen snowflake overlay should still work.
+* If an actor is both frozen and guarded, use the simplest readable layering.
+* Acceptable approaches:
+
+  * snowflake above shield.
+  * shield above snowflake.
+  * one overlay slightly offset if needed.
+* Do not over-engineer combined status overlays.
+* Ensure Red and Orange attack animations still appear clearly above or through the actor area as intended.
+
+Expected Behaviour
+
+* The `Battle` title is no longer visible.
+* The battle level line is no longer visible.
+* Debug controls float at the top of the page.
+* Removing debug controls would not affect the page layout.
+* Red attack animations appear above character images.
+* Orange counter animations appear above character images.
+* Attack animations still hit the correct target.
+* The dice roll container is 950px wide where space allows.
+* The dice roll container does not overflow small screens.
+* The dice roll container has 30px top and bottom padding.
+* The dice roll component is centred inside the dice container.
+* The dice container keeps a semi-transparent white background.
+* Dice contents remain fully opaque.
+* The dice container remains slightly rounded.
+* The dice container sits at the bottom of the page with a 10px bottom margin.
+* The actor containers sit 20px above the dice container.
+* Main battle elements are bottom-aligned.
+* Guard shields appear over character images.
+* Guard shield overlays use opacity.
+* Guard amount appears centred inside the shield.
+* Guard amount text is white.
+* Existing battle logic still works.
+
+Out Of Scope
+
+* No changes to token effect values.
+* No changes to damage calculation.
+* No changes to guard calculation beyond visual display.
+* No changes to freeze mechanics.
+* No changes to Purple or Yellow buff logic.
+* No changes to battle background selection.
+* No changes to debug button behaviour.
+* No removal of debug buttons yet.
+* No changes to reward page.
+* No changes to respawn flow.
+* No changes to gameplay board.
+* No unrelated battle UI redesign.
+
+Assumptions
+
+* Feature-005 actor containers already exist or can be created as part of this structural cleanup.
+* The battle page has a main wrapper that can be changed to a bottom-aligned layout.
+* Attack animations can be placed in a dedicated animation layer with a higher z-index than actor images.
+* Guard and frozen overlays can share a similar relative-positioned image wrapper.
+
+Stop Point
+
+* Stop once the battle page has no visible title or battle level line, floating debug controls, attack animations above character images, a 950px centred dice container with correct padding, bottom-aligned battle content, and guard shield overlays centred over character images with white centred guard values.
+
+Testing Checkpoints
+
+* Confirm the `Battle` title is removed.
+* Confirm the battle level line is removed.
+* Confirm battle level logic still works internally.
+* Confirm debug controls appear at the top of the page.
+* Confirm debug controls are absolutely positioned.
+* Confirm hiding/removing debug controls does not change the main battle layout.
+* Confirm Red attack animations appear above character images.
+* Confirm Orange counter animations appear above character images.
+* Confirm Red attack animations still hit the opponent correctly.
+* Confirm Orange counter animations still hit the original caster correctly.
+* Confirm the battle dice container is 950px wide where space allows.
+* Confirm the dice container does not overflow on smaller screens.
+* Confirm the dice container has 30px top padding.
+* Confirm the dice container has 30px bottom padding.
+* Confirm the dice component is centred inside the dice container.
+* Confirm the dice container has a semi-transparent white background.
+* Confirm the dice content remains fully opaque.
+* Confirm the dice container has rounded corners.
+* Confirm the dice container is at the bottom of the page.
+* Confirm the dice container has a 10px bottom margin.
+* Confirm there is a 20px margin between the actor containers and dice container.
+* Confirm the player and enemy actor containers align to the bottom layout correctly.
+* Confirm guard shield appears over the guarded player image.
+* Confirm guard shield appears over the guarded enemy image.
+* Confirm guard shield overlay uses opacity.
+* Confirm guard amount is centred inside the shield.
+* Confirm guard amount text is white.
+* Confirm shield and amount disappear when guard expires.
+* Confirm frozen snowflake overlay still works.
+* Confirm battle background still displays correctly.
+* Confirm battle turns still work.
+* Confirm forced dice buttons still work.
+* Confirm enemy automatic turns still work.
+* Confirm battle win/loss still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-007: Improve HealthBar styling and animated value changes
+
+Status
+
+* done
+
+Completion Notes
+
+* Reused the existing shared `HealthBar`, its `currentHealth`/`maxHealth` props, clamping helper, percentage calculation, threshold tones, and all existing BattlePage and GameplayPage consumers.
+* Flattened only the display structure so the fill and one health-value overlay share the meter container; no duplicate value remains outside the bar.
+* The meter now clips to rounded pill corners, the fill transitions width over `300ms ease` for both decreases and increases, and the bold black value remains centred over the whole bar independently of fill width.
+* Existing zero/max clamping, variable max health, green/orange/red thresholds, delayed battle damage timing, and gameplay logic remain unchanged.
+* No new component, prop, dependency, route, health rule, effect, or unrelated styling was added.
+
+Goal
+
+* Improve the reusable `HealthBar` component visually.
+* Add rounded corners.
+* Animate the health fill when health increases or decreases.
+* Move the health numbers into the health bar itself.
+* Centre the health numbers across the whole bar.
+* Use bold black text for the health numbers.
+
+Scope
+
+* Update the reusable `HealthBar` component.
+* Update the HealthBar CSS.
+* Preserve all existing HealthBar props and usage where possible.
+* Ensure the improved HealthBar works for:
+
+  * player health.
+  * enemy health.
+  * any future use with different max health values.
+* Keep health calculation logic unchanged.
+* Keep health colour threshold logic unchanged unless required by the styling change.
+
+Rounded Corner Requirement
+
+* The health bar should have rounded corners.
+* The outer health bar container should be rounded.
+* The inner health fill should also respect the rounded corners.
+* The fill should not visually overflow outside the rounded container.
+* Use `overflow: hidden` on the outer container if needed.
+* Suggested CSS direction:
+
+```css id="3t25yr"
+.health-bar {
+  border-radius: 999px;
+  overflow: hidden;
+}
+```
+
+* Exact radius can differ if it fits the current art style better.
+
+Animated Health Change Requirement
+
+* When health is removed, the health bar fill should animate smoothly as it shrinks.
+* When health is added, the health bar fill should animate smoothly as it grows.
+* The animation should happen whenever the health value changes.
+* Use a CSS transition where practical.
+* Suggested CSS direction:
+
+```css id="7b9wwp"
+.health-bar-fill {
+  transition: width 300ms ease;
+}
+```
+
+* Exact duration can differ slightly if it feels better.
+* The animation should work for both:
+
+  * damage.
+  * healing or health restoration.
+* The animation should not break delayed damage timing from Bug-011.
+* If damage is delayed until after an attack animation, the health bar should animate only when that delayed health value is applied.
+
+Health Number Placement Requirement
+
+* The health numbers should be displayed inside the health bar.
+* The text should be centred to the whole bar, not just centred inside the remaining fill.
+* The text should remain centred even when health is low.
+* The text should appear above the fill visually.
+* Suggested displayed format can remain whatever is currently used, such as:
+
+```txt id="0v310f"
+40 / 100
+```
+
+* Do not move the health numbers outside the health bar.
+* Do not duplicate the health numbers outside the health bar.
+
+Health Number Styling Requirement
+
+* Health number text should be:
+
+  * centred horizontally.
+  * centred vertically.
+  * bold.
+  * black.
+* Required text colour:
+
+```txt id="wk9gi6"
+black
+```
+
+* The text should remain readable over the health bar fill.
+* The text should not shift when the fill width changes.
+* Suggested CSS direction:
+
+```css id="625p87"
+.health-bar-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #000;
+  pointer-events: none;
+}
+```
+
+* Exact class names can differ.
+
+Health Bar Structure Requirement
+
+* Use a structure that supports centred overlay text.
+* Suggested structure:
+
+```jsx id="37fli4"
+<div className="health-bar">
+  <div className="health-bar-fill" style={{ width: healthPercent }} />
+  <div className="health-bar-text">{currentHealth} / {maxHealth}</div>
+</div>
+```
+
+* Exact implementation can vary.
+* The important requirement is that the text is centred over the whole bar and the fill animates underneath it.
+
+Health Value Requirement
+
+* Health should still be clamped between 0 and max health.
+* Health should never display below 0.
+* Health should never display above max health unless a future feature explicitly allows overheal.
+* The fill width should be based on current health divided by max health.
+* The component should still support variable max health.
+* Existing colour thresholds should still work:
+
+  * above 20% green.
+  * 20% or below and above 10% orange.
+  * 10% or below red.
+
+Expected Behaviour
+
+* Health bar corners are rounded.
+* Health fill respects rounded corners.
+* Health fill animates when health decreases.
+* Health fill animates when health increases.
+* Health numbers are inside the health bar.
+* Health numbers are centred to the whole health bar.
+* Health numbers are bold.
+* Health numbers are black.
+* Health numbers stay centred even at low health.
+* Player health bar uses the improved styling.
+* Enemy health bar uses the improved styling.
+* Battle damage timing from Bug-011 still works.
+* Existing battle logic is unchanged.
+
+Out Of Scope
+
+* No changes to player max health.
+* No changes to enemy max health.
+* No changes to damage values.
+* No changes to healing rules.
+* No new health effects.
+* No changes to HealthBar colour thresholds unless required to preserve current behaviour.
+* No changes to battle turn logic.
+* No changes to battle layout beyond replacing HealthBar styling.
+* No unrelated UI redesign.
+
+Assumptions
+
+* There is already a reusable `HealthBar` component from EPIC-005 Feature-002.
+* Player and enemy battle health bars both use this component or can be migrated to use it.
+* The health value and max health are already passed into the component.
+* The component can be updated without changing battle calculation logic.
+
+Stop Point
+
+* Stop once the reusable HealthBar has rounded corners, animated fill changes, and bold black centred health numbers inside the bar, and both player and enemy battle health displays use the improved component.
+
+Testing Checkpoints
+
+* Confirm player health bar corners are rounded.
+* Confirm enemy health bar corners are rounded.
+* Confirm health fill respects the rounded corners.
+* Confirm health fill does not overflow the rounded container.
+* Confirm player health shrink is animated when damage is applied.
+* Confirm enemy health shrink is animated when damage is applied.
+* Confirm health growth is animated when health is restored.
+* Confirm health numbers appear inside the health bar.
+* Confirm health numbers are centred horizontally.
+* Confirm health numbers are centred vertically.
+* Confirm health numbers are centred to the whole bar, not the fill.
+* Confirm health numbers remain centred when health is low.
+* Confirm health numbers are bold.
+* Confirm health numbers are black.
+* Confirm health never displays below 0.
+* Confirm health fill width matches current health percentage.
+* Confirm variable max health still works.
+* Confirm existing green/orange/red health thresholds still work.
+* Confirm delayed health updates from Bug-011 still animate correctly.
+* Confirm player and enemy battle health bars both use the improved component.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

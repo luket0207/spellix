@@ -47,13 +47,11 @@ function HealthBar({ currentHealth, maxHealth }) {
       className="health-bar"
       role="meter"
     >
-      <div className="health-bar-track">
-        <div
-          className={`health-bar-fill health-bar-fill--${tone}`}
-          style={{ width: `${healthPercent}%` }}
-        />
-      </div>
-      <span className="health-bar-value">{`${clampedCurrentHealth} / ${safeMaxHealth}`}</span>
+      <div
+        className={`health-bar-fill health-bar-fill--${tone}`}
+        style={{ width: `${healthPercent}%` }}
+      />
+      <span className="health-bar-text">{`${clampedCurrentHealth} / ${safeMaxHealth}`}</span>
     </div>
   );
 }

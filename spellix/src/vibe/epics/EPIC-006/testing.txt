@@ -1326,3 +1326,213 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * A browser pass is required to visually confirm the exact 950px cap, panel centring, narrow-screen containment, projectile endpoints, and radiating-effect alignment. DOM ownership, directional classes, effect sequencing, gameplay behavior, and production compilation are covered automatically.
+
+---
+
+Feature-006 Slice 1: Remove battle header text and float debug controls
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and inspect the top of the battle page.
+   Expected: No visible `Battle` heading or battle-level line appears.
+2. Use Remove 5 health, Win, Lose, and each forced-result button.
+   Expected: The existing controls remain usable and retain their previous behavior.
+3. Inspect the debug controls at narrow and desktop viewport widths.
+   Expected: They float near the top-right over the page and do not reserve space in the actor/dice layout.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies the visible heading and battle-level line are absent while the active battle still stores level `4`; all 24 BattlePage flows pass, including debug controls, forced rolls, effects, backgrounds, and win/loss behavior.
+* `src/pages/BattlePage.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Guard-overlay coverage was completed in Feature-006 Slice 4 below; attack layering is covered in Slice 2 and bottom/dice layout in Slice 3.
+* Imported CSS positioning requires the manual browser check below because JSDOM does not calculate stylesheet layout.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm the absolute top-right placement and absence of main-flow space. Attack layering is covered in Slice 2, bottom/dice layout in Slice 3, and guard overlays in Slice 4 below.
+
+---
+
+Feature-006 Slice 2: Attack animations above actor images
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Trigger a Red attack from the player and from the enemy.
+   Expected: The projectile and final hit remain visible above both actor images while travelling to the correct opponent.
+2. Trigger Orange counters in both directions.
+   Expected: Each counter remains visible above both actors and lands on the original caster.
+3. Observe a turn modal while battle effects transition.
+   Expected: Attack effects do not appear above the modal or floating debug controls.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies Red direction, bidirectional Orange direction, effect sequencing, actor attachment, modal timing, and all 24 BattlePage flows.
+* CSS source inspection confirms Red and Orange use layer `3`, actor images use `1`, frozen overlays use `2`, debug controls use `50`, and shared modals use `1000`.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused JSDOM coverage is identified for z-index rendering; JSDOM does not paint imported stylesheet layers.
+* Guard-overlay coverage was completed in Feature-006 Slice 4 below; bottom/dice layout is covered in Slice 3.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm projectiles and hit expansions remain above both player and enemy images but below dialogs. Bottom alignment and dice sizing are covered in Slice 3 and guard overlays in Slice 4 below.
+
+---
+
+Feature-006 Slice 3: Bottom-aligned actor stage and dice container
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle on a desktop-height viewport.
+   Expected: Available vertical space appears above the actor stage, with the actor panels positioned directly above the dice container near the bottom of the page.
+2. Inspect the spacing around the dice container.
+   Expected: There is 20px between the actor stage and dice container and 10px between the dice container and page bottom.
+3. Inspect the dice container at wide and narrow viewport widths.
+   Expected: It reaches 950px where space allows, never exceeds the viewport, has 30px top/bottom padding, and keeps the dice, text, and button centred and fully opaque.
+4. Trigger a freeze check.
+   Expected: The freeze prompt and persistent dice remain vertically grouped and horizontally centred in the same container.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies the persistent dice remains before the floating debug controls in document structure and all 24 BattlePage flows pass.
+* CSS source inspection confirms the exact responsive width, padding, margins, centring, rounded corners, and alpha background with no container opacity.
+* `npm run build` completed successfully.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* No additional focused JSDOM coverage is identified for imported CSS geometry; JSDOM does not calculate flex layout or viewport positioning.
+* Guard-overlay coverage was completed in Feature-006 Slice 4 below.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm bottom alignment, exact spacing, responsive width, and freeze-prompt grouping. Guard overlays are covered in Slice 4 below.
+
+---
+
+Feature-006 Slice 4: Guard shield image overlays
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Give the player active guard through a Blue spell result.
+   Expected: A translucent shield overlays the player image with the current guard amount centred in bold white text; no separate shield appears below the image.
+2. Give the enemy active guard.
+   Expected: The same overlay appears over the enemy image with the enemy's current value.
+3. Consume each actor's guard on an opposing turn.
+   Expected: The corresponding shield and value disappear when guard reaches zero.
+4. Observe an actor that is both guarded and frozen.
+   Expected: Both statuses remain readable in the same image area using the simple existing order, with the snowflake above the shield.
+5. Trigger Red or Orange through a guarded actor area.
+   Expected: The attack remains visible above the actor and status overlays.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies player and enemy shield icons, current values, zero-state absence, guard expiry, exact shield opacity `0.6`, amount classes, and ownership by the correct actor-image wrapper; all 24 BattlePage flows pass.
+* CSS source inspection confirms centred full-image guard geometry, white bold amount text, guard/freeze layer `2`, and attack layer `3`.
+* `src/pages/BattlePage.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* No additional focused JSDOM coverage is identified; JSDOM does not paint imported CSS overlays or visually compare combined shield/snowflake readability.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm shield sizing, amount centring/readability, combined frozen/guarded layering, and attack visibility. DOM ownership, exact opacity, live values, expiry, battle behavior, and production compilation are covered automatically.
+
+---
+
+Feature-007: Rounded HealthBar with animated fill and centred value
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and inspect both actor health bars.
+   Expected: Each bar has rounded ends and one bold black `current / max` value centred inside the full bar.
+2. Damage the player and enemy through normal battle effects.
+   Expected: The fill begins shrinking only when the existing delayed health update applies, then transitions smoothly while the value remains fixed at the bar centre.
+3. Restore or respawn the player to a higher health value.
+   Expected: The fill transitions smoothly as it grows and never exceeds the rounded outer bar.
+4. Observe health at 20%, 10%, and 0%.
+   Expected: Existing orange/red thresholds remain correct and the value remains centred and readable even with little or no fill.
+5. View the gameplay-page current-player health bar.
+   Expected: The same reusable rounded, animated, centred-value display is used there without layout or logic changes.
+
+Automated Tests Completed
+
+* `src/components/health/HealthBar.test.jsx` verifies variable max health, over-max and below-zero clamping, 0/10/20/25/50/60/80/100 percent widths, existing threshold classes, both decreasing and increasing updates, and the value overlay class inside the meter.
+* `src/pages/BattlePage.test.jsx` and `src/pages/GameplayPage.test.jsx` verify both current consumers, including player/enemy damage timing, health values, loss/respawn flow, and normal gameplay display; 29 page tests pass.
+* The three relevant suites passed with 33 tests total.
+* `src/components/health/HealthBar.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+* CSS inspection confirms pill rounding, overflow clipping, `width 300ms ease`, absolute full-bar centring, bold weight `700`, and black text with no stale track/value selectors.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* No additional focused JSDOM coverage is identified; JSDOM does not animate CSS transitions or visually render rounded clipping and text centring.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm transition smoothness in both directions, rounded clipping, and value readability across background tones. Calculations, clamping, thresholds, DOM structure, consumer behavior, and production compilation are covered automatically.
+
+---
+
+Bug-016: Battle debug buttons absolutely positioned on the left
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open an active battle and inspect the debug controls at the top of the page.
+   Expected: The controls appear 10 pixels from the left and top edges rather than on the right.
+2. Inspect the battle content before and after using the debug controls.
+   Expected: The controls float outside normal layout flow and the bottom-aligned battle content does not move.
+3. Select Remove 5 health, Win, and Lose in separate battle runs.
+   Expected: Each existing debug action behaves as before.
+4. Select each Force 1 through Force 6 button when enabled.
+   Expected: Forced dice rolls continue through the existing battle dice flow.
+
+Automated Tests Completed
+
+* A focused regression first failed against `right: 10px`, then passed after requiring `.battle-debug-controls` to contain `position: absolute` and `left: 10px` with no `right` declaration.
+* `src/pages/BattlePage.test.jsx` passed all 25 tests, including Remove 5 health, Win, Lose, forced dice rolls, battle layout content, turn effects, and outcome flows.
+* `src/pages/BattlePage.test.jsx` passed focused ESLint with the file's pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional automated coverage is identified for this one-declaration positioning fix.
+* The full unmodified ESLint rule reports the test file's existing direct DOM-access assertions; the new Bug-016 regression is not among those reported lines.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm the controls appear on the left and do not overlap battle content at supported viewport sizes. Position declarations and existing button behavior are covered automatically.

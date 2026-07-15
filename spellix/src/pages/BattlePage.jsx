@@ -15,7 +15,7 @@ import './BattlePage.css';
 
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
 
-function BattleActorImage({ children, frozen, frozenLabel, side }) {
+function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
   const [freezeAnimation, setFreezeAnimation] = useState(frozen ? 'enter' : null);
 
@@ -41,6 +41,19 @@ function BattleActorImage({ children, frozen, frozenLabel, side }) {
   return (
     <div className={`battle-actor-image battle-actor-image--${side}`}>
       {children}
+      {guard > 0 ? (
+        <span className="battle-guard-indicator">
+          <FontAwesomeIcon
+            aria-label={guardLabel}
+            className="battle-guard-shield"
+            icon={faShield}
+            style={{ opacity: 0.6 }}
+          />
+          <span aria-label={guardAmountLabel} className="battle-guard-amount">
+            {guard}
+          </span>
+        </span>
+      ) : null}
       {isFreezeOverlayMounted ? (
         <FontAwesomeIcon
           aria-label={frozenLabel}
@@ -276,9 +289,6 @@ function BattlePage() {
       className="battle-page"
       style={{ backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})` }}
     >
-      <h1>Battle</h1>
-      <p>{`Battle level: ${activeBattle.level}`}</p>
-
       <div className="battle-display">
         {activeBattleEffect?.type === 'redDamage' ? (
           <span
@@ -312,6 +322,9 @@ function BattlePage() {
           <BattleActorImage
             frozen={activeBattle.playerFrozen}
             frozenLabel="Player frozen"
+            guard={activeBattle.playerGuard}
+            guardAmountLabel="Player guard amount"
+            guardLabel="Player guard shield"
             side="player"
           >
             {pieceImageSource ? (
@@ -326,16 +339,6 @@ function BattlePage() {
               <p aria-label="Battle player piece">{battlePlayer.colour}</p>
             )}
           </BattleActorImage>
-          {activeBattle.playerGuard > 0 ? (
-            <span className="battle-guard-indicator">
-              <FontAwesomeIcon
-                aria-label="Player guard shield"
-                className="battle-guard-shield"
-                icon={faShield}
-              />{' '}
-              <span aria-label="Player guard amount">{activeBattle.playerGuard}</span>
-            </span>
-          ) : null}
           <HealthBar currentHealth={battlePlayer.currentHealth} maxHealth={battlePlayer.maxHealth} />
           <CommittedSpellSlotList
             lightBlueUses={activeBattle.playerFreezeUses}
@@ -363,6 +366,9 @@ function BattlePage() {
           <BattleActorImage
             frozen={activeBattle.enemyFrozen}
             frozenLabel="Enemy frozen"
+            guard={activeBattle.enemyGuard}
+            guardAmountLabel="Enemy guard amount"
+            guardLabel="Enemy guard shield"
             side="enemy"
           >
             {enemyImageSource ? (
@@ -376,16 +382,6 @@ function BattlePage() {
               <p aria-label="Battle enemy fallback">{battleEnemy.englishName}</p>
             )}
           </BattleActorImage>
-          {activeBattle.enemyGuard > 0 ? (
-            <span className="battle-guard-indicator">
-              <FontAwesomeIcon
-                aria-label="Enemy guard shield"
-                className="battle-guard-shield"
-                icon={faShield}
-              />{' '}
-              <span aria-label="Enemy guard amount">{activeBattle.enemyGuard}</span>
-            </span>
-          ) : null}
           <HealthBar currentHealth={battleEnemy.currentHealth} maxHealth={battleEnemy.maxHealth} />
           <CommittedSpellSlotList
             lightBlueUses={activeBattle.enemyFreezeUses}
@@ -412,6 +408,7 @@ function BattlePage() {
         />
       </div>
 
+      {/* DEBUG ONLY: Floating battle debug controls. Remove before production. */}
       <div className="battle-debug-controls">
         <button type="button" disabled={!isActiveBattle} onClick={handleRemoveHealth}>
           Remove 5 health

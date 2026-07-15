@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { getEnemyById } from '../features/battle/enemies';
@@ -105,6 +106,7 @@ function GameStateSnapshot() {
       <p>{`Enemy charged: ${activeBattle?.enemyCharged ?? 'none'}`}</p>
       <p>{`Resolving turn: ${activeBattle?.isResolvingTurn ?? 'none'}`}</p>
       <p>{`Battle phase: ${activeBattle?.phase ?? 'none'}`}</p>
+      <p>{`Stored level: ${activeBattle?.level ?? 'none'}`}</p>
       <p>{`Player 1 position: ${gameSetup.players[0].position.x},${gameSetup.players[0].position.y}`}</p>
     </div>
   );
@@ -154,6 +156,15 @@ describe('BattlePage flows', () => {
     jest.useRealTimers();
   });
 
+  test('keeps debug controls absolutely positioned on the left', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const debugControlsRule = stylesheet.match(/\.battle-debug-controls\s*\{([^}]*)\}/)?.[1];
+
+    expect(debugControlsRule).toMatch(/position:\s*absolute/);
+    expect(debugControlsRule).toMatch(/left:\s*10px/);
+    expect(debugControlsRule).not.toMatch(/right\s*:/);
+  });
+
   test('uses the selected environment background and falls back to fields', () => {
     const selectedEnvironmentSetup = createBattleSetup();
     selectedEnvironmentSetup.activeBattle.environment = 'mountains';
@@ -179,7 +190,9 @@ describe('BattlePage flows', () => {
     const playerPanel = screen.getByLabelText(/battle player panel/i);
     const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
 
-    expect(screen.getByText(/battle level: 4/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^battle$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/battle level:/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/stored level: 4/i)).toBeInTheDocument();
     expect(screen.getByText('10 / 100')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /battle player piece/i })).toHaveClass(
       'battle-player-piece'
@@ -797,9 +810,14 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/enemy guard: 25/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveAttribute('data-icon', 'shield');
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveClass('battle-guard-shield');
+    expect(screen.getByLabelText(/enemy guard shield/i)).toHaveStyle({ opacity: '0.6' });
     expect(screen.getByLabelText(/enemy guard amount/i)).toHaveTextContent('25');
+    expect(screen.getByLabelText(/enemy guard amount/i)).toHaveClass('battle-guard-amount');
     expect(screen.getByLabelText(/enemy guard amount/i).parentElement).toContainElement(
       screen.getByLabelText(/enemy guard shield/i)
+    );
+    expect(screen.getByLabelText(/enemy guard amount/i).parentElement?.parentElement).toHaveClass(
+      'battle-actor-image--enemy'
     );
     expect(screen.queryByLabelText(/player guard shield/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/player guard amount/i)).not.toBeInTheDocument();
@@ -848,9 +866,14 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/player guard shield/i)).toHaveAttribute('data-icon', 'shield');
     expect(screen.getByLabelText(/player guard shield/i)).toHaveClass('battle-guard-shield');
+    expect(screen.getByLabelText(/player guard shield/i)).toHaveStyle({ opacity: '0.6' });
     expect(screen.getByLabelText(/player guard amount/i)).toHaveTextContent('5');
+    expect(screen.getByLabelText(/player guard amount/i)).toHaveClass('battle-guard-amount');
     expect(screen.getByLabelText(/player guard amount/i).parentElement).toContainElement(
       screen.getByLabelText(/player guard shield/i)
+    );
+    expect(screen.getByLabelText(/player guard amount/i).parentElement?.parentElement).toHaveClass(
+      'battle-actor-image--player'
     );
     expect(screen.queryByLabelText(/enemy guard shield/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/enemy guard amount/i)).not.toBeInTheDocument();

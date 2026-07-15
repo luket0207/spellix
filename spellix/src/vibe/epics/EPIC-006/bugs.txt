@@ -1846,3 +1846,97 @@ Testing Required
 * Confirm the Spells modal has not changed.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-016: Battle debug buttons should be absolutely positioned on the left
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Improve battle page structure, positioning, overlays, and bottom alignment
+
+Bug Summary
+
+* The battle debug buttons are currently positioned on the right side of the page.
+* They should be left-aligned to the page instead.
+* They should still be absolutely positioned so they do not affect the battle page layout.
+
+Repro Steps
+
+* Open the battle page.
+* Look at the debug buttons.
+* Confirm they are floating at the top of the page.
+* Check whether they are aligned to the right side instead of the left side.
+
+Expected Behaviour
+
+* Battle debug buttons should be positioned on the left side of the page.
+* They should remain absolutely positioned.
+* They should not reserve layout space.
+* Removing the debug buttons later should not affect the battle page layout.
+* The main battle layout should remain unchanged.
+* The buttons should remain usable for testing.
+
+Actual Behaviour
+
+* Battle debug buttons are currently positioned on the right side of the page.
+
+Required Fix
+
+* Update the battle debug controls positioning.
+* Use left alignment instead of right alignment.
+* Keep `position: absolute`.
+* Suggested CSS direction:
+
+```css id="5m8d2r"
+.battle-debug-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 50;
+}
+```
+
+* Remove or override any `right` positioning currently applied to the debug controls.
+* Keep the debug controls outside the normal layout flow.
+* Do not change the behaviour of any debug buttons.
+
+Out Of Scope
+
+* No changes to debug button functionality.
+* No changes to forced dice roll behaviour.
+* No changes to battle layout except debug button positioning.
+* No changes to battle animations.
+* No changes to dice container positioning.
+* No changes to player or enemy layout.
+* No unrelated UI changes.
+
+Suspected Cause
+
+* Feature-006 suggested positioning the debug controls with `right: 10px`.
+* The debug controls need to use `left: 10px` instead.
+
+Attempted Fixes
+
+* Added a focused stylesheet regression that reproduced the right-aligned rule by requiring absolute positioning with `left: 10px` and no `right` declaration.
+
+Final Fix
+
+* Replaced only `right: 10px` with `left: 10px` in the existing `.battle-debug-controls` rule.
+* Preserved absolute positioning, the top offset, z-index, control markup, button behavior, forced rolls, and the main battle layout.
+
+Testing Required
+
+* Confirm battle debug buttons appear on the left side of the page.
+* Confirm battle debug buttons remain absolutely positioned.
+* Confirm battle debug buttons do not affect the main battle layout.
+* Confirm the main battle content remains bottom-aligned.
+* Confirm forced dice buttons still work.
+* Confirm Win and Lose debug buttons still work.
+* Confirm Remove 5 health still works if present.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
