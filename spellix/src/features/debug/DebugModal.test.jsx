@@ -162,6 +162,7 @@ describe('DebugModal', () => {
 
   test('starts the selected debug battle level for the current player', () => {
     const handleStartBattle = jest.fn();
+    const handleEnvironmentChange = jest.fn();
 
     render(
       <DebugModal
@@ -177,6 +178,7 @@ describe('DebugModal', () => {
         onStartSelectedEnemyBattle={jest.fn()}
         onPendingTokenReplacementChange={jest.fn()}
         onReplacePendingToken={jest.fn()}
+        onSelectedEnvironmentChange={handleEnvironmentChange}
         onSelectedEnemyIdChange={jest.fn()}
         onSelectedTokenTypeChange={jest.fn()}
         pendingTokenType=""
@@ -186,8 +188,14 @@ describe('DebugModal', () => {
       />
     );
 
+    expect(screen.getByLabelText(/battle environment/i)).toHaveValue('fields');
+
+    fireEvent.change(screen.getByLabelText(/battle environment/i), {
+      target: { value: 'forest' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /^level 3$/i }));
 
+    expect(handleEnvironmentChange).toHaveBeenCalledWith('forest');
     expect(handleStartBattle).toHaveBeenCalledWith(3);
   });
 

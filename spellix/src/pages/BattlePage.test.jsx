@@ -154,6 +154,26 @@ describe('BattlePage flows', () => {
     jest.useRealTimers();
   });
 
+  test('uses the selected environment background and falls back to fields', () => {
+    const selectedEnvironmentSetup = createBattleSetup();
+    selectedEnvironmentSetup.activeBattle.environment = 'mountains';
+
+    const { unmount } = renderBattleFlow(['/battle'], selectedEnvironmentSetup);
+
+    expect(screen.getByRole('main')).toHaveAttribute(
+      'style',
+      expect.stringContaining('mountains.png')
+    );
+
+    unmount();
+    renderBattleFlow();
+
+    expect(screen.getByRole('main')).toHaveAttribute(
+      'style',
+      expect.stringContaining('fields.png')
+    );
+  });
+
   test('removes player health in steps, clamps at zero, and respawns on loss', () => {
     renderBattleFlow();
     const playerPanel = screen.getByLabelText(/battle player panel/i);
@@ -446,6 +466,39 @@ describe('BattlePage flows', () => {
     );
   });
 
+  test('shows remaining limited-use counts in player and enemy battle displays', () => {
+    const limitedUseSetup = createBattleSetup();
+    limitedUseSetup.activeBattle = {
+      ...limitedUseSetup.activeBattle,
+      enemyCurrentHealth: 80,
+      enemyFreezeUses: [1, 0, 0, 0, 0, 0],
+      enemyId: 'venomglyph-serpent',
+      level: 3,
+      playerChargeUses: [2, 0, 0, 0, 0, 0],
+    };
+    limitedUseSetup.players[0].spellSlots[0] = {
+      ...limitedUseSetup.players[0].spellSlots[0],
+      tokens: Array.from({ length: 3 }, (_, index) => ({
+        committed: true,
+        id: `player-1-yellow-${index + 1}`,
+        type: 'yellow',
+      })),
+    };
+    renderBattleFlow(['/battle'], limitedUseSetup);
+
+    const playerPanel = screen.getByLabelText(/battle player panel/i);
+    const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
+
+    expect(within(playerPanel).getByLabelText(/2 yellow tokens in slot 1/i)).toHaveTextContent('2');
+    expect(within(playerPanel).queryByLabelText(/3 yellow tokens in slot 1/i)).not.toBeInTheDocument();
+    expect(within(enemyPanel).getByLabelText(/light-blue token in slot 1/i)).not.toHaveTextContent(
+      '1'
+    );
+    expect(
+      within(enemyPanel).queryByLabelText(/2 light-blue tokens in slot 1/i)
+    ).not.toBeInTheDocument();
+  });
+
 
   test('uses a player freeze check without resolving a spell slot, then allows an even follow-up attack', () => {
     const frozenPlayerSetup = createBattleSetup();
@@ -457,6 +510,7 @@ describe('BattlePage flows', () => {
 
     expect(playerFrozenOverlay).toHaveAttribute('data-icon', 'snowflake');
     expect(playerFrozenOverlay).toHaveClass('battle-freeze-indicator--enter');
+    expect(playerFrozenOverlay).toHaveStyle({ opacity: '0.6' });
     expect(playerFrozenOverlay.parentElement).toHaveClass(
       'battle-actor-image',
       'battle-actor-image--player'
@@ -538,6 +592,7 @@ describe('BattlePage flows', () => {
 
     expect(enemyFrozenOverlay).toHaveAttribute('data-icon', 'snowflake');
     expect(enemyFrozenOverlay).toHaveClass('battle-freeze-indicator--enter');
+    expect(enemyFrozenOverlay).toHaveStyle({ opacity: '0.6' });
     expect(enemyFrozenOverlay.parentElement).toHaveClass(
       'battle-actor-image',
       'battle-actor-image--enemy'

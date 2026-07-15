@@ -6,6 +6,7 @@ import DiceRoll from '../components/dice/DiceRoll';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
 import CommittedSpellSlotList from '../components/spells/CommittedSpellSlotList';
+import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { getEnemyImageSource } from '../features/battle/enemyImages';
 import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
@@ -45,6 +46,7 @@ function BattleActorImage({ children, frozen, frozenLabel, side }) {
           aria-label={frozenLabel}
           className={`battle-freeze-indicator battle-freeze-indicator--${freezeAnimation}`}
           icon={faSnowflake}
+          style={{ opacity: 0.6 }}
         />
       ) : null}
     </div>
@@ -270,7 +272,10 @@ function BattlePage() {
   };
 
   return (
-    <main className="battle-page">
+    <main
+      className="battle-page"
+      style={{ backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})` }}
+    >
       <h1>Battle</h1>
       <p>{`Battle level: ${activeBattle.level}`}</p>
 

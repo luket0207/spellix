@@ -1596,3 +1596,253 @@ Testing Required
 * Confirm the overlay appears above the actor image.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-014: Frozen snowflake icon should use 0.6 opacity
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement remaining battle token effects
+
+Related Bug
+
+* Bug-013: Frozen snowflake icon should overlay the frozen actor image and animate in/out
+
+Bug Summary
+
+* The frozen snowflake icon should be slightly transparent.
+* The snowflake overlay should use `0.6` opacity.
+* This should make the frozen status clear without completely covering the character image.
+
+Repro Steps
+
+* Start a battle.
+* Apply freeze to the player or enemy using Light Blue.
+* Observe the snowflake icon over the frozen actor’s image.
+* Check whether the snowflake appears too strong or fully opaque.
+
+Expected Behaviour
+
+* The snowflake icon should appear centred over the frozen actor’s image.
+* The snowflake icon should remain the same width as the frozen actor’s image, as required by Bug-013.
+* The snowflake icon should use:
+
+```txt id="atzj7p"
+opacity: 0.6
+```
+
+* The icon should still animate into view and out of view.
+* The icon should still remain visible while the actor is frozen.
+* The icon should disappear when freeze is resolved.
+
+Actual Behaviour
+
+* The snowflake icon does not currently use the desired opacity.
+
+Required Fix
+
+* Update the frozen snowflake overlay styling.
+* Set the snowflake icon opacity to `0.6`.
+* Preserve the centre overlay positioning.
+* Preserve the snowflake width requirement from Bug-013.
+* Preserve the grow/shrink in/out animation.
+* Ensure the animation does not override the final visible opacity incorrectly.
+* Keep this change focused only on the snowflake visual styling.
+
+Out Of Scope
+
+* No changes to freeze mechanics.
+* No changes to freeze roll rules.
+* No changes to Light Blue use tracking.
+* No changes to snowflake size or position except preserving existing Bug-013 requirements.
+* No changes to battle turn order.
+* No unrelated battle UI changes.
+
+Suspected Cause
+
+* The snowflake icon may currently use full opacity or inherit opacity from another icon style.
+
+Attempted Fixes
+
+* Added failing player and enemy overlay assertions that reproduced the missing exact `0.6` opacity value while all other BattlePage regressions remained green.
+
+Final Fix
+
+* The shared frozen snowflake overlay now declares opacity `0.6` for both actors.
+* The grow animation now ends at `0.6`, and the shrink animation starts at `0.6`, preserving the Bug-013 centring, image-width sizing, 200 ms timing, and mount lifecycle without a full-opacity animation frame.
+
+Testing Required
+
+* Confirm the snowflake icon uses `0.6` opacity while visible.
+* Confirm the snowflake remains centred over the frozen actor’s image.
+* Confirm the snowflake remains the same width as the frozen actor’s image.
+* Confirm the snowflake still animates into view.
+* Confirm the snowflake still animates out of view.
+* Confirm the snowflake remains visible while the actor is frozen.
+* Confirm the snowflake disappears when freeze resolves.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-015: Limited-use Light Blue and Yellow token counts should decrease visually during battle
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement remaining battle token effects
+
+Related Bug
+
+* Bug-012: Used Light Blue and Yellow battle tokens should be visually faded for that battle only
+
+Bug Summary
+
+* Light Blue and Yellow tokens correctly fade when all uses are gone.
+* However, when multiple limited-use tokens exist in the same spell column, the displayed number does not reduce as uses are consumed.
+* The consolidated token count should show remaining uses for the current battle.
+* This should happen for both Light Blue and Yellow.
+* The original spell data must not be permanently changed.
+
+Repro Steps
+
+* Start a battle with a spell column containing 2 Light Blue tokens.
+* Roll that spell column.
+* Observe the Light Blue token display.
+* Roll that spell column again.
+* Observe the Light Blue token display.
+* Repeat the same process with a spell column containing multiple Yellow tokens.
+
+Expected Behaviour
+
+* If a spell column starts with 2 Light Blue tokens:
+
+  * before use, the consolidated Light Blue token should display `2`.
+  * after the first freeze use, it should display `1`.
+  * after the second freeze use, it should display as used up with opacity `0.5`.
+* If a spell column starts with 3 Light Blue tokens:
+
+  * before use, display `3`.
+  * after one use, display `2`.
+  * after two uses, display `1`.
+  * after three uses, fade to opacity `0.5`.
+* If a spell column starts with 2 Yellow tokens:
+
+  * before use, the consolidated Yellow token should display `2`.
+  * after the first Charge use, it should display `1`.
+  * after the second Charge use, it should display as used up with opacity `0.5`.
+* If a spell column starts with 3 Yellow tokens:
+
+  * before use, display `3`.
+  * after one use, display `2`.
+  * after two uses, display `1`.
+  * after three uses, fade to opacity `0.5`.
+* The displayed count reduction should be battle-only.
+* The player’s actual spell tokens should not be permanently removed.
+* Enemy spell tokens should also not be permanently removed.
+* Starting a new battle should reset the displayed Light Blue and Yellow counts back to the original token counts.
+
+Actual Behaviour
+
+* Light Blue and Yellow tokens fade correctly when completely used up.
+* However, the number inside the consolidated token does not reduce to show remaining uses.
+* Example:
+
+  * 2 Light Blue tokens still display `2` after one freeze use, instead of reducing to `1`.
+
+Required Fix
+
+* Update the battle spell display logic for limited-use tokens.
+* For Light Blue and Yellow only, display remaining battle uses instead of the original raw token count.
+* Keep the original token count available for normal spell data and future battles.
+* Track remaining uses in battle-instance state.
+* Pass remaining-use information into the reusable spell display or reusable token component.
+* When remaining uses are greater than 1, display that number in the token.
+* When remaining uses are exactly 1, display either no number or `1`, following the existing token display convention for single tokens.
+* When remaining uses are 0:
+
+  * show the token at opacity `0.5`.
+  * do not show a misleading higher count.
+* Do not permanently remove or mutate the actual token objects from the player’s or enemy’s spells.
+* Do not change the Spells modal.
+
+Display Requirement
+
+* The battle spell display should continue to consolidate tokens.
+* For normal tokens, consolidation should still show the actual count of that token type.
+* For Light Blue and Yellow, consolidation should show remaining uses for this battle.
+* This should apply to:
+
+  * player battle spell display.
+  * enemy battle spell display.
+* This should not apply to:
+
+  * Spells modal.
+  * gameplay committed spell display outside battle unless it is intentionally sharing battle state.
+* The reduced count is purely a battle display state.
+
+Battle-Only State Requirement
+
+* Light Blue and Yellow remaining uses should be created when a battle starts.
+* The initial remaining uses should match the number of Light Blue or Yellow tokens in each spell column.
+* Each successful Light Blue freeze use should reduce the remaining Light Blue count for that actor and column by 1.
+* Each successful Yellow Charge use should reduce the remaining Yellow count for that actor and column by 1.
+* Remaining uses should never go below 0.
+* Remaining uses should reset when a new battle starts.
+* Original player and enemy spell slot data should remain unchanged.
+
+Out Of Scope
+
+* No changes to Light Blue freeze rules.
+* No changes to Yellow Charge rules.
+* No changes to fade opacity logic except preserving used-up opacity `0.5`.
+* No changes to Red, Blue, Orange, Green, Purple, Light Green, Black, White, or Grey token display.
+* No permanent token removal.
+* No changes to the Spells modal.
+* No changes to drag-and-drop.
+* No changes to battle win/loss flow.
+* No unrelated UI redesign.
+
+Suspected Cause
+
+* The display is likely still using the original consolidated token count even after battle-instance usage is consumed.
+* The used-up opacity logic may only check whether remaining uses are 0, without replacing the displayed count with the remaining count.
+
+Attempted Fixes
+
+* Bug-012 added the used-up faded state, but did not update the displayed count while some uses remain.
+* Added failing reusable-display and BattlePage regressions that showed raw consolidated counts remained visible after player Yellow and enemy Light Blue battle uses decreased.
+
+Final Fix
+
+* `CommittedSpellSlotList` now uses the current per-column battle-use value as the displayed count and accessible label for Light Blue and Yellow only when their use arrays are supplied.
+* Remaining counts are clamped at 0, counts above 1 remain visible, 1 follows the existing single-token no-number convention, and 0 preserves the Bug-012 opacity `0.5` state without a misleading original count.
+* Normal token consolidation and displays without battle-use arrays still use original token counts, so the Spells modal and original player/enemy spell data remain unchanged and a new battle restores fresh counts through the existing initialization.
+
+Testing Required
+
+* Confirm 2 Light Blue tokens display `2` before use.
+* Confirm after one Light Blue use, the token display reduces to `1` or single-token display convention.
+* Confirm after all Light Blue uses are gone, the token fades to opacity `0.5`.
+* Confirm 3 Light Blue tokens reduce from `3` to `2` to `1` to faded as uses are consumed.
+* Confirm 2 Yellow tokens display `2` before use.
+* Confirm after one Yellow use, the token display reduces to `1` or single-token display convention.
+* Confirm after all Yellow uses are gone, the token fades to opacity `0.5`.
+* Confirm 3 Yellow tokens reduce from `3` to `2` to `1` to faded as uses are consumed.
+* Confirm remaining use counts work for player spell displays.
+* Confirm remaining use counts work for enemy spell displays.
+* Confirm original player spell data is not permanently changed.
+* Confirm original enemy spell data is not permanently changed.
+* Confirm starting a new battle resets Light Blue and Yellow displayed counts.
+* Confirm the Spells modal has not changed.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

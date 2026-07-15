@@ -1,16 +1,29 @@
 .battle-page {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 100vh;
+  width: 100%;
 }
 
 .battle-display {
+  --enemy-actor-center: 75%;
+  --player-actor-center: 25%;
+
+  align-self: center;
+  box-sizing: border-box;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 24px;
   align-items: flex-start;
   justify-content: space-between;
+  max-width: 950px;
   position: relative;
+  width: 100%;
 }
 
 .battle-red-effect {
@@ -20,7 +33,7 @@
   background: red;
   border-radius: 50%;
   height: 20px;
-  left: 10%;
+  left: var(--player-actor-center);
   pointer-events: none;
   position: absolute;
   top: 65px;
@@ -38,39 +51,39 @@
 
 @keyframes battle-red-player-to-enemy {
   0% {
-    left: 10%;
-    transform: scale(1);
+    left: var(--player-actor-center);
+    transform: translateX(-50%) scale(1);
   }
 
   80% {
-    left: 90%;
+    left: var(--enemy-actor-center);
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
   }
 
   100% {
-    left: 90%;
+    left: var(--enemy-actor-center);
     opacity: 0;
-    transform: scale(2);
+    transform: translateX(-50%) scale(2);
   }
 }
 
 @keyframes battle-red-enemy-to-player {
   0% {
-    left: 90%;
-    transform: scale(1);
+    left: var(--enemy-actor-center);
+    transform: translateX(-50%) scale(1);
   }
 
   80% {
-    left: 10%;
+    left: var(--player-actor-center);
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
   }
 
   100% {
-    left: 10%;
+    left: var(--player-actor-center);
     opacity: 0;
-    transform: scale(2);
+    transform: translateX(-50%) scale(2);
   }
 }
 
@@ -79,17 +92,19 @@
   height: 150px;
   pointer-events: none;
   position: absolute;
+  left: 50%;
   top: 0;
+  transform: translateX(-50%);
   width: 150px;
   z-index: 0;
 }
 
 .battle-radiating-effect--player {
-  left: 0;
+  left: 50%;
 }
 
 .battle-radiating-effect--enemy {
-  right: 0;
+  left: 50%;
 }
 
 .battle-green-effect,
@@ -108,12 +123,12 @@
 @keyframes battle-effect-radiate {
   0% {
     opacity: 1;
-    transform: scale(0);
+    transform: translateX(-50%) scale(0);
   }
 
   100% {
     opacity: 0;
-    transform: scale(1.2);
+    transform: translateX(-50%) scale(1.2);
   }
 }
 
@@ -141,54 +156,55 @@
 
 @keyframes battle-orange-player-to-enemy {
   0% {
-    left: 10%;
-    transform: scale(1);
+    left: var(--player-actor-center);
+    transform: translateX(-50%) scale(1);
   }
 
   80% {
-    left: 90%;
+    left: var(--enemy-actor-center);
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
   }
 
   100% {
-    left: 90%;
+    left: var(--enemy-actor-center);
     opacity: 0;
-    transform: scale(2);
+    transform: translateX(-50%) scale(2);
   }
 }
 
 @keyframes battle-orange-enemy-to-player {
   0% {
-    left: 90%;
-    transform: scale(1);
+    left: var(--enemy-actor-center);
+    transform: translateX(-50%) scale(1);
   }
 
   80% {
-    left: 10%;
+    left: var(--player-actor-center);
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
   }
 
   100% {
-    left: 10%;
+    left: var(--player-actor-center);
     opacity: 0;
-    transform: scale(2);
+    transform: translateX(-50%) scale(2);
   }
 }
 
 .battle-side {
+  align-items: center;
   display: flex;
-  flex: 1 1 280px;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 12px;
-  max-width: 320px;
+  min-width: 0;
   position: relative;
   z-index: 1;
 }
 
 .battle-side--enemy {
-  align-items: flex-end;
+  align-items: center;
 }
 
 .battle-actor-image {
@@ -196,21 +212,24 @@
   display: inline-flex;
   height: 150px;
   justify-content: center;
+  max-width: 100%;
   position: relative;
   width: fit-content;
 }
 
 .battle-actor-image--player {
-  align-self: flex-start;
+  align-self: center;
 }
 
 .battle-actor-image--enemy {
-  align-self: flex-end;
+  align-self: center;
 }
 
 .battle-player-piece,
 .battle-enemy-piece {
   height: 100%;
+  max-width: 100%;
+  object-fit: contain;
   position: relative;
   width: auto;
   z-index: 1;
@@ -222,6 +241,16 @@
 
 .battle-guard-shield {
   color: blue;
+}
+
+.battle-side .health-bar,
+.battle-side .committed-spell-slot-display {
+  max-width: 300px;
+  width: 100%;
+}
+
+.battle-side .committed-spell-slot-display {
+  overflow-x: auto;
 }
 
 .battle-freeze-indicator {
@@ -254,14 +283,14 @@
   }
 
   to {
-    opacity: 1;
+    opacity: 0.6;
     transform: translate(-50%, -50%) scale(1);
   }
 }
 
 @keyframes battle-freeze-exit {
   from {
-    opacity: 1;
+    opacity: 0.6;
     transform: translate(-50%, -50%) scale(1);
   }
 
@@ -273,6 +302,8 @@
 
 .battle-dice {
   align-self: center;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
 }
 
 .battle-debug-controls {

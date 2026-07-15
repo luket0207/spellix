@@ -1,5 +1,6 @@
 import Modal from '../../components/Modal';
 import SpellToken from '../spells/SpellToken';
+import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
 import { DEBUG_TOKEN_TYPES, getDebugTokenTypeLabel } from './tokenBagAdmin';
 import './debug.css';
 
@@ -16,9 +17,11 @@ function DebugModal({
   onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
   onReplacePendingToken,
+  onSelectedEnvironmentChange,
   onSelectedEnemyIdChange,
   onSelectedTokenTypeChange,
   selectedEnemyId = '',
+  selectedEnvironment = 'fields',
   pendingTokenType = '',
   selectedReplacementTokenId = '',
   selectedTokenType = 'red',
@@ -59,6 +62,19 @@ function DebugModal({
 
         <div className="debug-battle-controls">
           <p>Start a debug battle for the current player.</p>
+          <label htmlFor="debug-battle-environment">Battle Environment</label>
+          <select
+            id="debug-battle-environment"
+            value={selectedEnvironment}
+            disabled={!currentPlayer}
+            onChange={(event) => onSelectedEnvironmentChange(event.target.value)}
+          >
+            {BATTLE_ENVIRONMENTS.map((environment) => (
+              <option key={environment} value={environment}>
+                {`${environment.charAt(0).toUpperCase()}${environment.slice(1)}`}
+              </option>
+            ))}
+          </select>
           {[1, 2, 3, 4].map((level) => (
             <button
               key={level}

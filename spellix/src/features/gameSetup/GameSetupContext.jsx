@@ -9,6 +9,7 @@ import {
   getCurrentPlayer,
 } from './gameSetup';
 import { calculateBattleTurn, createAdjacentPurpleBuffs } from '../battle/battleTurn';
+import { normalizeBattleEnvironment } from '../battle/battleEnvironments';
 import { getEnemyById } from '../battle/enemies';
 import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
@@ -163,7 +164,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     }));
   };
 
-  const startBattle = (playerId, level, enemyId) => {
+  const startBattle = (playerId, level, enemyId, environment = 'fields') => {
     const enemy = getEnemyById(enemyId);
 
     if (!enemy) {
@@ -187,6 +188,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           enemyNextCharged: null,
           enemyNextPurpleBuffs: null,
           enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
+          environment: normalizeBattleEnvironment(environment),
           isResolvingTurn: false,
           level,
           outcome: null,

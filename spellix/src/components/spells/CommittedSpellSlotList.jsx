@@ -57,15 +57,18 @@ function CommittedSpellSlotList({
                         : tokenType === 'yellow'
                           ? yellowUses
                           : null;
+                    const displayCount = Array.isArray(uses)
+                      ? Math.max(0, uses[index] ?? 0)
+                      : count;
 
                     return (
                       <Token
                         key={`${slot.id}-${tokenType}`}
-                        ariaLabel={`${count > 1 ? `${count} ` : ''}${tokenType} token${
-                          count > 1 ? 's' : ''
+                        ariaLabel={`${displayCount > 1 ? `${displayCount} ` : ''}${tokenType} token${
+                          displayCount > 1 ? 's' : ''
                         } in slot ${index + 1}`}
-                        count={count}
-                        faded={Array.isArray(uses) && (uses[index] ?? 0) <= 0}
+                        count={displayCount}
+                        faded={Array.isArray(uses) && displayCount === 0}
                         tokenType={tokenType}
                       />
                     );

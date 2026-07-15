@@ -1729,3 +1729,397 @@ Testing Checkpoints
 * Confirm the Spells modal has not changed.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Add battle page environment backgrounds and improved battle layout
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first cohesive slice by adding the debug-controlled battle environment flow and battle page backgrounds.
+* The debug battle controls now provide a `Battle Environment` dropdown with `fields` as the default and all seven required environment values.
+* Both level-based and manually selected enemy debug battle triggers pass the selected environment into the active battle state.
+* Battle environments are normalized through one explicit static image map; missing or invalid values safely fall back to `fields`.
+* The battle page displays the selected image behind the existing battle UI using centred, non-repeating cover sizing across the available page width.
+* Completed the second cohesive slice by reusing the existing battle-only persistent dice wrapper for the required `rgba(255, 255, 255, 0.5)` background and `8px` rounded corners.
+* The shared `DiceRoll` and temporary gameplay dice modal remain unchanged, and no container opacity is used, so all dice content remains fully opaque.
+* Completed the third cohesive slice by reusing the existing `.battle-display` and `.battle-side` structure as a centred, responsive two-column actor stage capped at `950px`; no new React component or wrapper was needed.
+* Player and enemy panels now centre their existing image, guard, health, and spell content around one panel centre while preserving left/right order, image facing, and battle-only sizing.
+* Narrow screens retain both actor columns without forcing the page wider; each actor's existing fixed-width spell display can scroll within its own available panel width.
+* Red and Orange effects now travel between shared player/enemy centre variables instead of the old page-edge coordinates, while Blue and Green effects radiate from the centre of their owning actor panel and freeze remains centred in its image wrapper.
+* Feature-005 is complete without changing battle rules, shared spell/health components, the temporary gameplay dice, routes, board environment detection, dependencies, or unrelated UI.
+
+Goal
+
+* Improve the battle page layout so the player and enemy are closer together.
+* Keep the battle content centred horizontally.
+* Ensure each actor’s image, health bar, and spell table are centre-aligned with each other.
+* Ensure battle animations still travel to and hit the correct targets after the layout change.
+* Add temporary debug-controlled environment awareness for battle backgrounds.
+* Display the correct battle background image based on the selected environment.
+* Improve the dice roll container styling with a semi-transparent white background.
+
+Scope
+
+* Update the battle page layout.
+* Add or update actor-side containers for the player and enemy.
+* Centre-align each actor’s image, health bar, and spell table within their own actor container.
+* Update battle animation positioning so attacks still land correctly after the layout change.
+* Update the persistent battle dice container styling.
+* Add an environment selector to the debug battle trigger flow.
+* Pass the selected battle environment into the battle page.
+* Display the matching battle background image.
+* Keep board-driven environment detection out of scope for now.
+
+Battle Layout Requirement
+
+* Move the two battle characters closer together.
+* The player and enemy should remain centred horizontally on the screen as a pair.
+* The whole battle character area should have a maximum width of:
+
+```txt id="1vs3rk"
+950px
+```
+
+* This max width should be measured from the far outer edge of the player character area to the far outer edge of the enemy character area.
+* The layout should still work on smaller screens.
+* The battle area should remain responsive.
+* Do not force the page wider than the viewport.
+* Suggested layout behaviour:
+
+  * use a centred battle stage wrapper.
+  * apply `max-width: 950px`.
+  * use `width: 100%`.
+  * keep player and enemy inside that wrapper.
+  * reduce the gap between the player and enemy compared with the current layout.
+
+Actor Container Requirement
+
+* Each battle participant should have their own actor container.
+* The actor container should include:
+
+  * character image.
+  * health bar.
+  * active guard display.
+  * frozen overlay if active.
+  * spell table.
+* Everything inside each actor container should be centre-aligned horizontally.
+* The character image, health bar, and spell table should line up around the same centre point.
+* The health bar should not be offset to one side of the character image.
+* The spell table should not be offset to one side of the character image.
+* The guard indicator should remain visually attached to the correct actor.
+* The frozen snowflake overlay should remain centred over the character image.
+* This should apply to both:
+
+  * player actor container.
+  * enemy actor container.
+
+Character Position Requirement
+
+* The player should remain on the left.
+* The enemy should remain on the right.
+* The player should still face the enemy.
+* The enemy should still face the player.
+* The player image should still use the battle-only horizontal flip from EPIC-005.
+* Health bars, spell displays, guard icons, freeze icons, and status indicators should remain visually attached to the correct actor.
+* The layout change should not break player image sizing.
+* The layout change should not break enemy image sizing.
+* Enemy images must continue to appear as images, not fallback text.
+
+Animation Positioning Requirement
+
+* Red attack animations must still travel from the caster to the opponent.
+* Orange counter animations must still travel from the countering actor to the original caster.
+* Blue guard animations must still radiate from behind the actor gaining guard.
+* Green weaken animations must still radiate from behind the actor weakening the attack.
+* Freeze snowflake overlays must still stay centred over the frozen actor image.
+* After moving the characters closer together, all animations must still start and end in the correct place.
+* Do not hardcode old layout positions.
+* Animation positioning should be based on the current actor image/container positions where practical.
+* Ensure the final hit/explosion appears on or near the correct target image.
+
+Dice Container Styling Requirement
+
+* The battle dice roll element should have a white background.
+* The white background should be semi-transparent with:
+
+```txt id="ct8enf"
+0.5 opacity
+```
+
+* Nothing inside the dice roll element should inherit opacity.
+* Do not set `opacity: 0.5` on the whole dice container.
+* Use a background colour with alpha instead.
+* Suggested CSS:
+
+```css id="a80nm2"
+background-color: rgba(255, 255, 255, 0.5);
+```
+
+* The dice roll element should have slightly rounded corners.
+* Suggested border radius:
+
+```css id="r7gscc"
+border-radius: 8px;
+```
+
+* Exact radius can differ slightly if it matches the existing UI better.
+* The dice itself, dice text, buttons, and any internal content should remain fully opaque.
+* This styling applies to the battle persistent dice display.
+* Do not change the temporary gameplay dice modal unless shared styling makes that unavoidable.
+
+Battle Background Requirement
+
+* The battle page should display a background image based on the selected environment.
+* Background images are located in:
+
+```txt id="iaj0gz"
+src/images/battleBackgrounds/X.png
+```
+
+* `X` is the environment value.
+* Environment file names are lowercase.
+* Supported battle background files:
+
+```txt id="9twnqf"
+fields.png
+hills.png
+gravel.png
+mud.png
+woods.png
+forest.png
+mountains.png
+```
+
+* The background should be the same width as the screen.
+* The background should sit behind the battle characters and battle UI.
+* The background should not cover or hide the characters, health bars, spells, dice, modals, or debug controls.
+* The background should scale cleanly across different viewport widths.
+* Use sensible background sizing so the image fills the horizontal space.
+* Suggested styling direction:
+
+  * `width: 100vw`
+  * `background-image`
+  * `background-size: cover`
+  * `background-position: center`
+  * `background-repeat: no-repeat`
+
+Environment Values Requirement
+
+* The possible battle environment values are:
+
+```txt id="fst025"
+fields
+hills
+gravel
+mud
+woods
+forest
+mountains
+```
+
+* These values should be used in the debug dropdown.
+* These values should map directly to the battle background file names.
+* Do not use `field` for this feature.
+* Use `fields`, because the file is `fields.png`.
+
+Debug Menu Environment Selector Requirement
+
+* Add a new dropdown to the debug battle trigger area.
+* The dropdown should allow selecting the battle environment before triggering a battle.
+* The dropdown options should be:
+
+  * fields
+  * hills
+  * gravel
+  * mud
+  * woods
+  * forest
+  * mountains
+* The selected environment should be passed into the active battle state when a debug battle is triggered.
+* The battle page should read the active battle environment and display the matching background.
+* The environment selector should be used for:
+
+  * level-based debug battle triggers.
+  * manually selected enemy debug battle triggers.
+* The dropdown should be clearly labelled.
+* Suggested label:
+
+```txt id="tqunua"
+Battle Environment
+```
+
+* Default environment should be:
+
+```txt id="rx5lmf"
+fields
+```
+
+Temporary Environment Awareness Requirement
+
+* For now, the debug menu controls the battle environment.
+* Board-driven environment detection is out of scope.
+* Do not try to detect the board square environment yet.
+* Do not change movement or battle-trigger logic on the board.
+* This feature should prepare the battle page to receive an environment value later.
+* Keep the battle environment in active battle state or another clear location that can later be set by board-triggered battles.
+
+Suggested Active Battle State Addition
+
+```js id="ggw3i5"
+{
+  activeBattle: {
+    playerId: "player-1",
+    enemyId: "vilewhisker-rat",
+    level: 1,
+    environment: "fields"
+  }
+}
+```
+
+* Exact structure can vary if it fits the existing code better.
+* The important requirement is that the battle page knows which environment background to show.
+
+Image Loading Requirement
+
+* Use the selected environment value to resolve the correct image.
+* Avoid fragile string paths if the current build setup requires explicit imports.
+* A clear mapping is acceptable.
+* Suggested mapping direction:
+
+```js id="26r74h"
+const battleBackgrounds = {
+  fields,
+  hills,
+  gravel,
+  mud,
+  woods,
+  forest,
+  mountains
+};
+```
+
+* Exact import names can vary.
+* Ensure missing or invalid environment values fail safely.
+* If no environment is provided, fall back to `fields`.
+
+Expected Behaviour
+
+* The player and enemy appear closer together on the battle page.
+* The battle character area remains centred.
+* The battle character area does not exceed 950px wide.
+* Each actor has a clear container holding their image, health bar, status indicators, and spell table.
+* The player image, player health bar, and player spell table are centre-aligned with each other.
+* The enemy image, enemy health bar, and enemy spell table are centre-aligned with each other.
+* Red attack animations still hit the opponent correctly.
+* Orange counter animations still hit the original caster correctly.
+* Blue guard animations still appear behind the guarded actor.
+* Green weaken animations still appear behind the actor weakening the attack.
+* Freeze snowflakes still centre over the frozen actor image.
+* The battle dice has a semi-transparent white background.
+* Dice content remains fully opaque.
+* The dice container has slightly rounded corners.
+* The debug battle trigger area has a battle environment dropdown.
+* Triggering a debug battle with `fields` shows `fields.png`.
+* Triggering a debug battle with `hills` shows `hills.png`.
+* Triggering a debug battle with `gravel` shows `gravel.png`.
+* Triggering a debug battle with `mud` shows `mud.png`.
+* Triggering a debug battle with `woods` shows `woods.png`.
+* Triggering a debug battle with `forest` shows `forest.png`.
+* Triggering a debug battle with `mountains` shows `mountains.png`.
+* The background is screen width.
+* Existing battle turn logic still works.
+
+Out Of Scope
+
+* No board-square environment detection.
+* No automatic battle background selection from movement.
+* No new battle environments.
+* No changes to board generation.
+* No changes to environment tile images.
+* No changes to enemy data.
+* No changes to player spells.
+* No changes to token effects.
+* No changes to damage values.
+* No changes to guard values.
+* No changes to freeze, charge, or buff logic.
+* No changes to battle win/loss flow.
+* No changes to reward page.
+* No changes to respawn flow.
+* No changes to gameplay dice modal unless unavoidable through shared component styling.
+* No unrelated battle UI redesign.
+
+Assumptions
+
+* Battle background images already exist at `src/images/battleBackgrounds`.
+* The file names are exactly:
+
+  * `fields.png`
+  * `hills.png`
+  * `gravel.png`
+  * `mud.png`
+  * `woods.png`
+  * `forest.png`
+  * `mountains.png`
+* The debug menu already has controls for starting level-based and manually selected battles.
+* The active battle state can be extended to include an environment value.
+* The battle page can receive this environment value from context, route state, or another existing battle state mechanism.
+* Battle animations currently rely on actor positions and may need to be recalculated after the layout change.
+
+Stop Point
+
+* Stop once the battle page uses a centred max-width 950px character layout, each actor’s image/health/spells are centre-aligned inside their actor container, battle animations still hit correctly, the battle dice has a semi-transparent white rounded background, and debug-triggered battles display the selected environment background image.
+
+Testing Checkpoints
+
+* Confirm the player and enemy are closer together than before.
+* Confirm the battle character area remains centred horizontally.
+* Confirm the battle character area does not exceed 950px wide.
+* Confirm the battle page remains usable on smaller screens.
+* Confirm the player remains on the left.
+* Confirm the enemy remains on the right.
+* Confirm the player image still faces the enemy.
+* Confirm enemy images still display correctly.
+* Confirm the player image, player health bar, and player spell table are centre-aligned.
+* Confirm the enemy image, enemy health bar, and enemy spell table are centre-aligned.
+* Confirm guard indicators remain attached to the correct actor.
+* Confirm freeze overlays remain centred over the correct actor image.
+* Confirm player health and enemy health still display correctly.
+* Confirm player spell display and enemy spell display still display correctly.
+* Confirm Red attack animations start from the caster and hit the opponent.
+* Confirm Orange counter animations start from the countering actor and hit the original caster.
+* Confirm Blue guard animations appear behind the actor gaining guard.
+* Confirm Green weaken animations appear behind the actor weakening the attack.
+* Confirm freeze snowflakes remain centred over frozen actor images.
+* Confirm the battle dice background is white with 0.5 opacity.
+* Confirm the dice itself remains fully opaque.
+* Confirm dice text remains fully opaque.
+* Confirm dice buttons remain fully opaque.
+* Confirm the dice container has slightly rounded corners.
+* Confirm the debug menu has a `Battle Environment` dropdown.
+* Confirm the dropdown includes `fields`.
+* Confirm the dropdown includes `hills`.
+* Confirm the dropdown includes `gravel`.
+* Confirm the dropdown includes `mud`.
+* Confirm the dropdown includes `woods`.
+* Confirm the dropdown includes `forest`.
+* Confirm the dropdown includes `mountains`.
+* Confirm starting a debug battle with `fields` shows the fields background.
+* Confirm starting a debug battle with `hills` shows the hills background.
+* Confirm starting a debug battle with `gravel` shows the gravel background.
+* Confirm starting a debug battle with `mud` shows the mud background.
+* Confirm starting a debug battle with `woods` shows the woods background.
+* Confirm starting a debug battle with `forest` shows the forest background.
+* Confirm starting a debug battle with `mountains` shows the mountains background.
+* Confirm the background spans the screen width.
+* Confirm invalid or missing environment falls back to `fields`.
+* Confirm battle turns still work.
+* Confirm forced dice buttons still work.
+* Confirm enemy automatic turns still work.
+* Confirm battle win/loss still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

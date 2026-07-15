@@ -34,10 +34,14 @@ function BattleStateProbe() {
 
   return (
     <div>
-      <button type="button" onClick={() => startBattle('player-1', 2, 'frostwisp-spirit')}>
+      <button
+        type="button"
+        onClick={() => startBattle('player-1', 2, 'frostwisp-spirit', 'woods')}
+      >
         Start battle
       </button>
       <p>{`Battle actor: ${activeBattle?.currentBattleActor ?? 'none'}`}</p>
+      <p>{`Battle environment: ${activeBattle?.environment ?? 'none'}`}</p>
       <p>{`Player guard: ${activeBattle?.playerGuard ?? 'none'}`}</p>
       <p>{`Enemy guard: ${activeBattle?.enemyGuard ?? 'none'}`}</p>
       <p>{`Resolving turn: ${activeBattle?.isResolvingTurn ?? 'none'}`}</p>
@@ -174,6 +178,7 @@ test('starts every battle with fresh Light Blue uses and no frozen actors', () =
   fireEvent.click(screen.getByRole('button', { name: /start battle/i }));
 
   expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
+  expect(screen.getByText(/battle environment: woods/i)).toBeInTheDocument();
   expect(screen.getByText(/player guard: 0/i)).toBeInTheDocument();
   expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
   expect(screen.getByText(/resolving turn: false/i)).toBeInTheDocument();

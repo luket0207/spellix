@@ -1143,3 +1143,186 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * A browser pass is required to visually confirm exact image-width alignment, centring, z-index, and smooth grow/shrink interpolation on the available player and enemy image aspect ratios; component lifecycle, timing boundaries, actor isolation, freeze behavior, and production compilation are covered automatically.
+
+---
+
+Bug-014: Frozen snowflake icon should use 0.6 opacity
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and freeze the player with a Light Blue effect.
+   Expected: The centred snowflake overlay settles at opacity `0.6` while retaining the same image-width size and position from Bug-013.
+2. Resolve the player freeze.
+   Expected: The snowflake shrinks and fades out from opacity `0.6`, then disappears after the existing 200 ms exit window.
+3. Freeze and unfreeze the enemy.
+   Expected: The enemy overlay uses the same opacity `0.6`, centring, size, and enter/exit animation behavior independently of the player.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies both player and enemy Font Awesome snowflake overlays declare exact opacity `0.6` while preserving their image-wrapper, enter, exit, and unmount assertions.
+* Related battle, context, dice, spell-slot, and token regressions passed: 6 suites and 67 tests.
+* `src/pages/BattlePage.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Bug-014.
+* CSS animation interpolation requires the manual browser check below because JSDOM does not render visual animation frames.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused battle route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm the snowflake appears consistently translucent throughout its animation on both actor images; the exact declared opacity, component lifecycle, existing geometry classes, freeze behavior, and production compilation are covered automatically.
+
+---
+
+Bug-015: Limited-use Light Blue and Yellow token counts should decrease visually during battle
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle with three Light Blue tokens in one spell column.
+   Expected: The consolidated battle token displays `3`, then `2` after one successful freeze use, then follows the existing no-number convention at one remaining use.
+2. Consume the final Light Blue use.
+   Expected: The Light Blue token remains present at opacity `0.5` and no longer displays a misleading original count.
+3. Repeat with three Yellow tokens and successful Charge uses.
+   Expected: The consolidated Yellow display changes from `3` to `2` to the single-token display, then fades at zero uses.
+4. Consume limited uses on player and enemy turns.
+   Expected: Each actor's display uses its own remaining Light Blue and Yellow counts for the selected column.
+5. Start another battle with the same spells.
+   Expected: Displayed limited-use counts reset to the original committed token counts because fresh battle-use arrays are created without changing the spell data.
+6. Open the Spells modal outside battle and inspect normal token types.
+   Expected: Light Blue, Yellow, and normal consolidated token counts continue to show their original spell-data counts.
+
+Automated Tests Completed
+
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies Light Blue and Yellow battle displays progress from `3` to `2` to the single-token convention to faded zero, then restore original counts when battle-use props are absent without mutating six original token objects.
+* `src/pages/BattlePage.test.jsx` verifies the player panel displays two remaining Yellow uses from three tokens and the enemy panel displays one remaining Light Blue use from two tokens.
+* Existing `src/features/gameSetup/GameSetupContext.test.jsx` coverage verifies per-battle count initialization, one-use consumption, zero clamping, original token retention, and fresh counts when a battle starts.
+* Related battle, context, dice, spell-slot, and token regressions passed: 6 suites and 69 tests.
+* `src/components/spells/CommittedSpellSlotList.jsx` passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Bug-015.
+* `src/App.test.jsx` was not rerun because its previously documented source-map-support error prevents that suite from starting; focused battle route/page coverage passed.
+
+Manual Testing Still Needed
+
+* A browser pass is recommended to visually confirm the count text remains readable as multiple player and enemy limited uses are consumed; count values, actor isolation, zero fading, reset behavior, token immutability, default display behavior, and production compilation are covered automatically.
+
+---
+
+Feature-005 Slice 1: Debug-controlled battle environment backgrounds
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the debug menu during a gameplay turn.
+   Expected: The battle trigger area shows a `Battle Environment` dropdown defaulted to `fields` with fields, hills, gravel, mud, woods, forest, and mountains options.
+2. Select `forest` and start a level-based debug battle.
+   Expected: The battle page opens with the forest image covering the page background behind all existing battle UI.
+3. Return to gameplay, select `mountains`, choose a specific enemy, and start the selected enemy battle.
+   Expected: The selected enemy battle opens with the mountains background.
+4. Resize the browser at desktop and narrow viewport widths.
+   Expected: The background remains centred, does not repeat, fills the available page width, and does not hide battle content.
+
+Automated Tests Completed
+
+* `src/features/battle/battleEnvironments.test.js` verifies all seven environment values resolve to their matching static image and unknown values fall back to `fields`.
+* `src/features/debug/DebugModal.test.jsx` verifies the labelled selector defaults to `fields` and reports a changed environment.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies a selected environment is persisted in fresh active battle state.
+* `src/pages/BattlePage.test.jsx` verifies the selected background is rendered and missing active-battle environment data falls back to `fields`; all 24 BattlePage flow regressions passed.
+* The four focused suites passed with 45 tests total.
+* Changed production files and focused non-baseline test files passed installed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Layout and animation positioning were completed and verified in Feature-005 Slice 3 below.
+* Dice-container styling was completed and verified in Feature-005 Slice 2 below.
+* The full `src/pages/BattlePage.test.jsx` file retains pre-existing `testing-library/no-node-access` lint findings outside this slice; the new environment assertion does not add one.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm each background's cover crop, screen-width coverage, readability behind the current battle UI, and both debug launch paths. Dice styling is covered in Slice 2 and actor layout/animation positioning in Slice 3 below.
+
+---
+
+Feature-005 Slice 2: Persistent battle dice container styling
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle and wait for the turn modal to close.
+   Expected: The persistent battle dice display is centered in its existing position on a semi-transparent white background with slightly rounded corners.
+2. Roll the battle dice and observe the dice, result text, and roll button throughout the sequence.
+   Expected: All content remains fully opaque because transparency is applied only to the background color.
+3. Return to gameplay and open the temporary gameplay dice modal.
+   Expected: The temporary dice modal retains its existing styling because only the battle-specific wrapper changed.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies the persistent `DiceRoll` remains inside the existing battle-only `.battle-dice` wrapper and all 24 BattlePage flow regressions pass.
+* `npm run build` completed successfully and compiled the updated battle page CSS.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for this CSS-only slice; JSDOM does not render imported stylesheet appearance.
+* Layout and animation positioning were completed and verified in Feature-005 Slice 3 below.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm the exact background translucency and rounded corners while the dice content remains fully opaque. Actor layout and animation positioning are covered in Slice 3 below.
+
+---
+
+Feature-005 Slice 3: Centred actor stage and animation positioning
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle on a desktop-width browser.
+   Expected: The player and enemy remain left and right in a horizontally centred character area no wider than `950px`, with less separation than a full-screen edge layout.
+2. Compare each actor's image, guard indicator, health bar, and spell table.
+   Expected: Each set of content shares the same horizontal centre within its own actor panel, while the player still faces the enemy and enemy images remain visible.
+3. Narrow the browser viewport.
+   Expected: Both actor columns remain within the viewport; images shrink only when necessary and each spell table can scroll inside its own panel rather than widening the page.
+4. Trigger Red attacks and Orange counters in both directions.
+   Expected: Each effect starts at its source actor centre and ends on or near the opposing actor centre.
+5. Trigger Blue guard and Green reduction for each actor.
+   Expected: Each radiating effect stays centred behind the actor panel that owns the effect.
+6. Freeze and unfreeze each actor.
+   Expected: The snowflake remains centred over the correct actor image throughout its existing enter and exit animation.
+
+Automated Tests Completed
+
+* `src/pages/BattlePage.test.jsx` verifies actor-specific image, health, spell, guard, freeze, Red, Green, Blue, and bidirectional Orange behavior while all 24 BattlePage flows pass.
+* The cumulative Feature-005 environment-map, debug-selector, active-battle-state, and BattlePage suites passed: 4 suites and 45 tests.
+* `npm run build` completed successfully and compiled the responsive stage and updated animation CSS.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* No additional focused JSDOM coverage is identified; JSDOM does not calculate imported stylesheet layout or render CSS keyframe geometry.
+
+Manual Testing Still Needed
+
+* A browser pass is required to visually confirm the exact 950px cap, panel centring, narrow-screen containment, projectile endpoints, and radiating-effect alignment. DOM ownership, directional classes, effect sequencing, gameplay behavior, and production compilation are covered automatically.

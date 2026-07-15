@@ -155,7 +155,7 @@ describe('CommittedSpellSlots', () => {
       />
     );
 
-    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).not.toHaveClass(
+    expect(screen.getByLabelText(/light-blue token in slot 1/i)).not.toHaveClass(
       'token-display--faded'
     );
     expect(screen.getByLabelText(/yellow token in slot 1/i)).toHaveClass(
@@ -169,7 +169,7 @@ describe('CommittedSpellSlots', () => {
         yellowUses={[0, 0, 0, 0, 0, 0]}
       />
     );
-    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).toHaveClass(
+    expect(screen.getByLabelText(/light-blue token in slot 1/i)).toHaveClass(
       'token-display--faded'
     );
 
@@ -180,6 +180,60 @@ describe('CommittedSpellSlots', () => {
     expect(screen.getByLabelText(/yellow token in slot 1/i)).not.toHaveClass(
       'token-display--faded'
     );
+  });
+
+  test('shows remaining limited-use counts during battle without mutating default counts', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[0].tokens = [
+      ...Array.from({ length: 3 }, (_, index) => ({
+        committed: true,
+        id: `light-blue-${index + 1}`,
+        type: 'light-blue',
+      })),
+      ...Array.from({ length: 3 }, (_, index) => ({
+        committed: true,
+        id: `yellow-${index + 1}`,
+        type: 'yellow',
+      })),
+    ];
+    const { rerender } = render(
+      <CommittedSpellSlotList
+        lightBlueUses={[3, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowUses={[3, 0, 0, 0, 0, 0]}
+      />
+    );
+
+    expect(screen.getByLabelText(/3 light-blue tokens in slot 1/i)).toHaveTextContent('3');
+    expect(screen.getByLabelText(/3 yellow tokens in slot 1/i)).toHaveTextContent('3');
+
+    rerender(
+      <CommittedSpellSlotList
+        lightBlueUses={[2, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowUses={[1, 0, 0, 0, 0, 0]}
+      />
+    );
+    expect(screen.getByLabelText(/2 light-blue tokens in slot 1/i)).toHaveTextContent('2');
+    expect(screen.getByLabelText(/yellow token in slot 1/i)).not.toHaveTextContent('1');
+    expect(screen.queryByLabelText(/3 yellow tokens in slot 1/i)).not.toBeInTheDocument();
+
+    rerender(
+      <CommittedSpellSlotList
+        lightBlueUses={[1, 0, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+        yellowUses={[0, 0, 0, 0, 0, 0]}
+      />
+    );
+    expect(screen.getByLabelText(/light-blue token in slot 1/i)).not.toHaveTextContent('1');
+    expect(screen.getByLabelText(/yellow token in slot 1/i)).toHaveClass(
+      'token-display--faded'
+    );
+
+    rerender(<CommittedSpellSlots spellSlots={spellSlots} />);
+    expect(screen.getByLabelText(/3 light-blue tokens in slot 1/i)).toHaveTextContent('3');
+    expect(screen.getByLabelText(/3 yellow tokens in slot 1/i)).toHaveTextContent('3');
+    expect(spellSlots[0].tokens).toHaveLength(6);
   });
 
 });

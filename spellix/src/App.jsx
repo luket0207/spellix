@@ -30,6 +30,7 @@ function App() {
   const [pendingDebugTokenType, setPendingDebugTokenType] = useState('');
   const [selectedReplacementTokenId, setSelectedReplacementTokenId] = useState('');
   const [selectedDebugEnemyId, setSelectedDebugEnemyId] = useState(ENEMIES[0]?.id ?? '');
+  const [selectedBattleEnvironment, setSelectedBattleEnvironment] = useState('fields');
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
@@ -163,7 +164,7 @@ function App() {
       return;
     }
 
-    startBattle(currentPlayer.id, level, enemy.id);
+    startBattle(currentPlayer.id, level, enemy.id, selectedBattleEnvironment);
     setIsDebugOpen(false);
     setIsSettingsOpen(false);
     resetDebugState();
@@ -183,7 +184,7 @@ function App() {
       return;
     }
 
-    startBattle(currentPlayer.id, enemy.level, enemy.id);
+    startBattle(currentPlayer.id, enemy.level, enemy.id, selectedBattleEnvironment);
     setIsDebugOpen(false);
     setIsSettingsOpen(false);
     resetDebugState();
@@ -245,10 +246,12 @@ function App() {
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
         onPendingTokenReplacementChange={setSelectedReplacementTokenId}
         onReplacePendingToken={handleReplacePendingToken}
+        onSelectedEnvironmentChange={setSelectedBattleEnvironment}
         onSelectedEnemyIdChange={setSelectedDebugEnemyId}
         onSelectedTokenTypeChange={setSelectedDebugTokenType}
         pendingTokenType={pendingDebugTokenType}
         selectedEnemyId={selectedDebugEnemyId}
+        selectedEnvironment={selectedBattleEnvironment}
         selectedReplacementTokenId={selectedReplacementTokenId}
         selectedTokenType={selectedDebugTokenType}
       />
