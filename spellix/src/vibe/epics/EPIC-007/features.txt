@@ -1,0 +1,1587 @@
+---
+
+Feature-001: Add death token punishment and respawn result screen
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first foundation slice by marking only the seven newly created starting tokens with `source: 'starting'` and `protected: true`; existing clone, draft movement, and commitment paths preserve this metadata.
+* Added `DEATH_TOKEN_PENALTIES` and `getDeathTokenPenalty` for level 1-4 battle losses and future mini game deaths.
+* Added a pure `applyDeathTokenPenalty` helper that considers only committed, unprotected spell-slot tokens, removes Black tokens first, randomly selects any remainder per individual token, never exceeds availability, and returns separate token copies with one-based column numbers plus immutable updated spell slots.
+* Protection is metadata-based rather than colour-based, so later-gained Red and Blue tokens remain removable.
+* Both automatic and debug battle losses now use one idempotent context transition that applies the level penalty once, persists the updated spell slots on the dying player, and stores `activeBattle.deathPenalty` with required `removalCount` and `removedTokens` fields.
+* Added a feature-local `DeathResult` renderer that lists every removed token separately with its one-based spell column or shows the required no-removal explanation.
+* Reused the existing locked battle-loss modal and respawn action, so the player remains dead until pressing Respawn, then returns to the existing first Start Area position at full health with removed tokens still absent and turn flow advanced.
+* Existing battle win/reward behavior, damage, token bag contents, mini game UI, board generation, and unrelated battle behavior remain unchanged.
+
+Goal
+
+* Add a punishment flow for when a player dies.
+* When a player dies in battle or in a future mini game, they should lose a number of removable tokens.
+* Starting tokens can never be removed.
+* Black tokens should always be removed first.
+* Any remaining token removals should be random.
+* Before the player respawns, show a new screen explaining exactly which tokens were removed.
+* After confirming the result screen, respawn the player in the starting zone with full health and without the removed tokens.
+
+Scope
+
+* Add death punishment logic.
+* Add token removal rules.
+* Add a death result / punishment screen.
+* Connect battle loss flow to the new punishment screen before respawn.
+* Prepare the same punishment logic for future mini game deaths.
+* Preserve existing battle win flow.
+* Preserve existing battle loss detection.
+* Preserve existing respawn behaviour after the punishment screen is completed.
+
+Punishment Amount Requirement
+
+* The number of tokens removed depends on how the player died.
+
+```txt id="e4nd9x"
+Loses level 1 battle = remove 1 token
+Loses level 2 battle = remove 1 token
+Loses level 3 battle = remove 2 tokens
+Loses level 4 battle = remove 3 tokens
+Dies in mini game = remove 1 token
+```
+
+* Mini games are not implemented yet.
+* For now, record mini game death as the same punishment level as a level 1 battle loss.
+* Add a reusable helper or data map so future mini games can call the same punishment flow later.
+
+Suggested Punishment Map
+
+```js id="kg8s90"
+const DEATH_TOKEN_PENALTIES = {
+  level1BattleLoss: 1,
+  level2BattleLoss: 1,
+  level3BattleLoss: 2,
+  level4BattleLoss: 3,
+  miniGameDeath: 1
+};
+```
+
+* Exact names can vary if they fit the project better.
+* Keep this easy to update.
+
+Starting Token Protection Requirement
+
+* Starting tokens can never be removed.
+* Starting tokens are the original tokens placed during first spell setup:
+
+  * 5 Red tokens.
+  * 2 Blue tokens.
+* These tokens must be permanently protected from death punishment.
+* The implementation should clearly distinguish starting tokens from gained tokens.
+* Do not rely only on token colour to identify starting tokens.
+* For example, a Red token gained later should be removable.
+* A Blue token gained later should be removable.
+* Starting Red and starting Blue tokens should not be removable.
+* Add token metadata if needed.
+
+Suggested Token Metadata Direction
+
+```js id="qpglf1"
+{
+  type: "Red",
+  source: "starting",
+  protected: true
+}
+```
+
+* Exact structure can vary.
+* The important rule is that original starting tokens are protected, but later gained Red/Blue tokens are not automatically protected.
+
+Removable Token Pool Requirement
+
+* The death punishment should remove only removable tokens.
+* Removable tokens are tokens that:
+
+  * belong to the dying player.
+  * are not protected starting tokens.
+  * are currently committed in spell slots.
+* Token pouch removal is out of scope unless the current project already treats the pouch as part of the same removable owned-token pool.
+* If token pouch removal is already simple and consistent, it may be included, but the result screen must still clearly identify where the token was removed from.
+* The core required display is for spell table columns.
+
+Black Token Priority Requirement
+
+* Black tokens are always removed first.
+* Black token removal ignores the normal random selection rule.
+* If the player has Black tokens that are removable, remove those before any other token type.
+* If the player has fewer Black tokens than the required removal amount:
+
+  * remove all removable Black tokens first.
+  * then remove the remaining amount randomly from other removable tokens.
+* Example:
+
+  * Player loses a level 4 battle.
+  * 3 tokens should be removed.
+  * Player has 2 removable Black tokens.
+  * Remove both Black tokens first.
+  * Remove 1 additional removable token at random.
+* If the player has enough Black tokens to satisfy the whole punishment:
+
+  * remove only Black tokens.
+  * do not randomly remove anything else.
+
+Random Token Removal Requirement
+
+* After removable Black tokens have been removed, all other removals should be completely random.
+* Random removal should select from all remaining removable non-starting tokens.
+* Each individual token should be eligible separately.
+* If two Green tokens are in the same spell column, each Green token should be treated as its own removable token.
+* Do not consolidate removal during calculation.
+* Do not remove more tokens than are available.
+* If there are not enough removable tokens, remove as many as possible.
+* If there are no removable tokens, remove none.
+
+Death Result Screen Requirement
+
+* When the player dies, show a new screen before respawning them.
+* This screen should show the result of token removal.
+* The player should not be respawned immediately before this screen.
+* The screen should explain one of the following:
+
+  * no tokens were removed because there were no removable tokens.
+  * one or more tokens were removed.
+* If no tokens are removed, show clear text such as:
+
+```txt id="yz5k2i"
+No tokens were removed because only starting tokens remained.
+```
+
+* If tokens are removed, list each removed token as a separate line.
+* Do not consolidate duplicate removals.
+* Example output:
+
+```txt id="xfc3n8"
+A Green token was removed from column 2.
+A Green token was removed from column 2.
+A Black token was removed from column 5.
+```
+
+* Each removed token line should include:
+
+  * token colour/type.
+  * spell column number.
+* Column numbers should be 1 to 6, matching the spell display.
+* If token pouch removal is included, pouch removals must be described clearly, for example:
+
+```txt id="ws2mzc"
+A Red token was removed from the token pouch.
+```
+
+* The screen should have a clear continue/respawn button.
+* Suggested button text:
+
+```txt id="0qgobf"
+Respawn
+```
+
+Respawn Requirement
+
+* After the player confirms the death result screen:
+
+  * respawn the player in the starting zone.
+  * restore the player to full health.
+  * keep the removed tokens removed.
+  * advance or restore turn flow according to the existing death/respawn behaviour.
+* The player should not regain removed tokens on respawn.
+* Starting tokens should still remain.
+* Player position should use the existing Start Area respawn logic.
+* Do not reset the whole game.
+
+Battle Loss Integration Requirement
+
+* When the user player loses a battle:
+
+  * calculate the punishment amount based on the battle level.
+  * remove tokens according to the punishment rules.
+  * navigate to or display the death result screen.
+  * only respawn after the player confirms the result screen.
+* Battle loss should still be resolved from the user player’s perspective.
+* If the enemy reaches 0 health, this feature should not run.
+* If the player reaches 0 health, this feature should run before respawn.
+* The existing lose debug flow should be updated or routed through this punishment flow where appropriate.
+
+Mini Game Preparation Requirement
+
+* Mini games are not implemented yet.
+* Add the mini game death punishment value now for future use.
+* Mini game deaths should remove 1 token.
+* Do not build mini games in this feature.
+* Do not add mini game UI in this feature.
+
+Out Of Scope
+
+* No mini game implementation.
+* No changes to battle damage values.
+* No changes to battle reward logic.
+* No changes to token rarity.
+* No changes to potion logic.
+* No changes to player max health.
+* No changes to Start Area board generation.
+* No permanent removal of starting tokens.
+* No removal of protected starting tokens under any circumstance.
+* No unrelated respawn redesign.
+
+Assumptions
+
+* The project can track whether a token came from the initial starting setup or was gained later.
+* If this metadata does not exist yet, it should be added before this punishment can work safely.
+* The existing battle loss flow already knows the battle level.
+* The existing respawn flow can be reused after the death result screen.
+* Spell columns are internally indexed in a way that can be mapped to user-facing columns 1 to 6.
+
+Stop Point
+
+* Stop once battle losses remove the correct number of removable tokens, starting tokens are protected, Black tokens are removed first, random removals work, a result screen lists each removed token separately, and the player respawns from that screen at full health in the starting zone.
+
+Testing Checkpoints
+
+* Confirm losing a level 1 battle removes 1 removable token.
+* Confirm losing a level 2 battle removes 1 removable token.
+* Confirm losing a level 3 battle removes 2 removable tokens.
+* Confirm losing a level 4 battle removes 3 removable tokens.
+* Confirm future mini game death punishment is recorded as 1 token.
+* Confirm original starting Red tokens cannot be removed.
+* Confirm original starting Blue tokens cannot be removed.
+* Confirm later gained Red tokens can be removed.
+* Confirm later gained Blue tokens can be removed.
+* Confirm Black tokens are removed before all other token types.
+* Confirm if a level 4 loss removes 3 tokens and the player has 2 Black tokens, both Black tokens are removed first.
+* Confirm remaining removals after Black tokens are random.
+* Confirm duplicate token removals are listed as separate lines.
+* Confirm two Green tokens removed from column 2 show two separate lines.
+* Confirm no more tokens are removed than are available.
+* Confirm if only starting tokens remain, no tokens are removed.
+* Confirm the no-removal message displays correctly.
+* Confirm the death result screen appears before respawn.
+* Confirm the player respawns only after pressing the respawn/continue button.
+* Confirm the player respawns in the starting zone.
+* Confirm the player respawns with full health.
+* Confirm removed tokens are no longer in the player’s spell table after respawn.
+* Confirm starting tokens are still present after respawn.
+* Confirm enemy win/player loss still triggers this flow correctly.
+* Confirm player win does not trigger this flow.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Add token rarity data, potion data, potion display, and potion debug granting
+
+Status
+
+* done
+
+Completion Notes
+
+* Completed the first data foundation slice by adding one centralized token definition map for all eleven existing token types. Each definition has a user-facing `label` and required `rarity`, and the existing debug token type list/labels now reuse this source.
+* Added the twenty-one preliminary potion definitions with stable `id`, exact `name`, `availability`, `rarity`, and `description` fields. The catalog is data-only and activates no effects.
+* Added a per-player `potions` array. New players start empty, and `createPlayers` clones existing potion records when preserving players during the current session.
+* Added a plain read-only potion list below the committed spell table on the gameplay page. It shows the current player's potion name, rarity, and availability, displays `No potions` for an empty collection, and updates when the current player changes.
+* Added a feature-local pure capacity helper with a maximum of three. Gains below capacity add immediately; gains at capacity preserve the three current potions and return the new potion as pending; resolving the pending gain can discard it or replace one selected current potion without creating a fourth slot.
+* Connected the capacity helper to session state. `pendingPotionGrant` records the target player and new potion when full, blocks overlapping grants until resolved, and clears after discarding the new potion or replacing one selected current potion. Immediate and resolved gains update only the target player's potion collection.
+* Added a separate lo-fi debug potion grant area with target-player and full-catalog selectors. Grants below capacity update the selected player immediately while preserving the existing token grant controls.
+* Full-capacity debug grants show the new potion and all three current potions, require discarding the new potion or replacing one selected potion, and prevent closing the debug modal until the decision is resolved.
+* Potion effects, reward generation, routes, and styling were not added.
+
+Goal
+
+* Add rarity data to all existing token types.
+* Add preliminary potion data to the game.
+* Display the current player’s potions below their spells table on the gameplay page.
+* Limit each player to a maximum of 3 potions.
+* Add debug menu controls to grant potions to players, similar to token granting.
+* Potion effects are out of scope for this feature.
+
+Scope
+
+* Add token rarity metadata.
+* Add potion data.
+* Add potion ownership to player state.
+* Add potion display below the player’s spell table on the gameplay page.
+* Add potion capacity handling.
+* Add forced discard flow when gaining a potion while already holding 3.
+* Add debug controls for granting potions to players.
+* Do not implement potion effects yet.
+
+Token Rarity Requirement
+
+* Assign every token type a rarity.
+* Token rarities are:
+
+```txt id="l6edb2"
+Red = Common
+Blue = Common
+Orange = Common
+Green = Common
+Light Blue = Common
+Light Green = Common
+Black = Common
+White = Rare
+Purple = Rare
+Yellow = Rare
+Grey = Rare
+```
+
+* Add this as data, not as hardcoded UI text scattered through the app.
+* Suggested data direction:
+
+```js id="he9lry"
+const tokenDefinitions = {
+  Red: { rarity: "Common" },
+  Blue: { rarity: "Common" },
+  Orange: { rarity: "Common" },
+  Green: { rarity: "Common" },
+  "Light Blue": { rarity: "Common" },
+  "Light Green": { rarity: "Common" },
+  Black: { rarity: "Common" },
+  White: { rarity: "Rare" },
+  Purple: { rarity: "Rare" },
+  Yellow: { rarity: "Rare" },
+  Grey: { rarity: "Rare" }
+};
+```
+
+* Exact structure can vary.
+* This data will be used by later reward logic.
+
+Potion Data Requirement
+
+* Add preliminary potion data to the game.
+* Potion effects are not implemented in this feature.
+* Each potion should have:
+
+  * name.
+  * board/battle availability.
+  * rarity.
+  * description.
+* Use the exact potion names and descriptions below unless fixing a spelling issue is already agreed later.
+
+Potion Data
+
+```txt id="lqhzs0"
+Roll Choice | Both | Rare | Choose the next roll of the dice
+Small Heal | Both | Common | Recover 30% HP
+Heal | Both | Rare | Recover 60% HP
+First Aid | Battle | Common | Recover 50% HP
+Teleport to * | Board | Common | Teleport to *feature*, then roll the dice starting from there.
+Copy and Paste | Board | Common | Duplicate any common token in the token pouch
+Gambeller | Board | Common | Discard two tokens of your choice from your token pouch and roll the dice for your turn. If the roll is even, gain a new token.
+Starting Charge | Board | Rare | If you encounter a battle this turn, all your slots are charged by 10 on your first turn in battle
+Tokensmith | Board | Common | Remove a token from a slot and put it into your token pouch
+Ice Beam | Battle | Common | Freeze your opponent
+Charger | Battle | Common | Charge your attacks by 5 next turn
+Heavy Weight | Board | Rare | The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn. I.E if they roll a 5, they will only be able to move 3 places next turn.
+Troublemaker | Board | Rare | Choose any other player and roll the dice for your turn. If even they lose all tokens from their token pouch, if odd you lose all your tokens from your token pouch
+Devine Chance | Board | Common | Roll the dice for your turn. If even you heal to full HP. If odd everyone else does.
+Buy and Sell | Board | Rare | Discard four tokens from your token pouch. Get a choice of 2 random token and pick one to gain.
+Cauldron | Board | Common | See 3 different potions, they are mixed up, you must blind pick and gain 1.
+Storm Master | Board | Rare | Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over.
+Double Dice | Board | Common | Roll 2 dice this turn.
+Bridge Builder | Board | Common | Auto win a River Mini Game
+Good Decisions | Board | Common | Remove any forfeits from a decision
+Cave Runner | Board | Common | Escape a cave encounter with no damage but lose any prizes you had.
+```
+
+* Store potion data in a clear data file.
+* Suggested file:
+
+```txt id="n4fyxz"
+src/data/potions.js
+```
+
+* Exact file location can vary if there is already a better data structure.
+
+Potion Ownership Requirement
+
+* Each player can own potions.
+* Add a potions array or equivalent to player state.
+* Each player can hold a maximum of:
+
+```txt id="7w9a9u"
+3 potions
+```
+
+* Potions should be tracked per player.
+* Potions should persist during the current game session.
+* Potion effects are not used yet.
+
+Gameplay Potion Display Requirement
+
+* Display the player’s potions below their spells table on the gameplay page.
+* This should show the current player’s potions.
+* The display should update when the current player changes.
+* If the player has no potions, show an empty state.
+* Suggested empty text:
+
+```txt id="y9daqc"
+No potions
+```
+
+* Each displayed potion should show at least:
+
+  * potion name.
+  * rarity.
+  * Battle/Board availability.
+* The description can also be shown if it does not clutter the UI.
+* Keep the display simple for now.
+* Do not implement potion use buttons yet unless needed for future placeholder structure.
+* Do not show potions on the board itself.
+
+Potion Capacity Requirement
+
+* A player can have at most 3 potions.
+* If a player gains a potion while they have fewer than 3:
+
+  * add the potion.
+  * update the display.
+* If a player gains a potion while they already have 3:
+
+  * force the player to choose whether to discard one current potion or discard the new potion.
+* The player must not be able to hold 4 potions.
+* This forced discard flow should be reusable for:
+
+  * debug potion grants.
+  * future potion rewards.
+  * future board events.
+* The flow should clearly show:
+
+  * the new potion.
+  * the current 3 potions.
+  * option to discard the new potion.
+  * option to discard one existing potion and keep the new one.
+
+Debug Potion Grant Requirement
+
+* Add a new area in the debug menu for granting potions.
+* This should work similarly to granting tokens.
+* The debug potion grant area should allow selecting:
+
+  * target player.
+  * potion to grant.
+* It should then grant that potion to the selected player.
+* If the selected player already has 3 potions:
+
+  * trigger the forced discard flow.
+* Keep this debug section labelled clearly in code.
+* Suggested comment:
+
+```js id="q7qs8u"
+// DEBUG ONLY: Potion grant controls.
+```
+
+* Potion grant debug controls should be separate from token grant debug controls.
+* Do not replace the existing token grant debug area.
+
+Potion Effect Out Of Scope Requirement
+
+* Potions should not be usable yet.
+* Do not implement healing.
+* Do not implement roll choice.
+* Do not implement teleport.
+* Do not implement potion battle effects.
+* Do not implement potion board effects.
+* Do not implement potion discard effects except capacity management.
+* Potions are only data, ownership, display, and debug grant for this feature.
+
+Expected Behaviour
+
+* All token types have Common/Rare rarity data.
+* Potion data exists in the game.
+* Players can own potions.
+* Each player can hold up to 3 potions.
+* Current player potions display below the spells table on the gameplay page.
+* Debug menu can grant potions to players.
+* If a potion is granted while the player has fewer than 3 potions, it is added.
+* If a potion is granted while the player already has 3 potions, the player must discard either the new potion or one current potion.
+* Potion effects do not activate yet.
+
+Out Of Scope
+
+* No potion usage.
+* No potion effect resolution.
+* No potion reward generation.
+* No battle reward assignment.
+* No board event potion rewards.
+* No mini game potion rewards.
+* No changes to battle token logic.
+* No changes to death punishment.
+* No save/load persistence.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* Token types are already represented consistently enough to attach rarity data.
+* The gameplay page already has a committed spells table/display for the current player.
+* The debug menu already supports granting tokens and can be extended for potions.
+* Potion names are unique enough to use as identifiers, or slugs can be generated from names.
+
+Stop Point
+
+* Stop once token rarities exist in data, potion data exists, each player can hold up to 3 potions, current player potions display below the spells table on gameplay, and the debug menu can grant potions with a forced discard flow when full.
+
+Testing Checkpoints
+
+* Confirm Red is Common.
+* Confirm Blue is Common.
+* Confirm Orange is Common.
+* Confirm Green is Common.
+* Confirm Light Blue is Common.
+* Confirm Light Green is Common.
+* Confirm Black is Common.
+* Confirm White is Rare.
+* Confirm Purple is Rare.
+* Confirm Yellow is Rare.
+* Confirm Grey is Rare.
+* Confirm all listed potions exist in potion data.
+* Confirm each potion has name, Battle/Board value, rarity, and description.
+* Confirm each player starts with no potions unless another feature says otherwise.
+* Confirm current player potions display below the spells table on gameplay.
+* Confirm the potion display updates when the current player changes.
+* Confirm a no-potions empty state appears when appropriate.
+* Confirm debug menu has potion grant controls.
+* Confirm a potion can be granted to Player 1.
+* Confirm a potion can be granted to another player.
+* Confirm granting a potion to a player with 0 potions adds it.
+* Confirm granting a potion to a player with 2 potions adds it as the third potion.
+* Confirm granting a potion to a player with 3 potions triggers the forced discard flow.
+* Confirm the player can discard the new potion.
+* Confirm the player can discard an existing potion and keep the new potion.
+* Confirm the player never holds more than 3 potions.
+* Confirm potion effects do not activate yet.
+* Confirm existing token grant debug controls still work.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Add battle reward generation and reward assignment flow
+
+Status
+
+* done
+
+Completion Notes
+
+* Added a feature-local battle reward configuration for levels 1-4 with the exact required choice counts and Common Token, Rare Token, Common Potion, and Rare Potion weights.
+* Added a pure weighted category generator that rolls every choice independently, accepts an injected random function for deterministic tests, excludes zero-weight categories, and returns no choices for unsupported levels.
+* Added exact-item selection for all four categories using only centralized token and potion rarity data. The normalized result is `{ category, itemType, item }`; token items include `type`, `label`, and `rarity`, while potion items preserve their catalog fields in an independent copy.
+* Added complete battle reward choice generation with stable per-battle choice IDs. Category rolls are completed before exact items are selected, and the configured level choice count is preserved.
+* Both automatic combat wins and the existing debug Win transition now generate and store `activeBattle.rewardChoices` once. Repeated reward transitions reuse the stored choices, while battle losses generate no rewards.
+* Updated the existing reward page with a plain Part 1 choice list that shows every generated category and exact token or potion. Selecting a choice stores its ID in battle state, moves the page to the assignment step, and cannot be changed by a later selection attempt.
+* Removed the placeholder Continue action while a reward is unresolved, so neither debug nor automatic wins can clear the battle or advance the turn before assignment.
+* Added the first token assignment paths using the existing token creation and token-bag capacity helpers. A selected token can be added to a bag with space or discarded, and the stored `rewardResolution` prevents either action from applying more than once.
+* A full token bag cannot receive a sixth token and displays a plain full-capacity message. Each current bag token is now an individual replacement choice; selecting one reuses the existing immutable replacement helper, keeps the bag at five, stores the replaced token ID in `rewardResolution`, and cannot apply twice.
+* Continue becomes available only after the token is added, replaced, or discarded; it then clears the battle, advances the turn, and returns to gameplay.
+* Added direct spell-slot assignment using the existing read-only committed spell display. All six slots are shown with plain Select controls, full five-token slots are disabled, and the chosen slot requires a separate Confirm action before state changes.
+* Confirming creates one unique committed reward token directly in the selected slot, records the slot ID in `rewardResolution`, prevents later duplicate or alternate resolution, and then enables the existing Continue flow.
+* Selecting a potion reward now reuses the existing three-potion capacity helper. Below capacity, the potion is added immediately to the winning player, a `potionSlot` resolution is stored, repeated selection cannot duplicate it, and Continue becomes available.
+* At full potion capacity, the reward choice locks without adding a fourth potion and shows a plain full-capacity message. Each current potion has a replacement action, and the new potion can be discarded separately.
+* Full-capacity replacement reuses the existing immutable pending-potion resolver, keeps exactly three potions, and stores a `potionSlotReplacement` resolution. Discarding the new potion leaves the collection unchanged and stores a `potionDiscarded` resolution; both paths apply only once and enable Continue.
+* Completed mixed reward regression across token and potion choices. The selected reward is the only item applied, resolved rewards survive navigation back to gameplay, the battle clears, and the turn advances once.
+* Stabilized the BattlePage reward regression by deterministically generating a token for its intentionally unresolved assignment assertion; potion auto-resolution remains covered separately on the RewardPage.
+
+Goal
+
+* Implement battle rewards on the existing reward page.
+* Battle rewards should be generated after winning a battle.
+* Reward selection is a two-part process:
+
+  * Part 1: choose one reward from generated reward choices.
+  * Part 2: assign or discard the chosen reward.
+* Rewards can be:
+
+  * Common Token
+  * Rare Token
+  * Common Potion
+  * Rare Potion
+* The player can only take one reward per battle.
+
+Scope
+
+* Update the existing reward page.
+* Generate reward choices based on the won battle level.
+* Allow the player to choose one reward.
+* Generate the actual token or potion represented by the chosen reward.
+* Add assignment flow for token rewards.
+* Add assignment flow for potion rewards.
+* Reuse or extract spell-assignment functionality from the Spells modal where practical.
+* Apply potion capacity rules from Feature-002.
+* Apply token bag capacity rules from existing token-bag logic.
+* After reward assignment/discard is complete, continue back to gameplay.
+
+Battle Reward Situations Requirement
+
+* Rewards are based on the level of battle won.
+* Only battle wins grant these rewards.
+* Battle losses do not use this feature.
+* Reward choices should be generated from the following table.
+
+```txt id="z6f38l"
+Win Level 1 Battle | Choice Amount 1 | Common Token 80 | Rare Token 0 | Common Potion 20 | Rare Potion 0
+Win Level 2 Battle | Choice Amount 2 | Common Token 60 | Rare Token 10 | Common Potion 25 | Rare Potion 5
+Win Level 3 Battle | Choice Amount 3 | Common Token 40 | Rare Token 30 | Common Potion 20 | Rare Potion 10
+Win Level 4 Battle | Choice Amount 3 | Common Token 20 | Rare Token 50 | Common Potion 5 | Rare Potion 25
+```
+
+* Chances are out of 100.
+* For each reward choice shown, roll against that table to decide the reward category.
+* Example:
+
+  * Winning a level 2 battle creates 2 choices.
+  * Each choice has:
+
+    * 60% chance Common Token.
+    * 10% chance Rare Token.
+    * 25% chance Common Potion.
+    * 5% chance Rare Potion.
+* The player can choose only 1 reward from the generated choices.
+* If there is only 1 reward choice, the player must take that reward category into Part 2.
+
+Reward Category Requirement
+
+* The four reward categories are:
+
+  * Common Token
+  * Rare Token
+  * Common Potion
+  * Rare Potion
+* If the chosen reward category is Common Token:
+
+  * randomly select one Common token from token rarity data.
+* If the chosen reward category is Rare Token:
+
+  * randomly select one Rare token from token rarity data.
+* If the chosen reward category is Common Potion:
+
+  * randomly select one Common potion from potion data.
+* If the chosen reward category is Rare Potion:
+
+  * randomly select one Rare potion from potion data.
+* The exact generated token or potion should be shown to the player before assignment.
+* Do not allow the player to take more than one reward per battle.
+
+Part 1: Reward Choice Requirement
+
+* The reward page should first show the reward choices.
+* The number of choices is based on battle level.
+* Each choice should clearly show the reward category and, if already generated, the exact reward.
+* Acceptable flow:
+
+  * generate exact reward items immediately and show them as choices.
+* Also acceptable:
+
+  * show categories first, then generate the exact item after choosing the category.
+* The chosen approach must be clear to the player.
+* Once the player chooses one reward:
+
+  * lock in that reward.
+  * move to Part 2.
+* If there is only one choice:
+
+  * the player still proceeds through the page.
+  * they do not need to compare choices.
+  * they must take that reward into Part 2.
+
+Part 2A: Token Reward Assignment Requirement
+
+* If the player chose a token reward, they must decide where it goes.
+* Possible outcomes:
+
+  * assign it directly to a spell slot.
+  * put it in the token bag to assign later.
+  * discard a token from the token bag to make room for it, if the bag is full.
+  * discard the new token.
+* If assigned directly to a spell slot:
+
+  * the token becomes committed immediately.
+  * after confirming, it cannot be moved.
+  * this should behave like committed tokens from the Spells modal.
+* If placed in the token bag:
+
+  * use existing token bag rules.
+  * if the token bag has space, add it.
+  * if the token bag is full, force the player to either discard an existing bag token or discard the new token.
+* If the new token is discarded:
+
+  * no token is added.
+  * complete the reward flow.
+* The player should not be able to duplicate the token through this flow.
+* The player should not be able to take the token into both a spell slot and the token bag.
+
+Token Assignment Component Requirement
+
+* The token assignment part should reuse functionality from the Spells modal where practical.
+* Refactor shared spell-slot assignment behaviour into a reusable component if needed.
+* This component should support:
+
+  * displaying spell slots.
+  * placing a new token into a valid slot.
+  * confirming placement.
+  * cancelling or discarding the new reward token.
+* The reward page version should not allow moving existing committed tokens.
+* The reward page version should only allow placing the newly rewarded token.
+* The token assignment UI can use similar styling to the existing fantasy-like spell table component.
+* Do not duplicate large amounts of Spells modal logic if it can be extracted cleanly.
+
+Token Assignment Visual Requirement
+
+* The reward assignment UI should look related to the battle spell table/fantasy spell slot style.
+* It should be clear which token is being assigned.
+* It should be clear which spell slot the token is being placed into.
+* It should be clear when the reward token will be committed.
+* The player must confirm before the token becomes committed.
+* Once confirmed, the reward flow can continue.
+
+Part 2B: Potion Reward Assignment Requirement
+
+* If the player chose a potion reward:
+
+  * add it to a potion slot.
+  * then complete the reward flow.
+* If the player already has fewer than 3 potions:
+
+  * add the potion automatically.
+  * show confirmation.
+* If the player already has 3 potions:
+
+  * force the player to choose whether to discard an existing potion or discard the new potion.
+* The player can discard the new potion if they do not want to lose a current potion.
+* The player must never hold more than 3 potions.
+* Use the potion capacity flow from Feature-002.
+* Potion effects remain out of scope.
+
+Reward Page Flow Requirement
+
+* The reward page should support the full sequence:
+
+  * show reward choices.
+  * player chooses one reward.
+  * if token, assign to spell slot, token bag, or discard.
+  * if potion, add to potion slots or force discard choice if full.
+  * after assignment/discard, continue back to gameplay.
+* The page should not return to gameplay before the reward has been resolved.
+* The reward should be applied only once.
+* Refreshing or rerendering should not duplicate the reward if avoidable within current app constraints.
+* Keep the flow simple and functional.
+
+Battle Win Integration Requirement
+
+* When the player wins a battle:
+
+  * use the battle level to generate the correct reward choices.
+  * navigate to the reward page.
+  * provide enough reward context for the reward page to know the battle level.
+* Winning level 1 should generate 1 reward choice.
+* Winning level 2 should generate 2 reward choices.
+* Winning level 3 should generate 3 reward choices.
+* Winning level 4 should generate 3 reward level 2 should generate 2 reward choices.
+* Winning level 3 should generate 3 reward choices.
+* Winning level 4 should generate 3 reward choices.
+* Existing debug Win flow should route through this reward page if it represents a battle win.
+* Do not grant rewards for battle loss.
+
+Random Selection Requirement
+
+* Reward category choices should use the chance table.
+* Actual token rewards should be selected randomly from matching token rarity.
+* Actual potion rewards should be selected randomly from matching potion rarity.
+* Random selection should be simple and readable.
+* Avoid hardcoding token lists separately from token rarity data.
+* Avoid hardcoding potion lists separately from potion data.
+
+Expected Behaviour
+
+* Winning a level 1 battle shows 1 reward choice.
+* Winning a level 2 battle shows 2 reward choices.
+* Winning a level 3 battle shows 3 reward choices.
+* Winning a level 4 battle shows 3 reward choices.
+* Reward categories follow the correct weighted chances.
+* Player can choose only one reward.
+* Token rewards can be assigned directly to a spell slot.
+* Directly assigned token rewards become committed.
+* Token rewards can be added to the token bag.
+* If the token bag is full, the player can discard a bag token or discard the new token.
+* Token rewards can be discarded.
+* Potion rewards are added to potion slots.
+* If potion slots are full, the player can discard an existing potion or discard the new potion.
+* Player never has more than 3 potions.
+* Reward flow returns to gameplay only after the reward is resolved.
+
+Out Of Scope
+
+* No battle reward types beyond Common Token, Rare Token, Common Potion, and Rare Potion.
+* No multiple rewards per battle.
+* No potion effects.
+* No token effect changes.
+* No battle balance changes.
+* No mini game rewards.
+* No shop system.
+* No save/load persistence.
+* No permanent reward history screen.
+* No unrelated reward page redesign.
+
+Assumptions
+
+* Feature-002 has added token rarity data.
+* Feature-002 has added potion data.
+* Feature-002 has added player potion ownership and potion capacity handling.
+* Existing token bag logic already handles full-bag decisions for gained tokens, or can be reused here.
+* Existing spell slot assignment logic from the Spells modal can be refactored safely into a reusable component.
+* The reward page already exists and can be extended rather than recreated.
+* Battle win flow knows the level of the battle that was won.
+
+Stop Point
+
+* Stop once winning a battle generates the correct number of weighted reward choices, the player can choose one, token rewards can be assigned/discarded correctly, potion rewards can be added/discarded correctly, and the reward page returns to gameplay only after the reward is fully resolved.
+
+Testing Checkpoints
+
+* Confirm level 1 battle win creates 1 reward choice.
+* Confirm level 2 battle win creates 2 reward choices.
+* Confirm level 3 battle win creates 3 reward choices.
+* Confirm level 4 battle win creates 3 reward choices.
+* Confirm level 1 reward categories use 80 Common Token / 0 Rare Token / 20 Common Potion / 0 Rare Potion.
+* Confirm level 2 reward categories use 60 Common Token / 10 Rare Token / 25 Common Potion / 5 Rare Potion.
+* Confirm level 3 reward categories use 40 Common Token / 30 Rare Token / 20 Common Potion / 10 Rare Potion.
+* Confirm level 4 reward categories use 20 Common Token / 50 Rare Token / 5 Common Potion / 25 Rare Potion.
+* Confirm Common Token rewards only select Common tokens.
+* Confirm Rare Token rewards only select Rare tokens.
+* Confirm Common Potion rewards only select Common potions.
+* Confirm Rare Potion rewards only select Rare potions.
+* Confirm the player can choose only one reward.
+* Confirm the reward page moves from reward choice to assignment.
+* Confirm a token reward can be assigned directly to a spell slot.
+* Confirm a directly assigned token becomes committed.
+* Confirm a directly assigned token cannot be moved after confirmation.
+* Confirm a token reward can be placed in the token bag when there is space.
+* Confirm a token reward triggers the full-bag decision when the token bag is full.
+* Confirm the player can discard an existing bag token to keep the new reward token.
+* Confirm the player can discard the new reward token.
+* Confirm a potion reward is added when the player has fewer than 3 potions.
+* Confirm a potion reward triggers the full-potion decision when the player already has 3 potions.
+* Confirm the player can discard an existing potion to keep the new reward potion.
+* Confirm the player can discard the new reward potion.
+* Confirm the player never has more than 3 potions.
+* Confirm reward assignment applies only once.
+* Confirm reward flow returns to gameplay after completion.
+* Confirm battle loss does not grant rewards.
+* Confirm existing debug Win flow still works with reward generation.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-004: Create global TokenIcon component with animated glow and tooltip descriptions
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the exact required description for all eleven existing token types to the centralized `TOKEN_DEFINITIONS` data alongside each token's existing label and rarity.
+* Existing reward generation already clones token definitions, so generated token reward items now carry the shared description without adding another data source or changing reward selection rules.
+* Reused the existing global `components/tokens/Token.jsx` component as the TokenIcon foundation. It now derives native hover tooltip text from centralized token data, exposes the same description through `aria-describedby`, and supports keyboard focus without changing caller-provided token names, counts, colour classes, or faded state.
+* Added the required shared animated glow to the TokenIcon foundation. Every token variant now exposes its existing colour through one CSS variable that drives both the token fill and a pointer-events-free pulse behind it; the existing faded state dims the glow with the token.
+* Replaced the duplicate token visual inside the shared `SpellTokenAssignment.jsx` drag surface with the global TokenIcon foundation. Normal Spells modal slots and bags plus reward source, slot, bag, discard, and replacement previews now share its tooltip and glow while preserving the outer `dnd-kit` drag button, disabled committed behavior, and keyboard instructions.
+* Added parent-managed focus and committed-state support to the global token component. Draggable token buttons remain the sole keyboard focus target, append the shared token description to the existing drag instructions, and preserve the previous locked-token inset marker.
+* Added the global TokenIcon foundation to token reward choices before selection. Token options now expose their matching glow and centralized effect description while preserving the existing category, name, Choose button, and reward-selection behavior; potion choices remain unchanged.
+* Replaced the debug full-bag token previews with the global TokenIcon foundation without changing their radio selection behavior, then removed the unused `SpellToken.jsx` duplicate renderer and its eleven duplicate colour rules.
+* A production source scan confirms all rendered token circles now use the global component. The death punishment result remains text-only, so it has no token visual to replace; browser-native `title` tooltips provide the scoped hover presentation without a new tooltip system.
+
+Goal
+
+* Create a reusable global token icon component.
+* Replace all current token displays with this component.
+* Add a subtle animated glow behind every token.
+* Add tooltip descriptions to every token.
+* Ensure tokens in rewards, spell tables, spell assignment screens, token bags, and the Spells modal all use the same component.
+
+Scope
+
+* Create a global token display component.
+* Use this component everywhere tokens currently appear.
+* Add token description data.
+* Add a hover tooltip to tokens.
+* Add a subtle animated glow behind tokens.
+* Preserve existing token behaviour.
+* Preserve existing drag-and-drop behaviour.
+* Preserve existing token count display.
+* Preserve battle-only visual states such as used-up opacity for Light Blue and Yellow.
+
+Global Token Component Requirement
+
+* Create a reusable token icon component.
+* Suggested component name:
+
+```txt id="ow3d97"
+TokenIcon
+```
+
+* Suggested location:
+
+```txt id="on7ofs"
+src/components/common/TokenIcon/TokenIcon.jsx
+src/components/common/TokenIcon/TokenIcon.css
+```
+
+* Exact location can vary if the project already has a better shared component structure.
+* The component should be used for every token display in the game.
+* It should replace duplicated token markup wherever it currently exists.
+
+Token Component Usage Requirement
+
+* Replace existing token visuals with the global token component in:
+
+  * reward choices.
+  * reward token assignment screen.
+  * spell tables.
+  * battle spell displays.
+  * gameplay spell displays.
+  * Spells modal.
+  * token bag displays.
+  * debug token displays, if visible.
+  * death punishment result screen, if tokens are visually shown there.
+* The same component should be used whether the token is:
+
+  * draggable.
+  * static.
+  * committed.
+  * uncommitted.
+  * in a token bag.
+  * in a spell slot.
+  * in a reward choice.
+  * faded because a battle-only use has been consumed.
+
+Token Description Data Requirement
+
+* Add descriptions for all token colours.
+* These descriptions should be stored in reusable token data, not hardcoded separately in multiple UI components.
+* Token descriptions are:
+
+```txt id="1wvaoz"
+Red = Plus 10 Damage
+Blue = Plus 5 Guard
+Orange = Plus 5 Counter Damage
+Green = Plus 5 Weakness
+Light Blue = Freeze
+Light Green = Plus 5 HP
+Black = This token will be the first token to be removed if you lose a battle
+White = Merge Token
+Purple = Plus 5 Buff
+Yellow = Charge
+Grey = Plus 1 Token slot to all adjacent columns
+```
+
+* If token rarity data already exists from Feature-002, add descriptions to the same token definition data if sensible.
+* Suggested data direction:
+
+```js id="c4xctj"
+const tokenDefinitions = {
+  Red: {
+    rarity: "Common",
+    description: "Plus 10 Damage"
+  },
+  Blue: {
+    rarity: "Common",
+    description: "Plus 5 Guard"
+  }
+};
+```
+
+* Exact structure can vary.
+* Avoid duplicating token description strings across components.
+
+Animated Glow Requirement
+
+* Every token should have a subtle animated glow behind it.
+* The glow colour should match the token colour.
+* The glow should slowly grow and shrink from behind the token.
+* The animation should be subtle, not distracting.
+* The glow should not make the token hard to read.
+* The glow should sit behind the token, not over the token.
+* The glow should not interfere with dragging or clicking.
+* The glow should work for all token colours:
+
+  * Red
+  * Blue
+  * Orange
+  * Green
+  * Light Blue
+  * Light Green
+  * Black
+  * White
+  * Purple
+  * Yellow
+  * Grey
+
+Suggested Glow Implementation
+
+```css id="bsa9sl"
+.token-icon::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  transform: scale(0.9);
+  animation: tokenGlowPulse 2.5s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes tokenGlowPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.18;
+  }
+
+  50% {
+    transform: scale(1.12);
+    opacity: 0.32;
+  }
+}
+```
+
+* Exact styling can vary.
+* Use the project’s existing token shape if one already exists.
+* Ensure the glow does not break layout.
+
+Tooltip Requirement
+
+* When the user hovers over a token, show a tooltip with the token description.
+* The tooltip should work anywhere the token appears.
+* The tooltip should show the description for that token colour.
+* Example:
+
+  * hovering over Red shows `Plus 10 Damage`.
+  * hovering over Black shows `This token will be the first token to be removed if you lose a battle`.
+* The tooltip should be readable.
+* The tooltip should appear above the token by default if there is space.
+* The tooltip should not block dragging if the token is draggable.
+* The tooltip should not permanently affect layout.
+* The tooltip should hide when the token is no longer hovered or focused.
+
+Tooltip Accessibility Requirement
+
+* The token should expose the description accessibly.
+* Use at least one of:
+
+  * `aria-label`.
+  * `aria-describedby`.
+  * accessible title/tooltip logic.
+* Keyboard focus should also be considered if simple.
+* Do not rely only on colour to communicate token meaning.
+
+Tooltip Viewport Requirement
+
+* Token tooltips should avoid going off-screen where practical.
+* For this feature, a simple CSS solution is acceptable.
+* If the tooltip is near the left or right edge, it should remain readable and not be clipped where practical.
+* Do not introduce a complex tooltip library unless already present in the project.
+
+Token Count Requirement
+
+* The TokenIcon component should support token counts.
+* Existing consolidated token behaviour should continue working.
+* If a token count is shown now, it should still be shown inside or on the token.
+* The token count should remain readable over the token.
+* The component should support battle-only remaining use counts from prior bugs.
+* For Light Blue and Yellow in battle:
+
+  * if remaining uses are shown, use the battle remaining-use value.
+  * if the token is used up, preserve the faded opacity requirement.
+* Do not break count reduction from Bug-015.
+
+Token Visual State Requirement
+
+* The component should support visual states such as:
+
+  * normal.
+  * draggable.
+  * disabled.
+  * committed.
+  * selected.
+  * faded / used-up.
+* Existing screens should pass these states into the component instead of creating separate token visuals.
+* Used-up limited-use tokens should still be able to render with opacity `0.5`.
+* The glow should respect disabled/faded state if needed.
+* If a token is faded, the glow should not make it look fully active.
+
+Reward Usage Requirement
+
+* When a token appears as a reward option, it must use the TokenIcon component.
+* This lets the player hover over reward tokens and see what they do before selecting them.
+* Token reward choices should show:
+
+  * token icon.
+  * token colour/name if needed.
+  * tooltip description on hover.
+* The reward token assignment screen should also use the TokenIcon component.
+
+Drag-And-Drop Requirement
+
+* The TokenIcon component should work inside the existing drag-and-drop system.
+* It should not break drag handles.
+* It should not consume pointer events in a way that prevents dragging.
+* Tooltip behaviour should not interfere with dragging.
+* Existing Spells modal drag-and-drop should still work.
+* Reward token assignment drag-and-drop should still work.
+
+Expected Behaviour
+
+* All token visuals use the same TokenIcon component.
+* Tokens show a subtle animated glow in their own colour.
+* Hovering over any token shows its description.
+* Token rewards show descriptions before the player selects them.
+* Spell table tokens show descriptions on hover.
+* Spells modal tokens show descriptions on hover.
+* Token bag tokens show descriptions on hover.
+* Battle token displays still support faded used-up Light Blue and Yellow states.
+* Existing token counts still display correctly.
+* Existing drag-and-drop still works.
+
+Out Of Scope
+
+* No changes to token effects.
+* No changes to token rarity.
+* No changes to battle calculations.
+* No changes to reward generation chances.
+* No changes to potion components.
+* No potion tooltip work in this feature.
+* No new token types.
+* No token image assets.
+* No changes to drag-and-drop rules.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Token colour names are already normalised enough to pass into a reusable component.
+* Existing token displays can be replaced incrementally but should all use the same final component.
+* The current token shape and count display can be preserved unless a small adjustment is needed for the glow and tooltip.
+* Tooltips can be built with CSS or a lightweight existing UI pattern.
+
+Stop Point
+
+* Stop once every token display in rewards, spell tables, token bags, and the Spells modal uses the same global TokenIcon component with subtle matching-colour glow and tooltip descriptions.
+
+Testing Checkpoints
+
+* Confirm Red uses the global TokenIcon component.
+* Confirm Blue uses the global TokenIcon component.
+* Confirm Orange uses the global TokenIcon component.
+* Confirm Green uses the global TokenIcon component.
+* Confirm Light Blue uses the global TokenIcon component.
+* Confirm Light Green uses the global TokenIcon component.
+* Confirm Black uses the global TokenIcon component.
+* Confirm White uses the global TokenIcon component.
+* Confirm Purple uses the global TokenIcon component.
+* Confirm Yellow uses the global TokenIcon component.
+* Confirm Grey uses the global TokenIcon component.
+* Confirm each token has a subtle animated glow matching its colour.
+* Confirm the glow grows and shrinks slowly.
+* Confirm the glow sits behind the token.
+* Confirm hovering Red shows `Plus 10 Damage`.
+* Confirm hovering Blue shows `Plus 5 Guard`.
+* Confirm hovering Orange shows `Plus 5 Counter Damage`.
+* Confirm hovering Green shows `Plus 5 Weakness`.
+* Confirm hovering Light Blue shows `Freeze`.
+* Confirm hovering Light Green shows `Plus 5 HP`.
+* Confirm hovering Black shows the death-removal description.
+* Confirm hovering White shows `Merge Token`.
+* Confirm hovering Purple shows `Plus 5 Buff`.
+* Confirm hovering Yellow shows `Charge`.
+* Confirm hovering Grey shows `Plus 1 Token slot to all adjacent columns`.
+* Confirm token rewards use TokenIcon.
+* Confirm reward token tooltips appear before choosing a reward.
+* Confirm battle spell displays use TokenIcon.
+* Confirm gameplay spell displays use TokenIcon.
+* Confirm the Spells modal uses TokenIcon.
+* Confirm token bag displays use TokenIcon.
+* Confirm token counts still display correctly.
+* Confirm Light Blue and Yellow battle remaining-use counts still display correctly.
+* Confirm used-up Light Blue and Yellow tokens still fade correctly.
+* Confirm drag-and-drop still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Create global PotionIcon component with flask icon, animated glow, names, and tooltip descriptions
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the exact required colour to all twenty-one existing potion definitions using the same lowercase colour names already used by global token variants: Blue, Green, Yellow, Orange, Red, Grey, Light Blue, and Purple.
+* Added the reusable global `components/potions/PotionIcon.jsx`. It renders the required Font Awesome `faFlask`, uses the potion's centralized colour and description, shows the potion name beneath the flask, exposes the description with `aria-describedby`, and supports keyboard focus or parent-managed focus for selectable displays.
+* The eight potion colour classes reuse the exact existing TokenIcon colour values in one scoped PotionIcon stylesheet; no new palette values were selected.
+* Added a subtle 2.5-second matching-colour glow behind every flask. The glow does not receive pointer events and does not alter potion selection or drag behavior.
+* Replaced native title text with a reusable custom tooltip that appears on hover or focus, wraps long descriptions, stays within eight pixels of the viewport sides, and does not affect page layout or pointer interaction.
+* Adopted PotionIcon in the current-player gameplay list, potion reward choices, selected full-capacity reward, reward replacement choices, pending debug grants, and debug replacement choices.
+* Existing potion descriptions, rarity, availability, ownership, reward generation, capacity rules, debug grant actions, and inactive potion effects remain unchanged.
+
+Goal
+
+* Create a reusable global potion display component.
+* Use this component everywhere potions appear.
+* Use the Font Awesome `faFlask` icon for potions.
+* Colour each potion flask based on potion data.
+* Add a subtle animated glow matching the potion colour.
+* Add tooltip descriptions for potions.
+* Display the potion name underneath the flask icon.
+* Ensure long potion tooltips remain entirely in view where practical.
+
+Scope
+
+* Create a global potion display component.
+* Add potion colour data.
+* Add or extend potion tooltip description data.
+* Use Font Awesome `faFlask`.
+* Replace potion displays with the global potion component.
+* Add animated glow to potion icons.
+* Add tooltip behaviour to potion icons.
+* Display potion names below the icon.
+* Keep potion effects out of scope.
+
+Global Potion Component Requirement
+
+* Create a reusable potion display component.
+* Suggested component name:
+
+```txt id="2w4xom"
+PotionIcon
+```
+
+* Suggested location:
+
+```txt id="gtdpot"
+src/components/common/PotionIcon/PotionIcon.jsx
+src/components/common/PotionIcon/PotionIcon.css
+```
+
+* Exact location can vary if the project already has a better shared component structure.
+* The component should be used anywhere potions appear.
+
+Potion Component Usage Requirement
+
+* Replace existing potion visuals with the global PotionIcon component in:
+
+  * gameplay potion display.
+  * reward choices.
+  * reward potion assignment / capacity screen.
+  * potion discard choice screens.
+  * debug potion grant displays, if visible.
+  * any future potion lists.
+* The same component should be used whether the potion is:
+
+  * selectable.
+  * static.
+  * newly rewarded.
+  * currently owned.
+  * being discarded.
+  * shown in debug UI.
+
+Font Awesome Requirement
+
+* Use Font Awesome icon:
+
+```txt id="v296ml"
+faFlask
+```
+
+* The flask icon should be coloured based on the potion’s colour value.
+* The flask icon should be the main visual for the potion.
+* Do not use separate image assets for potions in this feature.
+
+Potion Name Requirement
+
+* Display the potion name underneath the flask icon.
+* The name should be part of the PotionIcon component.
+* The name should be readable.
+* The name should stay visually attached to the flask icon.
+* Potion names can wrap if needed, but should not make the component excessively wide.
+* The name should appear wherever the PotionIcon is used unless a prop intentionally hides it for a very compact display.
+* Default behaviour should show the potion name.
+
+Potion Colour Data Requirement
+
+* Add colour data to potion definitions.
+* Potion colours are:
+
+```txt id="k5wzyr"
+Roll Choice = Blue
+Small Heal = Green
+Heal = Green
+First Aid = Green
+Teleport to * = Yellow
+Copy and Paste = Orange
+Gambeller = Red
+Starting Charge = Yellow
+Tokensmith = Grey
+Ice Beam = Light Blue
+Charger = Yellow
+Heavy Weight = Blue
+Troublemaker = Purple
+Devine Chance = Green
+Buy and Sell = Orange
+Cauldron = Red
+Storm Master = Red
+Double Dice = Blue
+Bridge Builder = Light Blue
+Good Decisions = Orange
+Cave Runner = Grey
+```
+
+* Store this colour value in potion data.
+* Do not hardcode potion colours only in the component.
+* The component should receive the potion data and render the correct colour.
+
+Potion Description Tooltip Data Requirement
+
+* Tooltips should use the potion description from potion data.
+* Descriptions are:
+
+```txt id="j0p7wp"
+Roll Choice = Choose the next roll of the dice
+Small Heal = Recover 30% HP
+Heal = Recover 60% HP
+First Aid = Recover 50% HP
+Teleport to * = Teleport to *feature*, then roll the dice starting from there.
+Copy and Paste = Duplicate any common token in the token pouch
+Gambeller = Discard two tokens of your choice from your token pouch and roll the dice for your turn. If the roll is even, gain a new token.
+Starting Charge = If you encounter a battle this turn, all your slots are charged by 10 on your first turn in battle
+Tokensmith = Remove a token from a slot and put it into your token pouch
+Ice Beam = Freeze your opponent
+Charger = Charge your attacks by 5 next turn
+Heavy Weight = The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn. I.E if they roll a 5, they will only be able to move 3 places next turn.
+Troublemaker = Choose any other player and roll the dice for your turn. If even they lose all tokens from their token pouch, if odd you lose all your tokens from your token pouch
+Devine Chance = Roll the dice for your turn. If even you heal to full HP. If odd everyone else does.
+Buy and Sell = Discard four tokens from your token pouch. Get a choice of 2 random token and pick one to gain.
+Cauldron = See 3 different potions, they are mixed up, you must blind pick and gain 1.
+Storm Master = Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over.
+Double Dice = Roll 2 dice this turn.
+Bridge Builder = Auto win a River Mini Game
+Good Decisions = Remove any forfeits from a decision
+Cave Runner = Escape a cave encounter with no damage but lose any prizes you had.
+```
+
+* These descriptions should come from the shared potion data added in Feature-002.
+* Do not duplicate potion descriptions in multiple components.
+
+Animated Glow Requirement
+
+* Every potion flask should have a subtle animated glow behind it.
+* The glow colour should match the potion colour.
+* The glow should slowly grow and shrink from behind the flask icon.
+* The animation should be subtle, not distracting.
+* The glow should not make the potion icon or name hard to read.
+* The glow should sit behind the flask, not over it.
+* The glow should not interfere with clicking or selecting.
+* This should behave similarly to the token glow from Feature-004.
+
+Suggested Glow Implementation
+
+```css id="oa37k6"
+.potion-icon__flask-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.22;
+  transform: scale(0.9);
+  animation: potionGlowPulse 2.5s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes potionGlowPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.16;
+  }
+
+  50% {
+    transform: scale(1.12);
+    opacity: 0.3;
+  }
+}
+```
+
+* Exact styling can vary.
+* Reuse shared glow CSS with tokens if that is cleaner.
+
+Tooltip Requirement
+
+* When the user hovers over a potion component, show a tooltip with the potion description.
+* The tooltip should work anywhere the potion appears.
+* The tooltip should show the description from the potion data.
+* The tooltip should not permanently affect layout.
+* The tooltip should hide when the potion is no longer hovered or focused.
+* The tooltip should be readable over the current background.
+* The tooltip should handle long descriptions.
+
+Tooltip Viewport Requirement
+
+* Potion tooltips must remain entirely in view on the page where practical.
+* Some potion descriptions are long.
+* Tooltips should not be clipped off-screen.
+* Tooltip positioning should account for viewport edges.
+* Acceptable approaches:
+
+  * use a small custom tooltip positioning helper.
+  * use CSS with max width and constrained positioning if sufficient.
+  * use an existing tooltip/popover utility if the project already has one.
+* Do not allow long tooltips to overflow off the left or right edge of the viewport.
+* Use a max width so long descriptions wrap neatly.
+* Suggested max width:
+
+```txt id="ootrsa"
+280px
+```
+
+* Exact width can vary if it works better on mobile.
+* On mobile or touch, use click/tap or focus behaviour if hover is not reliable, if simple.
+* Do not over-engineer this beyond ensuring the tooltip stays visible and readable.
+
+Tooltip Accessibility Requirement
+
+* Potion descriptions should be accessible.
+* Use at least one of:
+
+  * `aria-label`.
+  * `aria-describedby`.
+  * accessible tooltip logic.
+* Do not rely only on colour to explain potion purpose.
+* The potion name underneath the icon should help identify the potion.
+
+Potion Colour Mapping Requirement
+
+* Potion colours should map to the same visual colour language as tokens where possible.
+* Supported colour values:
+
+  * Blue
+  * Green
+  * Yellow
+  * Orange
+  * Red
+  * Grey
+  * Light Blue
+  * Purple
+* Use the same colour definitions as TokenIcon where practical.
+* If a colour does not yet exist in shared colour data, add it in a shared constant.
+* Avoid duplicating colour hex values separately in many components.
+
+Reward Usage Requirement
+
+* When a potion appears as a reward option, it must use the PotionIcon component.
+* This lets the player hover over the reward potion and see what it does before selecting it.
+* The potion reward choice should show:
+
+  * flask icon.
+  * potion name.
+  * tooltip description on hover.
+* Potion assignment and full-potion discard choices should also use the PotionIcon component.
+
+Gameplay Potion Display Requirement
+
+* The gameplay potion area from Feature-002 should use the PotionIcon component.
+* The current player’s owned potions should display as PotionIcon components.
+* The potion name should appear under each flask.
+* Hovering a current potion should show its description.
+* Potion effects should still not be usable yet unless another feature adds that later.
+
+Expected Behaviour
+
+* All potion visuals use the same PotionIcon component.
+* Potions use the Font Awesome `faFlask` icon.
+* Each potion flask uses its assigned colour.
+* Each potion has a subtle animated glow matching its colour.
+* The potion name appears underneath the flask.
+* Hovering over any potion shows its description.
+* Long potion tooltips remain in view and wrap clearly.
+* Potion rewards show descriptions before the player selects them.
+* Gameplay potions use PotionIcon.
+* Potion discard choices use PotionIcon.
+* Debug potion displays use PotionIcon where visible.
+* Potion effects remain inactive.
+
+Out Of Scope
+
+* No potion effect implementation.
+* No healing.
+* No freeze from Ice Beam yet.
+* No charge from Charger yet.
+* No board potion effects.
+* No battle potion effects.
+* No changes to potion reward chances.
+* No changes to potion capacity.
+* No changes to token icon component except shared styling utilities if helpful.
+* No new potion types.
+* No potion image assets.
+* No save/load persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Potion data from Feature-002 exists or will be updated to include colour.
+* Font Awesome is already available in the project.
+* `faFlask` can be imported from the existing Font Awesome package.
+* Potion names are unique enough to use for lookups.
+* The component can reuse shared colour definitions with TokenIcon.
+
+Stop Point
+
+* Stop once every potion display uses the same global PotionIcon component with Font Awesome flask icon, assigned colour, subtle matching glow, visible potion name, and tooltip descriptions that remain readable and in view.
+
+Testing Checkpoints
+
+* Confirm PotionIcon uses Font Awesome `faFlask`.
+* Confirm Roll Choice uses Blue.
+* Confirm Small Heal uses Green.
+* Confirm Heal uses Green.
+* Confirm First Aid uses Green.
+* Confirm Teleport to * uses Yellow.
+* Confirm Copy and Paste uses Orange.
+* Confirm Gambeller uses Red.
+* Confirm Starting Charge uses Yellow.
+* Confirm Tokensmith uses Grey.
+* Confirm Ice Beam uses Light Blue.
+* Confirm Charger uses Yellow.
+* Confirm Heavy Weight uses Blue.
+* Confirm Troublemaker uses Purple.
+* Confirm Devine Chance uses Green.
+* Confirm Buy and Sell uses Orange.
+* Confirm Cauldron uses Red.
+* Confirm Storm Master uses Red.
+* Confirm Double Dice uses Blue.
+* Confirm Bridge Builder uses Light Blue.
+* Confirm Good Decisions uses Orange.
+* Confirm Cave Runner uses Grey.
+* Confirm every potion has a subtle matching-colour glow.
+* Confirm the glow grows and shrinks slowly.
+* Confirm the glow sits behind the flask icon.
+* Confirm potion names appear underneath flask icons.
+* Confirm hovering each potion shows the correct description.
+* Confirm long tooltips wrap cleanly.
+* Confirm long tooltips remain inside the viewport.
+* Confirm potion rewards use PotionIcon.
+* Confirm current player potion display uses PotionIcon.
+* Confirm potion full-capacity discard choices use PotionIcon.
+* Confirm debug potion displays use PotionIcon where visible.
+* Confirm potion effects do not activate yet.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

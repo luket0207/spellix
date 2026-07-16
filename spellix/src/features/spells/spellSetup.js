@@ -1,6 +1,7 @@
 import { cloneSpellSlots, cloneTokenBag } from '../gameSetup/gameSetup';
 
 export const TOKEN_BAG_DROP_ZONE_ID = 'token-bag';
+export const REWARD_TOKEN_DISCARD_DROP_ZONE_ID = 'reward-discard';
 
 function normalizeTokens(tokens = []) {
   return [...tokens]

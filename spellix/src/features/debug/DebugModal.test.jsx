@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { POTION_DEFINITIONS } from '../../data/potions';
+import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import DebugModal from './DebugModal';
 
 function createCurrentPlayer(overrides = {}) {
@@ -18,6 +20,17 @@ function createCurrentPlayer(overrides = {}) {
 const enemyOptions = [
   { id: 'vilewhisker-rat', label: 'Vilewhisker Rat - Level 1' },
   { id: 'hexmaw-hag', label: 'Hexmaw Hag - Level 2' },
+];
+
+const potionPlayers = [
+  createCurrentPlayer({
+    potions: [
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam'),
+    ],
+  }),
+  createCurrentPlayer({ colour: 'blue', id: 'player-2', potions: [] }),
 ];
 
 describe('DebugModal', () => {
@@ -89,6 +102,13 @@ describe('DebugModal', () => {
     expect(screen.getByText(/new token: purple/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /discard new token/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /replace selected token/i })).toBeEnabled();
+    const redToken = screen.getByRole('img', { name: /red token/i });
+    const blueToken = screen.getByRole('img', { name: /blue token/i });
+
+    expect(redToken).toHaveClass('token-display--glow', 'token-display--red');
+    expect(redToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description);
+    expect(redToken).toHaveAccessibleDescription(TOKEN_DEFINITIONS.red.description);
+    expect(blueToken).toHaveClass('token-display--glow', 'token-display--blue');
 
     fireEvent.click(screen.getByDisplayValue('player-1-blue-1'));
 
@@ -233,5 +253,110 @@ describe('DebugModal', () => {
 
     expect(handleSelectedEnemyChange).toHaveBeenCalledWith('hexmaw-hag');
     expect(handleStartSelectedEnemyBattle).toHaveBeenCalled();
+  });
+
+  test('lets the admin select a target player and potion without changing token controls', () => {
+    const handlePlayerChange = jest.fn();
+    const handlePotionChange = jest.fn();
+    const handleGivePotion = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={potionPlayers[0]}
+        enemyOptions={enemyOptions}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onEnableAnywhereMode={jest.fn()}
+        onGivePotion={handleGivePotion}
+        onGiveToken={jest.fn()}
+        onSelectedPotionIdChange={handlePotionChange}
+        onSelectedPotionPlayerIdChange={handlePlayerChange}
+        players={potionPlayers}
+        selectedPotionId="roll-choice"
+        selectedPotionPlayerId="player-1"
+      />
+    );
+
+    expect(screen.getByLabelText(/potion target player/i)).toHaveValue('player-1');
+    expect(screen.getByLabelText(/potion type/i)).toHaveValue('roll-choice');
+    expect(screen.getByLabelText(/potion type/i).options).toHaveLength(21);
+    expect(screen.getByRole('button', { name: /give potion/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /give token/i })).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText(/potion target player/i), {
+      target: { value: 'player-2' },
+    });
+    fireEvent.change(screen.getByLabelText(/potion type/i), {
+      target: { value: 'small-heal' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /give potion/i }));
+
+    expect(handlePlayerChange).toHaveBeenCalledWith('player-2');
+    expect(handlePotionChange).toHaveBeenCalledWith('small-heal');
+    expect(handleGivePotion).toHaveBeenCalled();
+  });
+
+  test('shows every full-capacity discard choice for the pending target player', () => {
+    const handleReplacementChange = jest.fn();
+    const handleDiscard = jest.fn();
+    const handleReplace = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={potionPlayers[0]}
+        enemyOptions={enemyOptions}
+        isOpen
+        message="The red player's potion collection is full."
+        onClose={jest.fn()}
+        onDiscardPendingPotion={handleDiscard}
+        onEnableAnywhereMode={jest.fn()}
+        onGivePotion={jest.fn()}
+        onGiveToken={jest.fn()}
+        onPendingPotionReplacementChange={handleReplacementChange}
+        onReplacePendingPotion={handleReplace}
+        pendingPotionGrant={{
+          playerId: 'player-1',
+          potion: POTION_DEFINITIONS.find(({ id }) => id === 'heal'),
+        }}
+        players={potionPlayers}
+        selectedPotionId="heal"
+        selectedPotionPlayerId="player-1"
+        selectedReplacementPotionIndex="0"
+      />
+    );
+
+    expect(screen.getByText(/new potion: heal/i)).toBeInTheDocument();
+    expect(screen.getByText(/target player: red/i)).toBeInTheDocument();
+    const discardChoices = screen.getByRole('radiogroup', {
+      name: /current potions to discard/i,
+    });
+
+    expect(discardChoices).toContainElement(
+      screen.getByRole('group', { name: /roll choice potion/i })
+    );
+    expect(discardChoices).toContainElement(
+      screen.getByRole('group', { name: /small heal potion/i })
+    );
+    expect(discardChoices).toContainElement(
+      screen.getByRole('group', { name: /ice beam potion/i })
+    );
+    expect(screen.getByRole('button', { name: /discard new potion/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /replace selected potion/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^close$/i })).toBeDisabled();
+    expect(screen.getByRole('group', { name: /^heal potion$/i })).toHaveClass(
+      'potion-icon--green'
+    );
+    expect(screen.getByRole('group', { name: /small heal potion/i })).not.toHaveAttribute(
+      'tabindex'
+    );
+
+    fireEvent.click(screen.getByDisplayValue('1'));
+    fireEvent.click(screen.getByRole('button', { name: /discard new potion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /replace selected potion/i }));
+
+    expect(handleReplacementChange).toHaveBeenCalledWith('1');
+    expect(handleDiscard).toHaveBeenCalled();
+    expect(handleReplace).toHaveBeenCalled();
   });
 });

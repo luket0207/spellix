@@ -1,0 +1,99 @@
+.potion-icon {
+  display: inline-flex;
+  max-width: 120px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.potion-icon-flask {
+  position: relative;
+  isolation: isolate;
+  color: var(--potion-icon-colour);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.potion-icon-flask--glow::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--potion-icon-colour);
+  opacity: 0.16;
+  pointer-events: none;
+  transform: scale(0.9);
+  animation: potion-icon-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes potion-icon-glow {
+  50% {
+    opacity: 0.3;
+    transform: scale(1.12);
+  }
+}
+
+.potion-icon-name {
+  overflow-wrap: anywhere;
+}
+
+.potion-icon-tooltip {
+  position: fixed;
+  z-index: 1000;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 6px 8px;
+  margin: 0 auto;
+  border: 1px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  opacity: 0;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  visibility: hidden;
+  white-space: normal;
+}
+
+.potion-icon:hover .potion-icon-tooltip,
+.potion-icon:focus .potion-icon-tooltip,
+button:focus .potion-icon-tooltip,
+label:focus-within .potion-icon-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.potion-icon--blue {
+  --potion-icon-colour: #2957a8;
+}
+
+.potion-icon--green {
+  --potion-icon-colour: #2c7b3b;
+}
+
+.potion-icon--yellow {
+  --potion-icon-colour: #d4aa2d;
+}
+
+.potion-icon--orange {
+  --potion-icon-colour: #b86f25;
+}
+
+.potion-icon--red {
+  --potion-icon-colour: #b93125;
+}
+
+.potion-icon--grey {
+  --potion-icon-colour: #767676;
+}
+
+.potion-icon--light-blue {
+  --potion-icon-colour: #72c8f2;
+}
+
+.potion-icon--purple {
+  --potion-icon-colour: #69419e;
+}

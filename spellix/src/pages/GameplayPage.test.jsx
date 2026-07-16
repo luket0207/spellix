@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { POTION_DEFINITIONS } from '../data/potions';
 import { createPlayers } from '../features/gameSetup/gameSetup';
 import { GameSetupProvider } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
@@ -100,6 +101,51 @@ function renderGameplayPage() {
 }
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
+  test('shows no potions for an empty collection', () => {
+    renderGameplayPage();
+
+    expect(screen.getByRole('region', { name: /potions/i })).toHaveTextContent('No potions');
+  });
+
+  test('shows the current player potions and updates them when the turn changes', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+    ];
+    initialGameSetup.players[1].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const firstPlayerPotions = screen.getByRole('region', { name: /potions/i });
+
+    expect(within(firstPlayerPotions).getByText('Roll Choice')).toBeInTheDocument();
+    expect(within(firstPlayerPotions).getByText('Rare | Both')).toBeInTheDocument();
+    expect(
+      within(firstPlayerPotions).getByRole('group', { name: /roll choice potion/i })
+    ).toHaveClass('potion-icon--blue');
+    expect(within(firstPlayerPotions).queryByText('Small Heal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    const secondPlayerPotions = screen.getByRole('region', { name: /potions/i });
+
+    expect(within(secondPlayerPotions).getByText('Small Heal')).toBeInTheDocument();
+    expect(within(secondPlayerPotions).getByText('Common | Both')).toBeInTheDocument();
+    expect(
+      within(secondPlayerPotions).getByRole('group', { name: /small heal potion/i })
+    ).toHaveClass('potion-icon--green');
+    expect(within(secondPlayerPotions).queryByText('Roll Choice')).not.toBeInTheDocument();
+  });
+
   test('locks the temporary dice modal for the full sequence and uses its result for movement', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
     renderGameplayPage();

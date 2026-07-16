@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import Token from './Token';
 
 describe('Token', () => {
@@ -29,7 +30,7 @@ describe('Token', () => {
       'grey',
     ];
 
-    const { container } = render(
+    render(
       <div>
         {tokenTypes.map((tokenType) => (
           <Token key={tokenType} ariaLabel={`${tokenType} token`} tokenType={tokenType} />
@@ -38,10 +39,16 @@ describe('Token', () => {
     );
 
     tokenTypes.forEach((tokenType) => {
-      expect(screen.getByLabelText(`${tokenType} token`)).toHaveClass(`token-display--${tokenType}`);
+      const token = screen.getByLabelText(`${tokenType} token`);
+
+      expect(token).toHaveClass('token-display--glow');
+      expect(token).toHaveClass(`token-display--${tokenType}`);
+      expect(token).toHaveAttribute('title', TOKEN_DEFINITIONS[tokenType].description);
+      expect(token).toHaveAccessibleDescription(TOKEN_DEFINITIONS[tokenType].description);
+      expect(token).toHaveAttribute('tabindex', '0');
     });
 
-    expect(container.querySelectorAll('.token-display')).toHaveLength(tokenTypes.length);
+    expect(screen.getAllByRole('img')).toHaveLength(tokenTypes.length);
   });
 
   test('supports an optional faded state at half opacity', () => {
@@ -54,6 +61,22 @@ describe('Token', () => {
 
     rerender(<Token ariaLabel="yellow token" tokenType="yellow" />);
     expect(screen.getByLabelText(/yellow token/i)).not.toHaveClass('token-display--faded');
+  });
+
+  test('supports committed styling and parent-managed keyboard focus', () => {
+    render(
+      <Token
+        ariaLabel="committed blue token"
+        committed
+        focusable={false}
+        tokenType="blue"
+      />
+    );
+
+    const token = screen.getByLabelText(/committed blue token/i);
+
+    expect(token).toHaveClass('token-display--committed');
+    expect(token).not.toHaveAttribute('tabindex');
   });
 
 });

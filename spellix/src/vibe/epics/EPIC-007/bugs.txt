@@ -1,0 +1,283 @@
+---
+
+Bug-001: Reward token assignment should use shared Spells modal-style drag-and-drop component
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+
+Bug Summary
+
+* Part 2 of reward token assignment is currently wrong.
+* When the player chooses a token reward, they should be taken to a screen that looks and behaves almost identically to the Spells modal.
+* The player should be able to drag the new reward token into:
+
+  * one of their spell slots.
+  * their token bag.
+  * a discard area.
+* This same underlying drag-and-drop spell assignment UI should also be used by the normal Spells modal.
+* The reward-token-only parts should not appear in the normal Spells modal.
+
+Required Fix
+
+* Refactor the existing Spells modal drag-and-drop UI into a reusable component.
+* Use that same component for:
+
+  * the normal Spells modal.
+  * the reward token assignment screen.
+* The two screens should share the same base layout and behaviour.
+* The reward token assignment screen should add reward-specific areas and rules.
+* The normal Spells modal should not show:
+
+  * new reward token area.
+  * discard area for the new reward token.
+  * reward assignment confirmation flow unless already needed for normal spell editing.
+
+Shared Component Requirement
+
+* Create a reusable spell/token assignment component.
+* Suggested component responsibility:
+
+  * display spell slots.
+  * display token bag.
+  * support dragging tokens into valid places.
+  * enforce slot capacity.
+  * enforce token bag capacity.
+  * support save/confirm behaviour.
+  * support cancel behaviour where relevant.
+* The component should be configurable so it can run in different modes.
+* Suggested modes:
+
+```js id="4wnz2c"
+mode: "spellsModal" | "rewardAssignment"
+```
+
+* Exact prop names can vary.
+* Avoid duplicating two separate versions of the same drag-and-drop UI.
+
+Reward Token Assignment Screen Requirement
+
+* After the player chooses a token reward, show the reward assignment screen.
+* This screen should look identical to the Spells modal, except for the reward-specific additions.
+* It should show:
+
+  * the player’s spell slots.
+  * the player’s token bag.
+  * the new reward token.
+  * a discard area with a Font Awesome trash can icon.
+* The player should be able to drag the new token into:
+
+  * a spell slot.
+  * the token bag.
+  * the discard area.
+* The player should be able to confirm only after the new reward token has been resolved.
+* Resolved means:
+
+  * placed into a spell slot.
+  * placed into the token bag.
+  * discarded.
+
+New Reward Token To Spell Slot Requirement
+
+* If the player drags the new reward token into a spell slot:
+
+  * place it in that spell slot if valid.
+  * respect existing spell slot capacity rules.
+  * the token becomes committed after confirmation.
+  * after confirmation, the token cannot be moved.
+* The player should be able to review the placement before confirming.
+* Do not duplicate the reward token.
+* Do not also place the reward token in the token bag.
+
+New Reward Token To Token Bag Requirement
+
+* If the player drags the new reward token into the token bag and there is space:
+
+  * add the new token to the token bag.
+  * allow the player to confirm.
+* If the player drags the new reward token into a full token bag:
+
+  * show a prompt asking which existing token in the token bag should be removed.
+  * when the player clicks an existing bag token, remove that token.
+  * place the new reward token into the token bag.
+  * allow the player to confirm.
+* The player should not be able to exceed the token bag maximum.
+* The replacement prompt should be clear and not permanently remove anything until the player confirms, unless existing app behaviour already commits token bag choices immediately.
+
+Discard Area Requirement
+
+* The reward assignment screen should include a discard area.
+* The discard area should use a Font Awesome trash can icon.
+* If the new reward token is dragged onto the discard area:
+
+  * discard the new reward token.
+  * allow the player to complete the reward flow.
+* If a token from the token bag is dragged onto the discard area:
+
+  * discard that token from the token bag.
+  * automatically place the new reward token into the token bag.
+* This token bag discard behaviour is only needed for the reward assignment screen.
+* The discard area should make it clear that tokens dragged there will be removed.
+* Do not show this reward discard area in the normal Spells modal.
+
+Token Bag Replacement Requirement
+
+* The player has two valid ways to make room in a full token bag:
+
+  * drag the new reward token into the full token bag, then choose which current bag token to remove.
+  * drag an existing token bag token to the trash, causing the new reward token to take its place automatically.
+* Both routes should result in:
+
+  * exactly one existing bag token removed.
+  * the new reward token added to the token bag.
+  * the bag staying at its maximum capacity.
+* The new reward token should not be duplicated.
+* The removed bag token should be listed or otherwise made clear before confirmation if the current UI supports review.
+
+Normal Spells Modal Requirement
+
+* The normal Spells modal should use the same shared component.
+* The normal Spells modal should continue to support existing behaviour:
+
+  * moving uncommitted token bag tokens into spell slots.
+  * saving changes.
+  * cancelling changes.
+  * respecting slot capacity.
+  * respecting committed token rules.
+* The normal Spells modal should not show:
+
+  * a new reward token.
+  * a reward token placement prompt.
+  * the reward discard/trash area.
+  * full-bag reward replacement prompts.
+* The normal Spells modal should look and behave the same as before from the player’s perspective, except that the internal implementation is now shared.
+
+Confirmation Requirement
+
+* Reward token assignment should not be final until the player confirms.
+* If the player places the reward token into a spell slot and confirms:
+
+  * commit the token into that spell slot.
+* If the player places the reward token into the token bag and confirms:
+
+  * save it into the token bag.
+* If the player discards the reward token and confirms:
+
+  * do not add it anywhere.
+* If the player replaces a token bag token and confirms:
+
+  * remove the selected old bag token.
+  * add the new reward token.
+* If the player cancels before confirming:
+
+  * do not apply the reward token placement.
+  * do not remove any existing token bag tokens.
+* If the reward flow must not be cancellable, then the player must still resolve the reward by placing or discarding it before continuing.
+
+Expected Behaviour
+
+* Token reward assignment opens a Spells modal-style screen.
+* The screen shows spell slots and token bag in the same style as the normal Spells modal.
+* The reward token can be dragged into a spell slot.
+* The reward token can be dragged into the token bag.
+* The reward token can be dragged onto a Font Awesome trash can to discard it.
+* Dragging the reward token into a full token bag prompts the player to choose which existing bag token to remove.
+* Dragging a current token bag token onto the trash removes that bag token and places the new reward token into the bag automatically.
+* The normal Spells modal and reward assignment screen use the same underlying component.
+* Reward-specific UI is hidden in the normal Spells modal.
+* Existing Spells modal behaviour is not broken.
+
+Out Of Scope
+
+* No changes to reward generation chances.
+* No changes to token rarity.
+* No potion reward assignment changes.
+* No potion capacity changes.
+* No token effect changes.
+* No battle reward balancing changes.
+* No battle logic changes.
+* No gameplay movement changes.
+* No save/load persistence.
+* No unrelated reward page redesign.
+
+Suspected Cause
+
+* Feature-003 described token assignment too generally.
+* The reward token assignment flow needs to be much closer to the existing Spells modal drag-and-drop interaction.
+* The Spells modal functionality should be shared rather than recreated separately.
+
+Attempted Fixes
+
+* Extracted the existing DnD context, draggable token rendering, six spell-slot drop zones, and token-bag drop zone from `SpellsModal.jsx` into the feature-local reusable `SpellTokenAssignment.jsx` component.
+* Updated the normal Spells modal to render its existing draft spell slots and token bag through the shared assignment surface while keeping its header, player piece, forced-setup message, validation, Save, and Cancel behavior unchanged.
+* Added focused shared-component coverage for slot and token-bag rendering, moveable and committed token states, and the absence of reward-only controls in normal use.
+* Added a `rewardAssignment` mode to the shared surface. It keeps the same six spell slots and token bag, adds one distinct draggable new reward token, and conditionally renders a reward-only discard drop zone with the required Font Awesome trash-can icon.
+* Updated the unresolved token-reward page to render the winning player's actual spell slots and token bag through the shared reward-assignment mode instead of the separate read-only committed spell display.
+* Kept the existing click-based token resolution controls during this rendering slice so current assignment behavior remains usable until drag destinations, draft state, and confirmation are connected.
+* Added a pure reward-token spell-slot drop validator that accepts only the current new reward token, only targets existing slots, rejects full five-token slots, and rejects token-bag or unrelated-token drops.
+* Connected shared reward assignment drops to local RewardPage staging. A valid spell-slot drop selects that slot without mutating player state, and the shared surface moves the new reward token into the selected slot for review.
+* The existing Confirm action remains the only spell-slot commit point, so the staged token is added once with `committed: true`; the temporary numbered Select controls remain as a fallback until all drag paths are complete.
+* Added a pure reward-token token-bag drop validator that reuses the existing bag capacity rule, accepts only the current reward token at the shared token-bag drop zone, and rejects full bags, unrelated tokens, and other destinations.
+* Connected valid non-full token-bag drops to local RewardPage staging. The shared surface shows the reward token exactly once inside the bag for review, switching between a staged bag and staged spell slot clears the previous destination, and persisted player state remains unchanged.
+* Added an explicit Confirm token bag action as the only commit point for this route; the temporary Add to token bag control now stages the same draft behavior as a non-drag fallback.
+* Added a pure reward-token discard drop validator that accepts only the current new reward token at the shared reward discard drop zone and rejects bag tokens or unrelated destinations.
+* Connected a valid new-token trash drop to local RewardPage staging. The shared surface shows the reward token exactly once beside the existing Font Awesome trash icon, switching from a staged bag or spell slot clears that previous draft, and persisted state remains unchanged.
+* Added an explicit Confirm discard action as the only new-token discard commit point; the temporary Discard reward token control now stages the same review state as a drag fallback.
+* Added a pure full-token-bag drop validator that accepts only the current reward token at the shared bag drop zone when the bag has no remaining capacity and rejects non-full bags, bag tokens, and unrelated destinations.
+* Connected a valid full-bag reward drop to a local replacement request. The existing numbered replacement controls now appear only after that request or its temporary fallback, and selecting one previews exactly one old token replaced by the reward token in the shared bag without mutating persisted state.
+* Added an explicit Confirm replacement action as the only commit point for this route, preserving bag capacity and the existing context replacement behavior after confirmation.
+* Added a pure bag-token trash validator that returns only an actual token from the current full bag when it is dropped on the reward discard zone, rejecting non-full bags, reward or spell tokens, and unrelated destinations.
+* Connected a valid bag-token trash drop to the existing local replacement preview. The dragged old token is selected for removal, the new reward token appears once in its bag position, capacity remains five, and persisted state remains unchanged until Confirm replacement.
+* Verified cancellation safety without a production change. Reward placement, discard, and replacement drafts are local to `RewardPage`, so leaving the route before confirmation unmounts and clears the draft while the unresolved reward and original persisted player state remain intact.
+* Added route-level RewardPage coverage that stages a full-bag replacement, leaves before confirmation, and returns to confirm no token was removed or added and no replacement draft survived.
+* Removed the six temporary numbered Select spell slot controls from RewardPage. Reward slot assignment now relies only on the shared component's validated spell-slot drop zones, while the staged destination feedback and Confirm spell slot action remain unchanged.
+* Updated RewardPage coverage to reject the duplicate selector list and confirm the full and available shared slot drop zones remain present; helper, shared-surface, and reward-context suites continue to cover valid staging, capacity rejection, and committed placement.
+* Removed the temporary Add to token bag fallback, including its disabled full-bag copy, and removed its click-only staging function. Reward bag assignment now starts only through the shared token-bag drop zone while Confirm token bag remains available after a valid staged drop.
+* Updated RewardPage coverage to reject the Add to token bag button for both available and full bags while preserving the shared bag, unassigned reward source, unresolved state, capacity message, and existing helper/surface/context coverage for staged and confirmed bag assignment.
+* Removed the temporary Discard reward token fallback and its click-only staging function. Reward discard now starts only through the shared Font Awesome trash drop zone while Confirm discard remains available after a valid staged drop.
+* Updated RewardPage coverage to reject the Discard reward token button for both available and full bags while preserving the unassigned reward source, unresolved state, shared trash zone, and existing helper/surface/context coverage for staged and confirmed discard.
+* Removed the temporary Choose token to replace fallback and its click-only replacement-request function. The replacement prompt now opens only after the new reward token is dropped onto the shared full token bag.
+* Updated RewardPage coverage to reject the replacement-request button, preserve the full shared bag and unassigned reward source before a drop, and confirm route navigation leaves the reward unresolved without changing the persisted bag.
+* Removed the temporary numbered replacement list and its page-level click handler. After a full-bag reward drop, the player now selects an existing token by clicking that token directly in the shared bag or by dragging it to the shared trash zone.
+* Added reward-only shared bag-token click handling plus a pure request-gated validator. Normal Spells mode ignores the reward callback, non-full bags and unrequested clicks are rejected, and the new reward token cannot select itself for replacement.
+* Added final shared-surface regression coverage for reward-only replacement selection, one-token preview and confirmation, cancellation safety, normal Spells isolation, all reward destinations, capacity rules, and removal of every temporary assignment fallback control.
+
+Final Fix
+
+* Fixed. The normal Spells modal and reward token assignment screen use the same `SpellTokenAssignment.jsx` drag-and-drop surface for spell slots and token bags.
+* Reward mode adds only the new reward token, Font Awesome trash drop zone, local review state, and confirmation flows for slot, bag, discard, and full-bag replacement outcomes.
+* Full-bag replacement now uses the shared bag itself: dropping the reward token opens the prompt, clicking an existing shared bag token previews its replacement, and dragging a current bag token to trash selects the same safe replacement route.
+* All temporary Select spell slot, Add to token bag, Discard reward token, Choose token to replace, and numbered Replace token fallback controls have been removed.
+
+Testing Required
+
+* Confirm choosing a token reward opens a Spells modal-style assignment screen.
+* Confirm the reward assignment screen displays the player’s spell slots.
+* Confirm the reward assignment screen displays the player’s token bag.
+* Confirm the reward assignment screen displays the new reward token.
+* Confirm the reward assignment screen displays a Font Awesome trash can discard area.
+* Confirm the reward token can be dragged into a valid spell slot.
+* Confirm the reward token can be confirmed into a spell slot.
+* Confirm the confirmed reward token becomes committed.
+* Confirm the reward token can be dragged into the token bag when there is space.
+* Confirm the reward token can be confirmed into the token bag.
+* Confirm dragging the reward token into a full token bag prompts the player to choose a bag token to remove.
+* Confirm clicking a bag token in that prompt replaces it with the new reward token.
+* Confirm dragging an existing bag token to the trash discards that bag token and places the new reward token into the bag automatically.
+* Confirm dragging the new reward token to the trash discards the new reward token.
+* Confirm the player cannot duplicate the reward token.
+* Confirm the player cannot end with the reward token both in a slot and in the token bag.
+* Confirm the player cannot exceed the token bag maximum.
+* Confirm cancelling before confirmation does not remove existing bag tokens.
+* Confirm cancelling before confirmation does not add the reward token.
+* Confirm the normal Spells modal still works.
+* Confirm the normal Spells modal uses the shared component.
+* Confirm the normal Spells modal does not show the new reward token area.
+* Confirm the normal Spells modal does not show the reward trash area.
+* Confirm the normal Spells modal does not show reward replacement prompts.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

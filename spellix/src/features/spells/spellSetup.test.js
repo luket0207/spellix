@@ -1,5 +1,10 @@
 import { createPlayers } from '../gameSetup/gameSetup';
-import { hasDraftSpellChanges, moveSpellTokenInDraft, TOKEN_BAG_DROP_ZONE_ID } from './spellSetup';
+import {
+  createCommittedSpellData,
+  hasDraftSpellChanges,
+  moveSpellTokenInDraft,
+  TOKEN_BAG_DROP_ZONE_ID,
+} from './spellSetup';
 
 describe('spellSetup helpers', () => {
   test('moves an uncommitted token from the bag into a spell slot', () => {
@@ -17,6 +22,27 @@ describe('spellSetup helpers', () => {
     expect(result.tokenBag).toHaveLength(6);
     expect(result.spellSlots[0].tokens).toHaveLength(1);
     expect(result.spellSlots[0].tokens[0].id).toBe(tokenToMove.id);
+  });
+
+  test('preserves starting-token protection when spell placement is committed', () => {
+    const [player] = createPlayers(1);
+    const startingToken = player.tokenBag[0];
+    const placedState = moveSpellTokenInDraft({
+      destinationId: player.spellSlots[0].id,
+      spellSlots: player.spellSlots,
+      tokenBag: player.tokenBag,
+      tokenId: startingToken.id,
+    });
+
+    const committedState = createCommittedSpellData(placedState);
+
+    expect(committedState.spellSlots[0].tokens[0]).toEqual(
+      expect.objectContaining({
+        committed: true,
+        protected: true,
+        source: 'starting',
+      })
+    );
   });
 
   test('prevents moving a token into a full spell slot', () => {

@@ -1,4 +1,6 @@
 .token-display {
+  position: relative;
+  isolation: isolate;
   width: 18px;
   height: 18px;
   display: inline-flex;
@@ -16,54 +18,101 @@
   line-height: 1;
 }
 
+.token-display--glow::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -4px;
+  border-radius: inherit;
+  background: var(--token-display-colour);
+  opacity: 0.18;
+  pointer-events: none;
+  transform: scale(0.9);
+  animation: token-display-glow 2.5s ease-in-out infinite;
+}
+
+.token-display--committed {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+@keyframes token-display-glow {
+  50% {
+    opacity: 0.32;
+    transform: scale(1.12);
+  }
+}
+
 .token-display-count {
   display: block;
 }
 
+.token-display-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .token-display--red {
-  background: #b93125;
+  --token-display-colour: #b93125;
+  background: var(--token-display-colour);
 }
 
 .token-display--blue {
-  background: #2957a8;
+  --token-display-colour: #2957a8;
+  background: var(--token-display-colour);
 }
 
 .token-display--orange {
-  background: #b86f25;
+  --token-display-colour: #b86f25;
+  background: var(--token-display-colour);
 }
 
 .token-display--green {
-  background: #2c7b3b;
+  --token-display-colour: #2c7b3b;
+  background: var(--token-display-colour);
 }
 
 .token-display--light-blue {
-  background: #72c8f2;
+  --token-display-colour: #72c8f2;
+  background: var(--token-display-colour);
   color: #1d2733;
 }
 
 .token-display--light-green {
-  background: #8fda8a;
+  --token-display-colour: #8fda8a;
+  background: var(--token-display-colour);
   color: #1f2918;
 }
 
 .token-display--black {
-  background: #222222;
+  --token-display-colour: #222222;
+  background: var(--token-display-colour);
 }
 
 .token-display--white {
-  background: #f3efe5;
+  --token-display-colour: #f3efe5;
+  background: var(--token-display-colour);
   color: #2b1f14;
 }
 
 .token-display--purple {
-  background: #69419e;
+  --token-display-colour: #69419e;
+  background: var(--token-display-colour);
 }
 
 .token-display--yellow {
-  background: #d4aa2d;
+  --token-display-colour: #d4aa2d;
+  background: var(--token-display-colour);
   color: #2d2310;
 }
 
 .token-display--grey {
-  background: #767676;
+  --token-display-colour: #767676;
+  background: var(--token-display-colour);
 }

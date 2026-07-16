@@ -1,0 +1,1419 @@
+Feature-001 Slice 1: Protected starting tokens and reusable death punishment calculation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and open the initial spell setup.
+   Expected: Each player still receives five Red and two Blue starting tokens and can place and commit them normally; the new protection metadata does not change the visible setup flow.
+2. Use the existing debug token grant controls to grant a later Red or Blue token.
+   Expected: Existing token granting remains functional and the gained token is not treated as a protected starting token.
+3. Lose a battle in the current UI.
+   Expected: The existing loss and respawn flow remains unchanged in this foundation slice because punishment integration and the result screen are still pending.
+
+Automated Tests Completed
+
+* `src/features/death/deathPenalty.test.js` covers all battle-level penalties, the future mini game penalty, Black-first removal, deterministic random remainder selection, duplicate per-token records, one-based columns, unavailable-token clamping, committed spell-slot filtering, protected and uncommitted exclusions, gained Red/Blue removability, and input immutability.
+* `src/features/gameSetup/gameSetup.test.js` verifies every initial token is marked protected and starting while preserving the existing seven-token setup.
+* `src/features/spells/spellSetup.test.js` verifies protection metadata survives movement into a spell slot and commitment.
+* The three focused suites passed with 13 tests.
+* Five affected integration suites for game setup context, gameplay, the Spells modal, debug modal, and token bag administration passed with 24 tests.
+* All five touched JavaScript files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Context and page tests are still needed when battle loss applies the helper, stores the removed-token result, routes to the result screen, and respawns only after confirmation.
+* Integration coverage is still needed for level-specific loss amounts, no-removal messaging, separate result lines, retained removals after respawn, starting-zone positioning, full-health restoration, debug Lose, automatic loss, and unaffected battle wins.
+
+Manual Testing Still Needed
+
+* Death punishment is not user-visible yet. Full manual verification must wait for the remaining Feature-001 battle integration, result screen, and confirmed respawn slices.
+
+---
+
+Feature-001 Slice 2: Battle loss result display and confirmed respawn integration
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Commit gained removable tokens, including Black tokens where possible, then lose a level 1, 2, 3, or 4 battle.
+   Expected: The loss result appears before respawn and removes 1, 1, 2, or 3 removable spell-slot tokens respectively, never exceeding availability.
+2. Lose while removable Black tokens are committed alongside other removable colors.
+   Expected: Black tokens are listed and removed before any random non-Black selections.
+3. Lose with duplicate removable tokens in one spell column.
+   Expected: Every removed token appears on its own line with the correct one-based column number.
+4. Lose when only the protected five starting Red and two starting Blue tokens remain.
+   Expected: The result says no tokens were removed because only starting tokens remained.
+5. Leave the loss result open without pressing Respawn.
+   Expected: The player remains at zero health in the lost battle and no turn transition or automatic respawn occurs.
+6. Press Respawn.
+   Expected: The player returns to the existing first Start Area position at full health, removed tokens remain absent, protected tokens remain, the battle clears, and the next turn begins.
+7. Trigger both an automatic player death and the debug Lose control, then separately win a battle.
+   Expected: Both loss paths use the punishment result flow; a win continues to the unchanged reward flow without removing tokens.
+
+Automated Tests Completed
+
+* `src/features/death/DeathResult.test.jsx` verifies separate duplicate lines, multi-word token labels, one-based columns, accessible result-list markup, and the no-removal explanation.
+* `src/pages/BattlePage.test.jsx` verifies level-4 removal of three individual tokens, duplicate result lines, no-removal behavior for protected tokens, level-1 automatic loss removal count, debug loss integration, blocked pre-confirmation respawn, starting-zone respawn, full-health restoration, retained token removals, protected-token retention, and unchanged battle wins.
+* The DeathResult, deathPenalty, and BattlePage suites passed with 32 tests.
+* The complete project run passed 177 of 179 tests across 22 passing suites.
+* Production and new focused files passed ESLint; the modified BattlePage test passed with its documented pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Feature-001.
+* The complete project run still has two unrelated baseline failures: `AppSettingsButton.test.jsx` expects the Battle heading and level removed by prior Epic-006 work, while `App.test.jsx` fails before executing tests inside `source-map-support` mapping parsing.
+
+Manual Testing Still Needed
+
+* A browser pass is required to exercise each battle level, visually review result readability, and confirm the existing modal remains open until Respawn. Rule calculations, state changes, result structure, both loss entry points, and respawn behavior are covered automatically.
+
+---
+
+Feature-002 Slice 1: Token rarity, potion catalog, and player potion ownership data
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and complete normal player setup.
+   Expected: Setup behaves as before; each player has an empty potion collection in state, with no new potion UI in this foundation slice.
+2. Open the debug menu and use the existing token grant controls for single-word and multi-word token types.
+   Expected: The same eleven token choices and labels remain available and token granting works as before while now reading from centralized token data.
+3. Continue through gameplay and spell setup.
+   Expected: Player recreation preserves existing player data and introduces no visible potion effects or controls yet.
+
+Automated Tests Completed
+
+* `src/data/tokens.test.js` verifies the complete eleven-token order, user-facing labels, seven Common rarities, and four Rare rarities.
+* `src/data/potions.test.js` verifies all twenty-one required potion names, required fields, allowed availability/rarity values, non-empty descriptions, and exact representative records.
+* `src/features/gameSetup/gameSetup.test.js` verifies every player starts with no potions and existing per-player potion ownership is independently cloned during recreation.
+* The five focused data, setup, and debug suites passed with 16 tests, including unchanged existing token grant behavior.
+* Four affected game setup context, gameplay, Spells modal, and spell setup suites passed with 21 tests.
+* All seven files touched by this slice passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for a maximum of three potions, pending full-capacity grants, discarding the new potion, replacing an existing potion, and preventing four owned potions.
+* Debug tests are still needed for target-player selection, potion selection/granting, preserved token controls, and the forced discard flow.
+
+Manual Testing Still Needed
+
+* Potion data and ownership have no visible UI in this slice. Full manual verification must wait for the remaining Feature-002 gameplay display, debug grant, and forced capacity-decision slices.
+
+---
+
+Feature-002 Slice 2: Gameplay current-player potion display
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Enter gameplay with a current player who has no potions.
+   Expected: A Potions section appears below the committed spell table and shows `No potions`.
+2. Enter gameplay with a current player who owns one or more potions.
+   Expected: Each potion is listed with its name, rarity, and Board/Battle/Both availability.
+3. Complete a turn so the current player changes to a player with a different potion collection.
+   Expected: The Potions section updates to show only the new current player's potions.
+4. Review the potion list controls.
+   Expected: No use buttons or potion effects are available in this display slice.
+
+Automated Tests Completed
+
+* `src/features/potions/PotionList.test.jsx` verifies the empty state, potion name, rarity, availability, list structure, and absence of use controls.
+* `src/pages/GameplayPage.test.jsx` verifies the empty state is integrated and the displayed potion collection updates after a real turn transition.
+* The PotionList and GameplayPage suites passed with 9 tests.
+* Three affected game setup context, player creation, and Spells modal suites passed with 12 tests.
+* All four touched display and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for a maximum of three potions, pending full-capacity grants, discarding the new potion, replacing an existing potion, and preventing four owned potions.
+* Debug tests are still needed for target-player selection, potion selection/granting, preserved token controls, and the forced discard flow.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm the plain list's placement below the spell table and its updates between players. Capacity, forced discard, and debug granting remain unavailable until later Feature-002 slices.
+
+---
+
+Feature-002 Slice 3: Reusable potion capacity calculation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Continue normal setup and gameplay with the existing potion display.
+   Expected: Existing behavior remains unchanged because this pure capacity foundation is not connected to a grant control yet.
+2. Open the debug menu.
+   Expected: Potion grant and forced-discard controls are still absent in this slice; they remain follow-up Feature-002 work.
+
+Automated Tests Completed
+
+* `src/features/potions/potionCapacity.test.js` verifies the three-potion maximum, immediate gains from zero and two potions, pending gains at three, discarding the pending potion, replacing a selected current potion, invalid replacement handling, immutable input collections, and prevention of a fourth slot.
+* Four focused capacity, potion data, potion display, and player setup suites passed with 14 tests.
+* The new helper and test file passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Context tests are still needed to verify capacity results are persisted only for the selected player.
+* Debug tests are still needed for target-player selection, potion selection, immediate grants below capacity, the full-capacity pending state, both discard choices, and preserved token controls.
+
+Manual Testing Still Needed
+
+* Capacity behavior is not directly reachable in the browser until a potion grant entry point and the forced-discard controls are connected in later Feature-002 slices.
+
+---
+
+Feature-002 Slice 4: Potion grant session-state integration
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Continue normal setup and gameplay with the existing potion display.
+   Expected: Existing visible behavior remains unchanged because this state integration is not connected to debug controls yet.
+2. Reset or change the player count during setup.
+   Expected: The game starts without a pending potion grant, and changing the player count clears any pending grant state.
+
+Automated Tests Completed
+
+* `src/features/potions/potionCapacityContext.test.jsx` verifies immediate grants to either target player, unchanged non-target players, full collections staying at three, pending target/potion records, blocked overlapping grants, discard-new resolution, selected replacement, pending-state clearing, and one-time resolution.
+* `src/features/gameSetup/gameSetup.test.js` verifies a new game starts with no pending potion grant.
+* Five focused and affected capacity, setup, context, and gameplay suites passed with 28 tests.
+* All four touched implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Debug tests are still needed for target-player selection, potion selection, immediate grants below capacity, rendering the full-capacity pending decision, both discard controls, and preserved token controls.
+
+Manual Testing Still Needed
+
+* Potion grant state is not directly reachable in the browser until the debug potion grant and forced-discard controls are connected in the remaining Feature-002 work.
+
+---
+
+Feature-002 Slice 5: Debug potion granting and forced discard controls
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Enter gameplay, open Settings, then open Debug.
+   Expected: A separate Potion grant area shows a target-player selector, all twenty-one potion choices, and a Give Potion button; the existing token controls remain available.
+2. Select a player with zero or two potions, choose a potion, and press Give Potion.
+   Expected: The selected player receives the potion immediately, the gameplay display updates when that player is current, and no potion effect activates.
+3. Select a player with three potions and press Give Potion.
+   Expected: The collection remains at three, the new potion and all three current potions appear, and Debug cannot be closed until a choice is made.
+4. Press Discard New Potion.
+   Expected: The three current potions remain unchanged, the pending decision clears, and Debug can be closed.
+5. Repeat a full-capacity grant, select one current potion, and press Replace Selected Potion.
+   Expected: The selected current potion is removed, the new potion takes its place, the player still has exactly three potions, and the pending decision clears.
+6. Use Give Token after resolving the potion decision.
+   Expected: Existing debug token granting still works as before.
+
+Automated Tests Completed
+
+* `src/features/debug/DebugModal.test.jsx` verifies the target-player selector, all twenty-one potion choices, callback wiring, unchanged token controls, pending target/new potion display, all three current discard choices, both resolution buttons, and disabled Close while pending.
+* `src/AppSettingsButton.test.jsx` verifies grants to the selected current and non-current players, immediate gameplay display updates, a full collection staying at three, discard-new behavior, selected replacement behavior, and the final potion collection.
+* Capacity helper, capacity context, gameplay display, and complete DebugModal suites pass; the two new App integration tests also pass, for 27 passing feature-focused and affected tests.
+* The expanded five-suite run passed 31 of 33 tests. Its only failures are the two documented unrelated Epic-006 baseline assertions in `AppSettingsButton.test.jsx` that still expect the removed Battle heading and level text.
+* All five files touched by this slice passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional focused automated coverage is identified for Feature-002.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to follow the manual flow above and confirm the plain debug controls remain usable in the existing scrollable modal. Logic, state persistence, capacity enforcement, both discard outcomes, target selection, display updates, and unchanged token controls are covered automatically.
+
+---
+
+Feature-003 Slice 1: Weighted battle reward category generation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a battle and continue through the current reward page.
+   Expected: Existing placeholder reward behavior remains unchanged in this foundation slice because the generator is not connected to battle state or UI yet.
+2. Lose a battle.
+   Expected: Existing loss and death-punishment behavior remains unchanged; this data-only slice does not generate or grant rewards from any flow.
+
+Automated Tests Completed
+
+* `src/features/rewards/battleRewards.test.js` verifies the exact level 1-4 choice counts and weight tables, every category boundary, level-1 zero-weight rarity exclusions, independent rolls for each choice, and unsupported-level handling.
+* The reward generator plus centralized token and potion data suites passed with 24 tests.
+* The new reward generator and test file passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for selecting exact Common/Rare tokens and potions from the centralized rarity data.
+* Context and page tests are still needed for battle-win reward creation, one locked selection, token/potion assignment and discard paths, capacity decisions, one-time application, and returning to gameplay only after resolution.
+
+Manual Testing Still Needed
+
+* Reward generation is not user-visible until later Feature-003 slices connect the generator to battle wins and the existing reward page.
+
+---
+
+Feature-003 Slice 2: Exact reward-item selection by rarity
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a battle and view the current reward page.
+   Expected: Existing placeholder behavior remains unchanged because exact-item selection is still a pure foundation and is not rendered yet.
+2. Continue back to gameplay.
+   Expected: No token or potion is granted in this slice because reward state and assignment are not connected yet.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardItems.test.js` verifies all four category/type/rarity mappings, every eligible Common and Rare token, every eligible Common and Rare potion, wrong-rarity exclusion, deterministic first/final selections, independent potion copies, and unsupported categories.
+* Both reward logic suites and both centralized token/potion catalog suites passed with 35 tests.
+* The new exact-item selector and test file passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Context and page tests are still needed for battle-win reward creation, exact choice rendering, one locked selection, token/potion assignment and discard paths, capacity decisions, one-time application, and returning to gameplay only after resolution.
+
+Manual Testing Still Needed
+
+* Exact reward items are not user-visible until later Feature-003 slices connect category and item generation to battle state and the reward page.
+
+---
+
+Feature-003 Slice 3: Battle-win reward choice state
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a level 1-4 battle through normal combat resolution.
+   Expected: The battle enters the existing reward phase and stores the configured number of complete reward choices for that level; the placeholder reward page remains unchanged in this state-only slice.
+2. Trigger the existing debug Win control.
+   Expected: It uses the same reward generation path as a normal victory and does not reroll choices if the reward phase is requested again.
+3. Lose a battle.
+   Expected: The existing death-punishment flow remains unchanged and no reward choices are generated.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardItems.test.js` verifies complete choice counts for levels 1-4, stable unique choice IDs, category-first random ordering, exact normalized item data, and unsupported-level handling.
+* `src/features/rewards/rewardStateContext.test.jsx` verifies debug and automatic battle wins store generated choices, repeated win transitions do not reroll them, and losses generate none.
+* Five affected reward, context, and BattlePage suites passed with 74 tests.
+
+Automated Tests Still Needed
+
+* Page tests are still needed for exact choice rendering, one locked selection, token/potion assignment and discard paths, capacity decisions, one-time application, and returning to gameplay only after resolution.
+
+Manual Testing Still Needed
+
+* Generated reward choices are stored but not yet visible. Full browser verification must wait for the remaining Feature-003 reward page and assignment slices.
+
+---
+
+Feature-003 Slice 4: Reward page choice display and locked selection
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a level 1 battle through normal combat or debug Win.
+   Expected: The reward page shows one plain choice with its category and exact token or potion.
+2. Win a level 2, 3, or 4 battle.
+   Expected: The page shows 2, 3, or 3 choices respectively, and each choice displays both its category and exact item.
+3. Choose one reward.
+   Expected: The page changes to `Assign reward`, shows the locked category and exact item, and no other reward can be selected.
+4. Review the page before and after choosing.
+   Expected: There is no Continue action, the battle remains in the reward phase, and the turn does not advance while assignment is unresolved.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies exact token and potion choice rendering, accessible choice controls, locked selection state, movement to the assignment step, and absence of the old Continue bypass.
+* `src/features/rewards/rewardStateContext.test.jsx` verifies only an existing reward choice can be stored and a later selection attempt cannot replace the first choice.
+* `src/pages/BattlePage.test.jsx` verifies debug and automatic wins show the level-based choice count, accept one choice, remain in the reward phase, and do not advance the turn.
+* The three focused suites passed with 31 tests.
+* Six affected reward, context, RewardPage, and BattlePage suites passed with 76 tests.
+* The context, RewardPage, and reward-state files passed ESLint normally; the affected legacy BattlePage test passed with its documented pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for token spell-slot/bag assignment, token discard and full-bag decisions, potion gains and full-capacity decisions, one-time reward application, and returning to gameplay after resolution.
+
+Manual Testing Still Needed
+
+* A browser pass is needed to verify the plain choice list and locked selection flow. Assignment is intentionally unavailable until the remaining Feature-003 slices are implemented.
+
+---
+
+Feature-003 Slice 5: Token reward bag placement and discard
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the battling player's token bag has fewer than five tokens, then press Add to token bag.
+   Expected: One new uncommitted token with the selected type is added, a confirmation appears, and Continue becomes available.
+2. Choose a token reward and press Discard reward token.
+   Expected: No token is added, a discard confirmation appears, and Continue becomes available.
+3. Try either resolution action again after the token has been added or discarded.
+   Expected: The stored resolution does not change and the reward is not added twice.
+4. Choose a token reward while the token bag already contains five tokens.
+   Expected: The page says the bag is full, Add to token bag is disabled, no sixth token is added, and discarding the new reward remains available.
+5. Press Continue after adding or discarding the token.
+   Expected: The battle clears, the next player's turn starts, gameplay appears, and any added token remains in the winning player's bag.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardStateContext.test.jsx` verifies one selected Common token is added with a unique player/type ID, repeated add and later discard attempts are ignored, and only one token is stored.
+* `src/pages/RewardPage.test.jsx` verifies non-full bag placement, uncommitted token retention after navigation, discard without addition, five-token capacity enforcement, delayed Continue, battle clearing, and next-turn advancement.
+* The two focused suites passed with 8 tests.
+* Seven affected token-bag, reward, context, RewardPage, and BattlePage suites passed with 83 tests.
+* The context, RewardPage, and reward-state files passed ESLint normally; the affected legacy BattlePage test passed with its documented pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for direct committed spell-slot placement, full-bag existing-token replacement, potion gains and full-capacity decisions, and complete mixed reward regression.
+
+Manual Testing Still Needed
+
+* A browser pass is needed for the plain token controls and confirmation flow. Direct spell placement and potion assignment are intentionally unavailable in this slice.
+
+---
+
+Feature-003 Slice 6: Full token-bag replacement
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag contains five tokens.
+   Expected: Add to token bag is disabled, the full-bag message appears, and every current bag token has its own numbered Replace control.
+2. Choose one current bag token to replace.
+   Expected: Only that token is removed, one new uncommitted reward token is inserted in the same position, and the bag still contains exactly five tokens.
+3. Try another replacement or Discard reward token after replacement.
+   Expected: The original replacement result remains unchanged and no duplicate reward token is created.
+4. Press Continue.
+   Expected: Gameplay resumes on the next turn with the five-token replacement result preserved.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardStateContext.test.jsx` verifies full-capacity replacement, stable bag order, unique reward token ID creation, retained capacity, stored replacement resolution, and one-time application.
+* `src/pages/RewardPage.test.jsx` verifies all five current tokens render as distinct replacement choices, the selected third token is replaced, confirmation and Continue appear, and the bag remains at five.
+* The two focused suites passed with 9 tests.
+* Seven affected token-bag, reward, context, RewardPage, and BattlePage suites passed with 84 tests.
+* The context, RewardPage, and reward-state files passed ESLint normally; the affected legacy BattlePage test passed with its documented pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for direct committed spell-slot placement, potion gains and full-capacity decisions, and complete mixed reward regression.
+
+Manual Testing Still Needed
+
+* A browser pass is needed for the plain full-bag replacement controls. Direct spell placement and potion assignment remain intentionally unavailable.
+
+---
+
+Feature-003 Slice 7: Direct committed spell-slot assignment
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and review the Assign reward step.
+   Expected: The current committed spell table and six numbered Select spell slot controls appear alongside the existing bag/discard choices.
+2. Review a spell slot that already contains five tokens.
+   Expected: Its Select control is disabled, while any slot below capacity remains selectable.
+3. Select a valid spell slot without confirming.
+   Expected: The page identifies the selected slot and shows a separate Confirm control; the reward token has not yet been added.
+4. Press Confirm for the selected slot.
+   Expected: One uniquely identified reward token is added directly to that slot with `committed: true`, a confirmation appears, and Continue becomes available.
+5. Attempt another slot assignment or discard after confirmation.
+   Expected: The original slot assignment remains unchanged and the reward is not duplicated or moved.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardStateContext.test.jsx` verifies valid direct assignment, committed token state, unique ID creation, stored spell-slot resolution, and rejection of later assignment/discard attempts.
+* `src/pages/RewardPage.test.jsx` verifies reuse of the committed spell display, six slot choices, disabled full slots, no mutation before Confirm, selected-slot feedback, committed placement in slot 3, confirmation, and delayed Continue.
+* The two focused suites passed with 11 tests.
+* Eight affected token-bag, spell-display, reward, context, RewardPage, and BattlePage suites passed with 95 tests.
+* The context, RewardPage, and reward-state files passed ESLint normally; the affected legacy BattlePage test passed with its documented pre-existing `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for potion gains, full-capacity potion replacement/discard decisions, and complete mixed reward regression.
+
+Manual Testing Still Needed
+
+* A browser pass is needed for the plain spell-slot selection and confirmation controls. Potion assignment remains intentionally unavailable.
+
+---
+
+Feature-003 Slice 8: Potion reward gain below capacity
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a potion reward while the winning player has fewer than three potions.
+   Expected: The selected potion is added immediately, a confirmation appears, and Continue becomes available.
+2. Attempt to select the same potion reward again.
+   Expected: The winning player still receives only one copy and the stored resolution remains unchanged.
+3. Choose a potion reward while the winning player already has three potions.
+   Expected: The page says the potion slots are full, the collection remains at three, and Continue stays unavailable until a later full-capacity decision is implemented.
+4. Press Continue after a successful below-capacity potion gain.
+   Expected: The existing resolved-reward flow returns to gameplay and advances the turn with the potion retained by the winning player.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardStateContext.test.jsx` verifies a selected potion below capacity is added to the winning player, records a `potionSlot` resolution, and cannot be added twice.
+* `src/pages/RewardPage.test.jsx` verifies automatic potion gain, confirmation, stored destination, delayed Continue, and the full-capacity unresolved message without a fourth potion.
+* The two focused suites passed with 13 tests.
+* Eight affected potion-capacity, reward, spell-display, RewardPage, and BattlePage suites passed with 96 tests.
+* All four touched implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for full-capacity potion replacement/discard decisions and complete mixed reward regression.
+
+Manual Testing Still Needed
+
+* A browser pass is needed for the plain potion gain and full-capacity message. Full-capacity replacement and discard controls remain intentionally unavailable in this slice.
+
+---
+
+Feature-003 Slice 9: Full-capacity potion replacement and discard
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a potion reward while the winning player already has three potions.
+   Expected: The collection remains at three, a full-capacity message appears, and each current potion has its own Replace action.
+2. Replace one current potion.
+   Expected: Only the selected potion is replaced by the reward potion, the collection remains at three, a confirmation appears, and Continue becomes available.
+3. Attempt another replacement or discard after replacing a potion.
+   Expected: The original result remains unchanged and the reward potion is not applied twice.
+4. Repeat the full-capacity flow and press Discard new potion.
+   Expected: All three current potions remain unchanged, a discard confirmation appears, and Continue becomes available.
+5. Press Continue after either resolution.
+   Expected: The battle clears, gameplay resumes on the next turn, and the resolved potion collection is retained by the winning player.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardStateContext.test.jsx` verifies full-capacity replacement, stable potion order, retained three-potion capacity, stored replacement resolution, and rejection of later replacement/discard attempts.
+* `src/pages/RewardPage.test.jsx` verifies all three current potions render as distinct replacement choices, selected replacement, discard-new behavior, both confirmation messages, delayed Continue, and no fourth potion.
+* The two focused suites passed with 15 tests.
+* Eight affected potion-capacity, reward, spell-display, RewardPage, and BattlePage suites passed with 98 tests.
+* All four touched implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Complete mixed reward regression is still needed before Feature-003 is marked done.
+
+Manual Testing Still Needed
+
+* A browser pass is needed for the plain full-capacity potion replacement and discard controls. Final end-to-end mixed reward verification remains separate.
+
+---
+
+Feature-003 Slice 10: Final mixed reward regression
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win battles at levels 1-4 and review the reward page.
+   Expected: The configured number of weighted token and potion choices appears, and only one choice can be selected.
+2. Resolve token rewards through a spell slot, a bag with space, full-bag replacement, and discard.
+   Expected: Exactly one selected token outcome is applied, Continue appears only after resolution, and no duplicate token is created.
+3. Resolve potion rewards below capacity, through full-capacity replacement, and by discarding the new potion.
+   Expected: Exactly one selected potion outcome is applied, the player never holds more than three potions, and Continue appears only after resolution.
+4. Press Continue after each resolved reward type.
+   Expected: The battle clears, gameplay resumes, the next player's turn begins, and only the chosen reward result is retained by the winning player.
+5. Lose a battle.
+   Expected: No rewards are generated and the existing death-punishment flow remains active.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` now verifies a potion selected from mixed token/potion choices is the only reward applied, remains after navigation, clears the battle, and advances to the next player.
+* `src/pages/BattlePage.test.jsx` now deterministically generates a token for its locked unresolved-assignment assertion, removing random potion auto-resolution from that test while preserving separate potion coverage.
+* The three focused BattlePage, RewardPage, and reward-context suites passed with 41 tests.
+* All eight affected potion-capacity, reward, spell-display, RewardPage, and BattlePage suites passed with 98 tests.
+* The complete project run passed 31 of 33 suites and 253 of 255 executed tests. The two existing `AppSettingsButton.test.jsx` assertions still expect the Battle heading and battle-level text removed by Epic-006; isolated `App.test.jsx` still fails before executing tests in `source-map-support` while reading `generatedLine`.
+* `src/pages/RewardPage.test.jsx` passed ESLint normally. `src/pages/BattlePage.test.jsx` passed with its documented legacy `testing-library/no-node-access` rule disabled.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* No additional automated coverage is identified for Feature-003.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for the complete lo-fi reward flow across all token and potion outcomes. Feature logic, capacity limits, one-time application, battle clearing, and turn advancement are covered automatically.
+
+---
+
+Bug-001 Slice 1: Shared spell assignment surface extraction
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start gameplay for a player who has not completed initial spell setup.
+   Expected: The forced Spells modal still shows six spell slots, Starting Tokens, the current player piece, disabled Cancel, and the existing Save behavior.
+2. Complete initial setup, reopen the normal Spells modal, and move an uncommitted token between the token bag and a valid spell slot.
+   Expected: Existing drag-and-drop movement, slot capacity, committed-token locking, Save, and Cancel behavior remain unchanged.
+3. Review the normal Spells modal.
+   Expected: No reward token, trash area, or reward replacement prompt appears in this foundation slice.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies the shared surface renders all six slots, the token-bag drop zone, moveable and committed tokens, and no reward-only controls.
+* `src/features/spells/SpellsModal.test.jsx` verifies the normal modal still renders its forced and later-visit layouts through the extracted surface.
+* `src/features/spells/spellSetup.test.js` and `src/pages/GameplayPage.test.jsx` confirm existing immutable token movement, slot capacity, save/cancel integration, and gameplay behavior remain unchanged.
+* All four affected suites passed with 17 tests.
+* The three new or changed component/test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for reward-mode rendering, reward-token drag targets, staged spell-slot and token-bag confirmation, trash behavior, both full-bag replacement routes, cancellation safety, and final normal-modal regression.
+
+Manual Testing Still Needed
+
+* A browser pass is needed to confirm the extracted normal Spells modal drag behavior remains unchanged. Reward assignment still uses its previous controls and is intentionally not connected to the shared component in this slice.
+
+---
+
+Bug-001 Slice 2: Shared reward assignment rendering
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward.
+   Expected: The assignment page shows the same six-slot and token-bag surface used by the normal Spells modal, populated with the winning player's current tokens.
+2. Review the reward-only areas.
+   Expected: One distinct new reward token and a discard drop zone with a Font Awesome trash-can icon appear.
+3. Open the normal Spells modal.
+   Expected: The new reward token and discard area do not appear, and normal Save, Cancel, and drag behavior remain unchanged.
+4. Resolve the reward using the existing click controls.
+   Expected: Current spell-slot, token-bag, replacement, and discard behavior still works while drag resolution remains a later slice.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies reward mode shows the distinct draggable reward token, reward assignment label, discard drop zone, and accessible trash-can icon while normal mode hides reward-only UI.
+* `src/pages/RewardPage.test.jsx` verifies unresolved token rewards render the shared reward surface with six slots, the actual token bag, the new reward token, and the discard area instead of the old committed-only display.
+* Existing RewardPage tests confirm all temporary click-based token and potion resolution paths remain functional.
+* All seven affected spell, reward, gameplay, context, and BattlePage suites passed with 59 tests.
+* All four changed component and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for reward-token drops into slots, bag, and trash; bag-token drops into trash; draft review and confirmation; cancellation safety; both full-bag replacement routes; and removal of temporary click controls.
+
+Manual Testing Still Needed
+
+* A browser pass is needed to compare the shared normal and reward assignment surfaces. Dragging the reward token or bag tokens does not resolve state yet and remains intentionally deferred.
+
+---
+
+Bug-001 Slice 3: Staged reward-token spell-slot drops
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and drag the new reward token into a spell slot with fewer than five tokens.
+   Expected: The reward token moves into that slot on the shared assignment surface, the selected slot is identified, and persisted spell state remains unchanged.
+2. Drag the reward token to another valid spell slot before confirming.
+   Expected: The staged token moves to the new slot and still exists in exactly one place.
+3. Try to drag the reward token into a full five-token spell slot.
+   Expected: The full slot rejects the placement and no player state changes.
+4. Confirm a valid staged spell slot.
+   Expected: One reward token is committed to that slot, confirmation appears, and Continue becomes available.
+5. Open the normal Spells modal.
+   Expected: Existing token movement, committed-token locking, Save, and Cancel behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies only the current reward token can target a valid spell slot and rejects full slots, token-bag targets, and unrelated tokens.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies a staged reward token renders inside exactly one selected slot and its source reports the staged destination.
+* `src/pages/RewardPage.test.jsx` verifies selecting a valid slot moves the reward token into that slot for review, does not resolve state before Confirm, and still commits exactly once after confirmation.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 61 tests.
+* All six new or changed implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for token-bag and trash drops, bag-token-to-trash replacement, staged bag review and confirmation, cancellation safety, full-bag prompts, and removal of temporary click controls.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm pointer interaction stages and repositions the reward token correctly. Token-bag and trash drops remain intentionally unavailable in this slice.
+
+---
+
+Bug-001 Slice 4: Staged non-full token-bag drops
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag contains fewer than five tokens, then drag the new reward token into the bag.
+   Expected: The reward token appears once inside the shared token-bag drop zone, the selected destination is identified, and persisted player state remains unchanged.
+2. Move the staged reward token between a valid spell slot and the non-full token bag before confirming.
+   Expected: Only the latest destination remains staged and the reward token is never duplicated.
+3. Confirm the staged token-bag destination.
+   Expected: One uncommitted reward token is added to the player's bag, confirmation appears, and Continue becomes available.
+4. Try to drag the reward token into a token bag that already contains five tokens.
+   Expected: The bag rejects this direct placement, no sixth token is staged or persisted, and the existing full-bag controls remain available until replacement drag behavior is implemented.
+5. Open the normal Spells modal.
+   Expected: Existing token movement, capacity checks, Save, and Cancel behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies the current reward token can target the shared token-bag drop zone below capacity and rejects full bags, unrelated tokens, and spell-slot destinations.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies a bag-staged reward token renders exactly once inside the token bag and its source reports the staged destination.
+* `src/pages/RewardPage.test.jsx` verifies non-full bag placement stages without mutating persisted state, exposes confirmation only after staging, and adds one uncommitted reward token only after Confirm token bag.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 63 tests.
+* All six new or changed implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for reward-token and bag-token trash drops, staged discard and full-bag replacement review, cancellation safety, both full-bag replacement routes, and removal of temporary select, discard, and replacement controls.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm pointer interaction stages the reward token in the bag and allows switching between bag and spell-slot destinations. Trash and full-bag replacement drag behavior remain intentionally unavailable in this slice.
+
+---
+
+Bug-001 Slice 5: Staged new reward token discard
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and drag the new reward token onto the Font Awesome trash-can drop zone.
+   Expected: The reward token appears once in the discard area, the selected destination is identified, and persisted player state remains unchanged.
+2. Stage the reward token in a non-full token bag or valid spell slot, then move it to the discard area before confirming.
+   Expected: The previous destination is cleared and the reward token exists only in the discard area.
+3. Leave the staged discard unconfirmed.
+   Expected: The reward remains unresolved, Continue is unavailable, and no token is added to or removed from the player.
+4. Press Confirm discard.
+   Expected: The reward is recorded as discarded, the player's spell slots and token bag remain unchanged, and Continue becomes available.
+5. Open the normal Spells modal.
+   Expected: No discard area or reward-token controls appear and existing drag, Save, and Cancel behavior remains unchanged.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies only the current reward token can target the shared discard drop zone and rejects bag tokens and unrelated destinations.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies a discard-staged reward token renders exactly once inside the trash drop zone and its source reports the staged destination.
+* `src/pages/RewardPage.test.jsx` verifies switching from staged bag placement to discard clears the bag draft, does not mutate persisted state, keeps Continue unavailable, and records discard only after Confirm discard.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 65 tests.
+* All seven new or changed implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for bag-token trash drops, staged full-bag replacement review, cancellation safety, both full-bag replacement routes, and removal of temporary select, discard, and replacement controls.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm pointer interaction moves the reward token into the trash zone and supports switching among discard, bag, and spell-slot drafts. Bag-token trash and full-bag replacement drag behavior remain intentionally unavailable in this slice.
+
+---
+
+Bug-001 Slice 6: Staged full-token-bag replacement
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag contains five tokens, then drag the new reward token into the full bag.
+   Expected: A prompt asks the player to choose one existing token to remove, no sixth token is added, and persisted player state remains unchanged.
+2. Select one existing bag token from the replacement prompt.
+   Expected: The shared bag previews that one token replaced by the new reward token, still displays exactly five tokens, and identifies the selected token outside the bag.
+3. Select a different existing bag token before confirming.
+   Expected: The preview changes to the latest selection, the original bag remains persisted, and the reward token appears exactly once.
+4. Press Confirm replacement.
+   Expected: The selected old token is removed, one uncommitted reward token is stored in its position, the bag remains at five tokens, and Continue becomes available.
+5. Open the normal Spells modal.
+   Expected: No full-bag reward prompt or replacement controls appear and existing drag, Save, and Cancel behavior remains unchanged.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies only the current reward token can request replacement by targeting a full shared bag and rejects non-full bags, bag tokens, and unrelated destinations.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies a selected replacement previews the reward token exactly once, removes only the selected old token from the draft display, and preserves bag length.
+* `src/pages/RewardPage.test.jsx` verifies the replacement prompt is requested before numbered choices appear, selection leaves persisted state unchanged, the shared bag previews five tokens, Continue remains unavailable, and Confirm replacement applies exactly one swap.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 67 tests.
+* All six new or changed implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for the alternate bag-token-to-trash replacement route, cancellation safety, removal of temporary select, discard, and replacement controls, and final shared-surface regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm dropping the reward token on a full bag opens the prompt and that changing the selected replacement updates the preview. Bag-token-to-trash replacement remains intentionally unavailable in this slice.
+
+---
+
+Bug-001 Slice 7: Full-bag token trash replacement route
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag contains five tokens, then drag one existing bag token onto the reward trash zone.
+   Expected: That exact old token is selected for removal and the shared bag previews the new reward token in its place.
+2. Review the staged replacement before confirming.
+   Expected: The shared bag still contains exactly five tokens, the selected old token is identified, the new reward token appears exactly once, and persisted player state remains unchanged.
+3. Press Confirm replacement.
+   Expected: The selected old token is removed, one uncommitted reward token is stored in its position, and Continue becomes available.
+4. Try to drag the new reward token, a spell-slot token, or a token from a non-full bag onto trash for this replacement route.
+   Expected: None is treated as a full-bag token replacement; the new reward token continues to use its separate discard route.
+5. Open the normal Spells modal.
+   Expected: No reward trash or replacement behavior appears and existing drag, Save, and Cancel behavior remains unchanged.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies only an existing token from the current full bag can select the trash replacement route and rejects non-full bags, reward or spell tokens, and unrelated destinations.
+* Existing shared-surface coverage verifies the selected old token is omitted from the draft bag, the new reward token appears exactly once, and draft capacity is preserved.
+* Existing RewardPage and reward-context coverage verifies replacement preview leaves persisted state unchanged and Confirm replacement applies exactly one swap.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 68 tests.
+* All three changed implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for cancellation safety, removal of temporary select, discard, and replacement controls, and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm dragging a full-bag token onto trash selects that exact token and displays the replacement preview. Final temporary-control cleanup remains intentionally outside this slice.
+
+---
+
+Bug-001 Slice 8: Unconfirmed assignment cancellation safety
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward, stage a spell-slot placement, bag placement, discard, or full-bag replacement, but do not press its Confirm action.
+   Expected: The shared surface shows the draft while persisted player state and reward resolution remain unchanged.
+2. Navigate away from the reward route before confirming, then return while the same reward is unresolved.
+   Expected: The previous local draft is gone, the new reward token returns to its unassigned source, and the reward still requires resolution.
+3. For a staged full-bag replacement, compare the bag before leaving and after returning.
+   Expected: No existing token was removed, no reward token was added, and the original bag order and capacity are unchanged.
+4. Confirm a newly staged destination after returning.
+   Expected: Only that newly confirmed outcome is persisted and Continue becomes available.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` stages a full-bag replacement, verifies the original persisted bag and unresolved reward, navigates to gameplay, returns to reward assignment, and verifies the local replacement draft was cleared without adding or removing a token.
+* The regression uses the highest-risk replacement path to prove both required cancellation guarantees: no reward token placement and no existing bag-token removal before confirmation.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 69 tests.
+* `src/pages/RewardPage.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for removal of temporary select, discard, and replacement controls and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser navigation pass is needed to confirm leaving and returning clears each visible draft type. Production state required no change because all unconfirmed assignment drafts are already local to the route component.
+
+---
+
+Bug-001 Slice 9: Remove temporary spell-slot selectors
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and review the six spell slots on the shared assignment surface.
+   Expected: Each shared spell-slot drop zone appears with its current capacity and no separate numbered Select spell slot buttons appear below it.
+2. Drag the new reward token into a spell slot with fewer than five tokens.
+   Expected: The token stages inside that slot, the selected slot is identified, and Confirm spell slot appears.
+3. Try to drag the reward token into a full five-token slot.
+   Expected: The full slot rejects the token and no confirmation or persisted change occurs.
+4. Confirm a valid staged spell slot.
+   Expected: One committed reward token is added to that slot and Continue becomes available.
+5. Open the normal Spells modal.
+   Expected: Its shared slot drag behavior, committed-token rules, Save, and Cancel behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies the shared six-slot surface remains, full and available slot capacities are shown, the temporary assignment-choice list and all Select spell slot buttons are absent, and the reward remains unresolved before a drag.
+* `src/features/rewards/rewardTokenAssignment.test.js` and `src/features/spells/SpellTokenAssignment.test.jsx` continue to verify valid and full-slot drop decisions plus exactly one staged reward token in the selected slot.
+* `src/features/rewards/rewardStateContext.test.jsx` continues to verify confirmed direct slot assignment creates one committed reward token.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 69 tests.
+* `src/pages/RewardPage.jsx` and `src/pages/RewardPage.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for removal of temporary token-bag, discard, and replacement fallback controls and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm reward-slot staging remains usable after the numbered selectors are removed. Other temporary fallback controls remain intentionally unchanged in this slice.
+
+---
+
+Bug-001 Slice 10: Remove temporary token-bag add fallback
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag has fewer than five tokens.
+   Expected: The shared token-bag drop zone and unassigned reward token appear, but no separate Add to token bag button appears.
+2. Drag the new reward token into the available token bag.
+   Expected: The token stages once inside the bag, Selected destination: Token Bag appears, and Confirm token bag becomes available.
+3. Press Confirm token bag.
+   Expected: One uncommitted reward token is persisted in the bag and Continue becomes available.
+4. Choose a token reward while the bag already contains five tokens.
+   Expected: Token bag is full appears, no disabled Add to token bag button appears, and the full-bag drag replacement routes remain available.
+5. Open the normal Spells modal.
+   Expected: Existing shared bag drag behavior, Save, and Cancel remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies available and full reward bags never render Add to token bag, the shared bag and reward source remain present, and no reward is resolved or persisted before a drag.
+* `src/features/rewards/rewardTokenAssignment.test.js` and `src/features/spells/SpellTokenAssignment.test.jsx` continue to verify valid non-full bag drops and exactly one staged reward token inside the shared bag.
+* `src/features/rewards/rewardStateContext.test.jsx` continues to verify confirmed bag assignment adds one unique uncommitted reward token.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 69 tests.
+* `src/pages/RewardPage.jsx` and `src/pages/RewardPage.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for removal of temporary discard and replacement fallback controls and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm reward bag staging and confirmation remain usable without the Add button. Discard and replacement fallback controls remain intentionally unchanged in this slice.
+
+---
+
+Bug-001 Slice 11: Remove temporary reward discard fallback
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and review the shared assignment surface.
+   Expected: The shared trash drop zone and unassigned reward token appear, but no separate Discard reward token button appears.
+2. Drag the new reward token onto the shared trash drop zone.
+   Expected: The reward token stages exactly once beside the trash icon, Selected destination: Discard appears, and Confirm discard becomes available.
+3. Press Confirm discard.
+   Expected: The reward destination becomes discarded, the player's spell slots and token bag remain unchanged, and Continue becomes available.
+4. Choose a token reward while the token bag already contains five tokens.
+   Expected: No separate discard button appears and the shared trash drop route remains available independently of the full-bag replacement routes.
+5. Open the normal Spells modal.
+   Expected: No reward trash zone or reward discard behavior appears and existing drag, Save, and Cancel behavior remains unchanged.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies available and full reward bags never render Discard reward token, the shared trash zone and unassigned reward source remain present, and no reward is resolved or persisted before a drag.
+* `src/features/rewards/rewardTokenAssignment.test.js` and `src/features/spells/SpellTokenAssignment.test.jsx` continue to verify only a valid reward-token trash drop stages exactly one reward token on the shared trash surface.
+* `src/features/rewards/rewardStateContext.test.jsx` continues to verify confirmed discard resolves the reward without changing the player's tokens.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 69 tests.
+* `src/pages/RewardPage.jsx` and `src/pages/RewardPage.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for removal of temporary replacement fallback controls and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm reward discard staging and confirmation remain usable without the Discard reward token button. Replacement fallback controls remain intentionally unchanged in this slice.
+
+---
+
+Bug-001 Slice 12: Remove temporary replacement request fallback
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward while the winning player's token bag already contains five tokens.
+   Expected: Token bag is full appears with the shared full bag and unassigned reward token, but no separate Choose token to replace button appears.
+2. Review the page before dragging the reward token.
+   Expected: No replacement prompt, numbered replacement choices, confirmation, persisted bag change, or Continue action appears.
+3. Drag the new reward token onto the shared full token bag.
+   Expected: The existing Choose a token to remove prompt and numbered replacement choices appear.
+4. Select one replacement choice and press Confirm replacement.
+   Expected: Exactly that old token is replaced by the reward token, capacity remains five, and Continue becomes available.
+5. Leave and return to the reward route before making a drop.
+   Expected: The reward remains unresolved, the original full bag is unchanged, and no replacement request is retained.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies a full reward bag never renders Choose token to replace before a drop, keeps all five existing bag tokens and the unassigned reward source visible, and leaves reward resolution unchanged.
+* `src/pages/RewardPage.test.jsx` verifies leaving and returning before a full-bag drop preserves the unresolved reward and original persisted bag without retaining replacement UI.
+* `src/features/rewards/rewardTokenAssignment.test.js` continues to verify only the current reward token dropped onto a full shared bag starts the replacement route.
+* Existing shared-surface and reward-context coverage continues to verify a selected old token is previewed as one replacement and confirmation persists exactly one swap.
+* All eight affected spell, reward, gameplay, context, and BattlePage suites passed with 69 tests.
+* `src/pages/RewardPage.jsx` and `src/pages/RewardPage.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for removal of temporary numbered replacement controls and final shared normal/reward assignment regression.
+
+Manual Testing Still Needed
+
+* A browser drag pass is needed to confirm dropping the reward token onto a full bag opens the replacement prompt now that its click fallback is removed. Numbered replacement choices remain intentionally unchanged in this slice.
+
+---
+
+Bug-001 Final: Shared replacement interaction and regression
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Choose a token reward and review the assignment screen.
+   Expected: The screen uses the shared six spell-slot and token-bag surface, shows one new reward token and the Font Awesome trash zone, and shows no temporary assignment buttons or numbered selector lists.
+2. Drag the reward token into an available spell slot and confirm it.
+   Expected: The token appears once in that slot for review, then persists as committed after confirmation.
+3. Drag the reward token into a non-full token bag and confirm it.
+   Expected: The token appears once in the bag for review, then persists without exceeding bag capacity.
+4. Drag the reward token onto trash and confirm it.
+   Expected: The token appears once in the discard area for review, then resolves as discarded without changing the player's tokens.
+5. With a full token bag, drag the reward token onto the bag, then click one existing token in the shared bag.
+   Expected: Choose a token to remove appears after the drop, the clicked old token is identified, the reward token replaces it once in the five-token preview, and Confirm replacement persists exactly that swap.
+6. With a full token bag, drag one existing bag token directly onto trash.
+   Expected: The same one-for-one replacement preview appears and confirmation preserves bag capacity at five.
+7. Stage any reward destination, leave before confirmation, and return.
+   Expected: The local draft is cleared, the reward remains unresolved, and no reward token or bag-token removal was persisted.
+8. Open the normal Spells modal, move an uncommitted token, then test Save and Cancel.
+   Expected: Existing Spells behavior remains available, committed and capacity rules remain enforced, and no reward token, trash area, replacement prompt, or reward-only click behavior appears.
+
+Automated Tests Completed
+
+* `src/features/rewards/rewardTokenAssignment.test.js` verifies slot, non-full bag, full-bag request, reward discard, bag-token trash, and request-gated shared-token click decisions, including invalid token and capacity rejection.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies the shared normal surface, reward-only source and trash controls, exactly one staged token for every destination, one-for-one replacement preview, shared bag-token click selection, and normal-mode isolation.
+* `src/pages/RewardPage.test.jsx` verifies all temporary fallback controls are absent, drives the full-bag request through the page drop handler, clicks an actual shared bag token, confirms one persisted swap, and verifies route cancellation preserves the original bag.
+* Reward context, Spells modal, spell setup, gameplay, RewardPage, and BattlePage regression coverage passed with all eight affected suites and 71 tests.
+* All six Bug-001 implementation and test files passed ESLint.
+* `npm run build` completed successfully.
+* The full project run passed 33 of 35 suites and 267 of 269 tests. Unrelated residual failures remain in `src/AppSettingsButton.test.jsx`, where two tests expect a Battle heading absent from the current Battle page, and `src/App.test.jsx`, which fails during source-map-support stack preparation; both failures reproduced when rerun separately.
+
+Automated Tests Still Needed
+
+* None for Bug-001.
+
+Manual Testing Still Needed
+
+* A browser drag-and-drop pass is still needed for pointer behavior and a console-error check. Browser automation is not configured in this project, so this was not run from the terminal.
+
+---
+
+Feature-004 Slice 1: Centralized token description data
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the debug token grant controls and review all existing token choices.
+   Expected: The same eleven token types and labels remain available; this data-only slice does not change their current visuals or behavior.
+2. Complete a winning battle and generate token reward choices.
+   Expected: Token reward generation and rarity selection continue to work without changing the available token pool.
+3. Hover an existing token before the TokenIcon component is implemented.
+   Expected: No new tooltip or glow appears yet; this slice only prepares the shared descriptions that later TokenIcon slices will render.
+
+Automated Tests Completed
+
+* `src/data/tokens.test.js` verifies all eleven token definitions preserve their required type order, label, and rarity while exposing the exact Feature-004 description.
+* `src/features/rewards/rewardItems.test.js` verifies generated token rewards carry the description from centralized token data.
+* Token debug, battle reward, reward item, reward context, RewardPage, and BattlePage regressions passed with all seven affected suites and 85 tests.
+* All three changed data and test files passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for the global TokenIcon component, accessible tooltips, animated glow, count and faded states, drag-and-drop compatibility, and replacement of every existing token display.
+
+Manual Testing Still Needed
+
+* User-visible tooltip, glow, count, faded-state, and drag behavior must be tested after the TokenIcon component is implemented and adopted. No visible token behavior changed in this slice.
+
+---
+
+Feature-004 Slice 2: Accessible Token tooltip foundation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open gameplay or a battle where committed spell tokens are visible, then hover a token rendered by the existing global Token component.
+   Expected: The browser tooltip shows the exact centralized description for that token type.
+2. Move keyboard focus to the same token.
+   Expected: The token is focusable and its description is exposed through the token's accessible description without changing its existing accessible name.
+3. Review consolidated token counts and a used-up Light Blue or Yellow battle token.
+   Expected: Counts remain unchanged and the existing half-opacity faded state is preserved.
+4. Open the Spells modal or reward token assignment screen.
+   Expected: Their separate draggable token renderer is unchanged in this slice and does not use the new tooltip behavior yet.
+
+Automated Tests Completed
+
+* `src/components/tokens/Token.test.jsx` verifies all eleven token variants derive the exact centralized description as native tooltip text and accessible description, remain keyboard focusable, preserve consolidated counts, and preserve the half-opacity faded state.
+* Token, committed spell, gameplay, and BattlePage regressions passed with all four affected suites and 45 tests.
+* `src/components/tokens/Token.jsx` and `src/components/tokens/Token.test.jsx` passed ESLint.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for animated glow, custom viewport-aware tooltip presentation if required, draggable and committed visual states, reward usage, and replacement of the separate Spells token renderer and other token displays.
+
+Manual Testing Still Needed
+
+* Browser hover and keyboard tooltip behavior still needs a manual pass. Glow and full Token component adoption remain intentionally outside this slice.
+
+---
+
+Feature-004 Slice 3: Shared matching-colour token glow
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open gameplay or a battle where committed spell tokens are visible and inspect each available token colour.
+   Expected: Every token has a subtle glow matching its fill colour, and the glow grows and shrinks slowly behind the token.
+2. Review a consolidated token count while the glow animates.
+   Expected: The count remains centered and readable, and the glow does not change the token's size or layout.
+3. Use a Light Blue or Yellow token in battle so its existing used-up state is shown.
+   Expected: The token and its matching glow are both faded to the existing half-opacity state.
+4. Hover and focus the token while its glow animates.
+   Expected: Existing tooltip and keyboard behavior remain available, and the glow does not intercept pointer input.
+5. Open the Spells modal or reward token assignment screen.
+   Expected: Their separate draggable token renderer remains unchanged in this slice.
+
+Automated Tests Completed
+
+* `src/components/tokens/Token.test.jsx` verifies every supported token variant opts into the shared glow treatment while preserving exact descriptions, keyboard focus, counts, and faded state.
+* Token, committed spell, gameplay, and BattlePage regressions passed with all four affected suites and 45 tests.
+* `src/components/tokens/Token.jsx` and `src/components/tokens/Token.test.jsx` passed ESLint using the repository-installed binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for custom viewport-aware tooltip presentation if required, draggable and committed visual states, reward usage, and replacement of the separate Spells token renderer and other token displays.
+
+Manual Testing Still Needed
+
+* A browser visual pass is still needed to confirm the glow colour, pulse, layering, and faded appearance. Full Token component adoption remains intentionally outside this slice.
+
+---
+
+Feature-004 Slice 4: Shared draggable token adoption
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the normal Spells modal and review tokens in spell slots and the token bag.
+   Expected: Every visible token uses the same matching glow and hover description as committed gameplay tokens.
+2. Drag an uncommitted token between the token bag and a valid spell slot, then save.
+   Expected: Dragging and saving behave as before, and the token tooltip does not block pointer input.
+3. Review a committed token in the normal Spells modal.
+   Expected: It keeps the previous locked inset marker, cannot be dragged, and exposes its shared token description.
+4. Choose a token battle reward and review the new token in its source, a staged spell slot, the token bag, the discard area, and a full-bag replacement preview.
+   Expected: The reward token uses the global icon in every assignment position and appears exactly once without changing assignment or confirmation rules.
+5. Focus an uncommitted draggable token with the keyboard.
+   Expected: The drag button remains the only focus target and its accessible description includes both the existing `dnd-kit` keyboard instructions and the token effect description.
+
+Automated Tests Completed
+
+* `src/components/tokens/Token.test.jsx` verifies committed styling and the optional parent-managed focus state in addition to the existing colour, glow, tooltip, count, and faded-state coverage.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies moveable and committed assignment tokens render the global icon, preserve enabled/disabled button behavior, expose the shared description, and avoid a nested tab stop.
+* Token, shared assignment, Spells modal, RewardPage, and GameplayPage regressions passed with all five affected suites and 29 tests.
+* All four changed implementation and test files passed ESLint using the repository-installed binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for reward-choice and debug token adoption, any remaining separate token renderer, and custom viewport-aware tooltip presentation if required.
+
+Manual Testing Still Needed
+
+* A browser drag-and-drop and keyboard pass is still needed to verify pointer behavior, tooltip timing, glow layering, committed appearance, and console output. Remaining global token adoption stays outside this slice.
+
+---
+
+Feature-004 Slice 5: Token reward-choice adoption
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a battle that generates at least one token reward and open the reward-choice page before selecting an option.
+   Expected: Each token reward shows its existing category and name, the global matching-colour token icon, and the unchanged Choose button.
+2. Hover the token reward icon.
+   Expected: The browser tooltip shows the exact centralized effect description for that token colour before the reward is selected.
+3. Focus the token reward icon with the keyboard.
+   Expected: The icon is focusable and exposes the same effect as its accessible description.
+4. Review a mixed token and potion reward set.
+   Expected: Token choices use TokenIcon, while potion choices remain unchanged and do not display a token icon.
+5. Choose either reward type.
+   Expected: Existing token assignment or potion resolution behavior continues without duplication or selection changes.
+
+Automated Tests Completed
+
+* `src/pages/RewardPage.test.jsx` verifies a token choice renders the global glow and colour classes with the exact centralized tooltip and accessible description before selection, while a potion choice does not render a token icon.
+* Token, reward-item, and RewardPage regressions passed with all three affected suites and 30 tests.
+* `src/pages/RewardPage.jsx` and `src/pages/RewardPage.test.jsx` passed ESLint using the repository-installed binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for debug token adoption, any other remaining separate token renderer, and custom viewport-aware tooltip presentation if required.
+
+Manual Testing Still Needed
+
+* A browser hover and keyboard pass is still needed for reward-choice tooltip behavior, icon glow, selection behavior, and console output. Remaining global token adoption stays outside this slice.
+
+---
+
+Feature-004 Slice 6: Debug adoption and final renderer removal
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Fill the current player's token bag, use the debug menu to grant another token, and open the replacement choice.
+   Expected: Every existing bag token uses the global matching-colour icon and shows its centralized description on hover or keyboard focus.
+2. Select a different replacement radio option.
+   Expected: The selected replacement changes exactly as before; the icon remains descriptive and does not consume the radio interaction.
+3. Discard the new token or confirm a selected replacement.
+   Expected: Existing debug capacity behavior remains unchanged and no token is duplicated.
+4. Review token rewards, reward assignment, the normal Spells modal, gameplay spells, battle spells, and the debug replacement list.
+   Expected: Every rendered token circle uses the same shape, matching glow, and description source; counts, committed markers, and used-up fading remain intact where applicable.
+5. Check the browser console while hovering, focusing, dragging, and selecting tokens.
+   Expected: There are no console errors and native tooltips remain within browser-managed viewport bounds.
+
+Automated Tests Completed
+
+* `src/features/debug/DebugModal.test.jsx` verifies Red and Blue replacement choices render the global glow and colour classes, and Red exposes the exact centralized tooltip and accessible description while radio selection still updates normally.
+* A production source scan found no remaining `SpellToken` import, component use, or `spell-token--<colour>` visual class.
+* Token, DebugModal, shared assignment, and Spells modal regressions passed with all four affected suites and 21 tests.
+* `src/features/debug/DebugModal.jsx` and `src/features/debug/DebugModal.test.jsx` passed ESLint using the repository-installed binary.
+* `npm run build` completed successfully after deleting `SpellToken.jsx` and its obsolete colour/lock CSS.
+
+Automated Tests Still Needed
+
+* None for Feature-004.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm tooltip placement, glow animation/layering, drag behavior, radio interaction, counts, committed styling, faded limited-use tokens, and console output across all token surfaces.
+
+---
+
+Feature-005 Slice 1: Centralized potion colour data
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the debug potion type selector and review all potion choices.
+   Expected: The same twenty-one potion names remain available in the same order; this data-only slice does not change their current text presentation or controls.
+2. Review the current player's potions on gameplay.
+   Expected: Existing potion name, rarity, and availability text remains unchanged; no flask icon, glow, or tooltip is visible yet.
+3. Complete a battle that generates potion reward choices.
+   Expected: Existing potion rarity selection and reward resolution continue unchanged, with the selected potion carrying its centralized colour data for later display slices.
+
+Automated Tests Completed
+
+* `src/data/potions.test.js` verifies all twenty-one potion definitions preserve their required order and existing fields while exposing the exact Feature-005 colour mapping.
+* Potion data, reward item, GameplayPage, and DebugModal regressions passed with all four affected suites and 34 tests.
+* The potion data and PotionIcon implementation/test files passed ESLint during Slice 2 verification.
+* `npm run build` completed successfully during Slice 2 verification.
+
+Automated Tests Still Needed
+
+* Tests are still needed for animated glow, accessible viewport-constrained custom tooltips, and adoption across gameplay, rewards, capacity choices, and debug displays.
+
+Manual Testing Still Needed
+
+* User-visible flask, glow, name, tooltip, and full PotionIcon adoption checks remain for later slices. No visible potion behavior changed in this slice.
+
+---
+
+Feature-005 Slice 2: Global PotionIcon foundation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Render the standalone PotionIcon with any potion definition during component development.
+   Expected: A Font Awesome flask appears as the main visual with the potion's assigned colour and its name directly underneath.
+2. Hover the standalone potion component.
+   Expected: The browser-native tooltip shows the exact description from the supplied potion data.
+3. Move keyboard focus to the standalone potion component.
+   Expected: The component is focusable, is named as the potion, and exposes the same description accessibly.
+4. Review a long-name potion such as Copy and Paste or Teleport to *.
+   Expected: The name remains attached beneath the flask and can wrap within the component's limited width.
+5. Open gameplay, reward, or debug potion displays.
+   Expected: Existing potion text remains unchanged because production-screen adoption and glow are intentionally outside this foundation slice.
+
+Automated Tests Completed
+
+* `src/components/potions/PotionIcon.test.jsx` renders all twenty-one centralized potion definitions and verifies each global component has the required `faFlask` SVG, visible name, exact colour class, native tooltip description, accessible description, and keyboard focus.
+* Potion data and PotionIcon suites passed with both suites and 3 tests.
+* `src/data/potions.js`, `src/data/potions.test.js`, `src/components/potions/PotionIcon.jsx`, and `src/components/potions/PotionIcon.test.jsx` passed ESLint using the repository-installed binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Tests are still needed for matching animated glow, accessible viewport-constrained custom tooltip presentation, and adoption across gameplay, rewards, capacity choices, and debug displays.
+
+Manual Testing Still Needed
+
+* The standalone component still needs a browser visual pass. All production-screen PotionIcon behavior, glow, and custom tooltip layout remain for later slices.
+
+---
+
+Feature-005 Completion: Global PotionIcon glow, tooltip, and adoption
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open gameplay with potions assigned to the current player, then advance to another player with different potions.
+   Expected: Each owned potion uses its assigned flask colour, matching animated glow, and visible name; the list changes with the current player and potion effects remain inactive.
+2. Complete a battle that offers a potion reward and review each potion choice before selecting it.
+   Expected: Every potion choice uses PotionIcon and hovering or focusing it reveals the description before selection.
+3. Select a potion reward while the winner already owns three potions.
+   Expected: The new potion and all three replacement choices use PotionIcon, and replacing or discarding follows the existing capacity rules unchanged.
+4. Open debug potion controls and grant a potion to a player whose collection is full.
+   Expected: The pending new potion and every current discard choice use PotionIcon while the existing debug actions remain available.
+5. Hover and keyboard-focus short- and long-description potions near different viewport edges and at a narrow mobile width.
+   Expected: The custom tooltip wraps to at most 280px, remains inside the viewport sides, stays readable, and disappears when hover or focus leaves.
+6. Observe several potion flasks through a complete glow cycle.
+   Expected: Each glow slowly grows and shrinks behind its flask using the matching colour without blocking clicks or obscuring the name.
+
+Automated Tests Completed
+
+* PotionIcon coverage verifies all twenty-one definitions render the required `faFlask`, exact colour class, glow contract, visible name, accessible custom tooltip description, keyboard focus, and parent-managed focus support.
+* Gameplay, reward, and debug coverage verifies PotionIcon adoption for owned potions, reward choices, selected full-capacity rewards, replacement choices, pending debug grants, and debug discard choices.
+* Potion data, capacity, and reward regression coverage verifies the existing colour mapping, ownership limit, replacement behavior, reward state, and inactive potion behavior remain unchanged.
+* All ten affected suites passed with 64 tests.
+* All eleven Feature-005 implementation and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* None for Feature-005 completion.
+
+Manual Testing Still Needed
+
+* A browser visual pass is still needed for the animated glow timing and tooltip placement at desktop and mobile viewport edges.

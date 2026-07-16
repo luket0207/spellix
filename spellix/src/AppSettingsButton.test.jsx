@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
+import { POTION_DEFINITIONS } from './data/potions';
 import { createPlayers } from './features/gameSetup/gameSetup';
 import { GameSetupProvider } from './features/gameSetup/GameSetupContext';
 
@@ -181,5 +182,55 @@ describe('App gameplay settings button accessibility', () => {
     );
     expect(screen.getByText('120 / 120')).toBeInTheDocument();
     expect(screen.getAllByText('J')).toHaveLength(2);
+  });
+
+  test('grants the selected potion to the selected player from debug controls', async () => {
+    renderApp('/gameplay', {
+      initialGameSetup: createGameplaySetup({ hasCommittedInitialSpells: true }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+    await userEvent.selectOptions(screen.getByLabelText(/potion target player/i), 'player-2');
+    await userEvent.selectOptions(screen.getByLabelText(/potion type/i), 'small-heal');
+    await userEvent.click(screen.getByRole('button', { name: /give potion/i }));
+
+    expect(screen.getByText(/added small heal to the blue player's potions/i)).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText(/potion target player/i), 'player-1');
+    await userEvent.click(screen.getByRole('button', { name: /give potion/i }));
+
+    expect(screen.getByText(/added small heal to the red player's potions/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /potions/i })).toHaveTextContent('Small Heal');
+  });
+
+  test('forces a full-capacity potion grant to be discarded or replace one current potion', async () => {
+    const initialGameSetup = createGameplaySetup({ hasCommittedInitialSpells: true });
+    initialGameSetup.players[0].potions = POTION_DEFINITIONS.slice(0, 3);
+
+    renderApp('/gameplay', { initialGameSetup });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+    await userEvent.selectOptions(screen.getByLabelText(/potion type/i), 'first-aid');
+    await userEvent.click(screen.getByRole('button', { name: /give potion/i }));
+
+    expect(screen.getByText(/new potion: first aid/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^close$/i })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: /discard new potion/i }));
+
+    expect(screen.queryByText(/new potion: first aid/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /potions/i })).not.toHaveTextContent('First Aid');
+
+    await userEvent.click(screen.getByRole('button', { name: /give potion/i }));
+    await userEvent.click(screen.getByLabelText(/discard small heal/i));
+    await userEvent.click(screen.getByRole('button', { name: /replace selected potion/i }));
+
+    const potionDisplay = screen.getByRole('region', { name: /potions/i });
+    expect(potionDisplay).toHaveTextContent('Roll Choice');
+    expect(potionDisplay).toHaveTextContent('First Aid');
+    expect(potionDisplay).toHaveTextContent('Heal');
+    expect(potionDisplay).not.toHaveTextContent('Small Heal');
   });
 });

@@ -11,6 +11,15 @@ import {
 import { calculateBattleTurn, createAdjacentPurpleBuffs } from '../battle/battleTurn';
 import { normalizeBattleEnvironment } from '../battle/battleEnvironments';
 import { getEnemyById } from '../battle/enemies';
+import { applyDeathTokenPenalty, getDeathTokenPenalty } from '../death/deathPenalty';
+import {
+  addTokenToBag,
+  canAddTokenToBag,
+  createDebugToken,
+  replaceTokenInBag,
+} from '../debug/tokenBagAdmin';
+import { gainPotion, resolvePendingPotion } from '../potions/potionCapacity';
+import { generateBattleRewardChoices } from '../rewards/rewardItems';
 import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
 
@@ -20,6 +29,63 @@ function createTokenUses(spellSlots, tokenType) {
   return Array.from({ length: 6 }, (_, index) =>
     (spellSlots?.[index]?.tokens ?? []).filter((token) => token.type === tokenType).length
   );
+}
+
+function createLostBattleSetup(currentSetup, activeBattle) {
+  if (activeBattle.deathPenalty) {
+    return {
+      ...currentSetup,
+      activeBattle: {
+        ...activeBattle,
+        isResolvingTurn: false,
+        outcome: 'loss',
+        pendingEffects: [],
+        phase: 'lost',
+      },
+    };
+  }
+
+  const player = currentSetup.players.find(({ id }) => id === activeBattle.playerId);
+  const removalCount = getDeathTokenPenalty({ battleLevel: activeBattle.level });
+  const penaltyResult = applyDeathTokenPenalty({
+    removalCount,
+    spellSlots: player?.spellSlots ?? [],
+  });
+
+  return {
+    ...currentSetup,
+    activeBattle: {
+      ...activeBattle,
+      deathPenalty: {
+        removalCount,
+        removedTokens: penaltyResult.removedTokens,
+      },
+      isResolvingTurn: false,
+      outcome: 'loss',
+      pendingEffects: [],
+      phase: 'lost',
+    },
+    players: currentSetup.players.map((currentPlayer) =>
+      currentPlayer.id === activeBattle.playerId
+        ? { ...currentPlayer, spellSlots: penaltyResult.spellSlots }
+        : currentPlayer
+    ),
+  };
+}
+
+function createWonBattleSetup(currentSetup, activeBattle) {
+  return {
+    ...currentSetup,
+    activeBattle: {
+      ...activeBattle,
+      isResolvingTurn: false,
+      outcome: 'win',
+      pendingEffects: [],
+      phase: 'reward',
+      rewardChoices:
+        activeBattle.rewardChoices ?? generateBattleRewardChoices(activeBattle.level),
+    },
+  };
 }
 
 export function GameSetupProvider({ children, initialGameSetup = null }) {
@@ -32,6 +98,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       return {
         ...currentSetup,
         activeBattle: null,
+        pendingPotionGrant: null,
         playerCount: nextPlayerCount,
         players: createPlayers(nextPlayerCount, currentSetup.players),
         turnOrder: [],
@@ -162,6 +229,61 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           : player
       ),
     }));
+  };
+
+  const grantPotionToPlayer = (playerId, newPotion) => {
+    setGameSetup((currentSetup) => {
+      if (currentSetup.pendingPotionGrant) {
+        return currentSetup;
+      }
+
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+
+      if (!player) {
+        return currentSetup;
+      }
+
+      const result = gainPotion(player.potions, newPotion);
+
+      return {
+        ...currentSetup,
+        pendingPotionGrant: result.pendingPotion
+          ? { playerId, potion: result.pendingPotion }
+          : null,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? { ...currentPlayer, potions: result.potions }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolvePendingPotionGrant = (replacedPotionIndex) => {
+    setGameSetup((currentSetup) => {
+      const pendingGrant = currentSetup.pendingPotionGrant;
+
+      if (!pendingGrant) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        pendingPotionGrant: null,
+        players: currentSetup.players.map((player) =>
+          player.id === pendingGrant.playerId
+            ? {
+                ...player,
+                potions: resolvePendingPotion({
+                  pendingPotion: pendingGrant.potion,
+                  potions: player.potions,
+                  replacedPotionIndex,
+                }),
+              }
+            : player
+        ),
+      };
+    });
   };
 
   const startBattle = (playerId, level, enemyId, environment = 'fields') => {
@@ -348,16 +470,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
-      return {
-        ...currentSetup,
-        activeBattle: {
-          ...activeBattle,
-          isResolvingTurn: false,
-          outcome,
-          pendingEffects: [],
-          phase: outcome === 'win' ? 'reward' : 'lost',
-        },
-      };
+      if (outcome === 'loss') {
+        return createLostBattleSetup(currentSetup, activeBattle);
+      }
+
+      return createWonBattleSetup(currentSetup, activeBattle);
     });
   };
 
@@ -444,21 +561,256 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
-      const outcome = phase === 'reward' ? 'win' : phase === 'lost' ? 'loss' : null;
+      if (phase === 'lost') {
+        return createLostBattleSetup(currentSetup, currentSetup.activeBattle);
+      }
+
+      if (phase === 'reward') {
+        return createWonBattleSetup(currentSetup, currentSetup.activeBattle);
+      }
 
       return {
         ...currentSetup,
         activeBattle: {
           ...currentSetup.activeBattle,
-          ...(outcome
-            ? {
-                isResolvingTurn: false,
-                outcome,
-                pendingEffects: [],
-              }
-            : {}),
           phase,
         },
+      };
+    });
+  };
+
+  const selectBattleReward = (rewardChoiceId) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+      const selectedReward = activeBattle?.rewardChoices?.find(
+        ({ id }) => id === rewardChoiceId
+      );
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'reward' ||
+        activeBattle.selectedRewardChoiceId ||
+        !selectedReward
+      ) {
+        return currentSetup;
+      }
+
+      if (selectedReward.itemType === 'potion') {
+        const player = currentSetup.players.find(
+          ({ id }) => id === activeBattle.playerId
+        );
+
+        if (!player) {
+          return currentSetup;
+        }
+
+        const potionResult = gainPotion(player.potions, selectedReward.item);
+
+        if (!potionResult.pendingPotion) {
+          return {
+            ...currentSetup,
+            activeBattle: {
+              ...activeBattle,
+              rewardResolution: {
+                choiceId: selectedReward.id,
+                destination: 'potionSlot',
+              },
+              selectedRewardChoiceId: selectedReward.id,
+            },
+            players: currentSetup.players.map((currentPlayer) =>
+              currentPlayer.id === player.id
+                ? { ...currentPlayer, potions: potionResult.potions }
+                : currentPlayer
+            ),
+          };
+        }
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          selectedRewardChoiceId: rewardChoiceId,
+        },
+      };
+    });
+  };
+
+  const resolveSelectedPotionReward = (replacedPotionIndex) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+      const selectedReward = activeBattle?.rewardChoices?.find(
+        ({ id }) => id === activeBattle.selectedRewardChoiceId
+      );
+      const player = currentSetup.players.find(({ id }) => id === activeBattle?.playerId);
+      const isDiscardingNewPotion = replacedPotionIndex === undefined;
+      const isValidReplacement =
+        Number.isInteger(replacedPotionIndex) &&
+        replacedPotionIndex >= 0 &&
+        replacedPotionIndex < (player?.potions.length ?? 0);
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'reward' ||
+        activeBattle.rewardResolution ||
+        selectedReward?.itemType !== 'potion' ||
+        !player ||
+        (!isDiscardingNewPotion && !isValidReplacement)
+      ) {
+        return currentSetup;
+      }
+
+      const potionResult = gainPotion(player.potions, selectedReward.item);
+
+      if (!potionResult.pendingPotion) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          rewardResolution: {
+            choiceId: selectedReward.id,
+            destination: isDiscardingNewPotion
+              ? 'potionDiscarded'
+              : 'potionSlotReplacement',
+          },
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === player.id
+            ? {
+                ...currentPlayer,
+                potions: resolvePendingPotion({
+                  pendingPotion: potionResult.pendingPotion,
+                  potions: potionResult.potions,
+                  replacedPotionIndex,
+                }),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveSelectedTokenReward = (destination, replacedTokenId = null) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+      const selectedReward = activeBattle?.rewardChoices?.find(
+        ({ id }) => id === activeBattle.selectedRewardChoiceId
+      );
+      const player = currentSetup.players.find(({ id }) => id === activeBattle?.playerId);
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'reward' ||
+        activeBattle.rewardResolution ||
+        selectedReward?.itemType !== 'token' ||
+        !player ||
+        !['tokenBag', 'tokenBagReplacement', 'discarded'].includes(destination) ||
+        (destination === 'tokenBag' && !canAddTokenToBag(player.tokenBag)) ||
+        (destination === 'tokenBagReplacement' &&
+          (canAddTokenToBag(player.tokenBag) ||
+            !player.tokenBag.some(({ id }) => id === replacedTokenId)))
+      ) {
+        return currentSetup;
+      }
+
+      const nextToken =
+        destination !== 'discarded' ? createDebugToken(player, selectedReward.item.type) : null;
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          rewardResolution: {
+            choiceId: selectedReward.id,
+            destination,
+            ...(replacedTokenId ? { replacedTokenId } : {}),
+          },
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === player.id && nextToken
+            ? {
+                ...currentPlayer,
+                tokenBag:
+                  destination === 'tokenBag'
+                    ? addTokenToBag(currentPlayer.tokenBag, nextToken)
+                    : replaceTokenInBag(
+                        currentPlayer.tokenBag,
+                        replacedTokenId,
+                        nextToken
+                      ),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const addSelectedRewardTokenToBag = () => {
+    resolveSelectedTokenReward('tokenBag');
+  };
+
+  const discardSelectedRewardToken = () => {
+    resolveSelectedTokenReward('discarded');
+  };
+
+  const replaceSelectedRewardTokenInBag = (replacedTokenId) => {
+    resolveSelectedTokenReward('tokenBagReplacement', replacedTokenId);
+  };
+
+  const assignSelectedRewardTokenToSpellSlot = (spellSlotId) => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+      const selectedReward = activeBattle?.rewardChoices?.find(
+        ({ id }) => id === activeBattle.selectedRewardChoiceId
+      );
+      const player = currentSetup.players.find(({ id }) => id === activeBattle?.playerId);
+      const spellSlot = player?.spellSlots.find(({ id }) => id === spellSlotId);
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'reward' ||
+        activeBattle.rewardResolution ||
+        selectedReward?.itemType !== 'token' ||
+        !player ||
+        !spellSlot ||
+        spellSlot.tokens.length >= spellSlot.maxTokens
+      ) {
+        return currentSetup;
+      }
+
+      const rewardToken = {
+        ...createDebugToken(player, selectedReward.item.type),
+        committed: true,
+      };
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          rewardResolution: {
+            choiceId: selectedReward.id,
+            destination: 'spellSlot',
+            spellSlotId,
+          },
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === player.id
+            ? {
+                ...currentPlayer,
+                spellSlots: currentPlayer.spellSlots.map((currentSlot) =>
+                  currentSlot.id === spellSlotId
+                    ? {
+                        ...currentSlot,
+                        tokens: [...currentSlot.tokens, rewardToken],
+                      }
+                    : currentSlot
+                ),
+              }
+            : currentPlayer
+        ),
       };
     });
   };
@@ -478,6 +830,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     <GameSetupContext.Provider
       value={{
         activeBattle: gameSetup.activeBattle ?? null,
+        addSelectedRewardTokenToBag,
+        assignSelectedRewardTokenToSpellSlot,
         advanceBattleTurn,
         battleEnemy: gameSetup.activeBattle?.enemyId
           ? (() => {
@@ -499,12 +853,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         applyBattleDiceResult,
         clearActiveBattle,
         currentPlayer: getCurrentPlayer(gameSetup),
+        discardSelectedRewardToken,
+        grantPotionToPlayer,
         advanceTurn,
         initializeBoard,
         initializeTurnOrder,
+        pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
+        replaceSelectedRewardTokenInBag,
+        resolvePendingPotionGrant,
+        resolveSelectedPotionReward,
         finalizeBattleEffects,
         resetGame,
         resolveBattleFreezeCheck,
+        selectBattleReward,
         setActiveBattlePhase,
         setPlayerAnywhereMode,
         setPlayerHealth,

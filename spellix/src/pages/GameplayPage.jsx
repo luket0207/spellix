@@ -11,6 +11,7 @@ import {
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
+import PotionList from '../features/potions/PotionList';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellsModal from '../features/spells/SpellsModal';
 import {
@@ -299,6 +300,8 @@ function GameplayPage() {
         {currentPlayer?.hasCommittedInitialSpells ? (
           <CommittedSpellSlots spellSlots={currentPlayer.spellSlots} />
         ) : null}
+
+        <PotionList potions={currentPlayer?.potions ?? []} />
       </section>
 
       <SpellsModal

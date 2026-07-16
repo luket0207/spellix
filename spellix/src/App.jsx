@@ -3,6 +3,7 @@ import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import Modal from './components/Modal';
+import { POTION_DEFINITIONS } from './data/potions';
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
@@ -22,19 +23,34 @@ import StartPage from './pages/StartPage';
 
 function App() {
   const navigate = useNavigate();
-  const { currentPlayer, resetGame, setPlayerAnywhereMode, startBattle, updatePlayerSpells } =
-    useGameSetup();
+  const {
+    currentPlayer,
+    gameSetup,
+    grantPotionToPlayer,
+    pendingPotionGrant,
+    resetGame,
+    resolvePendingPotionGrant,
+    setPlayerAnywhereMode,
+    startBattle,
+    updatePlayerSpells,
+  } = useGameSetup();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
   const [selectedDebugTokenType, setSelectedDebugTokenType] = useState('red');
   const [pendingDebugTokenType, setPendingDebugTokenType] = useState('');
   const [selectedReplacementTokenId, setSelectedReplacementTokenId] = useState('');
+  const [selectedDebugPotionId, setSelectedDebugPotionId] = useState(
+    POTION_DEFINITIONS[0]?.id ?? ''
+  );
+  const [selectedDebugPotionPlayerId, setSelectedDebugPotionPlayerId] = useState('player-1');
+  const [selectedReplacementPotionIndex, setSelectedReplacementPotionIndex] = useState('');
   const [selectedDebugEnemyId, setSelectedDebugEnemyId] = useState(ENEMIES[0]?.id ?? '');
   const [selectedBattleEnvironment, setSelectedBattleEnvironment] = useState('fields');
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
     setPendingDebugTokenType('');
+    setSelectedReplacementPotionIndex('');
     setSelectedReplacementTokenId('');
     setDebugMessage('');
   };
@@ -50,16 +66,26 @@ function App() {
   const handleOpenDebug = () => {
     setIsSettingsOpen(false);
     resetDebugState();
+    setSelectedDebugPotionPlayerId(currentPlayer?.id ?? gameSetup.players[0]?.id ?? '');
     setIsDebugOpen(true);
   };
 
   const handleOpenSettings = () => {
+    if (isDebugOpen && pendingPotionGrant) {
+      setDebugMessage('Resolve the pending potion grant before closing debug tools.');
+      return;
+    }
+
     setIsDebugOpen(false);
     resetDebugState();
     setIsSettingsOpen(true);
   };
 
   const handleCloseDebug = () => {
+    if (pendingPotionGrant) {
+      return;
+    }
+
     setIsDebugOpen(false);
     resetDebugState();
   };
@@ -134,6 +160,55 @@ function App() {
     );
     setPendingDebugTokenType('');
     setSelectedReplacementTokenId('');
+  };
+
+  const handleGiveDebugPotion = () => {
+    const player = gameSetup.players.find(({ id }) => id === selectedDebugPotionPlayerId);
+    const potion = POTION_DEFINITIONS.find(({ id }) => id === selectedDebugPotionId);
+
+    if (!player || !potion) {
+      setDebugMessage('Select a valid player and potion before granting.');
+      return;
+    }
+
+    grantPotionToPlayer(player.id, potion);
+
+    if (player.potions.length >= 3) {
+      setSelectedReplacementPotionIndex('0');
+      setDebugMessage(
+        `The ${player.colour} player's potion collection is full. Discard the new ${potion.name} potion or replace one current potion.`
+      );
+      return;
+    }
+
+    setDebugMessage(`Added ${potion.name} to the ${player.colour} player's potions.`);
+  };
+
+  const handleDiscardPendingPotion = () => {
+    if (!pendingPotionGrant) {
+      return;
+    }
+
+    const potionName = pendingPotionGrant.potion.name;
+
+    resolvePendingPotionGrant();
+    setSelectedReplacementPotionIndex('');
+    setDebugMessage(`Discarded the new ${potionName} potion.`);
+  };
+
+  const handleReplacePendingPotion = () => {
+    if (!pendingPotionGrant || selectedReplacementPotionIndex === '') {
+      return;
+    }
+
+    const player = gameSetup.players.find(({ id }) => id === pendingPotionGrant.playerId);
+    const replacedPotion = player?.potions[Number(selectedReplacementPotionIndex)];
+
+    resolvePendingPotionGrant(Number(selectedReplacementPotionIndex));
+    setSelectedReplacementPotionIndex('');
+    setDebugMessage(
+      `Replaced ${replacedPotion?.name ?? 'one current potion'} with ${pendingPotionGrant.potion.name} for the ${player?.colour ?? 'selected'} player.`
+    );
   };
 
   const handleEnableAnywhereMode = () => {
@@ -236,22 +311,33 @@ function App() {
         message={debugMessage}
         onEnableAnywhereMode={handleEnableAnywhereMode}
         onClose={handleCloseDebug}
+        onDiscardPendingPotion={handleDiscardPendingPotion}
         onDiscardPendingToken={handleDiscardPendingToken}
         enemyOptions={ENEMIES.map((enemy) => ({
           id: enemy.id,
           label: `${enemy.englishName} - Level ${enemy.level}`,
         }))}
+        onGivePotion={handleGiveDebugPotion}
         onGiveToken={handleGiveDebugToken}
+        onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
         onStartBattle={handleStartBattle}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
         onPendingTokenReplacementChange={setSelectedReplacementTokenId}
+        onReplacePendingPotion={handleReplacePendingPotion}
         onReplacePendingToken={handleReplacePendingToken}
         onSelectedEnvironmentChange={setSelectedBattleEnvironment}
         onSelectedEnemyIdChange={setSelectedDebugEnemyId}
+        onSelectedPotionIdChange={setSelectedDebugPotionId}
+        onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
         onSelectedTokenTypeChange={setSelectedDebugTokenType}
+        pendingPotionGrant={pendingPotionGrant}
         pendingTokenType={pendingDebugTokenType}
+        players={gameSetup.players}
         selectedEnemyId={selectedDebugEnemyId}
         selectedEnvironment={selectedBattleEnvironment}
+        selectedPotionId={selectedDebugPotionId}
+        selectedPotionPlayerId={selectedDebugPotionPlayerId}
+        selectedReplacementPotionIndex={selectedReplacementPotionIndex}
         selectedReplacementTokenId={selectedReplacementTokenId}
         selectedTokenType={selectedDebugTokenType}
       />

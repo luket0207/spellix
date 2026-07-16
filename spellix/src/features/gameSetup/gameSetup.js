@@ -16,6 +16,8 @@ function createInitialTokenBag(playerId) {
       id: `${playerId}-${type}-${index + 1}`,
       type,
       committed: false,
+      protected: true,
+      source: 'starting',
     }))
   );
 }
@@ -65,6 +67,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
       maxHealth: existingPlayer?.maxHealth ?? 100,
       pieceImage: getPlayerPieceImageName({ colour, gender }),
+      potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
       spellSlots: existingPlayer
         ? cloneSpellSlots(existingPlayer.spellSlots)
@@ -77,6 +80,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
 export function createInitialGameSetup() {
   return {
     activeBattle: null,
+    pendingPotionGrant: null,
     playerCount: MIN_PLAYER_COUNT,
     players: createPlayers(MIN_PLAYER_COUNT),
     turnOrder: [],

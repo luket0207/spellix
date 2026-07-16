@@ -1,6 +1,7 @@
 import Modal from '../../components/Modal';
-import SpellToken from '../spells/SpellToken';
+import Token from '../../components/tokens/Token';
 import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
+import DebugPotionGrantControls from './DebugPotionGrantControls';
 import { DEBUG_TOKEN_TYPES, getDebugTokenTypeLabel } from './tokenBagAdmin';
 import './debug.css';
 
@@ -11,18 +12,29 @@ function DebugModal({
   message,
   onEnableAnywhereMode,
   onClose,
+  onDiscardPendingPotion,
   onDiscardPendingToken,
+  onGivePotion,
   onGiveToken,
+  onPendingPotionReplacementChange,
   onStartBattle,
   onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
+  onReplacePendingPotion,
   onReplacePendingToken,
   onSelectedEnvironmentChange,
   onSelectedEnemyIdChange,
+  onSelectedPotionIdChange,
+  onSelectedPotionPlayerIdChange,
   onSelectedTokenTypeChange,
+  pendingPotionGrant = null,
+  players = [],
   selectedEnemyId = '',
   selectedEnvironment = 'fields',
   pendingTokenType = '',
+  selectedPotionId = '',
+  selectedPotionPlayerId = '',
+  selectedReplacementPotionIndex = '',
   selectedReplacementTokenId = '',
   selectedTokenType = 'red',
 }) {
@@ -33,7 +45,7 @@ function DebugModal({
   return (
     <Modal
       actions={
-        <button type="button" onClick={onClose}>
+        <button type="button" disabled={Boolean(pendingPotionGrant)} onClick={onClose}>
           Close
         </button>
       }
@@ -146,7 +158,7 @@ function DebugModal({
                     value={token.id}
                     onChange={(event) => onPendingTokenReplacementChange(event.target.value)}
                   />
-                  <SpellToken
+                  <Token
                     ariaLabel={`${getDebugTokenTypeLabel(token.type)} token`}
                     tokenType={token.type}
                   />
@@ -169,6 +181,20 @@ function DebugModal({
             </div>
           </div>
         ) : null}
+
+        <DebugPotionGrantControls
+          onDiscardPendingPotion={onDiscardPendingPotion}
+          onGivePotion={onGivePotion}
+          onPendingPotionReplacementChange={onPendingPotionReplacementChange}
+          onReplacePendingPotion={onReplacePendingPotion}
+          onSelectedPotionIdChange={onSelectedPotionIdChange}
+          onSelectedPotionPlayerIdChange={onSelectedPotionPlayerIdChange}
+          pendingPotionGrant={pendingPotionGrant}
+          players={players}
+          selectedPotionId={selectedPotionId}
+          selectedPotionPlayerId={selectedPotionPlayerId}
+          selectedReplacementPotionIndex={selectedReplacementPotionIndex}
+        />
       </div>
     </Modal>
   );

@@ -87,6 +87,11 @@ function createBattleSetup() {
 
 function GameStateSnapshot() {
   const { activeBattle, battleEnemy, battlePlayer, currentPlayer, gameSetup } = useGameSetup();
+  const playerOne = gameSetup.players[0];
+  const playerOneSpellTokenIds = playerOne.spellSlots
+    .flatMap(({ tokens }) => tokens)
+    .map(({ id }) => id)
+    .join(',');
 
   return (
     <div>
@@ -107,6 +112,8 @@ function GameStateSnapshot() {
       <p>{`Resolving turn: ${activeBattle?.isResolvingTurn ?? 'none'}`}</p>
       <p>{`Battle phase: ${activeBattle?.phase ?? 'none'}`}</p>
       <p>{`Stored level: ${activeBattle?.level ?? 'none'}`}</p>
+      <p>{`Player 1 health: ${playerOne.currentHealth}`}</p>
+      <p>{`Player 1 spell tokens: ${playerOneSpellTokenIds || 'none'}`}</p>
       <p>{`Player 1 position: ${gameSetup.players[0].position.x},${gameSetup.players[0].position.y}`}</p>
     </div>
   );
@@ -251,6 +258,8 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByText(/resolving turn: false/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
+    expect(screen.getAllByText('A Red token was removed from column 1.')).toHaveLength(2);
+    expect(screen.getByText('A Blue token was removed from column 2.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
     act(() => {
@@ -265,10 +274,13 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 0,29/i)).toBeInTheDocument();
+    expect(screen.getByText(/player 1 health: 100/i)).toBeInTheDocument();
+    expect(screen.getByText(/player 1 spell tokens: none/i)).toBeInTheDocument();
     expect(screen.queryByText(/returning to gameplay/i)).not.toBeInTheDocument();
   });
 
-  test('wins a battle, goes to reward, and continues back to gameplay on the next turn', () => {
+  test('wins a battle, shows reward choices, and locks one for assignment', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
     renderBattleFlow();
 
     act(() => {
@@ -277,15 +289,16 @@ describe('BattlePage flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^win$/i }));
 
-    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^choose /i })).toHaveLength(3);
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /^choose /i })[0]);
 
-    expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
-    expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
+    expect(screen.getByText(/current player: player-1/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 3,28/i)).toBeInTheDocument();
-    expect(screen.queryByText(/returning to gameplay/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
   });
 
   test('finalizes the battle when the debug Lose button is selected', () => {
@@ -303,6 +316,41 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /remove 5 health/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^lose$/i })).toBeDisabled();
+  });
+
+  test('reports no removals and keeps protected starting tokens after respawn', () => {
+    const protectedTokenSetup = createBattleSetup();
+    protectedTokenSetup.players[0].spellSlots = protectedTokenSetup.players[0].spellSlots.map(
+      (slot) => ({
+        ...slot,
+        tokens: slot.tokens.map((token) => ({
+          ...token,
+          protected: true,
+          source: 'starting',
+        })),
+      })
+    );
+    renderBattleFlow(['/battle'], protectedTokenSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^lose$/i }));
+
+    expect(
+      screen.getByText('No tokens were removed because only starting tokens remained.')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: /removed tokens/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /respawn/i }));
+
+    expect(
+      screen.getByText(
+        /player 1 spell tokens: player-1-red-1,player-1-red-2,player-1-blue-1/i
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText(/player 1 health: 100/i)).toBeInTheDocument();
   });
 
   test('forces a selected result through the existing persistent battle dice flow', () => {
@@ -1109,16 +1157,18 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^choose /i })).toHaveLength(1);
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /roll dice/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^choose /i }));
 
-    expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
-    expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
+    expect(screen.getByText(/current player: player-1/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
   });
 
   test('automatically resolves a player loss without starting another battle transition', () => {
@@ -1167,6 +1217,9 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('dialog', { name: /battle lost/i })).getAllByRole('listitem')
+    ).toHaveLength(1);
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
@@ -1215,7 +1268,7 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(randomSpy).toHaveBeenCalledTimes(1);
+    expect(randomSpy).toHaveBeenCalledTimes(4);
     expect(screen.getByText(/battle player health: 0/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();

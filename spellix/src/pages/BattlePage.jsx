@@ -8,6 +8,7 @@ import Modal from '../components/Modal';
 import CommittedSpellSlotList from '../components/spells/CommittedSpellSlotList';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { getEnemyImageSource } from '../features/battle/enemyImages';
+import DeathResult from '../features/death/DeathResult';
 import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
@@ -457,6 +458,7 @@ function BattlePage() {
         isOpen={showLoseModal}
       >
         <p>The player has lost.</p>
+        <DeathResult removedTokens={activeBattle.deathPenalty?.removedTokens} />
       </Modal>
     </main>
   );

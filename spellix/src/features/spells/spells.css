@@ -86,62 +86,6 @@
   cursor: not-allowed;
 }
 
-.spell-token {
-  width: 18px;
-  height: 18px;
-  display: inline-block;
-  border: 1px solid #000000;
-  border-radius: 999px;
-}
-
-.spell-token--red {
-  background: #d22f27;
-}
-
-.spell-token--blue {
-  background: #2f6fd2;
-}
-
-.spell-token--orange {
-  background: #d67b2f;
-}
-
-.spell-token--green {
-  background: #2f9b46;
-}
-
-.spell-token--light-blue {
-  background: #72c8f2;
-}
-
-.spell-token--light-green {
-  background: #8fda8a;
-}
-
-.spell-token--black {
-  background: #222222;
-}
-
-.spell-token--white {
-  background: #ffffff;
-}
-
-.spell-token--purple {
-  background: #7f4ac8;
-}
-
-.spell-token--yellow {
-  background: #e4c231;
-}
-
-.spell-token--grey {
-  background: #888888;
-}
-
-.spell-token--locked {
-  box-shadow: inset 0 0 0 2px #ffffff;
-}
-
 .spell-token-source {
   display: flex;
   flex-direction: column;

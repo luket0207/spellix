@@ -1,18 +1,7 @@
 import { cloneTokenBag } from '../gameSetup/gameSetup';
+import { TOKEN_DEFINITIONS, TOKEN_TYPES } from '../../data/tokens';
 
-export const DEBUG_TOKEN_TYPES = [
-  'red',
-  'blue',
-  'orange',
-  'green',
-  'light-blue',
-  'light-green',
-  'black',
-  'white',
-  'purple',
-  'yellow',
-  'grey',
-];
+export const DEBUG_TOKEN_TYPES = TOKEN_TYPES;
 
 export const TOKEN_BAG_MAX_CAPACITY = 5;
 
@@ -24,10 +13,7 @@ function getPlayerTokens(player) {
 }
 
 export function getDebugTokenTypeLabel(tokenType) {
-  return tokenType
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  return TOKEN_DEFINITIONS[tokenType]?.label ?? tokenType;
 }
 
 export function createDebugToken(player, tokenType) {
