@@ -3,6 +3,8 @@ import { DEFAULT_PLAYER_GENDER, getPlayerPieceImageName } from './pieceImages';
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
 export const PLAYER_COLOURS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+export const DEFAULT_PLAYER_LANGUAGE = 'en';
+export const PLAYER_LANGUAGES = ['en', 'jp'];
 const SPELL_SLOT_COUNT = 6;
 const SPELL_SLOT_CAPACITY = 5;
 const STARTING_TOKEN_COUNTS = {
@@ -60,11 +62,13 @@ export function createPlayers(playerCount, existingPlayers = []) {
 
     return {
       id: playerId,
+      number: index + 1,
       anywhereMode: existingPlayer?.anywhereMode ?? false,
       colour,
       currentHealth: existingPlayer?.currentHealth ?? 100,
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
+      language: existingPlayer?.language ?? DEFAULT_PLAYER_LANGUAGE,
       maxHealth: existingPlayer?.maxHealth ?? 100,
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],

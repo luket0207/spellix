@@ -1,6 +1,7 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useDraggable,
   useDroppable,
@@ -11,16 +12,21 @@ import { CSS } from '@dnd-kit/utilities';
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Token from '../../components/tokens/Token';
-import { TOKEN_DEFINITIONS } from '../../data/tokens';
+import { getTokenDescription } from '../../data/tokens';
+import {
+  getGameplayLanguage,
+  getSpellAssignmentTranslations,
+} from '../../i18n/translations';
 import {
   REWARD_TOKEN_DISCARD_DROP_ZONE_ID,
   TOKEN_BAG_DROP_ZONE_ID,
 } from './spellSetup';
 import './spells.css';
 
-function DraggableSpellToken({ ariaLabel, onClick, token }) {
+function DraggableSpellToken({ ariaLabel, language, onClick, showName = false, token }) {
   const tokenDescriptionId = useId();
   const { attributes, isDragging, listeners, setNodeRef, transform } = useDraggable({
+    data: { token },
     id: token.id,
     disabled: token.committed,
   });
@@ -29,7 +35,7 @@ function DraggableSpellToken({ ariaLabel, onClick, token }) {
         transform: CSS.Translate.toString(transform),
       }
     : undefined;
-  const tokenDescription = TOKEN_DEFINITIONS[token.type]?.description;
+  const tokenDescription = isDragging ? '' : getTokenDescription(token.type, language);
   const describedBy = [
     attributes['aria-describedby'],
     tokenDescription ? tokenDescriptionId : null,
@@ -60,6 +66,9 @@ function DraggableSpellToken({ ariaLabel, onClick, token }) {
         committed={token.committed}
         descriptionId={tokenDescriptionId}
         focusable={false}
+        language={language}
+        showName={showName && !isDragging}
+        showTooltip={!isDragging}
         tokenType={token.type}
       />
     </button>
@@ -83,6 +92,7 @@ function TokenDropZone({ children, id, label }) {
 function SpellTokenAssignment({
   isRewardTokenStagedInBag = false,
   isRewardTokenStagedForDiscard = false,
+  language,
   mode = 'spellsModal',
   onTokenBagTokenClick,
   onTokenDrop,
@@ -93,6 +103,9 @@ function SpellTokenAssignment({
   tokenBag,
   tokenSourceLabel,
 }) {
+  const [activeDragToken, setActiveDragToken] = useState(null);
+  const currentLanguage = getGameplayLanguage(language);
+  const translations = getSpellAssignmentTranslations(currentLanguage);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -101,11 +114,16 @@ function SpellTokenAssignment({
     })
   );
   const handleDragEnd = ({ active, over }) => {
+    setActiveDragToken(null);
+
     if (!over) {
       return;
     }
 
     onTokenDrop?.(String(active.id), String(over.id));
+  };
+  const handleDragStart = ({ active }) => {
+    setActiveDragToken(active.data.current?.token ?? null);
   };
   const isRewardAssignment = mode === 'rewardAssignment';
   const hasStagedRewardTokenBagReplacement = Boolean(
@@ -122,11 +140,20 @@ function SpellTokenAssignment({
       : tokenBag;
 
   return (
-    <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
-      <div aria-label={isRewardAssignment ? 'Reward token assignment' : 'Spell token assignment'}>
+    <DndContext
+      autoScroll={false}
+      onDragCancel={() => setActiveDragToken(null)}
+      onDragEnd={handleDragEnd}
+      onDragStart={handleDragStart}
+      sensors={sensors}
+    >
+      <div
+        aria-label={isRewardAssignment ? 'Reward token assignment' : 'Spell token assignment'}
+        className={`language-${currentLanguage}`}
+      >
         <section className="spell-slot-section">
           <div className="spell-slot-scroll">
-            <ul aria-label="Spell slots" className="spell-slot-list">
+            <div aria-label="Spell slots" className="spell-slot-list">
               {spellSlots.map((slot, index) => {
                 const hasStagedReward =
                   rewardToken &&
@@ -139,8 +166,12 @@ function SpellTokenAssignment({
                   : slot.tokens;
 
                 return (
-                  <li key={slot.id} className="spell-slot-item">
-                    <p>{`Slot ${index + 1}: ${displayedTokens.length} of ${slot.maxTokens} tokens`}</p>
+                  <div
+                    aria-label={`Assignment column ${index + 1}`}
+                    key={slot.id}
+                    className="spell-slot-item"
+                  >
+                    <h4>{index + 1}</h4>
                     <TokenDropZone id={slot.id} label={`Spell slot ${index + 1}`}>
                       {displayedTokens.length > 0 ? (
                         displayedTokens.map((token) => (
@@ -151,21 +182,23 @@ function SpellTokenAssignment({
                                 : undefined
                             }
                             key={token.id}
+                            language={currentLanguage}
                             token={token}
                           />
                         ))
                       ) : (
-                        <span>Drop tokens here</span>
+                        <span>{translations.dropTokensHere}</span>
                       )}
                     </TokenDropZone>
-                  </li>
+                    <p>{`${displayedTokens.length} / ${slot.maxTokens}`}</p>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           </div>
         </section>
         <section className="spell-token-source">
-          <p>{tokenSourceLabel}</p>
+          <p>{tokenSourceLabel ?? translations.tokenBag}</p>
           <TokenDropZone id={TOKEN_BAG_DROP_ZONE_ID} label="Token bag drop zone">
             {displayedTokenBag.length > 0 ? (
               displayedTokenBag.map((token) => (
@@ -176,35 +209,41 @@ function SpellTokenAssignment({
                       : undefined
                   }
                   key={token.id}
+                  language={currentLanguage}
                   onClick={
                     isRewardAssignment && token.id !== rewardToken?.id
                       ? () => onTokenBagTokenClick?.(token.id)
                       : undefined
                   }
+                  showName
                   token={token}
                 />
               ))
             ) : (
-              <span>No available tokens</span>
+              <span>{translations.noAvailableTokens}</span>
             )}
           </TokenDropZone>
         </section>
         {isRewardAssignment && rewardToken ? (
           <section>
-            <p>New Reward Token</p>
+            <p>{translations.newRewardToken}</p>
             {isRewardTokenStagedForDiscard ? (
-              <span>Placed in discard area</span>
+              <span>{translations.placedInDiscardArea}</span>
             ) : hasStagedRewardTokenBagReplacement ? (
-              <span>Replacing token in token bag</span>
+              <span>{translations.placedInTokenBag}</span>
             ) : isRewardTokenStagedInBag ? (
-              <span>Placed in token bag</span>
+              <span>{translations.placedInTokenBag}</span>
             ) : stagedRewardDestinationId ? (
-              <span>{`Placed in spell slot ${
-                spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
-              }`}</span>
+              <span>
+                {translations.placedInSpellSlot(
+                  spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
+                )}
+              </span>
             ) : (
               <DraggableSpellToken
                 ariaLabel={`New reward ${rewardToken.type} token`}
+                language={currentLanguage}
+                showName
                 token={rewardToken}
               />
             )}
@@ -212,7 +251,7 @@ function SpellTokenAssignment({
         ) : null}
         {isRewardAssignment ? (
           <section>
-            <p>Discard</p>
+            <p>{translations.discard}</p>
             <TokenDropZone
               id={REWARD_TOKEN_DISCARD_DROP_ZONE_ID}
               label="Discard token drop zone"
@@ -221,6 +260,8 @@ function SpellTokenAssignment({
               {isRewardTokenStagedForDiscard && rewardToken ? (
                 <DraggableSpellToken
                   ariaLabel={`New reward ${rewardToken.type} token`}
+                  language={currentLanguage}
+                  showName
                   token={rewardToken}
                 />
               ) : null}
@@ -228,6 +269,18 @@ function SpellTokenAssignment({
           </section>
         ) : null}
       </div>
+      <DragOverlay>
+        {activeDragToken ? (
+          <span aria-hidden="true" className="spell-token-drag-overlay">
+            <Token
+              focusable={false}
+              language={currentLanguage}
+              showTooltip={false}
+              tokenType={activeDragToken.type}
+            />
+          </span>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

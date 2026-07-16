@@ -2,6 +2,7 @@ import { cloneSpellSlots, cloneTokenBag } from '../gameSetup/gameSetup';
 
 export const TOKEN_BAG_DROP_ZONE_ID = 'token-bag';
 export const REWARD_TOKEN_DISCARD_DROP_ZONE_ID = 'reward-discard';
+const STARTING_TOKEN_COUNT = 7;
 
 function normalizeTokens(tokens = []) {
   return [...tokens]
@@ -26,6 +27,19 @@ function normalizeSpellState({ spellSlots = [], tokenBag = [] }) {
 
 export function countPlacedTokens(spellSlots = []) {
   return spellSlots.reduce((total, slot) => total + slot.tokens.length, 0);
+}
+
+export function isStartingSpellSetupComplete({ spellSlots = [], tokenBag = [] }) {
+  const placedStartingTokenCount = spellSlots.reduce(
+    (total, slot) =>
+      total + slot.tokens.filter((token) => token.source === 'starting').length,
+    0
+  );
+  const hasUnplacedStartingToken = tokenBag.some(
+    (token) => token.source === 'starting'
+  );
+
+  return placedStartingTokenCount === STARTING_TOKEN_COUNT && !hasUnplacedStartingToken;
 }
 
 function findTokenLocation(tokenId, tokenBag, spellSlots) {

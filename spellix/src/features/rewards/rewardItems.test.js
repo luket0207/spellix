@@ -44,8 +44,9 @@ describe('rewardItems', () => {
         category: REWARD_CATEGORIES.COMMON_TOKEN,
         id: 'reward-choice-1',
         item: {
-          description: 'Plus 10 Damage',
+          description: { en: 'Plus 10 Damage', jp: 'ダメージ+10' },
           label: 'Red',
+          name: { en: 'Damage', jp: 'ダメージ' },
           rarity: 'Common',
           type: 'red',
         },

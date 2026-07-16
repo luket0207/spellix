@@ -9,6 +9,8 @@ describe('game setup player piece selection foundation', () => {
   test('creates players with default boy piece-selection data', () => {
     const players = createPlayers(2);
 
+    expect(players[0].number).toBe(1);
+    expect(players[0].language).toBe('en');
     expect(players[0].anywhereMode).toBe(false);
     expect(players[0].gender).toBe('boy');
     expect(players[0].currentHealth).toBe(100);
@@ -22,6 +24,8 @@ describe('game setup player piece selection foundation', () => {
     expect(players[1].hasLeftStartArea).toBe(false);
     expect(players[1].maxHealth).toBe(100);
     expect(players[1].pieceImage).toBe('m-blue.png');
+    expect(players[1].number).toBe(2);
+    expect(players[1].language).toBe('en');
     expect(players[0].tokenBag).toHaveLength(7);
     expect(players[0].tokenBag).toEqual(
       expect.arrayContaining([
@@ -46,5 +50,16 @@ describe('game setup player piece selection foundation', () => {
     expect(recreatedPlayers[0].potions).toEqual([{ id: 'small-heal', name: 'Small Heal' }]);
     expect(recreatedPlayers[0].potions).not.toBe(existingPlayers[0].potions);
     expect(recreatedPlayers[1].potions).toEqual([]);
+  });
+
+  test('preserves valid player languages and falls back to English when missing', () => {
+    const existingPlayers = createPlayers(2);
+    existingPlayers[0].language = 'jp';
+    delete existingPlayers[1].language;
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].language).toBe('jp');
+    expect(recreatedPlayers[1].language).toBe('en');
   });
 });

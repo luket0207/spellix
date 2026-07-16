@@ -28,6 +28,8 @@ function DiceRoll({
   onRollComplete,
   onRollStart,
   onSequenceComplete,
+  rollButtonClassName = '',
+  rollButtonLabel = 'Roll Dice',
 }) {
   const [faceValue, setFaceValue] = useState(1);
   const [pendingFaceValue, setPendingFaceValue] = useState(1);
@@ -148,12 +150,17 @@ function DiceRoll({
         aria-live="polite"
         className={`dice-roll-result dice-roll-result--${isResultVisible ? 'visible' : 'hidden'}`}
       >
-        {`Dice result: ${faceValue}`}
+        {`${faceValue}`}
       </p>
 
       {mode === 'persistent' ? (
-        <button disabled={disabled || phase !== 'rest'} type="button" onClick={() => startRoll()}>
-          Roll Dice
+        <button
+          className={rollButtonClassName}
+          disabled={disabled || phase !== 'rest'}
+          type="button"
+          onClick={() => startRoll()}
+        >
+          {rollButtonLabel}
         </button>
       ) : null}
     </section>

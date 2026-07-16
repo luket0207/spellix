@@ -172,6 +172,46 @@ describe('BattlePage flows', () => {
     expect(debugControlsRule).not.toMatch(/right\s*:/);
   });
 
+  test('positions the battle title at the top centre with the required size and weight', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const titleRule = stylesheet.match(/\.battle-title\s*\{([^}]*)\}/)?.[1];
+
+    expect(titleRule).toMatch(/position:\s*absolute/);
+    expect(titleRule).toMatch(/top:\s*16px/);
+    expect(titleRule).toMatch(/left:\s*50%/);
+    expect(titleRule).toMatch(/transform:\s*translateX\(-50%\)/);
+    expect(titleRule).toMatch(/font-size:\s*32px/);
+    expect(titleRule).toMatch(/font-weight:\s*700/);
+    expect(titleRule).toMatch(/text-align:\s*center/);
+  });
+
+  test('uses the battling player language for the title, dice button, and both battle actors', () => {
+    const japanesePlayerSetup = createBattleSetup();
+    const enemy = getEnemyById('hellcrown-reaper');
+
+    japanesePlayerSetup.players[0].language = 'jp';
+
+    const { unmount } = renderBattleFlow(['/battle'], japanesePlayerSetup);
+
+    expect(screen.getByRole('heading', { name: `${enemy.japaneseName}バトル` })).toHaveClass(
+      'battle-title',
+      'language-jp'
+    );
+    expect(screen.getByRole('button', { name: 'サイコロを振る' })).toHaveClass('language-jp');
+    expect(screen.getByText('赤のターン')).toHaveClass('language-jp');
+    expect(screen.getByRole('img', { name: `Battle enemy ${enemy.japaneseName}` })).toBeInTheDocument();
+
+    unmount();
+
+    const japaneseEnemyTurnSetup = createBattleSetup();
+
+    japaneseEnemyTurnSetup.players[0].language = 'jp';
+    japaneseEnemyTurnSetup.activeBattle.currentBattleActor = 'enemy';
+    renderBattleFlow(['/battle'], japaneseEnemyTurnSetup);
+
+    expect(screen.getByText(`${enemy.japaneseName}のターン`)).toHaveClass('language-jp');
+  });
+
   test('uses the selected environment background and falls back to fields', () => {
     const selectedEnvironmentSetup = createBattleSetup();
     selectedEnvironmentSetup.activeBattle.environment = 'mountains';
@@ -197,7 +237,10 @@ describe('BattlePage flows', () => {
     const playerPanel = screen.getByLabelText(/battle player panel/i);
     const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
 
-    expect(screen.queryByRole('heading', { name: /^battle$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hellcrown Reaper Battle' })).toHaveClass(
+      'battle-title',
+      'language-en'
+    );
     expect(screen.queryByText(/battle level:/i)).not.toBeInTheDocument();
     expect(screen.getByText(/stored level: 4/i)).toBeInTheDocument();
     expect(screen.getByText('10 / 100')).toBeInTheDocument();
@@ -219,7 +262,7 @@ describe('BattlePage flows', () => {
     expect(screen.getAllByText('J')).toHaveLength(2);
     expect(screen.getByLabelText(/dice roller/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
-    expect(screen.getByText("Red's Turn")).toBeInTheDocument();
+    expect(screen.getByText('Red Turn')).toBeInTheDocument();
     expect(screen.getByLabelText(/battle turn actor/i)).toHaveAttribute(
       'src',
       expect.stringContaining('m-red.png')
@@ -823,7 +866,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
     expect(screen.getByText(/resolving turn: false/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
-    expect(screen.getByText("Hellcrown Reaper's Turn")).toBeInTheDocument();
+    expect(screen.getByText('Hellcrown Reaper Turn')).toBeInTheDocument();
     expect(screen.getByLabelText(/battle turn actor/i)).toHaveAttribute(
       'src',
       expect.stringContaining('HR.png')
@@ -898,7 +941,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
-    expect(screen.getByText("Red's Turn")).toBeInTheDocument();
+    expect(screen.getByText('Red Turn')).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -992,7 +1035,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
-    expect(screen.getByText("Boneveil Acolyte's Turn")).toBeInTheDocument();
+    expect(screen.getByText('Boneveil Acolyte Turn')).toBeInTheDocument();
   });
 
   test('places enemy-turn Green reduction behind the defending player', () => {
@@ -1237,7 +1280,7 @@ describe('BattlePage flows', () => {
     enemyTurnSetup.activeBattle.currentBattleActor = 'enemy';
     renderBattleFlow(['/battle'], enemyTurnSetup);
 
-    expect(screen.getByText("Hellcrown Reaper's Turn")).toBeInTheDocument();
+    expect(screen.getByText('Hellcrown Reaper Turn')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
     act(() => {

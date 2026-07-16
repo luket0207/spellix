@@ -106,13 +106,37 @@ describe('DebugModal', () => {
     const blueToken = screen.getByRole('img', { name: /blue token/i });
 
     expect(redToken).toHaveClass('token-display--glow', 'token-display--red');
-    expect(redToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description);
-    expect(redToken).toHaveAccessibleDescription(TOKEN_DEFINITIONS.red.description);
+    expect(redToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description.en);
+    expect(redToken).toHaveAccessibleDescription(TOKEN_DEFINITIONS.red.description.en);
+    expect(screen.getByText('Damage')).toBeInTheDocument();
+    expect(screen.getByText('Guard')).toBeInTheDocument();
     expect(blueToken).toHaveClass('token-display--glow', 'token-display--blue');
 
     fireEvent.click(screen.getByDisplayValue('player-1-blue-1'));
 
     expect(handleReplacementChange).toHaveBeenCalledWith('player-1-blue-1');
+  });
+
+  test('shows Japanese names and tooltips for a Japanese current player', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        enemyOptions={enemyOptions}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onPendingTokenReplacementChange={jest.fn()}
+        pendingTokenType="purple"
+        selectedReplacementTokenId="player-1-red-1"
+      />
+    );
+
+    expect(screen.getByText('ダメージ')).toBeInTheDocument();
+    expect(screen.getByText('ガード')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /red token/i })).toHaveAttribute(
+      'title',
+      'ダメージ+10'
+    );
   });
 
   test('disables token-giving controls until the current player finishes initial spell setup', () => {
@@ -358,5 +382,45 @@ describe('DebugModal', () => {
     expect(handleReplacementChange).toHaveBeenCalledWith('1');
     expect(handleDiscard).toHaveBeenCalled();
     expect(handleReplace).toHaveBeenCalled();
+  });
+
+  test('shows debug potion grant displays in the target player language', () => {
+    const japanesePlayers = [
+      { ...potionPlayers[0], language: 'jp' },
+      potionPlayers[1],
+    ];
+
+    render(
+      <DebugModal
+        currentPlayer={japanesePlayers[0]}
+        enemyOptions={enemyOptions}
+        isOpen
+        message="The red player's potion collection is full."
+        onClose={jest.fn()}
+        onDiscardPendingPotion={jest.fn()}
+        onEnableAnywhereMode={jest.fn()}
+        onGivePotion={jest.fn()}
+        onGiveToken={jest.fn()}
+        onPendingPotionReplacementChange={jest.fn()}
+        onReplacePendingPotion={jest.fn()}
+        pendingPotionGrant={{
+          playerId: 'player-1',
+          potion: POTION_DEFINITIONS.find(({ id }) => id === 'heal'),
+        }}
+        players={japanesePlayers}
+        selectedPotionId="heal"
+        selectedPotionPlayerId="player-1"
+        selectedReplacementPotionIndex="0"
+      />
+    );
+
+    expect(screen.getByText('New potion: 回復')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '回復 potion' })).toHaveAccessibleDescription(
+      'HPを60％回復する。'
+    );
+    expect(screen.getByRole('radio', { name: 'Discard 出目選択' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '小回復 potion' })).toHaveAccessibleDescription(
+      'HPを30％回復する。'
+    );
   });
 });

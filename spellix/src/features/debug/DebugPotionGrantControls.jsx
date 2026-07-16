@@ -1,5 +1,5 @@
 import PotionIcon from '../../components/potions/PotionIcon';
-import { POTION_DEFINITIONS } from '../../data/potions';
+import { getPotionName, POTION_DEFINITIONS } from '../../data/potions';
 
 // DEBUG ONLY: Potion grant controls.
 function DebugPotionGrantControls({
@@ -17,6 +17,7 @@ function DebugPotionGrantControls({
 }) {
   const pendingPlayer = players.find(({ id }) => id === pendingPotionGrant?.playerId) ?? null;
   const isSelectionDisabled = players.length === 0 || Boolean(pendingPotionGrant);
+  const pendingLanguage = pendingPlayer?.language;
 
   return (
     <div>
@@ -55,21 +56,21 @@ function DebugPotionGrantControls({
 
       {pendingPotionGrant && pendingPlayer ? (
         <div>
-          <p>{`New potion: ${pendingPotionGrant.potion.name}`}</p>
-          <PotionIcon potion={pendingPotionGrant.potion} />
+          <p>{`New potion: ${getPotionName(pendingPotionGrant.potion, pendingLanguage)}`}</p>
+          <PotionIcon language={pendingLanguage} potion={pendingPotionGrant.potion} />
           <p>{`Target player: ${pendingPlayer.colour}`}</p>
           <div role="radiogroup" aria-label="Current potions to discard">
             {pendingPlayer.potions.map((potion, index) => (
               <label key={`${potion.id}-${index}`}>
                 <input
-                  aria-label={`Discard ${potion.name}`}
+                  aria-label={`Discard ${getPotionName(potion, pendingLanguage)}`}
                   checked={selectedReplacementPotionIndex === String(index)}
                   name="debug-potion-replacement"
                   type="radio"
                   value={index}
                   onChange={(event) => onPendingPotionReplacementChange(event.target.value)}
                 />
-                <PotionIcon focusable={false} potion={potion} />
+                <PotionIcon focusable={false} language={pendingLanguage} potion={potion} />
               </label>
             ))}
           </div>

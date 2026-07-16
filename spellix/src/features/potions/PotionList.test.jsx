@@ -36,4 +36,34 @@ describe('PotionList', () => {
     ).toHaveClass('potion-icon--light-blue');
     expect(within(potionSection).queryByRole('button')).not.toBeInTheDocument();
   });
+
+  test('passes the active language to every shared potion icon', () => {
+    render(
+      <PotionList
+        language="jp"
+        potions={[
+          POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+          POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam'),
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('group', { name: '出目選択 potion' })).toHaveAccessibleDescription(
+      '次に振るサイコロの出目を選ぶ。'
+    );
+    expect(screen.getByRole('group', { name: 'アイスビーム potion' })).toHaveAccessibleDescription(
+      '対戦相手を凍結させる。'
+    );
+  });
+
+  test('supports a translated gameplay title and language font class', () => {
+    render(<PotionList languageClassName="language-jp" potions={[]} title="ポーション" />);
+
+    const potionSection = screen.getByRole('region', { name: 'ポーション' });
+
+    expect(within(potionSection).getByRole('heading', { name: 'ポーション' })).toHaveClass(
+      'language-jp'
+    );
+    expect(within(potionSection).getByText('No potions')).not.toHaveClass('language-jp');
+  });
 });

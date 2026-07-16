@@ -12,6 +12,14 @@ import DeathResult from '../features/death/DeathResult';
 import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
+import {
+  getBattleTitle,
+  getBattleTurnMessage,
+  getEnemyDisplayName,
+  getGameplayLanguage,
+  getGameplayTranslations,
+  getPlayerColourDisplayName,
+} from '../i18n/translations';
 import './BattlePage.css';
 
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
@@ -100,6 +108,9 @@ function BattlePage() {
   const hasBattleContext = Boolean(activeBattle && battleEnemy && battlePlayer);
   const isActiveBattle = Boolean(activeBattle?.phase === 'active' && battlePlayer);
   const [showTurnModal, setShowTurnModal] = useState(isActiveBattle);
+  const currentLanguage = getGameplayLanguage(battlePlayer?.language);
+  const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const languageClassName = `language-${currentLanguage}`;
 
   advanceBattleTurnRef.current = advanceBattleTurn;
   applyBattleEffectRef.current = applyBattleEffect;
@@ -191,6 +202,8 @@ function BattlePage() {
 
   const enemyImageSource = getEnemyImageSource(battleEnemy.imageFileName);
   const pieceImageSource = getPieceImageSource(battlePlayer.pieceImage);
+  const enemyDisplayName = getEnemyDisplayName(currentLanguage, battleEnemy);
+  const battleTitle = getBattleTitle(currentLanguage, battleEnemy);
   const isPlayerTurn = activeBattle.currentBattleActor !== 'enemy';
   const isFreezeCheck = isPlayerTurn ? activeBattle.playerFrozen : activeBattle.enemyFrozen;
   const isBattleDiceDisabled = Boolean(
@@ -201,8 +214,9 @@ function BattlePage() {
       isBattleDiceRolling
   );
   const turnActorName = isPlayerTurn
-    ? `${battlePlayer.colour.charAt(0).toUpperCase()}${battlePlayer.colour.slice(1)}`
-    : battleEnemy.englishName;
+    ? getPlayerColourDisplayName(currentLanguage, battlePlayer.colour)
+    : enemyDisplayName;
+  const battleTurnMessage = getBattleTurnMessage(currentLanguage, turnActorName);
   const turnActorImageSource = isPlayerTurn ? pieceImageSource : enemyImageSource;
   const shouldAutoRollEnemy = Boolean(
     isActiveBattle &&
@@ -290,6 +304,8 @@ function BattlePage() {
       className="battle-page"
       style={{ backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})` }}
     >
+      <h1 className={`battle-title ${languageClassName}`}>{battleTitle}</h1>
+
       <div className="battle-display">
         {activeBattleEffect?.type === 'redDamage' ? (
           <span
@@ -342,6 +358,7 @@ function BattlePage() {
           </BattleActorImage>
           <HealthBar currentHealth={battlePlayer.currentHealth} maxHealth={battlePlayer.maxHealth} />
           <CommittedSpellSlotList
+            language={currentLanguage}
             lightBlueUses={activeBattle.playerFreezeUses}
             purpleBuffs={activeBattle.playerPurpleBuffs}
             spellSlots={battlePlayer.spellSlots}
@@ -374,17 +391,18 @@ function BattlePage() {
           >
             {enemyImageSource ? (
               <img
-                alt={`Battle enemy ${battleEnemy.englishName}`}
-                aria-label={`Battle enemy ${battleEnemy.englishName}`}
+                alt={`Battle enemy ${enemyDisplayName}`}
+                aria-label={`Battle enemy ${enemyDisplayName}`}
                 className="battle-enemy-piece"
                 src={enemyImageSource}
               />
             ) : (
-              <p aria-label="Battle enemy fallback">{battleEnemy.englishName}</p>
+              <p aria-label="Battle enemy fallback">{enemyDisplayName}</p>
             )}
           </BattleActorImage>
           <HealthBar currentHealth={battleEnemy.currentHealth} maxHealth={battleEnemy.maxHealth} />
           <CommittedSpellSlotList
+            language={currentLanguage}
             lightBlueUses={activeBattle.enemyFreezeUses}
             purpleBuffs={activeBattle.enemyPurpleBuffs}
             spellSlots={battleEnemy.spellSlots}
@@ -406,6 +424,8 @@ function BattlePage() {
           onRollComplete={handleDiceRollComplete}
           onSequenceComplete={handleDiceSequenceComplete}
           onRollStart={() => setIsBattleDiceRolling(true)}
+          rollButtonClassName={languageClassName}
+          rollButtonLabel={gameplayTranslations.rollDice}
         />
       </div>
 
@@ -437,10 +457,10 @@ function BattlePage() {
         ariaLabel="Battle turn"
         isOpen={showTurnModal}
       >
-        <p>{`${turnActorName}'s Turn`}</p>
+        <p className={languageClassName}>{battleTurnMessage}</p>
         {turnActorImageSource ? (
           <img
-            alt={`${turnActorName}'s turn`}
+            alt={battleTurnMessage}
             aria-label="Battle turn actor"
             src={turnActorImageSource}
             style={{ height: '150px', width: 'auto' }}

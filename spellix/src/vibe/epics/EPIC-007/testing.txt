@@ -1417,3 +1417,185 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * A browser visual pass is still needed for the animated glow timing and tooltip placement at desktop and mobile viewport edges.
+
+---
+
+Bug-002: Spell assignment columns should never show internal scroll bars
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the normal Spells modal, drag an uncommitted token into a spell slot, then drag it back into the token bag.
+   Expected: No vertical scrollbar appears in the spell-column area, the slot remains the same height, and the token returns to the bag normally.
+2. Choose a token reward, drag the reward into a spell slot, then drag it into the token bag and repeat by dragging it to discard.
+   Expected: Neither route leaves a vertical scrollbar behind; the reward remains draggable and appears in only the staged destination.
+3. Display ten tokens in one assignment spell slot using a valid test/debug state.
+   Expected: The tokens wrap into two compact rows of five inside the fixed-height slot without an internal scrollbar or a taller spell column.
+4. Resize the assignment screen to a narrow viewport.
+   Expected: Existing horizontal access to the six-slot list remains available while vertical scrollbars stay absent.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` renders ten tokens in a shared spell slot and verifies all ten remain present, the count reads `10 / 10`, vertical overflow is suppressed on the shared wrapper, and spell-slot drop zones use the fixed `60px` height.
+* The isolated Bug-002 regression test passed.
+* Five shared normal/reward rendering and staged-destination checks passed alongside the regression. The only selected check that failed was the existing unrelated assertion expecting `X of X tokens` while the component renders `X / X`.
+* `src/features/spells/SpellTokenAssignment.test.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Browser-level drag automation is not configured, so actual scrollbar appearance during pointer dragging cannot be measured in the terminal test environment.
+
+Manual Testing Still Needed
+
+* A browser pointer-drag pass is still needed for the slot-to-bag and slot-to-discard routes in both assignment modes, including a console-error check.
+
+---
+
+Bug-003: Spell assignment columns should not scroll when dragged over
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the normal Spells modal and drag an uncommitted token downward over each spell slot before moving it back to the token bag.
+   Expected: Slot contents and the slot wrapper remain vertically fixed with no visible or hidden movement, and the token can still be dropped normally.
+2. Choose a token reward, stage it in a spell slot, then drag downward before moving it to the token bag and discard area in separate runs.
+   Expected: The spell columns never change vertical position and each valid reward destination continues to stage correctly.
+3. Repeat with a spell slot containing up to ten tokens.
+   Expected: The fixed two-row token layout remains visible, does not grow, and does not shift while dragging over or away from the slot.
+4. At a narrow viewport, manually scroll the six-slot row horizontally before dragging a token.
+   Expected: Manual horizontal access remains available; dragging does not cause automatic vertical or horizontal container movement.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies the shared `DndContext` disables drag auto-scroll and the spell-slot wrapper contains vertical overscroll.
+* The focused Bug-003 test and Bug-002 ten-token/no-scrollbar regression both passed.
+* Six shared reward rendering, spell-slot staging, token-bag staging, discard staging, full-bag preview, and replacement-selection checks passed.
+* `src/features/spells/SpellTokenAssignment.jsx` and its test passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Browser-level pointer drag and scroll-position measurement are not configured in this project, so actual browser `scrollTop` behavior still requires the manual steps above.
+
+Manual Testing Still Needed
+
+* A browser pointer/touch pass is still needed in normal and reward assignment modes, including narrow-view horizontal access and a console-error check.
+
+---
+
+Bug-004: Replace spell assignment list markup with divs to prevent hidden drag area
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the normal Spells modal and inspect the six assignment columns with browser developer tools if available.
+   Expected: The `spell-slot-list` and each `spell-slot-item` are divs rather than `ul` and `li`, with no browser list spacing.
+2. Drag an uncommitted token into a spell column, below the visible bottom edge of the slot row, and then back into the token bag.
+   Expected: The drag overlay keeps the token visible continuously, the columns do not move or grow, and the token drops normally.
+3. Choose a token reward and repeat the drag below the slot row before dropping into a spell slot, token bag, and discard area in separate runs.
+   Expected: The token does not flicker or disappear and each existing staging route still resolves correctly.
+4. Repeat with up to ten tokens visible in a spell slot.
+   Expected: Tokens retain the fixed compact two-row layout with no scrollbar, hidden scrolling, clipping, or slot growth.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies the shared slot row is an `HTMLDivElement`, no Spell slots list/listitem semantics remain, assignment columns are divs, and the component includes `DragOverlay` outside the slot wrapper.
+* The Bug-004 structure/overlay check, Bug-003 no-auto-scroll check, and Bug-002 fixed-height ten-token check all passed.
+* Eight normal/reward checks passed for localized rendering, reward source, slot/bag/discard staging, full-bag replacement preview, replacement selection, and Japanese labels.
+* A source audit found no other production or test consumer relying on the removed assignment list/listitem semantics.
+* `src/features/spells/SpellTokenAssignment.jsx` and its test passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The terminal test environment cannot visually track the browser-positioned drag overlay through a pointer path, so continuous visibility beyond the slot boundary still requires manual verification.
+
+Manual Testing Still Needed
+
+* A browser pointer/touch drag pass is still needed in normal and reward assignment modes, including below-row visibility, all destinations, narrow viewports, and a console-error check.
+
+---
+
+Bug-005: Hide token names while dragging to prevent duplicate ghost display
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the normal Spells modal and inspect a token at rest in the token bag.
+   Expected: Its localized name and tooltip appear normally before dragging.
+2. Drag that token over every spell column and below the slot row.
+   Expected: The icon remains visible through the drag overlay, but neither the original nor overlay shows a token name or tooltip ghost.
+3. Return the token to the token bag, then drag it into a spell column in a separate run.
+   Expected: The name and tooltip return when resting in the bag; after resting in a spell column, the name stays hidden as before while the normal tooltip is available.
+4. Repeat with an unassigned reward token and cancel or complete each slot, bag, and discard route.
+   Expected: Reward names/tooltips show only while at rest in name-enabled areas and are absent throughout active dragging, with no duplicate label.
+
+Automated Tests Completed
+
+* `src/components/tokens/Token.test.jsx` verifies optional tooltip suppression removes title, accessible description, and tooltip focus while preserving a configured resting name.
+* The complete global Token suite passed all six tests, including unchanged colour, glow, count, faded, committed, localization, fallback, name, and default tooltip behavior.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies active drag state overrides `showName` and `showTooltip`, and the drag overlay explicitly disables its tooltip.
+* Twelve shared assignment regressions passed for drag visibility, div markup, scrolling, ten-token layout, localized resting names/tooltips, reward rendering, all staged destinations, replacement, and Japanese labels.
+* All four Bug-005 implementation and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The terminal environment cannot visually detect a browser-native ghost label or hover tooltip during a pointer path, so final artefact verification remains manual.
+
+Manual Testing Still Needed
+
+* A browser pointer/touch pass is still needed to confirm there is no duplicate name or tooltip during active dragging and that each resting destination restores the correct visibility without console errors.
+
+---
+
+Bug-006: Starting token setup Save button should stay disabled until all 7 tokens are placed
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and inspect Save before placing any starting tokens, then after placing one token and six tokens.
+   Expected: Save remains disabled at every stage and the existing seven-token warning remains visible in the current player's language.
+2. Place all five Red and two Blue starting tokens into any valid combination of spell columns.
+   Expected: Save becomes enabled immediately after the seventh starting token is placed and opens the existing save confirmation.
+3. Move one of the seven placed tokens between spell columns.
+   Expected: Save remains enabled because all seven starting tokens are still placed.
+4. Return one placed token to the token bag, then place it into a spell column again.
+   Expected: Save disables immediately while the token is in the bag and enables again when all seven are placed.
+5. Repeat the forced setup for each later player, including one Japanese player, then open the normal Spells modal and complete a token reward assignment.
+   Expected: Every player has the same strict seven-token rule, the Japanese warning remains accurate, and normal Spells and reward validation retain their existing behavior without console errors.
+
+Automated Tests Completed
+
+* `src/features/spells/spellSetup.test.js` verifies zero, one, and six placed starting tokens are incomplete; exactly seven are complete; moving all seven between columns remains complete; and returning one to the bag becomes incomplete. All 11 helper tests passed.
+* `src/pages/GameplayPage.test.jsx` verifies the forced modal Save button is disabled with zero, one, and six placed starting tokens, enabled with seven, preserves the English warning, and opens the existing confirmation.
+* All four focused GameplayPage Bug-006 checks passed, along with the other eight relevant GameplayPage checks in the full-file run.
+* Sixteen reward-page checks and two normal Spells modal checks passed, confirming their existing flows remain isolated from the forced-setup predicate.
+* The four Bug-006 implementation and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The full `GameplayPage.test.jsx` run retains one unrelated stale dice-result assertion that expects `Dice result: 4` while the current component renders `4`.
+* The reward and normal Spells modal suites each retain one unrelated stale count-label assertion expecting `N of 5 tokens` while the shared assignment surface renders `N / 5`.
+* Browser-level drag-and-drop is not configured in the terminal test environment, so immediate pointer-driven button transitions still require the manual steps above.
+
+Manual Testing Still Needed
+
+* A browser pointer/touch pass is still needed for all seven placements, removal, movement between columns, later players, Japanese copy, normal Spells, reward assignment, and a console-error check.

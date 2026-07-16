@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import SpellTokenAssignment from './SpellTokenAssignment';
@@ -14,6 +15,113 @@ function createSpellSlots() {
 }
 
 describe('SpellTokenAssignment', () => {
+  test('hides token names and tooltips from the original and overlay while dragging', () => {
+    const componentSource = readFileSync(
+      `${__dirname}/SpellTokenAssignment.jsx`,
+      'utf8'
+    );
+
+    expect(componentSource).toMatch(/showName={showName && !isDragging}/);
+    expect(componentSource).toMatch(/showTooltip={!isDragging}/);
+    expect(componentSource).toMatch(
+      /<DragOverlay>[\s\S]*?<Token[\s\S]*?showTooltip={false}/
+    );
+  });
+
+  test('uses div-based spell columns and an unclipped drag overlay', () => {
+    render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[]}
+      />
+    );
+
+    const componentSource = readFileSync(
+      `${__dirname}/SpellTokenAssignment.jsx`,
+      'utf8'
+    );
+    const spellSlotArea = screen.getByLabelText('Spell slots');
+
+    expect(spellSlotArea).toBeInstanceOf(HTMLDivElement);
+    expect(screen.queryByRole('list', { name: 'Spell slots' })).not.toBeInTheDocument();
+    expect(within(spellSlotArea).queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.getByLabelText('Assignment column 1')).toBeInstanceOf(HTMLDivElement);
+    expect(componentSource).toMatch(/<DragOverlay>/);
+  });
+
+  test('disables drag auto-scrolling and vertical overscroll for spell columns', () => {
+    const componentSource = readFileSync(
+      `${__dirname}/SpellTokenAssignment.jsx`,
+      'utf8'
+    );
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+
+    expect(componentSource).toMatch(/<DndContext[^>]*autoScroll={false}/s);
+    expect(stylesheet).toMatch(
+      /\.spell-slot-scroll\s*{[^}]*overscroll-behavior-y:\s*none;/s
+    );
+  });
+
+  test('keeps spell columns fixed and prevents vertical scroll bars with ten tokens', () => {
+    const spellSlots = createSpellSlots();
+
+    spellSlots[0] = {
+      ...spellSlots[0],
+      maxTokens: 10,
+      tokens: Array.from({ length: 10 }, (_, index) => ({
+        committed: false,
+        id: `red-${index + 1}`,
+        type: 'red',
+      })),
+    };
+
+    render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={spellSlots}
+        tokenBag={[]}
+      />
+    );
+
+    const firstSpellSlot = screen.getByLabelText('Spell slot 1');
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+
+    expect(within(firstSpellSlot).getAllByRole('button')).toHaveLength(10);
+    expect(screen.getByText('10 / 10')).toBeInTheDocument();
+    expect(stylesheet).toMatch(
+      /\.spell-slot-scroll\s*{[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-slot-item \.spell-drop-zone\s*{[^}]*height:\s*60px;[^}]*min-height:\s*60px;/s
+    );
+  });
+
+  test('shows localized names in the token bag while keeping spell slots compact', () => {
+    render(
+      <SpellTokenAssignment
+        language="jp"
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[{ committed: false, id: 'red-1', type: 'red' }]}
+      />
+    );
+
+    const tokenBag = screen.getByLabelText(/token bag drop zone/i);
+    const firstSpellSlot = screen.getByLabelText(/spell slot 1/i);
+
+    expect(within(tokenBag).getByText('ダメージ')).toBeInTheDocument();
+    expect(within(tokenBag).getByRole('img', { name: /red token/i })).toHaveAttribute(
+      'title',
+      'ダメージ+10'
+    );
+    expect(within(firstSpellSlot).queryByText('ガード')).not.toBeInTheDocument();
+    expect(within(firstSpellSlot).getByRole('img', { name: /blue token/i })).toHaveAttribute(
+      'title',
+      'ガード+5'
+    );
+  });
+
   test('renders the reusable spell slots and token bag without reward-only controls', () => {
     const onTokenBagTokenClick = jest.fn();
 
@@ -28,7 +136,8 @@ describe('SpellTokenAssignment', () => {
     );
 
     expect(screen.getByLabelText(/^spell slots$/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/^Slot [1-6]: [0-1] of 5 tokens$/i)).toHaveLength(6);
+    expect(screen.getAllByRole('heading', { level: 4 })).toHaveLength(6);
+    expect(screen.getAllByText(/^[0-1] of 5 tokens$/i)).toHaveLength(6);
     expect(screen.getByLabelText(/token bag drop zone/i)).toBeInTheDocument();
     const moveableTokenButton = screen.getByRole('button', { name: /moveable red token/i });
     const committedTokenButton = screen.getByRole('button', { name: /committed blue token/i });
@@ -43,12 +152,14 @@ describe('SpellTokenAssignment', () => {
     expect(moveableTokenButton).toHaveAccessibleDescription(/Plus 10 Damage/);
     expect(committedTokenButton).toBeDisabled();
     expect(moveableToken).toHaveClass('token-display--glow', 'token-display--red');
-    expect(moveableToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description);
+    expect(moveableToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description.en);
     expect(moveableToken).not.toHaveAttribute('tabindex');
     expect(committedToken).toHaveClass(
       'token-display--committed',
       'token-display--blue'
     );
+    expect(within(screen.getByLabelText(/token bag drop zone/i)).getByText('Damage')).toBeInTheDocument();
+    expect(within(screen.getByLabelText(/spell slot 1/i)).queryByText('Guard')).not.toBeInTheDocument();
     expect(screen.queryByText(/new reward token/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/discard/i)).not.toBeInTheDocument();
 
@@ -72,6 +183,7 @@ describe('SpellTokenAssignment', () => {
     expect(screen.getByLabelText(/reward token assignment/i)).toBeInTheDocument();
     expect(screen.getByText(/new reward token/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new reward red token/i })).toBeEnabled();
+    expect(screen.getByText('Damage')).toBeInTheDocument();
     expect(screen.getByLabelText(/discard token drop zone/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /trash can/i })).toBeInTheDocument();
   });
@@ -94,6 +206,7 @@ describe('SpellTokenAssignment', () => {
         name: /new reward red token/i,
       })
     ).toBeInTheDocument();
+    expect(within(screen.getByLabelText(/spell slot 3/i)).queryByText('Damage')).not.toBeInTheDocument();
     expect(screen.getByText(/placed in spell slot 3/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
@@ -169,7 +282,7 @@ describe('SpellTokenAssignment', () => {
     expect(
       within(tokenBag).getByRole('button', { name: /moveable blue token/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/replacing token in token bag/i)).toBeInTheDocument();
+    expect(screen.getByText(/placed in token bag/i)).toBeInTheDocument();
     expect(within(tokenBag).getAllByRole('button')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
@@ -198,5 +311,54 @@ describe('SpellTokenAssignment', () => {
 
     expect(onTokenBagTokenClick).toHaveBeenCalledTimes(1);
     expect(onTokenBagTokenClick).toHaveBeenCalledWith('green-1');
+  });
+
+  test('puts each slot number above its drop zone and its token count in a paragraph below', () => {
+    const spellSlots = createSpellSlots();
+
+    spellSlots[0].tokens = [];
+
+    render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={spellSlots}
+        tokenBag={[]}
+      />
+    );
+
+    const firstSlot = screen.getByLabelText('Assignment column 1');
+
+    expect(within(firstSlot).getByRole('heading', { name: '1', level: 4 })).toBeInTheDocument();
+    expect(within(firstSlot).getByLabelText('Spell slot 1')).toBeInTheDocument();
+    expect(within(firstSlot).getByText('0 of 5 tokens', { selector: 'p' })).toBeInTheDocument();
+    expect(firstSlot).toHaveTextContent(/^1Drop tokens here0 of 5 tokens$/);
+    expect(within(firstSlot).queryByText(/Slot 1:/)).not.toBeInTheDocument();
+  });
+
+  test('uses Japanese labels and statuses in reward assignment mode', () => {
+    render(
+      <SpellTokenAssignment
+        isRewardTokenStagedForDiscard
+        language="jp"
+        mode="rewardAssignment"
+        onTokenDrop={jest.fn()}
+        rewardToken={{ committed: false, id: 'reward-token', type: 'red' }}
+        spellSlots={createSpellSlots()}
+        tokenBag={[]}
+      />
+    );
+
+    const assignment = screen.getByLabelText(/reward token assignment/i);
+
+    expect(assignment).toHaveClass('language-jp');
+    expect(within(assignment).getAllByText('ここにトークンをドロップ')).toHaveLength(5);
+    expect(within(assignment).getByText('トークンバッグ')).toBeInTheDocument();
+    expect(within(assignment).getByText('使用可能なトークンがありません')).toBeInTheDocument();
+    expect(within(assignment).getByText('新しい報酬トークン')).toBeInTheDocument();
+    expect(within(assignment).getByText('破棄エリアに配置')).toBeInTheDocument();
+    expect(within(assignment).getByText('破棄')).toBeInTheDocument();
+    expect(within(screen.getByLabelText(/discard token drop zone/i)).getByText('ダメージ')).toBeInTheDocument();
+    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'ダメージ+10');
+    expect(within(screen.getByLabelText(/spell slot 1/i)).queryByText('ガード')).not.toBeInTheDocument();
   });
 });

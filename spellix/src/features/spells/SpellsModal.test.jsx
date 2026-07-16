@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { getPlayerPieceImageName } from '../gameSetup/pieceImages';
 import SpellsModal from './SpellsModal';
 
@@ -10,12 +10,13 @@ function createDraftSpellSlots() {
   }));
 }
 
-function renderSpellsModal({ isForcedSetup = true } = {}) {
+function renderSpellsModal({ isForcedSetup = true, language = 'en' } = {}) {
   return render(
     <SpellsModal
       currentPlayer={{
         id: 'player-1',
         colour: 'red',
+        language,
         pieceImage: getPlayerPieceImageName({ colour: 'red', gender: 'girl' }),
       }}
       draftSpellSlots={createDraftSpellSlots()}
@@ -38,20 +39,27 @@ describe('SpellsModal layout', () => {
     renderSpellsModal({ isForcedSetup: true });
 
     const spellSlotsList = screen.getByLabelText(/^spell slots$/i);
-    const startingTokensHeading = screen.getByText(/^Starting Tokens$/i);
-    const spellSlotLabels = screen.getAllByText(/^Slot [1-6]: 0 of 5 tokens$/i);
+    const tokenBagHeading = screen.getByText(/^Token Bag$/i);
+    const spellSlotHeadings = screen.getAllByRole('heading', { level: 4 });
+    const tokenCounts = screen.getAllByText(/^0 of 5 tokens$/i);
     const spellPlayerPiece = screen.getByRole('img', { name: /spell player piece/i });
 
-    expect(spellSlotsList.compareDocumentPosition(startingTokensHeading)).toBe(
+    expect(spellSlotsList.compareDocumentPosition(tokenBagHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     );
     expect(screen.getByText(/^Spells$/i)).toBeInTheDocument();
     expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
     expect(spellPlayerPiece).not.toHaveClass('battle-player-piece');
     expect(spellPlayerPiece).toHaveStyle({ height: '100px' });
-    expect(spellSlotLabels).toHaveLength(6);
-    expect(spellSlotLabels[0]).toHaveTextContent('Slot 1: 0 of 5 tokens');
-    expect(spellSlotLabels[5]).toHaveTextContent('Slot 6: 0 of 5 tokens');
+    expect(spellSlotHeadings.map(({ textContent }) => textContent)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ]);
+    expect(tokenCounts).toHaveLength(6);
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
   });
@@ -69,5 +77,25 @@ describe('SpellsModal layout', () => {
     expect(screen.queryByText(/^Starting Tokens$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
+  });
+
+  test('uses Japanese modal copy and font class for a Japanese player', () => {
+    renderSpellsModal({ isForcedSetup: true, language: 'jp' });
+
+    const dialog = screen.getByRole('dialog', { name: '呪文' });
+
+    expect(within(dialog).getByRole('heading', { name: '呪文' })).toHaveClass(
+      'language-jp'
+    );
+    expect(
+      within(dialog).getByText(
+        'サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。'
+      )
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('トークンバッグ')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'キャンセル' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled();
+    expect(within(dialog).queryByText('新しい報酬トークン')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('破棄')).not.toBeInTheDocument();
   });
 });

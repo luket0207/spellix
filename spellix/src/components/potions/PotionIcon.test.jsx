@@ -42,4 +42,43 @@ describe('PotionIcon', () => {
       'tabindex'
     );
   });
+
+  test('shows Japanese text and updates when the active language changes', () => {
+    const potion = POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice');
+    const { rerender } = render(<PotionIcon language="jp" potion={potion} />);
+
+    const japaneseIcon = screen.getByRole('group', { name: '出目選択 potion' });
+
+    expect(within(japaneseIcon).getByText('出目選択')).toHaveClass(
+      'potion-icon-name',
+      'language-jp'
+    );
+    expect(japaneseIcon).toHaveAccessibleDescription(
+      '次に振るサイコロの出目を選ぶ。'
+    );
+    expect(within(japaneseIcon).getByRole('tooltip')).toHaveClass('language-jp');
+
+    rerender(<PotionIcon language="invalid" potion={potion} />);
+
+    expect(screen.getByRole('group', { name: 'Roll Choice potion' })).toHaveAccessibleDescription(
+      potion.description
+    );
+  });
+
+  test('falls back to non-empty English text when Japanese text is missing', () => {
+    render(
+      <PotionIcon
+        language="jp"
+        potion={{
+          ...POTION_DEFINITIONS[0],
+          japaneseDescription: '',
+          japaneseName: '',
+        }}
+      />
+    );
+
+    expect(screen.getByRole('group', { name: 'Roll Choice potion' })).toHaveAccessibleDescription(
+      POTION_DEFINITIONS[0].description
+    );
+  });
 });

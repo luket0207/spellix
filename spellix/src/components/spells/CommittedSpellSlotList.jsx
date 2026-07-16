@@ -22,16 +22,26 @@ function consolidateSlotTokens(tokens = []) {
 }
 
 function CommittedSpellSlotList({
+  language,
   lightBlueUses = null,
   purpleBuffs = [],
   spellSlots,
   title = 'Spells',
+  titleClassName = '',
   yellowCharged = false,
   yellowUses = null,
 }) {
   return (
     <section aria-label="Committed spell slots" className="committed-spell-slot-display">
-      {title ? <p className="committed-spell-slot-display-title">{title}</p> : null}
+      {title ? (
+        <p
+          className={`committed-spell-slot-display-title${
+            titleClassName ? ` ${titleClassName}` : ''
+          }`}
+        >
+          {title}
+        </p>
+      ) : null}
       <ul className="committed-spell-slot-list">
         {spellSlots.map((slot, index) => {
           const consolidatedTokens = consolidateSlotTokens(slot.tokens);
@@ -69,6 +79,7 @@ function CommittedSpellSlotList({
                         } in slot ${index + 1}`}
                         count={displayCount}
                         faded={Array.isArray(uses) && displayCount === 0}
+                        language={language}
                         tokenType={tokenType}
                       />
                     );

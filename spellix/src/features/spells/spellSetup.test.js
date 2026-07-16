@@ -2,6 +2,7 @@ import { createPlayers } from '../gameSetup/gameSetup';
 import {
   createCommittedSpellData,
   hasDraftSpellChanges,
+  isStartingSpellSetupComplete,
   moveSpellTokenInDraft,
   TOKEN_BAG_DROP_ZONE_ID,
 } from './spellSetup';
@@ -144,6 +145,64 @@ describe('spellSetup helpers', () => {
         draftTokenBag: restoredState.tokenBag,
         savedSpellSlots: player.spellSlots,
         savedTokenBag: player.tokenBag,
+      })
+    ).toBe(false);
+  });
+
+  test.each([0, 1, 6])(
+    'does not complete starting setup with %i starting tokens placed',
+    (placedTokenCount) => {
+      const [player] = createPlayers(1);
+      const spellSlots = player.spellSlots.map((slot) => ({
+        ...slot,
+        tokens: [],
+      }));
+
+      spellSlots[0].tokens = player.tokenBag.slice(0, placedTokenCount);
+
+      expect(
+        isStartingSpellSetupComplete({
+          spellSlots,
+          tokenBag: player.tokenBag.slice(placedTokenCount),
+        })
+      ).toBe(false);
+    }
+  );
+
+  test('completes starting setup only while all seven starting tokens are placed', () => {
+    const [player] = createPlayers(1);
+    const spellSlots = player.spellSlots.map((slot) => ({
+      ...slot,
+      tokens: [],
+    }));
+
+    spellSlots[0].tokens = player.tokenBag.slice(0, 5);
+    spellSlots[1].tokens = player.tokenBag.slice(5);
+
+    expect(
+      isStartingSpellSetupComplete({ spellSlots, tokenBag: [] })
+    ).toBe(true);
+
+    const movedBetweenSlots = spellSlots.map((slot) => ({
+      ...slot,
+      tokens: [...slot.tokens],
+    }));
+    movedBetweenSlots[0].tokens.pop();
+    movedBetweenSlots[2].tokens.push(player.tokenBag[4]);
+
+    expect(
+      isStartingSpellSetupComplete({
+        spellSlots: movedBetweenSlots,
+        tokenBag: [],
+      })
+    ).toBe(true);
+
+    movedBetweenSlots[2].tokens.pop();
+
+    expect(
+      isStartingSpellSetupComplete({
+        spellSlots: movedBetweenSlots,
+        tokenBag: [player.tokenBag[4]],
       })
     ).toBe(false);
   });

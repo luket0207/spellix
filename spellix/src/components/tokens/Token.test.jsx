@@ -43,8 +43,8 @@ describe('Token', () => {
 
       expect(token).toHaveClass('token-display--glow');
       expect(token).toHaveClass(`token-display--${tokenType}`);
-      expect(token).toHaveAttribute('title', TOKEN_DEFINITIONS[tokenType].description);
-      expect(token).toHaveAccessibleDescription(TOKEN_DEFINITIONS[tokenType].description);
+      expect(token).toHaveAttribute('title', TOKEN_DEFINITIONS[tokenType].description.en);
+      expect(token).toHaveAccessibleDescription(TOKEN_DEFINITIONS[tokenType].description.en);
       expect(token).toHaveAttribute('tabindex', '0');
     });
 
@@ -76,6 +76,40 @@ describe('Token', () => {
     const token = screen.getByLabelText(/committed blue token/i);
 
     expect(token).toHaveClass('token-display--committed');
+    expect(token).not.toHaveAttribute('tabindex');
+  });
+
+  test('conditionally shows a localized name and tooltip with an English fallback', () => {
+    const { rerender } = render(
+      <Token ariaLabel="red token" language="jp" showName tokenType="red" />
+    );
+
+    expect(screen.getByText('ダメージ')).toHaveClass('token-display-name', 'language-jp');
+    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'ダメージ+10');
+    expect(screen.getByLabelText('red token')).toHaveAccessibleDescription('ダメージ+10');
+
+    rerender(<Token ariaLabel="red token" language="invalid" tokenType="red" />);
+
+    expect(screen.queryByText('ダメージ')).not.toBeInTheDocument();
+    expect(screen.queryByText('Damage')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'Plus 10 Damage');
+  });
+
+  test('can suppress its tooltip without removing an allowed resting name', () => {
+    render(
+      <Token
+        ariaLabel="red token"
+        showName
+        showTooltip={false}
+        tokenType="red"
+      />
+    );
+
+    const token = screen.getByLabelText('red token');
+
+    expect(screen.getByText('Damage')).toBeInTheDocument();
+    expect(token).not.toHaveAttribute('title');
+    expect(token).not.toHaveAttribute('aria-describedby');
     expect(token).not.toHaveAttribute('tabindex');
   });
 

@@ -17,8 +17,15 @@ import SpellsModal from '../features/spells/SpellsModal';
 import {
   createCommittedSpellData,
   hasDraftSpellChanges,
+  isStartingSpellSetupComplete,
   moveSpellTokenInDraft,
 } from '../features/spells/spellSetup';
+import {
+  getGameplayLanguage,
+  getGameplayTranslations,
+  getNextTurnMessage,
+  getSpellAssignmentTranslations,
+} from '../i18n/translations';
 import './GameplayPage.css';
 
 function GameplayPage() {
@@ -41,6 +48,10 @@ function GameplayPage() {
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [showTurnModal, setShowTurnModal] = useState(false);
+  const currentLanguage = getGameplayLanguage(currentPlayer?.language);
+  const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
+  const languageClassName = `language-${currentLanguage}`;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
   const hasUnsavedSpellChanges = Boolean(
     currentPlayer &&
@@ -51,6 +62,13 @@ function GameplayPage() {
         savedTokenBag: currentPlayer.tokenBag,
       })
   );
+  const isStartingSetupComplete = isStartingSpellSetupComplete({
+    spellSlots: draftSpellSlots,
+    tokenBag: draftTokenBag,
+  });
+  const isSpellSaveDisabled = isForcedSpellSetup
+    ? !isStartingSetupComplete
+    : !hasUnsavedSpellChanges;
 
   useEffect(() => {
     if (gameSetup.turnOrder.length === 0 && gameSetup.players.length > 0) {
@@ -187,12 +205,12 @@ function GameplayPage() {
   };
 
   const handleSpellSaveRequest = () => {
-    if (!currentPlayer || !hasUnsavedSpellChanges) {
+    if (!currentPlayer || (!isForcedSpellSetup && !hasUnsavedSpellChanges)) {
       return;
     }
 
-    if (isForcedSpellSetup && draftTokenBag.length > 0) {
-      setSpellValidationMessage('Place all 7 starting tokens into spell slots before saving.');
+    if (isForcedSpellSetup && !isStartingSetupComplete) {
+      setSpellValidationMessage(spellAssignmentTranslations.startingTokenWarning);
       return;
     }
 
@@ -276,6 +294,7 @@ function GameplayPage() {
         )}
 
         <button
+          className={languageClassName}
           type="button"
           disabled={
             !currentPlayer?.hasCommittedInitialSpells ||
@@ -286,22 +305,33 @@ function GameplayPage() {
           }
           onClick={handleRollDice}
         >
-          Roll Dice
+          {gameplayTranslations.rollDice}
         </button>
 
         <button
+          className={languageClassName}
           disabled={!currentPlayer || showDiceModal || showSpellsModal || showTurnModal}
           type="button"
           onClick={() => setShowSpellsModal(true)}
         >
-          Spells
+          {gameplayTranslations.spells}
         </button>
 
         {currentPlayer?.hasCommittedInitialSpells ? (
-          <CommittedSpellSlots spellSlots={currentPlayer.spellSlots} />
+          <CommittedSpellSlots
+            language={currentLanguage}
+            spellSlots={currentPlayer.spellSlots}
+            title={gameplayTranslations.spells}
+            titleClassName={languageClassName}
+          />
         ) : null}
 
-        <PotionList potions={currentPlayer?.potions ?? []} />
+        <PotionList
+          language={currentLanguage}
+          languageClassName={languageClassName}
+          potions={currentPlayer?.potions ?? []}
+          title={gameplayTranslations.potions}
+        />
       </section>
 
       <SpellsModal
@@ -312,7 +342,7 @@ function GameplayPage() {
         isOpen={showSpellsModal}
         onCancel={handleSpellCancelRequest}
         onSave={handleSpellSaveRequest}
-        isSaveDisabled={!hasUnsavedSpellChanges}
+        isSaveDisabled={isSpellSaveDisabled}
         onTokenDrop={handleSpellTokenDrop}
         validationMessage={spellValidationMessage}
       />
@@ -320,38 +350,51 @@ function GameplayPage() {
       <Modal
         actions={
           <>
-            <button type="button" onClick={handleConfirmSpellCancel}>
-              Yes
+            <button
+              className={languageClassName}
+              type="button"
+              onClick={handleConfirmSpellCancel}
+            >
+              {spellAssignmentTranslations.yes}
             </button>
-            <button type="button" onClick={() => setShowSpellCancelConfirmation(false)}>
-              No
+            <button
+              className={languageClassName}
+              type="button"
+              onClick={() => setShowSpellCancelConfirmation(false)}
+            >
+              {spellAssignmentTranslations.no}
             </button>
           </>
         }
         ariaLabel="Cancel spells confirmation"
         isOpen={showSpellCancelConfirmation}
       >
-        <p>Are you sure you want to cancel? All changes to your spell slots will be lost</p>
+        <p className={languageClassName}>{spellAssignmentTranslations.cancelConfirmation}</p>
       </Modal>
 
       <Modal
         actions={
           <>
-            <button type="button" onClick={handleConfirmSpellSave}>
-              Yes
+            <button
+              className={languageClassName}
+              type="button"
+              onClick={handleConfirmSpellSave}
+            >
+              {spellAssignmentTranslations.yes}
             </button>
-            <button type="button" onClick={() => setShowSpellSaveConfirmation(false)}>
-              No
+            <button
+              className={languageClassName}
+              type="button"
+              onClick={() => setShowSpellSaveConfirmation(false)}
+            >
+              {spellAssignmentTranslations.no}
             </button>
           </>
         }
         ariaLabel="Save spells confirmation"
         isOpen={showSpellSaveConfirmation}
       >
-        <p>
-          Are you sure you want to commit your tokens to these spell slots? This cannot be changed
-          without using potions once they are saved.
-        </p>
+        <p className={languageClassName}>{spellAssignmentTranslations.saveConfirmation}</p>
       </Modal>
 
       <Modal
@@ -376,7 +419,9 @@ function GameplayPage() {
           ariaLabel="Turn change"
           isOpen={showTurnModal}
         >
-          <p>{`It is now ${currentPlayer.colour} player's turn.`}</p>
+          <p className={languageClassName}>
+            {getNextTurnMessage(currentLanguage, currentPlayer.colour)}
+          </p>
           {renderPlayerPiece({
             ariaLabel: 'Turn change player piece',
             className: 'turn-change-player-piece',

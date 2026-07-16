@@ -10,6 +10,18 @@
   width: 100%;
 }
 
+.battle-title {
+  font-size: 32px;
+  font-weight: 700;
+  left: 50%;
+  margin: 0;
+  position: absolute;
+  text-align: center;
+  top: 16px;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
 .battle-display {
   --enemy-actor-center: 75%;
   --player-actor-center: 25%;

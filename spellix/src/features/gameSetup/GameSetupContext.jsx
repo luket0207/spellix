@@ -6,6 +6,7 @@ import {
   createInitialGameSetup,
   createPlayers,
   createTurnOrder,
+  DEFAULT_PLAYER_LANGUAGE,
   getCurrentPlayer,
 } from './gameSetup';
 import { calculateBattleTurn, createAdjacentPurpleBuffs } from '../battle/battleTurn';
@@ -89,7 +90,18 @@ function createWonBattleSetup(currentSetup, activeBattle) {
 }
 
 export function GameSetupProvider({ children, initialGameSetup = null }) {
-  const [gameSetup, setGameSetup] = useState(() => initialGameSetup ?? createInitialGameSetup());
+  const [gameSetup, setGameSetup] = useState(() => {
+    const setup = initialGameSetup ?? createInitialGameSetup();
+
+    return {
+      ...setup,
+      players: setup.players.map((player, index) => ({
+        ...player,
+        language: player.language ?? DEFAULT_PLAYER_LANGUAGE,
+        number: player.number ?? index + 1,
+      })),
+    };
+  });
 
   const setPlayerCount = (playerCount) => {
     setGameSetup((currentSetup) => {
@@ -139,6 +151,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
               pieceImage: getPlayerPieceImageName({ colour: player.colour, gender }),
             }
           : player
+      ),
+      turnOrder: [],
+      currentTurnIndex: 0,
+      board: null,
+    }));
+  };
+
+  const setPlayerLanguage = (playerId, language) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      activeBattle: null,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId ? { ...player, language } : player
       ),
       turnOrder: [],
       currentTurnIndex: 0,
@@ -872,6 +897,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         setPlayerPosition,
         setPlayerColour,
         setPlayerGender,
+        setPlayerLanguage,
         setPlayerCount,
         startBattle,
         updatePlayerSpells,

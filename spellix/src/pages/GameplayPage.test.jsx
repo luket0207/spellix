@@ -72,6 +72,24 @@ function createCommittedGameplaySetup() {
   };
 }
 
+function createForcedGameplaySetup(placedTokenCount) {
+  const players = createPlayers(2);
+  const currentPlayer = players[0];
+  const placedTokens = currentPlayer.tokenBag.slice(0, placedTokenCount);
+
+  currentPlayer.spellSlots[0].tokens = placedTokens.slice(0, 5);
+  currentPlayer.spellSlots[1].tokens = placedTokens.slice(5);
+  currentPlayer.tokenBag = currentPlayer.tokenBag.slice(placedTokenCount);
+
+  return {
+    board: null,
+    currentTurnIndex: 0,
+    playerCount: 2,
+    players,
+    turnOrder: ['player-1', 'player-2'],
+  };
+}
+
 beforeEach(() => {
   jest.useFakeTimers();
   mockGetAnywhereModeHighlightedNodeIds.mockReset();
@@ -101,6 +119,161 @@ function renderGameplayPage() {
 }
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
+  test.each([0, 1, 6])(
+    'keeps forced setup Save disabled with %i starting tokens placed',
+    (placedTokenCount) => {
+      render(
+        <GameSetupProvider
+          initialGameSetup={createForcedGameplaySetup(placedTokenCount)}
+        >
+          <GameplayPage />
+        </GameSetupProvider>
+      );
+
+      const spellsDialog = screen.getByRole('dialog', { name: /spells/i });
+
+      expect(within(spellsDialog).getByRole('button', { name: /^save$/i })).toBeDisabled();
+      expect(
+        within(spellsDialog).getByText(
+          'You must place all 7 starting tokens into spell slots before rolling dice.'
+        )
+      ).toBeInTheDocument();
+    }
+  );
+
+  test('enables forced setup Save only when all seven starting tokens are placed', () => {
+    render(
+      <GameSetupProvider initialGameSetup={createForcedGameplaySetup(7)}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const saveButton = within(
+      screen.getByRole('dialog', { name: /spells/i })
+    ).getByRole('button', { name: /^save$/i });
+
+    expect(saveButton).toBeEnabled();
+
+    fireEvent.click(saveButton);
+
+    expect(
+      screen.getByRole('dialog', { name: /save spells confirmation/i })
+    ).toBeInTheDocument();
+  });
+
+  test('switches the listed gameplay labels and font classes with each player turn', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].language = 'en';
+    initialGameSetup.players[1].language = 'jp';
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const gameplayPanel = screen.getByRole('region', { name: /gameplay panel/i });
+
+    expect(within(gameplayPanel).getByRole('button', { name: 'Roll Dice' })).toHaveClass(
+      'language-en'
+    );
+    expect(within(gameplayPanel).getByRole('button', { name: 'Spells' })).toHaveClass(
+      'language-en'
+    );
+    expect(
+      within(gameplayPanel).getByText('Spells', {
+        selector: '.committed-spell-slot-display-title',
+      })
+    ).toHaveClass('language-en');
+    expect(
+      within(gameplayPanel).getByRole('heading', { name: 'Potions' })
+    ).toHaveClass('language-en');
+
+    fireEvent.click(within(gameplayPanel).getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(
+      within(gameplayPanel).getByRole('button', { name: 'サイコロを振る' })
+    ).toHaveClass('language-jp');
+    expect(within(gameplayPanel).getByRole('button', { name: '呪文' })).toHaveClass(
+      'language-jp'
+    );
+    expect(
+      within(gameplayPanel).getByText('呪文', {
+        selector: '.committed-spell-slot-display-title',
+      })
+    ).toHaveClass('language-jp');
+    expect(
+      within(gameplayPanel).getByRole('heading', { name: 'ポーション' })
+    ).toHaveClass('language-jp');
+    expect(within(gameplayPanel).queryByRole('button', { name: 'Roll Dice' })).not.toBeInTheDocument();
+
+    const japaneseTurnDialog = screen.getByRole('dialog', { name: /turn change/i });
+
+    expect(within(japaneseTurnDialog).getByText('プレイヤー青のターン')).toHaveClass(
+      'language-jp'
+    );
+    expect(within(japaneseTurnDialog).queryByText(/It is now/i)).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(japaneseTurnDialog).getByRole('button', {
+        name: 'OK',
+      })
+    );
+    fireEvent.click(within(gameplayPanel).getByRole('button', { name: '呪文' }));
+
+    const spellsDialog = screen.getByRole('dialog', { name: '呪文' });
+
+    expect(within(spellsDialog).getByRole('heading', { name: '呪文' })).toHaveClass(
+      'language-jp'
+    );
+    expect(within(spellsDialog).getByText('トークンバッグ')).toBeInTheDocument();
+    expect(within(spellsDialog).getByRole('button', { name: 'キャンセル' })).toHaveClass(
+      'language-jp'
+    );
+    fireEvent.click(within(spellsDialog).getByRole('button', { name: 'キャンセル' }));
+
+    fireEvent.click(within(gameplayPanel).getByRole('button', { name: 'サイコロを振る' }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(within(gameplayPanel).getByRole('button', { name: 'Roll Dice' })).toHaveClass(
+      'language-en'
+    );
+    expect(within(gameplayPanel).getByRole('button', { name: 'Spells' })).toHaveClass(
+      'language-en'
+    );
+    expect(within(gameplayPanel).getByRole('heading', { name: 'Potions' })).toHaveClass(
+      'language-en'
+    );
+  });
+
+  test('uses English gameplay labels when the current player language is invalid', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].language = 'invalid';
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const gameplayPanel = screen.getByRole('region', { name: /gameplay panel/i });
+
+    expect(within(gameplayPanel).getByRole('button', { name: 'Roll Dice' })).toHaveClass(
+      'language-en'
+    );
+    expect(within(gameplayPanel).getByRole('button', { name: 'Spells' })).toHaveClass(
+      'language-en'
+    );
+    expect(within(gameplayPanel).getByRole('heading', { name: 'Potions' })).toHaveClass(
+      'language-en'
+    );
+  });
+
   test('shows no potions for an empty collection', () => {
     renderGameplayPage();
 
@@ -110,9 +283,11 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
   test('shows the current player potions and updates them when the turn changes', () => {
     const initialGameSetup = createCommittedGameplaySetup();
 
+    initialGameSetup.players[0].language = 'en';
     initialGameSetup.players[0].potions = [
       POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
     ];
+    initialGameSetup.players[1].language = 'jp';
     initialGameSetup.players[1].potions = [
       POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
     ];
@@ -136,13 +311,13 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     finishDiceSequence();
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
 
-    const secondPlayerPotions = screen.getByRole('region', { name: /potions/i });
+    const secondPlayerPotions = screen.getByRole('region', { name: 'ポーション' });
 
-    expect(within(secondPlayerPotions).getByText('Small Heal')).toBeInTheDocument();
+    expect(within(secondPlayerPotions).getByText('小回復')).toHaveClass('language-jp');
     expect(within(secondPlayerPotions).getByText('Common | Both')).toBeInTheDocument();
     expect(
-      within(secondPlayerPotions).getByRole('group', { name: /small heal potion/i })
-    ).toHaveClass('potion-icon--green');
+      within(secondPlayerPotions).getByRole('group', { name: '小回復 potion' })
+    ).toHaveAccessibleDescription('HPを30％回復する。');
     expect(within(secondPlayerPotions).queryByText('Roll Choice')).not.toBeInTheDocument();
   });
 
@@ -214,7 +389,8 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
 
     expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
-    expect(screen.getByText(/it is now blue player's turn\./i)).toBeInTheDocument();
+    expect(screen.getByText('Blue Players Turn')).toHaveClass('language-en');
+    expect(screen.queryByText(/it is now blue player's turn\./i)).not.toBeInTheDocument();
     expect(screen.getByText(/^Current board player: player-2$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/turn change player piece/i)).toHaveAttribute(
       'src',

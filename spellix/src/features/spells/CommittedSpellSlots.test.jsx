@@ -91,6 +91,14 @@ describe('CommittedSpellSlots', () => {
     });
   });
 
+  test('localizes committed token tooltips without showing token names', () => {
+    render(<CommittedSpellSlots language="jp" spellSlots={createSpellSlots()} />);
+
+    expect(screen.getByLabelText('red token in slot 1')).toHaveAttribute('title', 'ダメージ+10');
+    expect(screen.queryByText('ダメージ')).not.toBeInTheDocument();
+    expect(screen.queryByText('ガード')).not.toBeInTheDocument();
+  });
+
   test('keeps empty committed spell slots visible without placeholder text', () => {
     const { container } = render(<CommittedSpellSlots spellSlots={createSpellSlots()} />);
     const columns = container.querySelectorAll('.committed-spell-slot-column');

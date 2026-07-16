@@ -1,4 +1,8 @@
 import Modal from '../../components/Modal';
+import {
+  getGameplayLanguage,
+  getSpellAssignmentTranslations,
+} from '../../i18n/translations';
 import { getPieceImageSource } from '../gameSetup/pieceImages';
 import SpellTokenAssignment from './SpellTokenAssignment';
 import './spells.css';
@@ -16,27 +20,40 @@ function SpellsModal({
   validationMessage,
 }) {
   const pieceImageSource = currentPlayer ? getPieceImageSource(currentPlayer.pieceImage) : '';
+  const currentLanguage = getGameplayLanguage(currentPlayer?.language);
+  const translations = getSpellAssignmentTranslations(currentLanguage);
+  const languageClassName = `language-${currentLanguage}`;
 
   return (
     <Modal
       actions={
         <div className="spell-modal-actions">
-          <button disabled={isForcedSetup} onClick={onCancel} type="button">
-            Cancel
+          <button
+            className={languageClassName}
+            disabled={isForcedSetup}
+            onClick={onCancel}
+            type="button"
+          >
+            {translations.cancel}
           </button>
-          <button disabled={isSaveDisabled} onClick={onSave} type="button">
-            Save
+          <button
+            className={languageClassName}
+            disabled={isSaveDisabled}
+            onClick={onSave}
+            type="button"
+          >
+            {translations.save}
           </button>
         </div>
       }
-      ariaLabel="Spells"
+      ariaLabel={translations.spells}
       isOpen={isOpen && Boolean(currentPlayer)}
       panelClassName="modal-panel--spells"
     >
       {currentPlayer ? (
         <div className="spells-layout">
             <div className="spells-header">
-              <h2>Spells</h2>
+              <h2 className={languageClassName}>{translations.spells}</h2>
               {pieceImageSource ? (
                 <img
                   alt="Spell player piece"
@@ -50,14 +67,14 @@ function SpellsModal({
               )}
             </div>
             {isForcedSetup ? (
-              <p>You must place all 7 starting tokens into spell slots before rolling dice.</p>
+              <p className={languageClassName}>{translations.startingTokenWarning}</p>
             ) : null}
-            {validationMessage ? <p>{validationMessage}</p> : null}
+            {validationMessage ? <p className={languageClassName}>{validationMessage}</p> : null}
             <SpellTokenAssignment
+              language={currentLanguage}
               onTokenDrop={onTokenDrop}
               spellSlots={draftSpellSlots}
               tokenBag={draftTokenBag}
-              tokenSourceLabel={isForcedSetup ? 'Starting Tokens' : 'Token Bag'}
             />
         </div>
       ) : null}

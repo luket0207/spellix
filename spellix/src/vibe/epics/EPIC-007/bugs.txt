@@ -281,3 +281,803 @@ Testing Required
 * Confirm the normal Spells modal does not show reward replacement prompts.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-002: Spell assignment columns should never show internal scroll bars
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+
+Related Bug
+
+* Bug-001: Reward token assignment should use shared Spells modal-style drag-and-drop component
+
+Bug Summary
+
+* When assigning a reward token, dragging a token into a spell column and then dragging it back out can cause scroll bars to appear inside the spell column area.
+* This happens when the token is moved from a spell column back into the token bag or discard area.
+* The spell assignment columns should never show internal scroll bars.
+* The droppable spell column areas should be able to visually handle up to 10 tokens without scrolling or increasing their size.
+
+Repro Steps
+
+* Win a battle and choose a token reward.
+* Open the reward token assignment screen.
+* Drag the new token into one of the spell columns.
+* Then drag that token back out of the spell column.
+* Drop it into the token bag or discard area.
+* Observe the spell column area.
+* Check whether scroll bars appear inside the spell columns.
+
+Expected Behaviour
+
+* Spell column droppable areas should never show scroll bars.
+* Dragging a token into a spell column should not create scroll bars.
+* Dragging a token back out of a spell column should not create scroll bars.
+* Dropping the token into the token bag should not leave scroll bars behind.
+* Dropping the token into the discard area should not leave scroll bars behind.
+* The droppable spell column areas should be able to handle up to 10 tokens visually.
+* The droppable spell column areas should not increase in size when tokens are added.
+* The droppable spell column areas should not require internal scrolling.
+* The shared assignment component should remain usable in both:
+
+  * normal Spells modal mode.
+  * reward assignment mode.
+
+Actual Behaviour
+
+* Scroll bars appear on the spell column area after dragging a token into a column and then dragging it out again.
+
+Required Fix
+
+* Find and remove any unnecessary `overflow: auto`, `overflow-y: auto`, or equivalent scrolling behaviour on the spell column droppable area.
+* Ensure spell columns do not create internal scroll bars during drag-and-drop.
+* Use fixed-height or constrained layout styling that can display up to 10 tokens without requiring scroll bars.
+* Ensure token layout inside spell columns remains compact.
+* Ensure removing scroll behaviour does not cause the columns to grow larger.
+* Ensure removing scroll behaviour does not cause tokens to overflow outside the intended column area in an ugly way.
+* If needed, adjust token spacing, stacking, wrapping, or scale within the droppable area so up to 10 tokens can fit cleanly.
+* Apply the fix to the shared token assignment component, not only to the reward assignment screen.
+
+Droppable Area Capacity Requirement
+
+* Each spell column droppable area should visually support up to:
+
+```txt id="ag9p0c"
+10 tokens
+```
+
+* This should be possible without:
+
+  * internal scroll bars.
+  * increasing the droppable area height.
+  * breaking the spell table layout.
+  * hiding tokens completely.
+* A compact stacked layout is acceptable.
+* A small overlap layout is acceptable if it remains readable.
+* Token counts and drag-and-drop should still work correctly.
+
+Shared Component Requirement
+
+* This bug should be fixed in the shared Spells Token Assignment component.
+* The fix should apply to:
+
+  * normal Spells modal.
+  * reward token assignment screen.
+* Do not patch only one usage of the component.
+* Do not duplicate CSS fixes separately if the shared component can handle it centrally.
+
+Out Of Scope
+
+* No changes to reward generation.
+* No changes to token reward assignment rules.
+* No changes to token bag capacity.
+* No changes to spell slot capacity rules unless needed only for visual display.
+* No changes to token effects.
+* No changes to TokenIcon tooltip behaviour.
+* No changes to drag-and-drop library.
+* No unrelated layout redesign.
+
+Suspected Cause
+
+* There is likely an `overflow: auto` or `overflow-y: auto` style on the spell column droppable area.
+* The drag-and-drop placeholder or temporary dragged item may be causing the area to exceed its height and trigger scroll behaviour.
+* The column may need `overflow: hidden` or a more compact token layout instead.
+
+Attempted Fixes
+
+* Reproduced the missing layout contract in `SpellTokenAssignment.test.jsx` by rendering ten tokens in one shared spell slot and checking the assignment stylesheet for a fixed slot height and suppressed vertical scrolling.
+* Confirmed `.spell-slot-scroll` allowed horizontal overflow without explicitly suppressing vertical overflow, while `.spell-drop-zone` had only a minimum height and could grow as tokens wrapped.
+* Kept the existing horizontal overflow behavior for narrow viewports, added `overflow-y: hidden` to prevent transformed drag items from creating a vertical scrollbar, and applied one shared fixed `60px` border-box height to spell-slot drop zones only.
+* Kept token wrapping and the existing `6px` gap. At the existing `140px` slot width, ten `18px` tokens fit in two rows of five without changing token size, assignment logic, or slot capacity rules.
+
+Final Fix
+
+* Fixed. Both normal Spells and reward assignment use the same shared stylesheet, whose spell-slot wrapper no longer permits vertical scrolling and whose spell-slot drop zones remain at a fixed height while displaying up to ten compact wrapped tokens.
+
+Testing Required
+
+* Confirm dragging a reward token into a spell column does not create scroll bars.
+* Confirm dragging a reward token out of a spell column into the token bag does not create scroll bars.
+* Confirm dragging a reward token out of a spell column into the discard area does not create scroll bars.
+* Confirm spell columns do not show scroll bars in reward assignment mode.
+* Confirm spell columns do not show scroll bars in the normal Spells modal.
+* Confirm spell columns can visually handle up to 10 tokens.
+* Confirm spell columns do not grow taller when many tokens are added.
+* Confirm drag-and-drop still works after removing scroll behaviour.
+* Confirm tokens can still be placed into valid spell columns.
+* Confirm tokens can still be removed from spell columns before confirmation when allowed.
+* Confirm token bag dropping still works.
+* Confirm discard area dropping still works in reward assignment mode.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-003: Spell assignment columns should not scroll when dragged over
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+
+Related Bug
+
+* Bug-002: Spell assignment columns should never show internal scroll bars
+
+Bug Summary
+
+* Bug-002 removed the visible scroll bars from the spell assignment columns.
+* However, the spell column droppable area can still scroll when the user drags downward on it.
+* The spell column area should remain completely fixed.
+* There should be no visible or hidden internal scrolling in the spell assignment columns.
+
+Repro Steps
+
+* Win a battle and choose a token reward.
+* Open the reward token assignment screen.
+* Drag a token into one of the spell columns.
+* While dragging, move downward inside the spell column area.
+* Observe whether the spell column contents shift or scroll.
+* Repeat this in the normal Spells modal if the shared component is used there.
+
+Expected Behaviour
+
+* Spell assignment columns should remain fixed.
+* The column area should not visibly scroll.
+* The column area should not hidden-scroll.
+* Dragging down inside a spell column should not move the internal contents.
+* Dragging a token over a spell column should not change the scroll position.
+* Dragging a token out of a spell column should not change the scroll position.
+* The droppable areas should still handle up to 10 tokens without:
+
+  * scroll bars.
+  * hidden scrolling.
+  * growing taller.
+  * shifting contents unexpectedly.
+
+Actual Behaviour
+
+* The visible scroll bars are gone.
+* The element still scrolls internally when dragging down on it.
+
+Required Fix
+
+* Remove or prevent all internal scrolling from the spell column droppable area.
+* Check for hidden scroll behaviour caused by:
+
+  * `overflow: auto`.
+  * `overflow-y: auto`.
+  * `overflow: scroll`.
+  * drag-and-drop placeholder behaviour.
+  * browser touch/pointer scrolling.
+  * parent containers with scrollable overflow.
+* Ensure the spell column droppable area uses fixed, non-scrollable behaviour.
+* Use `overflow: hidden` where appropriate.
+* Ensure the element cannot be scrolled programmatically or by pointer drag.
+* If needed, reset scroll position to `0` during drag updates, but prefer removing the cause of scrolling.
+* Apply the fix in the shared Spells Token Assignment component so it affects:
+
+  * reward token assignment screen.
+  * normal Spells modal.
+
+Suggested Styling Direction
+
+```css id="d49wte"
+.spell-slot-droppable-area {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+```
+
+* Exact class names can vary.
+* Only use `touch-action: none` if it does not break drag-and-drop behaviour.
+* If the drag-and-drop library needs pointer events, use the least invasive CSS that prevents internal scrolling.
+
+Suggested Defensive Fix
+
+```js id="b7zn5k"
+droppableElement.scrollTop = 0;
+```
+
+* This should only be used if CSS alone cannot prevent hidden scrolling.
+* Prefer fixing the layout and overflow first.
+
+Droppable Area Layout Requirement
+
+* The droppable area should be able to visually contain up to 10 tokens.
+* It should not grow in height.
+* It should not scroll.
+* It should not shift when tokens are dragged over it.
+* It should not shift when tokens are dragged out of it.
+* Token layout can use compact spacing or overlap if needed.
+* Tokens should remain visible and draggable.
+
+Out Of Scope
+
+* No changes to reward generation.
+* No changes to token reward assignment rules.
+* No changes to token bag capacity.
+* No changes to spell slot capacity logic.
+* No changes to token effects.
+* No changes to TokenIcon tooltip behaviour.
+* No changes to the drag-and-drop library unless absolutely necessary.
+* No unrelated layout redesign.
+
+Suspected Cause
+
+* Bug-002 likely hid the scroll bars but did not fully remove scrollable overflow.
+* The droppable area may still have a scrollable box with hidden scroll bars.
+* The drag-and-drop library placeholder may be increasing internal content height during drag.
+* A parent container may still be scrollable even though the visible scroll bars are hidden.
+
+Attempted Fixes
+
+* Bug-002 removed the visible scroll bars.
+* Added a failing regression contract confirming the shared `DndContext` still used its default auto-scroll behavior and the slot wrapper did not contain vertical overscroll.
+* Disabled `dnd-kit` auto-scrolling on the existing shared assignment context. This prevents downward drag proximity from programmatically changing the hidden vertical scroll position in either assignment mode.
+* Added `overscroll-behavior-y: none` to the existing spell-slot wrapper while preserving its manual horizontal overflow for narrow viewports.
+* Re-ran the Bug-002 fixed-height and ten-token regression together with reward slot, bag, discard, and replacement staging checks.
+
+Final Fix
+
+* Fixed. The shared assignment surface no longer auto-scrolls during dragging, and its spell-slot wrapper contains vertical overscroll, so normal Spells and reward assignment columns remain vertically fixed without changing valid drop handling.
+
+Testing Required
+
+* Confirm spell columns show no scroll bars.
+* Confirm spell columns do not scroll internally when dragging downward.
+* Confirm spell columns do not scroll internally when dragging upward.
+* Confirm dragging a token into a spell column does not shift the column contents.
+* Confirm dragging a token out of a spell column does not shift the column contents.
+* Confirm reward assignment spell columns remain fixed.
+* Confirm normal Spells modal columns remain fixed.
+* Confirm columns can still visually handle up to 10 tokens.
+* Confirm tokens remain draggable.
+* Confirm token bag dropping still works.
+* Confirm discard area dropping still works in reward assignment mode.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-004: Replace spell assignment list markup with divs to prevent hidden drag area
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+
+Related Bugs
+
+* Bug-002: Spell assignment columns should never show internal scroll bars
+* Bug-003: Spell assignment columns should not scroll when dragged over
+
+Bug Summary
+
+* The spell assignment column scrolling issue is better, but not fully fixed.
+* When a token is dragged beyond the bottom of the `spell-slot-list` element, the token disappears for a short distance.
+* This suggests there may still be hidden layout space, clipping, list styling, or browser default list behaviour interfering with drag-and-drop.
+* The `spell-slot-list` should be changed from a `ul` to a `div`.
+* All nested `li` elements should also be changed into `div` elements.
+* The spell slot area should have no hidden space where dragged tokens can disappear.
+
+Repro Steps
+
+* Win a battle and choose a token reward.
+* Open the reward token assignment screen.
+* Drag a token into a spell column.
+* Drag the token downward beyond the bottom of the spell slot list area.
+* Observe whether the token disappears briefly.
+* Repeat the same behaviour in the normal Spells modal if the shared component is used there.
+
+Expected Behaviour
+
+* The dragged token should remain visible at all times.
+* The token should not disappear when dragged beyond the bottom edge of the spell slot list area.
+* The spell slot list should not have hidden scrollable space.
+* The spell slot list should not have hidden clipped space.
+* The spell slot list should not use `ul` or `li` markup if that is causing layout or drag issues.
+* The spell slot list should remain fixed in size.
+* The spell slot list should not scroll.
+* The spell slot list should not grow larger.
+* The spell slot list should not clip the dragged token unexpectedly.
+
+Actual Behaviour
+
+* The token can disappear for a short distance when it is dragged beyond the bottom of the `spell-slot-list` element.
+
+Required Fix
+
+* Replace the `spell-slot-list` `ul` element with a `div`.
+* Replace all nested `li` spell slot elements with `div` elements.
+* Remove any list-specific CSS that is no longer needed.
+* Remove or neutralise browser default list behaviour.
+* Ensure the new div-based structure has no hidden overflow space.
+* Ensure the dragged token remains visible while moving in and out of spell columns.
+* Ensure there is no invisible area beneath the spell columns where the token can disappear.
+* Apply the fix in the shared Spells Token Assignment component so it affects:
+
+  * reward token assignment screen.
+  * normal Spells modal.
+
+Suggested Markup Direction
+
+```jsx id="52kngy"
+<div className="spell-slot-list">
+  <div className="spell-slot-item">
+    ...
+  </div>
+  <div className="spell-slot-item">
+    ...
+  </div>
+</div>
+```
+
+* Exact class names can vary.
+* Do not keep `ul` or `li` for the spell slot list if they are contributing to this issue.
+
+CSS Cleanup Requirement
+
+* Remove list-specific styles such as:
+
+  * `list-style`
+  * default `ul` padding
+  * default `ul` margin
+  * `li` spacing rules that are no longer relevant
+* Ensure the replacement divs explicitly define:
+
+  * margin.
+  * padding.
+  * height.
+  * box sizing.
+  * overflow behaviour.
+* The spell slot list and slot items should use:
+
+```css id="p85ye4"
+box-sizing: border-box;
+```
+
+* The spell slot list should not have scroll behaviour.
+* The spell slot list should not clip the dragged token unless the drag library renders a separate drag overlay.
+* If the drag library supports a drag overlay/portal, prefer using it so dragged tokens are not clipped by parent containers.
+
+Hidden Space Requirement
+
+* Ensure there is no hidden vertical space below the visible spell slots.
+* Ensure the bottom edge of the spell slot list matches the visible layout.
+* Ensure the drag-and-drop placeholder does not create invisible extra space.
+* Ensure no parent container creates a hidden scroll zone around the spell slot list.
+* If needed, inspect and remove:
+
+  * extra padding-bottom.
+  * min-height values that exceed visible content.
+  * hidden overflow wrappers.
+  * drag placeholder margin.
+  * list default spacing.
+
+Drag Visibility Requirement
+
+* A token should remain visible when:
+
+  * dragged into a spell column.
+  * dragged out of a spell column.
+  * dragged below the spell slot list.
+  * dragged into the token bag.
+  * dragged into the discard area.
+* The token should not flicker or disappear during valid drag movement.
+* The token should not be clipped by the old spell slot list boundary.
+* The token should still be droppable into valid targets.
+
+Droppable Area Requirement
+
+* Each spell column droppable area should still visually support up to 10 tokens.
+* It should not scroll.
+* It should not show scroll bars.
+* It should not hidden-scroll.
+* It should not grow in height.
+* It should not create a hidden area where dragged tokens disappear.
+* Existing compact token layout should still work.
+
+Out Of Scope
+
+* No changes to reward generation.
+* No changes to token reward assignment rules.
+* No changes to token bag capacity.
+* No changes to spell slot capacity logic.
+* No changes to token effects.
+* No changes to TokenIcon styling except if required to preserve drag visibility.
+* No changes to the drag-and-drop library unless absolutely necessary.
+* No unrelated layout redesign.
+
+Suspected Cause
+
+* The `ul` / `li` structure may be introducing default spacing, clipping, or hidden layout behaviour.
+* Previous fixes may have hidden scroll bars and stopped visible scrolling, but not removed the underlying hidden drag area.
+* The drag-and-drop library may be interacting badly with list semantics or list spacing.
+* There may be an invisible area created by list padding, margins, placeholders, or hidden overflow.
+
+Attempted Fixes
+
+* Bug-002 removed visible scroll bars.
+* Bug-003 reduced hidden scrolling.
+* Added a failing structural regression that confirmed the shared spell-slot container still rendered as `ul`, its children still had `li` semantics, and no drag overlay existed outside the clipped slot wrapper.
+* Replaced only the shared assignment `ul/li` pair with labelled `div` elements, so normal Spells and reward assignment receive the same markup change.
+* Removed the obsolete `list-style` declaration and explicitly set zero margin/padding, automatic height, border-box sizing, and visible overflow on the div-based slot row and items.
+* Added a `dnd-kit` `DragOverlay` driven by the token data already attached to each draggable. The overlay renders the active token outside the slot scroll wrapper and clears on drag completion or cancellation.
+* Re-ran the Bug-002 ten-token and Bug-003 no-auto-scroll contracts plus normal/reward rendering, slot/bag/discard staging, and replacement preview checks.
+
+Final Fix
+
+* Fixed. The shared assignment columns now use div-based markup with explicit non-list layout rules, and the active token renders through `DragOverlay` so it remains visible beyond the slot-row boundary without changing valid drop behavior.
+
+Testing Required
+
+* Confirm `spell-slot-list` no longer renders as a `ul`.
+* Confirm spell slot items no longer render as `li`.
+* Confirm the replacement structure uses divs.
+* Confirm dragging a token below the spell slot list no longer makes it disappear.
+* Confirm dragging a token into a spell column keeps it visible.
+* Confirm dragging a token out of a spell column keeps it visible.
+* Confirm dragging a token to the token bag keeps it visible.
+* Confirm dragging a token to the discard area keeps it visible.
+* Confirm spell columns do not show scroll bars.
+* Confirm spell columns do not hidden-scroll.
+* Confirm spell columns do not grow in height.
+* Confirm spell columns can still visually handle up to 10 tokens.
+* Confirm normal Spells modal still works.
+* Confirm reward token assignment screen still works.
+* Confirm drag-and-drop still works after replacing list markup.
+* Confirm token bag dropping still works.
+* Confirm discard area dropping still works in reward assignment mode.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-005: Hide token names while dragging to prevent duplicate ghost display
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-008 Feature-005: Add bilingual token names and Japanese token tooltips
+
+Related Bugs
+
+* Bug-002: Spell assignment columns should never show internal scroll bars
+* Bug-003: Spell assignment columns should not scroll when dragged over
+* Bug-004: Replace spell assignment list markup with divs to prevent hidden drag area
+
+Bug Summary
+
+* The spell assignment scrolling issue now appears to be fixed.
+* However, when dragging a token onto the spell columns, a duplicate ghost appears underneath the dragged token.
+* This seems to be caused by the token name that was added underneath tokens.
+* Token names should only be visible when the token is at rest.
+* Token names should be hidden while the token is actively being dragged.
+
+Repro Steps
+
+* Open the reward token assignment screen or normal Spells modal.
+* Drag a token from the token bag or reward token area.
+* Move the dragged token over the spell columns.
+* Observe whether a duplicate ghost or duplicate label appears underneath the token.
+* Drop the token or return it to rest.
+* Observe whether the token name appears normally again.
+
+Expected Behaviour
+
+* Token names should appear when tokens are at rest outside spell columns.
+* Token names should not appear while a token is being dragged.
+* The dragged token should not create a duplicate ghost underneath itself.
+* The dragged token should remain clean and readable.
+* The token name should reappear once the token is dropped and is at rest in a location where names are meant to be shown.
+* Tokens inside spell columns should still not show names.
+* Tokens in token bags or reward areas should show names only when at rest.
+
+Actual Behaviour
+
+* When dragging a token onto the spell columns, a duplicate ghost appears underneath the token.
+* The issue appears to be related to the token name rendering during drag.
+
+Required Fix
+
+* Update the global `TokenIcon` component, drag wrapper, or shared Spells Token Assignment component so token names are hidden while dragging.
+* Detect when a token is actively being dragged.
+* During active drag:
+
+  * hide the token name.
+  * keep the token icon visible.
+  * keep the token count visible if needed for clarity.
+  * keep the tooltip disabled or hidden while dragging if it interferes.
+* After the drag ends:
+
+  * restore the token name if that token is in a context where names should be shown.
+  * keep token names hidden if the token is dropped into a spell column.
+* Do not remove token names permanently.
+* Do not remove token name support from token bags or reward displays.
+
+Token Name Visibility Requirement
+
+* Token names should be visible when:
+
+  * the token is outside a spell column.
+  * the token is at rest.
+  * the display context allows names.
+* Token names should be hidden when:
+
+  * the token is actively being dragged.
+  * the token is inside a spell column.
+  * the display context disables names.
+* The drag state should override `showName`.
+* Example logic:
+
+```jsx id="uez9qa"
+<TokenIcon
+  tokenType={token.type}
+  showName={showName && !isDragging}
+/>
+```
+
+* Exact implementation can vary.
+* The important requirement is that names are hidden during drag.
+
+Drag Overlay Requirement
+
+* If the drag-and-drop library uses a drag overlay or clone:
+
+  * ensure the overlay version of the token does not render the token name.
+  * ensure the original/resting token placeholder does not create a duplicate visible name.
+* If the library keeps the original element visible while dragging:
+
+  * apply an active dragging class to hide the name on the original or dragged item as needed.
+* Avoid fixing this by hiding all token names globally.
+
+CSS Direction
+
+* A CSS-based fix is acceptable if the drag state class is reliable.
+* Suggested direction:
+
+```css id="ok3s7k"
+.token-icon.is-dragging .token-icon__name {
+  display: none;
+}
+```
+
+* Or:
+
+```css id="li985d"
+.dragging-token .token-icon__name {
+  display: none;
+}
+```
+
+* Exact class names can vary.
+* Prefer a clear component/state-based fix if possible.
+
+Tooltip Requirement
+
+* Token tooltips should not appear while dragging.
+* Hover tooltips should work again once the token is at rest.
+* This should avoid tooltip/label artefacts during drag.
+
+Out Of Scope
+
+* No changes to token name translations.
+* No changes to token tooltip text.
+* No changes to token effects.
+* No changes to token reward logic.
+* No changes to spell slot capacity.
+* No changes to token bag capacity.
+* No changes to drag-and-drop rules.
+* No changes to potion components.
+* No unrelated layout redesign.
+
+Suspected Cause
+
+* The newly added token name is likely being rendered both in the original token element and in the drag preview/overlay.
+* The drag-and-drop library may be cloning the full token component, including the name.
+* The name may be extending outside the expected drag element and creating a ghost-like duplicate under the token.
+
+Attempted Fixes
+
+* Bug-002 removed visible scroll bars.
+* Bug-003 stopped most hidden scrolling.
+* Bug-004 replaced list markup to reduce hidden drag area.
+* Added failing regressions confirming the global Token could not suppress its tooltip independently and the shared draggable still passed `showName` unchanged while active.
+* Added an optional default-on `showTooltip` prop to the global Token. Disabling it removes the native title, accessible description reference, hidden description node, and tooltip-only tab stop without removing an allowed resting name.
+* Updated the shared draggable so active drag state overrides both `showName` and `showTooltip`; resting bag and reward tokens continue using their existing name and tooltip behavior.
+* Explicitly disabled the tooltip on the `DragOverlay` token, which already renders without a name, so the overlay provides only the clean token icon during movement.
+* Kept spell-column names hidden as before and made no changes to token text, translations, effects, capacities, or drop rules.
+
+Final Fix
+
+* Fixed. Token names and tooltips are hidden on both the original draggable and drag overlay while movement is active, then the original resting context restores its configured name and tooltip after drag completion or cancellation.
+
+Testing Required
+
+* Confirm token names appear when tokens are at rest in the token bag.
+* Confirm token names appear when reward tokens are at rest.
+* Confirm token names disappear while dragging a token.
+* Confirm dragging a token over spell columns does not show a duplicate ghost underneath it.
+* Confirm the token icon remains visible while dragging.
+* Confirm the token count remains usable while dragging if counts are shown.
+* Confirm token names reappear after dropping back into the token bag.
+* Confirm token names do not appear after dropping into a spell column.
+* Confirm token names still appear for reward tokens after drag is cancelled or reset.
+* Confirm tooltips do not appear while dragging.
+* Confirm tooltips work again when tokens are at rest.
+* Confirm normal Spells modal drag-and-drop still works.
+* Confirm reward token assignment drag-and-drop still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Starting token setup Save button should stay disabled until all 7 tokens are placed
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add battle reward generation and reward assignment flow
+* Bug-001: Reward token assignment should use shared Spells modal-style drag-and-drop component
+
+Bug Summary
+
+* The token select / token assignment component needs stricter validation during starting token setup.
+* At the start of the game, each player must place all 7 starting tokens into spell columns before they can save.
+* The Save button should remain disabled until every starting token has been placed into a spell column.
+
+Repro Steps
+
+* Start a new game.
+* Reach the starting token setup flow for a player.
+* Place fewer than all 7 starting tokens into spell columns.
+* Check whether the Save button is active.
+* Try placing all 7 starting tokens.
+* Check whether the Save button becomes active.
+
+Expected Behaviour
+
+* During starting token setup, the player has 7 starting tokens:
+
+  * 5 Red.
+  * 2 Blue.
+* All 7 starting tokens must be placed into spell columns before Save is enabled.
+* If 0 to 6 starting tokens are placed, the Save button should be disabled.
+* Once all 7 starting tokens are placed, the Save button should become enabled.
+* If the player removes a token from a spell column before saving, bringing the placed total below 7, the Save button should become disabled again.
+* The existing warning text should remain accurate:
+
+```txt id="ls4p2d"
+You must place all 7 starting tokens into spell slots before rolling dice.
+```
+
+* The Japanese warning from EPIC-008 Feature-003 should also remain accurate:
+
+```txt id="w2ojc9"
+サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。
+```
+
+Actual Behaviour
+
+* The Save button can become active before all 7 starting tokens have been placed, or the validation is not strict enough.
+
+Required Fix
+
+* Add validation for starting token setup mode.
+* Count how many of the player’s 7 starting tokens are currently placed in spell columns.
+* Enable Save only when the placed starting token count is exactly 7.
+* Disable Save when fewer than 7 starting tokens are placed.
+* Ensure this validation updates immediately after every drag-and-drop action.
+* Ensure the validation works if a token is moved into a spell column.
+* Ensure the validation works if a token is moved out of a spell column.
+* Ensure the validation works if a token is moved between spell columns.
+* Do not allow the player to complete starting setup while any starting token remains in the token bag or available token area.
+
+Starting Setup Mode Requirement
+
+* This validation should apply specifically to the start-of-game forced setup flow.
+* It should not incorrectly block other uses of the shared token assignment component.
+* Normal Spells modal behaviour after setup should keep its existing save validation.
+* Reward token assignment should keep its own validation rules.
+* Use a clear mode flag or prop if needed.
+
+Suggested Validation Direction
+
+```js id="hzm9dy"
+const isStartingSetupComplete = placedStartingTokenCount === 7;
+const canSave = mode === "startingSetup"
+  ? isStartingSetupComplete
+  : existingCanSaveLogic;
+```
+
+* Exact implementation can vary.
+* The important requirement is that starting setup has its own strict completion rule.
+
+Out Of Scope
+
+* No changes to the number of starting tokens.
+* No changes to starting token colours.
+* No changes to spell slot capacity.
+* No changes to reward token assignment validation.
+* No changes to token effects.
+* No changes to token rarity.
+* No changes to battle logic.
+* No changes to translations except preserving existing warning text.
+* No unrelated UI redesign.
+
+Suspected Cause
+
+* The shared token assignment component may be using generic “has changes” validation instead of starting-setup-specific validation.
+* The Save button may be enabling when any token has been placed, rather than when all 7 starting tokens have been placed.
+
+Attempted Fixes
+
+* Reproducing the forced-setup save predicate with focused regression coverage before changing production validation.
+* Added failing helper regressions for zero, one, six, and seven placed starting tokens plus removal and movement between spell columns.
+* Added forced GameplayPage regressions for the actual Save button state and existing confirmation flow.
+
+Final Fix
+
+* Added `isStartingSpellSetupComplete` to count only tokens marked with `source: 'starting'` across spell columns and require exactly seven with none remaining in the token bag.
+* Updated `GameplayPage` to use that strict predicate for forced setup Save-button state and save-request validation.
+* Preserved the existing unsaved-change validation for later normal Spells modal visits and did not change reward assignment validation.
+* The completion predicate is recalculated from draft spell slots and the draft token bag after every successful token move, so returning a token disables Save while moving all seven between columns keeps it enabled.
+
+Testing Required
+
+* Confirm the Save button is disabled before any starting tokens are placed.
+* Confirm the Save button is disabled after placing 1 starting token.
+* Confirm the Save button is disabled after placing 6 starting tokens.
+* Confirm the Save button becomes enabled after placing all 7 starting tokens.
+* Confirm removing a token after placing all 7 disables the Save button again.
+* Confirm moving tokens between spell columns does not incorrectly disable Save if all 7 remain placed.
+* Confirm starting setup cannot be completed while any starting token remains unplaced.
+* Confirm this validation works for Player 1.
+* Confirm this validation works for every later player.
+* Confirm normal Spells modal save behaviour still works after starting setup.
+* Confirm reward token assignment validation still works.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

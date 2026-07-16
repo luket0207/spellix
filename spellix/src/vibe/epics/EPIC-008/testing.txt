@@ -1,0 +1,295 @@
+Feature-001: Bilingual Game Setup and per-player language selection
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Game Setup.
+   Expected: The title reads `Game Setup - ゲームの準備`, the old setup description is absent, the player-count label is bilingual, and the button reads `Start Game - ゲーム開始`.
+2. Change Number of Players from two to six.
+   Expected: Six separately grouped sections appear with titles from `Player 1 - プレイヤー1` through `Player 6 - プレイヤー6`.
+3. Review each player section.
+   Expected: Every section contains Language, Gender, and Colour selects with the required bilingual labels; language options are `English` and `日本語`, gender options are bilingual, and all six colour names are bilingual.
+4. Set Player 1 to English and Player 2 to Japanese, then change another player's gender and colour.
+   Expected: Each language remains independently selected, the gender still selects the matching boy/girl piece image, and changing colour does not alter language.
+5. Try to select a colour already owned by another player, then free that colour by changing its owner.
+   Expected: Taken colours remain unavailable to other players and become available again when freed.
+6. Reduce and re-expand the player count, then start the game.
+   Expected: Existing players retain their language choices, newly created players default to English, and gameplay opens normally with no setup error.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/gameSetup.test.js` verifies player numbers, English defaults, independent language preservation, missing-language fallback, existing potion ownership, starting tokens, and piece image data.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies legacy players are normalized to English and one player's language can change without affecting another player.
+* `src/pages/GameSetupPage.test.jsx` verifies exact bilingual copy, removal of the old description, semantic grouping for all six players, all required language/gender/colour options, independent language state, piece image updates, and colour exclusivity.
+* The game setup, context, page, and GameplayPage regression suites passed with 26 tests.
+* All six Feature-001 implementation and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* `src/App.test.jsx` could not execute any tests because `source-map-support` repeatedly crashed while parsing generated mappings, including after clearing Jest's cache. Retry this existing app-wide suite after the test-tooling issue is resolved.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to follow the setup-to-gameplay flow and visually confirm the native player fieldsets and piece changes.
+
+---
+
+Feature-002: Turn-based Gameplay language and fonts
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. In Game Setup, assign English to one player and Japanese to another, then start the game.
+   Expected: Each player's choice remains independent and gameplay opens normally.
+2. Complete the existing starting-spell setup if prompted, then inspect the active player's Gameplay sidebar.
+   Expected: An English player's labels read `Roll Dice`, `Spells`, and `Potions` using Unkempt; a Japanese player's labels read `サイコロを振る`, `呪文`, and `ポーション` using Noto Serif JP.
+3. Roll the dice, complete movement, and dismiss the turn-change dialog.
+   Expected: The three labels switch to the next player's configured language and matching font without a page reload or global language change.
+4. On a Japanese player's turn, select `呪文`.
+   Expected: The existing Spells modal opens and remains in English because modal translation is outside this feature; its editing behavior remains unchanged.
+5. Close the Spells modal, complete the Japanese player's roll and movement, and continue until the English player's next turn.
+   Expected: The three Gameplay labels return to English and use Unkempt again.
+6. Review owned potions and committed spells during both language turns.
+   Expected: Only the section titles change language; potion names, tooltips, spell contents, and game behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/i18n/translations.test.js` verifies the exact English/Japanese labels and English fallback for missing or invalid language values.
+* `src/pages/GameplayPage.test.jsx` verifies English-to-Japanese-to-English turn switching, all three translated labels, both language classes, unchanged dice/movement behavior, invalid-language fallback, and the unchanged English Spells modal.
+* `src/features/potions/PotionList.test.jsx` verifies the translated title and font class without applying that class to untranslated potion content.
+* Existing Game Setup, committed-spell, Spells modal, and BattlePage regressions verify language storage and shared display defaults remain unchanged.
+* All eight affected suites passed with 62 tests.
+* All eight Feature-002 JavaScript and JSX implementation/test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully and the optimized CSS includes the central Google Fonts import plus Unkempt and Noto Serif JP family rules.
+
+Automated Tests Still Needed
+
+* `src/App.test.jsx` remains unable to execute because the existing `source-map-support` mapping parser crashes before running tests, as documented under Feature-001. No Feature-002 assertion failed.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm both remote fonts load successfully and visually switch with the active player's language.
+
+---
+
+Feature-003: Bilingual next-turn modal and Spells Token Assignment
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. In Game Setup, assign English to one player and Japanese to another, complete starting spell setup, then finish each player's movement.
+   Expected: The English next-turn dialog says `X Players Turn`; the Japanese dialog says `プレイヤーXのターン`, uses the required Japanese colour name, and the old `It is now X player's turn.` sentence is absent.
+2. Open Spells during both players' turns.
+   Expected: The title, starting-token warning when shown, Token Bag, empty/drop labels, Cancel, and Save use the current player's language and the matching Unkempt or Noto Serif JP font.
+3. Review all six spell slots in either language.
+   Expected: Each slot heading contains only its number above the drop area, and `X of X tokens` appears in a separate paragraph below the drop area.
+4. Make a spell-slot change, then request Cancel and Save in turn.
+   Expected: Both confirmation messages and their Yes/No buttons use the current player's language, while cancel/save behavior remains unchanged.
+5. Choose a token reward for an English player and repeat for a Japanese player.
+   Expected: Assign reward, New Reward Token, Token Bag, Discard, placement status, and the single Confirm action use the battle player's language; reward-only controls remain absent from the normal Spells modal.
+6. Assign a reward to the token bag, spell slot, and discard area in separate runs.
+   Expected: Each placement and completion message names the correct destination in the player's language; `Selected reward:` and `Selected destination:` do not appear.
+7. Drag normal spell tokens and a reward token between every currently valid destination.
+   Expected: Existing capacity, committed-token, replacement, save, and reward-resolution rules behave exactly as before with no console errors.
+
+Automated Tests Completed
+
+* `src/i18n/translations.test.js` verifies all required assignment labels, exact Japanese punctuation, English fallback, all Japanese turn colours, and translated reward destination messages.
+* `src/features/spells/SpellsModal.test.jsx` verifies English and Japanese titles, warning, Token Bag, actions, font class, slot layout, and normal-mode isolation from reward-only controls.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies number/drop/count order, translated empty/drop/status labels, both modes, reward staging in slot/bag/discard, replacement previews, and existing draggable/committed token behavior.
+* `src/pages/RewardPage.test.jsx` verifies removal of selected reward/destination text, one unconditional Confirm label, English and Japanese assignment copy, all three placement statuses, and all three reward completion destinations.
+* The four focused translation, Spells, assignment, and RewardPage suites passed with 29 tests.
+* `src/pages/GameplayPage.test.jsx` passed its language switching, Japanese Spells modal, English fallback, and English/Japanese next-turn assertions; eight of nine tests in the surrounding suite passed.
+* All ten Feature-003 JavaScript and JSX implementation/test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The full `src/pages/GameplayPage.test.jsx` suite has one unrelated stale DiceRoll assertion expecting `Dice result: 4` while the current DiceRoll component renders `4`; all Feature-003 assertions in that suite pass.
+* `src/App.test.jsx` remains unable to execute because of the existing `source-map-support` mapping parser crash documented under Feature-001.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to verify pointer and keyboard drag-and-drop in both modes, visually confirm the two fonts, and check the console during the full bilingual flow.
+
+---
+
+Feature-004: Battle page translations and enemy battle title
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a battle with an English-language player.
+   Expected: The top-centred title reads `Enemy Name Battle`, the persistent dice button reads `Roll Dice`, and the opening player dialog reads `Colour Turn`, all using Unkempt.
+2. Let the battle advance to the enemy turn.
+   Expected: The turn dialog reads `English Enemy Name Turn`, then the existing automatic enemy roll and battle effects continue normally.
+3. Start a battle with a Japanese-language player and advance through both actors.
+   Expected: The title reads `日本語の敵名バトル`, the dice button reads `サイコロを振る`, and player/enemy dialogs use `Xのターン` with Japanese colour and enemy names using Noto Serif JP.
+4. Review the title while the debug controls, actors, dice area, turn dialog, and battle animations are visible.
+   Expected: The title remains bold at `32px` in the top horizontal centre, the debug controls remain top-left above it, and the existing bottom-aligned actor/dice layout does not move.
+5. Enter battles against enemies from each available level.
+   Expected: English players see each enemy's English name; Japanese players see the existing `japaneseName`, with safe English fallback if that field is unavailable.
+6. Use forced rolls to complete a normal turn, then exercise Win and Lose.
+   Expected: Dice timing, actor alternation, automatic enemy turns, reward navigation, loss/respawn behavior, and debug labels remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* `src/i18n/translations.test.js` passes six tests covering English/Japanese battle actor names, player colour names, turn text, titles, invalid-language fallback, and missing-Japanese-name fallback.
+* `src/pages/BattlePage.test.jsx` verifies both player languages, player/enemy turn copy, translated enemy image names, reused Roll Dice copy, title font classes, and the exact absolute-centre/`32px`/bold CSS requirements.
+* Twenty-seven BattlePage tests pass, including the new Feature-004 assertions and existing environment, timing, forced-roll, automatic enemy, effects, win, loss, and respawn behavior.
+* `src/i18n/translations.js`, `src/i18n/translations.test.js`, `src/components/dice/DiceRoll.jsx`, and `src/pages/BattlePage.jsx` pass the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+* `git diff --check` found no whitespace errors or conflict markers.
+
+Automated Tests Still Needed
+
+* One unrelated existing `src/pages/BattlePage.test.jsx` assertion expects `Dice result: 1` while the separately changed DiceRoll component currently renders `1`; all Feature-004 assertions and the other 27 BattlePage tests pass.
+* The existing BattlePage test file has 30 `testing-library/no-node-access` lint violations from its earlier direct DOM traversal assertions. Feature-004 did not add direct DOM access; a broad test cleanup remains outside this feature.
+* `src/App.test.jsx` remains unable to execute because of the existing `source-map-support` mapping parser crash documented under Feature-001.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm title centring/font loading over every battle background and observe a full English and Japanese player/enemy turn cycle with the console open.
+
+---
+
+Feature-005: Bilingual token names and Japanese token tooltips
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Spells for an English-language player and inspect the token bag and spell slots.
+   Expected: Bag tokens show the required English names beneath their icons and unchanged English tooltips; tokens inside spell slots show no names.
+2. Repeat with a Japanese-language player and inspect all eleven token types.
+   Expected: Each token shows its required Japanese name and tooltip, including the full Black and Grey descriptions, with English fallback if the language is missing or invalid.
+3. Drag tokens between the token bag and every valid spell slot, then save the spells.
+   Expected: The icon and name drag together from the bag, names disappear inside slots, existing capacity/commit rules remain unchanged, and committed gameplay tokens retain tooltips without names.
+4. Complete a battle and inspect token reward choices and reward assignment.
+   Expected: Reward choices, the new reward token, token-bag tokens, replacement previews, and a token staged in discard show localized names; a token staged in a spell slot does not.
+5. Inspect both player and enemy spell columns during an English and Japanese battle.
+   Expected: Columns stay compact without token names while their tooltips use the winning/current player's language; counts, faded uses, committed styling, and glow remain unchanged.
+6. Open the debug token replacement flow for English and Japanese current players.
+   Expected: Existing bag choices show localized token names and tooltips without changing debug controls or replacement behavior.
+
+Automated Tests Completed
+
+* `src/data/tokens.test.js` verifies all eleven bilingual names and descriptions, rarity grouping, language selection, invalid-language fallback, and unknown-token safety.
+* `src/components/tokens/Token.test.jsx` verifies optional localized names, English fallback, localized accessible tooltips, counts, glow, faded state, committed styling, and focus behavior.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies localized bag names/tooltips, name-free spell slots, visible new/discard reward names, staged spell-slot hiding, and existing draggable assignment paths.
+* `src/features/spells/CommittedSpellSlots.test.jsx` verifies Japanese committed-token tooltips remain available while names stay hidden; the complete suite passed.
+* `src/pages/RewardPage.test.jsx` verifies English and Japanese reward names/tooltips, and `src/features/debug/DebugModal.test.jsx` verifies localized debug bag choices.
+* The six focused component/page suites passed 48 of 51 tests. The only three failures are existing spell-count assertions expecting `X of X tokens` while the current shared assignment component renders `X / X`; all Feature-005 assertions pass.
+* Direct Feature-005 assignment checks passed four tests, direct reward display checks passed two tests, and the reward-item regression suite passed all 17 tests.
+* All Feature-005 implementation and test files passed the repository ESLint binary except the existing `CommittedSpellSlots.test.jsx` file, which still has 40 earlier direct-DOM lint violations; the new Feature-005 test does not use direct DOM access.
+* `npm run build` completed successfully, and `git diff --check` found no whitespace errors or conflict markers.
+
+Automated Tests Still Needed
+
+* The three existing spell-count assertions need to be reconciled with the current `X / X` rendering outside this feature's token-name and tooltip scope.
+* The existing `CommittedSpellSlots.test.jsx` direct-DOM lint violations need a separate test-only cleanup.
+* `src/App.test.jsx` remains unable to execute because of the existing `source-map-support` mapping parser crash documented under Feature-001.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm compact name layout for all token types, native tooltip switching, pointer and keyboard dragging with names, and console-free English/Japanese gameplay and reward flows.
+
+---
+
+Feature-006: Translated and restructured battle rewards page
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win a forest battle with an English-language player and open the reward choices.
+   Expected: The forest battle background remains visible, the centred panel says `Choose one reward`, and every reward button says only `Choose`.
+2. Inspect the reward choices and resize the browser from desktop to a narrow viewport.
+   Expected: No Common/Rare category labels or list markup are visible; token and potion components sit in individual div containers, display horizontally when space allows, and wrap while remaining grouped with their buttons.
+3. Inspect the reward panel over each available battle background.
+   Expected: The title, reward components, and buttons remain fully opaque over a white `rgba(255, 255, 255, 0.5)` panel centred on the full-width background.
+4. Win a battle with a Japanese-language player.
+   Expected: The title says `報酬を1つ選んでください`, both buttons say only `選ぶ`, and the existing Japanese token name and tooltip remain visible.
+5. Open a reward with a missing or invalid environment and language.
+   Expected: The fields background and English title/buttons are used safely.
+6. Select token and potion rewards in separate runs and complete every available assignment path.
+   Expected: Token bag, spell slot, discard, full-bag replacement, potion add, potion replacement, potion discard, Continue, and turn advancement all behave as before.
+
+Automated Tests Completed
+
+* `src/i18n/translations.test.js` passes seven tests, including exact English/Japanese reward title and Choose copy plus invalid-language fallback.
+* `src/pages/RewardPage.test.jsx` verifies forest and fields-fallback backgrounds, category removal, Token/Potion component reuse, exact localized buttons, div-based structure, the required flex/wrap/centred/alpha CSS, and unchanged reward assignment flows.
+* The combined translation and RewardPage run passed 22 of 23 tests. Its only failure is the existing spell-count assertion expecting `5 of 5 tokens` while the shared assignment component renders `5 / 5`.
+* A direct RewardPage regression run excluding that documented stale assertion passed all 15 remaining tests.
+* `src/i18n/translations.js`, `src/i18n/translations.test.js`, `src/pages/RewardPage.jsx`, and `src/pages/RewardPage.test.jsx` passed the repository ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` found no whitespace errors or conflict markers.
+
+Automated Tests Still Needed
+
+* The existing shared spell-count assertion still needs to be reconciled with the current `X / X` rendering outside Feature-006's reward layout and translation scope.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm centring, wrapping, panel readability, and background continuity at real viewport sizes for both languages.
+
+---
+
+Feature-007: Bilingual potion names and descriptions
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Give all 21 potion types to English- and Japanese-language players and inspect their potion lists on each player's turn.
+   Expected: English turns show the existing English names and descriptions; Japanese turns show every required Japanese name and description using the Japanese font.
+2. Hover or keyboard-focus short and long potion names in Gameplay.
+   Expected: The shared flask icon, potion colour, animated glow, keyboard focus, and accessible tooltip remain unchanged, while long Japanese descriptions wrap within the viewport.
+3. Win a battle with an English player and then a Japanese player, selecting a potion reward each time.
+   Expected: Reward choices and selected potion assignment displays use the winner's language without changing reward generation or assignment behavior.
+4. Fill a Japanese player's three potion slots and select another potion reward.
+   Expected: The new potion and all three replacement choices show Japanese names and tooltips; replacing or discarding resolves exactly as before.
+5. Open the debug potion grant flow for English and Japanese target players whose potion collections are full.
+   Expected: Visible potion icons, names, tooltips, and discard choices use the target player's language while debug control labels and grant mechanics remain unchanged.
+6. Inspect a potion with missing Japanese text and a player with missing or invalid language.
+   Expected: Non-empty English name and description text is displayed safely.
+
+Automated Tests Completed
+
+* `src/data/potions.test.js` verifies all 21 exact Japanese names and descriptions, unchanged English data/rarity/availability/colours, both language selectors, invalid-language fallback, and missing-Japanese-text fallback.
+* `src/components/potions/PotionIcon.test.jsx` verifies Japanese names, accessible tooltips, language font classes, live language updates, English fallback, and unchanged flask/colour/glow/focus behavior.
+* `src/features/potions/PotionList.test.jsx` verifies the active language reaches every shared potion icon while rarity and availability display remain unchanged.
+* `src/pages/GameplayPage.test.jsx` verifies potion names and tooltips switch from English to Japanese with the current turn.
+* `src/pages/RewardPage.test.jsx` verifies Japanese potion reward choices and the complete full-capacity replacement display.
+* `src/features/debug/DebugModal.test.jsx` verifies pending and existing potion displays use the target player's Japanese text in the debug replacement flow.
+* The three focused data/component suites passed all 12 tests. The three integration suites passed 34 of 36 tests, including every Feature-007 assertion.
+* `src/features/rewards/rewardItems.test.js` passed all 17 reward-generation regression tests, including unchanged potion rarity selection and catalog immutability.
+* All Feature-007 implementation and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The Gameplay suite retains its unrelated stale DiceRoll assertion expecting `Dice result: 4` while the current component renders `4`.
+* The RewardPage suite retains its unrelated stale spell-count assertion expecting `5 of 5 tokens` while the shared assignment component renders `5 / 5`.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm Japanese font rendering, tooltip wrapping and viewport containment, hover/focus behavior, and unchanged potion glow colours across Gameplay, rewards, capacity replacement, and debug grants.

@@ -55,6 +55,19 @@ function BattleStateProbe() {
   );
 }
 
+function PlayerLanguageProbe() {
+  const { gameSetup, setPlayerLanguage } = useGameSetup();
+
+  return (
+    <div>
+      <button type="button" onClick={() => setPlayerLanguage('player-2', 'jp')}>
+        Set player 2 Japanese
+      </button>
+      <p>{`Player languages: ${gameSetup.players.map(({ language }) => language).join(',')}`}</p>
+    </div>
+  );
+}
+
 function FreezeResolutionProbe() {
   const {
     activeBattle,
@@ -167,6 +180,25 @@ function ChargeResolutionProbe() {
     </div>
   );
 }
+
+test('defaults missing player languages to English and updates one player independently', () => {
+  const initialGameSetup = createFreezeSetup();
+
+  delete initialGameSetup.players[0].language;
+  delete initialGameSetup.players[1].language;
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <PlayerLanguageProbe />
+    </GameSetupProvider>
+  );
+
+  expect(screen.getByText('Player languages: en,en')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /set player 2 japanese/i }));
+
+  expect(screen.getByText('Player languages: en,jp')).toBeInTheDocument();
+});
 
 test('starts every battle with fresh Light Blue uses and no frozen actors', () => {
   render(

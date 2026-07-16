@@ -33,6 +33,8 @@
 
 .spell-slot-scroll {
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-y: none;
 }
 
 .spell-slot-list {
@@ -40,18 +42,25 @@
   flex-direction: row;
   align-items: stretch;
   gap: 12px;
-  list-style: none;
+  height: auto;
   margin: 0;
+  overflow: visible;
   padding: 0;
   min-width: max-content;
+  box-sizing: border-box;
 }
 
 .spell-slot-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  padding: 0;
   width: 140px;
   flex: 0 0 140px;
+  box-sizing: border-box;
 }
 
 .spell-drop-zone {
@@ -62,6 +71,13 @@
   gap: 6px;
   padding: 8px;
   border: 1px solid #000000;
+}
+
+.spell-slot-item .spell-drop-zone {
+  height: 60px;
+  min-height: 60px;
+  align-content: center;
+  box-sizing: border-box;
 }
 
 .spell-drop-zone--active {
@@ -84,6 +100,11 @@
 
 .spell-token-button:disabled {
   cursor: not-allowed;
+}
+
+.spell-token-drag-overlay {
+  display: inline-flex;
+  pointer-events: none;
 }
 
 .spell-token-source {

@@ -1,0 +1,2077 @@
+---
+
+Feature-001: Add bilingual Game Setup page and per-player language selection
+
+Status
+
+* done
+
+Completion Notes
+
+* Reused the existing `createPlayers` factory, Game Setup context setter pattern, native select controls, colour availability filter, and gender-based piece image helper rather than creating a separate setup or language system.
+* Added stable `number` and `language` fields to every created player. New and missing language values default to English, existing language choices survive player-count recreation, and provider initialization adds the fallback to older player objects without dropping their existing fields.
+* Added an independent `setPlayerLanguage` context action that follows the existing setup reset behavior for board and turn state.
+* Reworked each player form area into a native `fieldset` with the required bilingual legend and Language, Gender, and Colour controls. All exact English/Japanese option labels are present, while existing gender image selection and colour exclusivity remain unchanged.
+* Updated the setup title, player-count label, and Start Game button with the required bilingual text and removed the old setup description.
+* Added no CSS, fonts, translation framework, gameplay translations, routes, persistence, or changes to game mechanics; those items remain outside Feature-001.
+
+Goal
+
+* Prepare the game setup flow for English and Japanese language support.
+* Allow each player to independently choose their own language.
+* Make the Game Setup page bilingual because player language is not known before setup is complete.
+* Store each player’s selected language for later turn-based language display.
+
+Scope
+
+* Update the Game Setup page text.
+* Add language selection for each player.
+* Restructure each player setup section.
+* Store language choice per player.
+* Keep actual full-game translation out of scope for this feature.
+
+Remove Existing Text Requirement
+
+* Remove this text from the Game Setup page:
+
+```txt id="xrf1bf"
+Set up the game before play starts.
+```
+
+Bilingual Page Title Requirement
+
+* Update the Game Setup title to:
+
+```txt id="p6ghv3"
+Game Setup - ゲームの準備
+```
+
+Bilingual Number Of Players Label Requirement
+
+* Update the number of players label to:
+
+```txt id="3gdbks"
+Number of Players - プレイヤー人数
+```
+
+Player Section Structure Requirement
+
+* Restructure each player’s inputs into a grouped section.
+* Each player section should have a title.
+* Player section titles should be bilingual.
+* Use this format:
+
+```txt id="hz2s5w"
+Player 1 - プレイヤー1
+Player 2 - プレイヤー2
+Player 3 - プレイヤー3
+Player 4 - プレイヤー4
+Player 5 - プレイヤー5
+Player 6 - プレイヤー6
+```
+
+* Under each player title, show that player’s inputs:
+
+  * Language
+  * Gender
+  * Colour
+* These inputs should be visually grouped under the correct player title.
+
+Language Input Requirement
+
+* Add a new language input for every player.
+* The language label should be:
+
+```txt id="b01iku"
+Language - 言語
+```
+
+* The language options should be:
+
+```txt id="yxe48j"
+English
+日本語
+```
+
+* Each player should be able to choose their language independently.
+* Store the selected language on the player data.
+* Suggested values:
+
+```js id="6jyace"
+"en"
+"jp"
+```
+
+* Exact values can vary if the project already has a language convention.
+* The important requirement is that player language can be reliably checked later.
+
+Gender Input Requirement
+
+* The gender label should be:
+
+```txt id="33rwwy"
+Gender - 性別
+```
+
+* The gender options should be:
+
+```txt id="mqih9f"
+Boy - 男の子
+Girl - 女の子
+```
+
+* Keep existing gender behaviour.
+* Keep existing boy/girl image selection behaviour.
+* Do not change piece image file logic except as needed to preserve current behaviour.
+
+Colour Input Requirement
+
+* The colour label should be:
+
+```txt id="wpwpl2"
+Colour - 色
+```
+
+* The colour options should be:
+
+```txt id="zvvj8a"
+Red - 赤
+Blue - 青
+Green - 緑
+Yellow - 黄色
+Purple - 紫
+Orange - オレンジ
+```
+
+* Keep existing colour exclusivity rules.
+* A colour should still only be selectable by one player.
+* Existing piece colour logic should continue working.
+
+Start Game Button Requirement
+
+* Update the Start Game button text to:
+
+```txt id="h2bksa"
+Start Game - ゲーム開始
+```
+
+Player Data Requirement
+
+* Each player should store their selected language.
+* When the game starts, player data should include:
+
+  * player number.
+  * colour.
+  * gender.
+  * selected language.
+  * existing player fields already used by the game.
+* Existing gameplay should not break if older player objects do not yet have a language.
+* If a fallback is needed, use English.
+
+Suggested Player Data Direction
+
+```js id="78er60"
+{
+  id: "player-1",
+  colour: "Red",
+  gender: "Boy",
+  language: "en"
+}
+```
+
+* Exact structure can vary if it fits the current GameContext better.
+
+Out Of Scope
+
+* No full gameplay translation.
+* No translation system implementation beyond storing player language.
+* No Japanese translation of every component.
+* No language switching outside setup yet.
+* No changes to battle language.
+* No changes to reward language.
+* No changes to token or potion descriptions.
+* No changes to gameplay mechanics.
+* No save/load persistence.
+
+Assumptions
+
+* Game setup already creates the player data used by Gameplay.
+* Player colour and gender are already stored in GameContext or equivalent.
+* Language can be added to the same player object.
+* English can be used as a safe fallback when language is missing.
+
+Stop Point
+
+* Stop once the Game Setup page is bilingual, each player can choose English or Japanese independently, and the chosen language is stored on that player for later turn-based text display.
+
+Testing Checkpoints
+
+* Confirm the old setup description text is removed.
+* Confirm the title says `Game Setup - ゲームの準備`.
+* Confirm the number of players label says `Number of Players - プレイヤー人数`.
+* Confirm Player 1 section says `Player 1 - プレイヤー1`.
+* Confirm Player 2 section says `Player 2 - プレイヤー2`.
+* Confirm all player sections use the same bilingual format.
+* Confirm each player has a Language input.
+* Confirm the Language label says `Language - 言語`.
+* Confirm language options are `English` and `日本語`.
+* Confirm each player can choose language independently.
+* Confirm each player has a Gender input.
+* Confirm the Gender label says `Gender - 性別`.
+* Confirm gender options are `Boy - 男の子` and `Girl - 女の子`.
+* Confirm each player has a Colour input.
+* Confirm the Colour label says `Colour - 色`.
+* Confirm colour options are bilingual.
+* Confirm colour exclusivity still works.
+* Confirm the Start Game button says `Start Game - ゲーム開始`.
+* Confirm player language is stored after starting the game.
+* Confirm existing gameplay still loads after setup.
+* Confirm missing language falls back to English if needed.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Add turn-based language mechanism and gameplay page translations
+
+Status
+
+* done
+
+Completion Notes
+
+* Added a small reusable `src/i18n/translations.js` map and helper for the three requested Gameplay labels. It reuses the existing player language constants and falls back to English for missing or invalid values without adding an i18n dependency.
+* Gameplay now derives its active language directly from `currentPlayer`, so labels update automatically with the existing turn state rather than using a global game language.
+* Translated only the Gameplay `Roll Dice` button, `Spells` button and committed-spell title, and `Potions` title. The existing committed spell and potion components accept translated titles while retaining their English defaults elsewhere.
+* Added central Unkempt and Noto Serif JP loading in `index.css` and scoped `language-en` or `language-jp` only to translated labels, preventing untranslated surrounding text from inheriting the other language's font.
+* Preserved dice behavior, turn progression, potion contents, committed spell contents, and the English Spells modal. No setup, battle, reward, tooltip, enemy-name, persistence, browser-language, or global-toggle translation was added.
+
+Goal
+
+* Introduce the language system into the project before more text is added.
+* Display text based on the current player’s selected language.
+* Language should be player-turn based, not game-wide.
+* Add the first translated gameplay page text.
+* Apply different fonts for English and Japanese consistently.
+
+Scope
+
+* Add a translation mechanism.
+* Add current-player language detection.
+* Add font handling for English and Japanese.
+* Translate basic Gameplay page text.
+* Ensure Gameplay text changes depending on whose turn it is.
+* Keep translation work limited to the Gameplay page text listed in this feature.
+
+Turn-Based Language Requirement
+
+* The displayed language should depend on the current player.
+* If the current player selected English:
+
+  * gameplay UI text should appear in English.
+* If the current player selected Japanese:
+
+  * gameplay UI text should appear in Japanese.
+* This must work within the same game.
+* Example:
+
+  * Blue player selected English.
+  * Red player selected Japanese.
+  * On Blue’s turn, Gameplay page text is English.
+  * On Red’s turn, Gameplay page text is Japanese.
+* Do not make language a global game setting.
+* Do not force all players to use the same language.
+
+Current Player Language Requirement
+
+* Read the current player from the existing turn system.
+* Read that player’s stored language from player data.
+* Use that language to select displayed text.
+* If the current player language is missing or invalid, fall back to English.
+* The language should update when the turn changes.
+
+Suggested Helper Direction
+
+```js id="xk1xdm"
+const currentLanguage = currentPlayer?.language || "en";
+```
+
+* Exact implementation can vary.
+* Keep this easy to reuse on later pages.
+
+Translation Data Requirement
+
+* Add reusable translation data for gameplay text.
+* Do not hardcode conditional strings directly inside the component if it can be avoided.
+* Suggested structure:
+
+```js id="8zzpga"
+const translations = {
+  en: {
+    rollDice: "Roll Dice",
+    spells: "Spells",
+    potions: "Potions"
+  },
+  jp: {
+    rollDice: "サイコロを振る",
+    spells: "呪文",
+    potions: "ポーション"
+  }
+};
+```
+
+* Exact location can vary.
+* Suggested location:
+
+```txt id="oy14nn"
+src/i18n/translations.js
+```
+
+* Or use a page-specific file if that better fits the project.
+* Keep the system simple and easy to expand.
+
+Gameplay Translation Requirement
+
+* Translate the following Gameplay page text:
+
+```txt id="4uio5h"
+Roll Dice = サイコロを振る
+Spells = 呪文
+Potions = ポーション
+```
+
+* When current player language is English, show:
+
+  * `Roll Dice`
+  * `Spells`
+  * `Potions`
+* When current player language is Japanese, show:
+
+  * `サイコロを振る`
+  * `呪文`
+  * `ポーション`
+
+Font Requirement
+
+* English text should use:
+
+```txt id="6kgbg9"
+Unkempt
+```
+
+* Japanese text should use:
+
+```txt id="k7ql12"
+Noto Serif Japanese
+```
+
+* Apply the correct font consistently depending on the active displayed language.
+* When the current player language is English, translated UI text should use Unkempt.
+* When the current player language is Japanese, translated UI text should use Noto Serif Japanese.
+* Do not apply Japanese font to English text unless unavoidable.
+* Do not apply English font to Japanese text.
+
+Font Loading Requirement
+
+* Ensure both fonts are available to the app.
+* If the fonts are loaded through CSS imports, keep that setup central and clear.
+* Use the correct CSS font-family name.
+* If the app already has a font loading system, extend it.
+* Avoid repeating font imports in many components.
+
+Suggested CSS Direction
+
+```css id="rbf3hb"
+.language-en {
+  font-family: "Unkempt", cursive;
+}
+
+.language-jp {
+  font-family: "Noto Serif JP", serif;
+}
+```
+
+* The user-facing requested name is `Noto Serif Japanese`.
+* If the actual font-family name in CSS is `Noto Serif JP`, use the correct technical name for implementation.
+* Keep naming clear in comments if needed.
+
+Language Class Requirement
+
+* Add a class or wrapper that can apply the active language font.
+* Suggested approach:
+
+  * `language-en` for English.
+  * `language-jp` for Japanese.
+* Apply it to the Gameplay page or to translated text elements.
+* The font should update when the current player changes.
+
+Reusable Translation Helper Requirement
+
+* Add a simple helper or hook if helpful.
+* Suggested concept:
+
+```js id="gneubn"
+const t = useTranslation(currentPlayer.language);
+```
+
+* Or:
+
+```js id="2sruln"
+getTranslation("rollDice", currentLanguage)
+```
+
+* Exact implementation can vary.
+* Keep it simple.
+* This should be easy to expand for future pages and components.
+* Avoid introducing a heavy i18n library unless already present.
+
+Expected Behaviour
+
+* Gameplay page text displays in the current player’s selected language.
+* When the current player uses English, the button says `Roll Dice`.
+* When the current player uses Japanese, the button says `サイコロを振る`.
+* When the current player uses English, the spells label/button says `Spells`.
+* When the current player uses Japanese, the spells label/button says `呪文`.
+* When the current player uses English, the potions label says `Potions`.
+* When the current player uses Japanese, the potions label says `ポーション`.
+* The text changes when the turn changes to a player with a different language.
+* English text uses Unkempt.
+* Japanese text uses Noto Serif Japanese / correct CSS family.
+* Missing or invalid language falls back to English.
+
+Out Of Scope
+
+* No translations outside the listed Gameplay page text.
+* No Game Setup translation changes beyond Feature-001.
+* No battle page translation.
+* No reward page translation.
+* No Spells modal translation.
+* No token tooltip translation.
+* No potion tooltip translation.
+* No Japanese enemy names display.
+* No persistence of language beyond current game state unless already supported.
+* No browser language detection.
+* No global language toggle.
+
+Assumptions
+
+* Feature-001 stores each player’s language.
+* The turn system can identify the current player.
+* Gameplay page already has the Roll Dice and Spells UI.
+* Potions display exists or is being added from EPIC-007 Feature-002.
+* The app can load or use the requested fonts through CSS.
+
+Stop Point
+
+* Stop once Gameplay page text for Roll Dice, Spells, and Potions changes based on the current player’s language, and the correct English/Japanese font is applied consistently for that active language.
+
+Testing Checkpoints
+
+* Set Player 1 language to English.
+* Set Player 2 language to Japanese.
+* Start the game.
+* Confirm Player 1’s turn shows `Roll Dice`.
+* Confirm Player 1’s turn shows `Spells`.
+* Confirm Player 1’s turn shows `Potions`.
+* Confirm Player 1’s translated text uses Unkempt.
+* Advance to Player 2’s turn.
+* Confirm Player 2’s turn shows `サイコロを振る`.
+* Confirm Player 2’s turn shows `呪文`.
+* Confirm Player 2’s turn shows `ポーション`.
+* Confirm Player 2’s translated text uses Noto Serif Japanese.
+* Advance back to Player 1.
+* Confirm text switches back to English.
+* Confirm missing player language falls back to English.
+* Confirm existing gameplay dice behaviour still works.
+* Confirm existing Spells button/modal still opens.
+* Confirm potion display still appears if implemented.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-003: Add bilingual next-turn modal and Spells Token Assignment translations
+
+Status
+
+* done
+
+Goal
+
+* Add bilingual text support to the gameplay next-turn modal.
+* Add bilingual text support to the shared Spells Token Assignment component.
+* Continue using the player-turn-based language system from Feature-002.
+* Apply English or Japanese text depending on the active/current player’s selected language.
+* Keep the Game Setup bilingual work from Feature-001 unchanged.
+
+Scope
+
+* Update the gameplay next-turn modal text.
+* Update the Spells Token Assignment component text.
+* Add required Japanese translations.
+* Add required text alterations where the UI should be changed instead of directly translated.
+* Remove obsolete selected destination/reward text from reward assignment.
+* Ensure the shared Spells Token Assignment component supports both:
+
+  * normal Spells modal usage.
+  * reward token assignment usage.
+
+Language Behaviour Requirement
+
+* Text should display based on the current active player’s selected language.
+* If the current player language is English, show English.
+* If the current player language is Japanese, show Japanese.
+* If no language is found, fall back to English.
+* The next-turn modal should use the language of the player whose turn is starting.
+* The Spells Token Assignment component should use the current player’s language.
+* This should continue the turn-based language system from Feature-002.
+* Do not make language a global game setting.
+
+Font Requirement
+
+* English text should continue using:
+
+```txt id="8ldaal"
+Unkempt
+```
+
+* Japanese text should continue using:
+
+```txt id="e6vfth"
+Noto Serif Japanese
+```
+
+* Apply the correct language font to translated modal/component text.
+* Do not break the font system from Feature-002.
+
+Next Turn Modal Requirement
+
+* The current next-turn modal text is:
+
+```txt id="80rvqk"
+It is now X player's turn.
+```
+
+* Replace this with shorter language-aware text.
+
+English next-turn format:
+
+```txt id="ntdpbj"
+X Players Turn
+```
+
+* Example:
+
+```txt id="q0xp9o"
+Blue Players Turn
+```
+
+Japanese next-turn format:
+
+```txt id="se4yjp"
+プレイヤーXのターン
+```
+
+* In Japanese, `X` should be replaced by the player colour in Japanese.
+
+Colour Translation Requirement For Next Turn Modal
+
+* Use these colour values for Japanese next-turn modal text:
+
+```txt id="wax7yk"
+Red = 赤
+Blue = 青
+Green = 緑
+Yellow = 黄色
+Purple = 紫
+Orange = オレンジ
+```
+
+* Examples:
+
+  * Red player in English: `Red Players Turn`
+  * Red player in Japanese: `プレイヤー赤のターン`
+  * Blue player in English: `Blue Players Turn`
+  * Blue player in Japanese: `プレイヤー青のターン`
+
+Spells Token Assignment Component Requirement
+
+* Update the shared Spells Token Assignment component so it can display English or Japanese labels.
+* This component is used by:
+
+  * normal Spells modal.
+  * reward token assignment screen.
+* Translation and UI changes should work in both places unless explicitly stated otherwise.
+* Reward-only text should only appear in reward assignment mode.
+* Normal Spells modal should not show reward-only areas such as New Reward Token or Discard area unless the mode requires them.
+
+Translation Data Requirement
+
+* Add these strings to the translation data used by the component.
+* Keep the data reusable and easy to expand.
+
+```txt id="fj533a"
+Spells = 呪文
+You must place all 7 starting tokens into spell slots before rolling dice. = サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。
+Drop tokens here = ここにトークンをドロップ
+Token Bag = トークンバッグ
+No available tokens = 使用可能なトークンがありません
+Are you sure you want to cancel? All changes to your spell slots will be lost = キャンセルしますか？呪文スロットへの変更はすべて失われます。
+Yes = はい
+No = いいえ
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved. = これらの呪文スロットにトークンを確定しますか？保存後は、ポーションを使用しない限り変更できません。
+Cancel = キャンセル
+Save = 保存
+New Reward Token = 新しい報酬トークン
+Placed in token bag = トークンバッグに配置
+Placed in spell slot X = 呪文スロットXに配置
+Placed in discard area = 破棄エリアに配置
+Discard = 破棄
+Confirm = 確定
+Assign reward = 報酬を割り当てる
+Reward added to X = 報酬をXに追加しました
+```
+
+Slot Header Layout Requirement
+
+* The current slot text is similar to:
+
+```txt id="uwnobs"
+Slot X: X of X tokens
+```
+
+* Do not directly translate this text.
+* Change the layout instead.
+* Remove the word `Slot`.
+* The slot number should appear above the droppable area.
+* The token count should be moved into its own `<p>` below the droppable area.
+* The token count should be visually separated from the slot number.
+* Example structure:
+
+```jsx id="ecwaft"
+<div className="spell-slot">
+  <h4>1</h4>
+  <div className="spell-slot-droppable-area">
+    ...
+  </div>
+  <p>3 of 5 tokens</p>
+</div>
+```
+
+* Exact class names can vary.
+* The token count text does not need Japanese translation in this feature.
+* Keep the token count format as:
+
+```txt id="44xoib"
+X of X tokens
+```
+
+Reward Assignment Text Removal Requirement
+
+* Remove this text entirely:
+
+```txt id="5ucqku"
+Selected destination: X
+```
+
+* Remove this text entirely:
+
+```txt id="dntzxw"
+Selected reward:X
+```
+
+* These should not appear in English or Japanese.
+* Do not replace them with Japanese.
+* Do not leave empty placeholders.
+
+Confirm Button Requirement
+
+* The confirm button should always say:
+
+```txt id="vxw1rh"
+Confirm
+```
+
+* In Japanese, it should say:
+
+```txt id="c0tn0p"
+確定
+```
+
+* The button text should not be conditional.
+* Do not change the confirm button text based on the selected destination.
+* The selected destination can still be tracked internally.
+
+Reward Added Message Requirement
+
+* The reward completion message should use:
+
+```txt id="kas57q"
+Reward added to X
+```
+
+* Japanese:
+
+```txt id="ed3d7g"
+報酬をXに追加しました
+```
+
+* The `X` should use the translated destination/location name.
+* Use these location translations:
+
+```txt id="l5w4an"
+token bag = トークンバッグ
+spell slot X = 呪文スロットX
+discard area = 破棄エリア
+```
+
+* Example English messages:
+
+  * `Reward added to token bag`
+  * `Reward added to spell slot 2`
+  * `Reward added to discard area`
+* Example Japanese messages:
+
+  * `報酬をトークンバッグに追加しました`
+  * `報酬を呪文スロット2に追加しました`
+  * `報酬を破棄エリアに追加しました`
+
+Reward Placement Status Requirement
+
+* Reward placement status text should be translated.
+* English:
+
+  * `Placed in token bag`
+  * `Placed in spell slot X`
+  * `Placed in discard area`
+* Japanese:
+
+  * `トークンバッグに配置`
+  * `呪文スロットXに配置`
+  * `破棄エリアに配置`
+* Replace `X` with the spell slot number when relevant.
+* This status should only appear in reward assignment mode if that mode currently displays placement status.
+
+Normal Spells Modal Requirement
+
+* The normal Spells modal should use the translated shared component text.
+* It should show:
+
+  * Spells / 呪文
+  * starting token warning if relevant.
+  * Drop tokens here / ここにトークンをドロップ
+  * Token Bag / トークンバッグ
+  * No available tokens / 使用可能なトークンがありません
+  * confirmation modal text.
+  * Cancel / キャンセル
+  * Save / 保存
+* It should not show reward-only text:
+
+  * New Reward Token.
+  * Discard.
+  * Assign reward.
+  * reward placement status.
+  * reward added message.
+  * discard area.
+
+Reward Assignment Mode Requirement
+
+* Reward assignment mode should use the same translated shared component.
+* It should show reward-only text where relevant:
+
+  * New Reward Token / 新しい報酬トークン
+  * Discard / 破棄
+  * Confirm / 確定
+  * Assign reward / 報酬を割り当てる
+  * Placed in token bag / トークンバッグに配置
+  * Placed in spell slot X / 呪文スロットXに配置
+  * Placed in discard area / 破棄エリアに配置
+  * Reward added to X / 報酬をXに追加しました
+* It should not show removed text:
+
+  * Selected destination: X
+  * Selected reward:X
+
+Modal Confirmation Requirement
+
+* Cancel confirmation should be translated.
+* English:
+
+```txt id="l9g8px"
+Are you sure you want to cancel? All changes to your spell slots will be lost
+```
+
+* Japanese:
+
+```txt id="n3d0ck"
+キャンセルしますか？呪文スロットへの変更はすべて失われます。
+```
+
+* Yes/No should be translated:
+
+  * Yes = はい
+  * No = いいえ
+
+Save Confirmation Requirement
+
+* Save confirmation should be translated.
+* English:
+
+```txt id="dcce3i"
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.
+```
+
+* Japanese:
+
+```txt id="nmiiyg"
+これらの呪文スロットにトークンを確定しますか？保存後は、ポーションを使用しない限り変更できません。
+```
+
+Expected Behaviour
+
+* Next-turn modal no longer says `It is now X player's turn.`
+* English next-turn modal says `X Players Turn`.
+* Japanese next-turn modal says `プレイヤーXのターン`.
+* Japanese next-turn modal uses Japanese colour names.
+* Spells Token Assignment component uses current player language.
+* Spells title translates to `呪文`.
+* Starting token warning translates correctly.
+* Drop area text translates correctly.
+* Token Bag translates correctly.
+* No available tokens translates correctly.
+* Cancel confirmation translates correctly.
+* Save confirmation translates correctly.
+* Yes/No buttons translate correctly.
+* Cancel/Save buttons translate correctly.
+* Reward-only text translates correctly in reward mode.
+* Selected destination text is removed.
+* Selected reward text is removed.
+* Confirm button text is no longer conditional.
+* Slot headings only show the slot number above the droppable area.
+* Token count appears in its own `<p>` below the droppable area.
+* Reward added messages use translated destination names in Japanese.
+
+Out Of Scope
+
+* No translation of battle page text.
+* No translation of reward choice page text beyond the shared token assignment component.
+* No translation of token tooltips.
+* No translation of potion tooltips.
+* No translation of enemy names.
+* No translation of debug controls.
+* No changes to token assignment rules.
+* No changes to reward generation.
+* No changes to token effects.
+* No changes to potion effects.
+* No changes to drag-and-drop behaviour except layout/text changes.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Feature-002 has added a turn-based language helper or translation lookup.
+* The current player language can be accessed from the Spells Token Assignment component.
+* The reward assignment screen and Spells modal already share or are being refactored to share the same component.
+* Slot indexes can be displayed as user-facing numbers 1 to 6.
+* Destination values can be mapped to translated labels before showing reward added messages.
+
+Stop Point
+
+* Stop once the next-turn modal and Spells Token Assignment component display the required English/Japanese text based on the current player’s selected language, with the specified slot layout changes and removed reward status text.
+
+Testing Checkpoints
+
+* Set one player to English and one player to Japanese.
+* Confirm English next-turn modal says `Blue Players Turn` or equivalent colour.
+* Confirm Japanese next-turn modal says `プレイヤー赤のターン` or equivalent colour.
+* Confirm the old `It is now X player's turn.` text no longer appears.
+* Confirm Spells title shows `Spells` for English players.
+* Confirm Spells title shows `呪文` for Japanese players.
+* Confirm the starting token warning shows in English for English players.
+* Confirm the starting token warning shows in Japanese for Japanese players.
+* Confirm `Drop tokens here` translates to `ここにトークンをドロップ`.
+* Confirm `Token Bag` translates to `トークンバッグ`.
+* Confirm `No available tokens` translates to `使用可能なトークンがありません`.
+* Confirm cancel confirmation text translates correctly.
+* Confirm save confirmation text translates correctly.
+* Confirm Yes/No translate to `はい` and `いいえ`.
+* Confirm Cancel translates to `キャンセル`.
+* Confirm Save translates to `保存`.
+* Confirm reward mode shows `New Reward Token` in English.
+* Confirm reward mode shows `新しい報酬トークン` in Japanese.
+* Confirm reward mode shows `Discard` / `破棄`.
+* Confirm reward mode shows `Assign reward` / `報酬を割り当てる`.
+* Confirm `Selected destination: X` no longer appears.
+* Confirm `Selected reward:X` no longer appears.
+* Confirm Confirm button always says `Confirm` in English.
+* Confirm Confirm button always says `確定` in Japanese.
+* Confirm slot headings only show the slot number.
+* Confirm token count appears below the droppable area in its own `<p>`.
+* Confirm `Placed in token bag` translates correctly.
+* Confirm `Placed in spell slot X` translates correctly.
+* Confirm `Placed in discard area` translates correctly.
+* Confirm `Reward added to token bag` translates correctly.
+* Confirm `Reward added to spell slot X` translates correctly.
+* Confirm `Reward added to discard area` translates correctly.
+* Confirm normal Spells modal does not show reward-only text.
+* Confirm reward assignment mode still supports drag-and-drop.
+* Confirm normal Spells modal drag-and-drop still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added reusable English/Japanese assignment translations, Japanese turn-colour formatting, English fallback, and translated reward destination messages to the existing turn-based translation utility.
+* Reused the existing Gameplay turn modal, Spells modal, shared Spell Token Assignment component, RewardPage, language classes, and drag-and-drop/reward state handlers; no new component, route, dependency, or styling system was created.
+* The next-turn dialog, normal Spells flow, confirmation dialogs, and reward token assignment now use the active player's language and matching existing font class.
+* Slot headings now contain only numbers above their existing drop zones, with token counts in separate paragraphs below; reward selection/destination text was removed and token reward confirmation labels are unconditional.
+* Reward generation, token capacity rules, spell mutation, potion flow, battle text, tooltips, and drag-and-drop logic were intentionally unchanged.
+* Focused automated tests, ESLint, and the production build passed. Browser drag-and-drop/font verification and the unrelated existing test gaps are recorded in `testing.txt`.
+
+---
+
+Feature-004: Add battle page translations and enemy battle title
+
+Status
+
+* done
+
+Goal
+
+* Add Japanese language support to the battle page.
+* Reuse existing translations where possible.
+* Add a new battle title at the centre top of the battle screen.
+* Display the enemy name in the correct language.
+* Keep battle language based on the player who triggered the battle.
+
+Scope
+
+* Update the battle page text.
+* Reuse the existing `Roll Dice` translation.
+* Reuse or extend the existing turn modal text helper.
+* Add a new centred battle title.
+* Use English enemy names for English players.
+* Use Japanese enemy names for Japanese players.
+* Keep battle mechanics unchanged.
+
+Battle Page Language Requirement
+
+* Battle page language should be based on the language selected by the player who triggered the battle.
+* If that player selected English, battle page text should be English.
+* If that player selected Japanese, battle page text should be Japanese.
+* Enemies do not have their own language preference.
+* Enemy turns should still display using the battling player’s selected language.
+* If the player language is missing, fall back to English.
+
+Roll Dice Translation Requirement
+
+* The battle page should reuse the existing `Roll Dice` translation from EPIC-008 Feature-002.
+* Do not create a duplicate translation string.
+* English:
+
+```txt id="awe9h2"
+Roll Dice
+```
+
+* Japanese:
+
+```txt id="yrr7tb"
+サイコロを振る
+```
+
+* The battle dice button should display the correct language.
+
+Battle Turn Modal Translation Requirement
+
+* The battle turn modal should reuse or extend the turn modal text logic from EPIC-008 Feature-003.
+* The text should be generated from the active battle actor’s display name.
+* English format:
+
+```txt id="h0ymv4"
+X Turn
+```
+
+* Japanese format:
+
+```txt id="etxenr"
+Xのターン
+```
+
+* `X` should be replaced by:
+
+  * the player colour name when it is the player’s battle turn.
+  * the enemy name when it is the enemy’s battle turn.
+* For English:
+
+  * use the English player colour.
+  * use the English enemy name.
+* For Japanese:
+
+  * use the Japanese player colour.
+  * use the Japanese enemy name.
+
+Battle Turn Modal Examples
+
+```txt id="na299b"
+English player turn: Blue Turn
+Japanese player turn: 青のターン
+English enemy turn: Vilewhisker Rat Turn
+Japanese enemy turn: 毒ヒゲネズミのターン
+```
+
+* If the existing gameplay turn helper says `X Players Turn`, do not force that exact wording for enemies.
+* For battle, use the simpler reusable pattern of name plus turn.
+* Keep this logic central and reusable where practical.
+
+Enemy Name Translation Requirement
+
+* Japanese translations for enemy names should already exist in enemy data.
+* Use the existing Japanese enemy name field.
+* Do not create a duplicate enemy translation table if enemy data already contains Japanese names.
+* If the Japanese enemy name is missing, fall back to the English enemy name.
+* Existing enemy display logic should continue working.
+
+Battle Title Requirement
+
+* Add a new title at the centre top of the battle screen.
+* The title should display the enemy battle name.
+* English format:
+
+```txt id="up3vxg"
+Enemy Name Battle
+```
+
+* Example:
+
+```txt id="n8wiyc"
+Vilewhisker Rat Battle
+```
+
+* Japanese format:
+
+```txt id="om37i6"
+Enemy Nameバトル
+```
+
+* Example:
+
+```txt id="m51bty"
+毒ヒゲネズミバトル
+```
+
+* The enemy name should use the correct language.
+* English players should see the English enemy name.
+* Japanese players should see the Japanese enemy name.
+* If Japanese enemy name is unavailable, fall back to English enemy name.
+
+Battle Title Styling Requirement
+
+* The battle title should be:
+
+  * centred horizontally.
+  * positioned at the top centre of the battle screen.
+  * bold.
+  * `32px` font size.
+* Required font size:
+
+```txt id="qd50h7"
+32px
+```
+
+* The title should use the active battle language font:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese.
+* The title should not interfere with:
+
+  * floating debug buttons.
+  * battle characters.
+  * dice roll container.
+  * battle animations.
+  * modals.
+* The title should remain visible above the battle background.
+* If debug buttons are on the top left, keep the title centred independently.
+
+Suggested Title Structure
+
+```jsx id="qkvjsu"
+<h1 className="battle-title">
+  {battleTitle}
+</h1>
+```
+
+Suggested Styling Direction
+
+```css id="m3qe4o"
+.battle-title {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 32px;
+  font-weight: 700;
+  z-index: 20;
+  text-align: center;
+}
+```
+
+* Exact class names can vary.
+* Ensure the title does not affect the bottom-aligned battle layout from EPIC-006 Feature-006.
+
+Expected Behaviour
+
+* Battle page Roll Dice button appears in English for English players.
+* Battle page Roll Dice button appears in Japanese for Japanese players.
+* Battle turn modal uses English names and `Turn` for English players.
+* Battle turn modal uses Japanese names and `のターン` for Japanese players.
+* Enemy turns use the enemy’s translated name when Japanese is active.
+* A new battle title appears at the top centre of the battle page.
+* English title example: `Vilewhisker Rat Battle`.
+* Japanese title example: `毒ヒゲネズミバトル`.
+* The title is bold.
+* The title is 32px.
+* The title uses the correct language font.
+* Existing battle logic still works.
+
+Out Of Scope
+
+* No new enemy translations.
+* No translation of token tooltips.
+* No translation of potion tooltips.
+* No translation of debug controls.
+* No translation of reward page text.
+* No translation of battle reward assignment text beyond already shared components.
+* No changes to battle mechanics.
+* No changes to enemy data unless needed to read existing Japanese names.
+* No changes to dice behaviour.
+* No changes to battle animations.
+* No unrelated battle layout redesign.
+
+Assumptions
+
+* Enemy data already contains both English and Japanese names.
+* The battle page can identify the player who triggered the battle.
+* The triggering player’s language is available from player data.
+* The existing translation system from EPIC-008 Feature-002 can be reused.
+* The existing turn text helper from EPIC-008 Feature-003 can be reused or lightly extended.
+
+Stop Point
+
+* Stop once the battle page uses the triggering player’s language for Roll Dice, turn modals, enemy names, and the new centred enemy battle title.
+
+Testing Checkpoints
+
+* Start a battle with an English-language player.
+* Confirm the dice button says `Roll Dice`.
+* Confirm the battle title says `Vilewhisker Rat Battle` or the correct English enemy name.
+* Confirm the title is centred at the top.
+* Confirm the title is bold.
+* Confirm the title is 32px.
+* Confirm the player turn modal uses English.
+* Confirm the enemy turn modal uses the English enemy name.
+* Start a battle with a Japanese-language player.
+* Confirm the dice button says `サイコロを振る`.
+* Confirm the battle title uses the Japanese enemy name plus `バトル`.
+* Confirm the player turn modal uses Japanese colour/name text.
+* Confirm the enemy turn modal uses the Japanese enemy name plus `のターン`.
+* Confirm the Japanese title uses the Japanese font.
+* Confirm the English title uses the English font.
+* Confirm missing Japanese enemy names fall back safely to English.
+* Confirm debug buttons remain top-left and do not move the title.
+* Confirm the title does not affect the bottom-aligned battle layout.
+* Confirm battle turns still work.
+* Confirm enemy automatic turns still work.
+* Confirm forced dice buttons still work.
+* Confirm win/loss flow still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Extended the existing turn-based translation utility with battle actor, enemy-name fallback, turn-message, and enemy battle-title helpers while reusing the existing Gameplay `Roll Dice` translation.
+* Reused `battlePlayer.language`, `battleEnemy.englishName`, `battleEnemy.japaneseName`, the existing BattlePage turn modal, language font classes, and all current battle state/effect handlers.
+* Added a configurable persistent DiceRoll button label/class with unchanged English defaults so BattlePage can translate only its existing dice action without duplicating the string or affecting other DiceRoll consumers.
+* Added the required absolutely centred, bold, `32px` enemy battle title below the existing top-left debug controls and independently of the bottom-aligned battle display.
+* Enemy data, debug labels, freeze/loss/reward copy, battle rules, dice timing, animations, effects, and navigation were intentionally unchanged.
+* Feature-specific tests, implementation ESLint, the production build, and the whitespace check passed. Existing unrelated test/lint gaps and browser verification are recorded in `testing.txt`.
+
+
+---
+
+Feature-005: Add bilingual token names and Japanese token tooltips
+
+Status
+
+* done
+
+Goal
+
+* Add display names to tokens.
+* Add English and Japanese names for every token colour.
+* Show token names underneath token icons only when the token is outside spell columns.
+* Keep committed spell-column tokens compact by hiding token names there.
+* Ensure token tooltips display in the current player’s selected language.
+* Do not change token behaviour, token effects, token rarity, or token drag-and-drop rules.
+
+Scope
+
+* Update token definition data.
+* Add English token names.
+* Add Japanese token names.
+* Add Japanese tooltip descriptions.
+* Update the global `TokenIcon` component from EPIC-007 Feature-004.
+* Allow `TokenIcon` to conditionally show or hide the token name.
+* Use current player language to display the correct token name and tooltip.
+* Hide token names when tokens appear inside spell columns.
+* Show token names when tokens appear outside spell columns.
+
+Token Name Data Requirement
+
+* Add bilingual names to every token type.
+* Token name data should live in the shared token definition data.
+* Do not hardcode these names separately in multiple components.
+
+Token names:
+
+```txt id="70xadh"
+Red = Damage / ダメージ
+Blue = Guard / ガード
+Orange = Counter / カウンター
+Green = Weaken / 弱体化
+Light Blue = Freeze / 凍結
+Light Green = Health / 体力
+Black = Sacrifice / 身代わり
+White = Merge / 合成
+Purple = Buff / 強化
+Yellow = Charge / チャージ
+Grey = Capacity / 容量
+```
+
+Suggested token data direction:
+
+```js id="dmfpaa"
+const tokenDefinitions = {
+  Red: {
+    rarity: "Common",
+    name: {
+      en: "Damage",
+      jp: "ダメージ"
+    },
+    description: {
+      en: "Plus 10 Damage",
+      jp: "ダメージ+10"
+    }
+  }
+};
+```
+
+* Exact structure can vary.
+* The important requirement is that token name and tooltip description can be selected by language.
+
+Full Token Name Table
+
+```txt id="nwtpnm"
+Token Colour | English Name | Japanese Name
+Red | Damage | ダメージ
+Blue | Guard | ガード
+Orange | Counter | カウンター
+Green | Weaken | 弱体化
+Light Blue | Freeze | 凍結
+Light Green | Health | 体力
+Black | Sacrifice | 身代わり
+White | Merge | 合成
+Purple | Buff | 強化
+Yellow | Charge | チャージ
+Grey | Capacity | 容量
+```
+
+Token Name Display Requirement
+
+* The global `TokenIcon` component should support showing the token name underneath the icon.
+* The token name should appear underneath the token icon, similar to potion names.
+* The displayed name should depend on the active language:
+
+  * English player sees English token names.
+  * Japanese player sees Japanese token names.
+* Token names should only appear when the token is outside spell columns.
+* Token names should not appear for committed tokens inside spell columns.
+* Token names should not clutter the compact spell table display.
+
+Show Token Names In These Places
+
+* Token bag.
+* Reward choices.
+* Reward token assignment new-token area.
+* Reward token assignment token bag area.
+* Debug token grant displays, if visible and practical.
+* Any non-spell-column token display where the token is being selected, previewed, or stored outside a spell slot.
+
+Hide Token Names In These Places
+
+* Gameplay committed spell columns.
+* Battle spell columns.
+* Spells modal spell columns.
+* Reward assignment spell columns.
+* Any token that is visually inside a spell slot or spell column.
+* Any compact spell-table display where token names would make the layout too crowded.
+
+TokenIcon Prop Requirement
+
+* Add a configurable prop to control whether the token name is displayed.
+* Suggested prop:
+
+```jsx id="llbydq"
+<TokenIcon
+  tokenType="Red"
+  showName={true}
+/>
+```
+
+* Or use a context-style prop such as:
+
+```jsx id="f154e8"
+<TokenIcon
+  tokenType="Red"
+  displayContext="tokenBag"
+/>
+```
+
+* Exact prop names can vary.
+* The component must make it easy for spell columns to hide token names and token bags/rewards to show them.
+
+Language Requirement
+
+* Token names should use the current player’s language.
+* Token tooltips should also use the current player’s language.
+* If the current player language is English:
+
+  * show English token name.
+  * show English tooltip.
+* If the current player language is Japanese:
+
+  * show Japanese token name.
+  * show Japanese tooltip.
+* If language is missing or invalid:
+
+  * fall back to English.
+* Do not make token language a global game setting.
+* Continue using the player-turn-based language approach from EPIC-008.
+
+Japanese Tooltip Requirement
+
+* Existing token tooltips from EPIC-007 Feature-004 should now support Japanese.
+* Add Japanese tooltip text for each token.
+* Use these tooltip descriptions:
+
+```txt id="6k5sk6"
+Red = ダメージ+10
+Blue = ガード+5
+Orange = カウンターダメージ+5
+Green = 弱体化+5
+Light Blue = 凍結
+Light Green = 体力+5
+Black = バトルに負けた場合、このトークンが最初に取り除かれます。
+White = 合成トークン
+Purple = 強化+5
+Yellow = チャージ
+Grey = 隣接するすべての列のトークンスロット+1
+```
+
+* English tooltips should remain unchanged:
+
+```txt id="vgb8lv"
+Red = Plus 10 Damage
+Blue = Plus 5 Guard
+Orange = Plus 5 Counter Damage
+Green = Plus 5 Weakness
+Light Blue = Freeze
+Light Green = Plus 5 HP
+Black = This token will be the first token to be removed if you lose a battle
+White = Merge Token
+Purple = Plus 5 Buff
+Yellow = Charge
+Grey = Plus 1 Token slot to all adjacent columns
+```
+
+* Tooltips should update when the current player language changes.
+* Token tooltip behaviour should remain the same otherwise.
+* Tooltip positioning and glow animation should not be affected.
+
+TokenIcon Layout Requirement
+
+* When `showName` is enabled:
+
+  * render the token icon.
+  * render the token name underneath it.
+  * keep the name visually attached to the token.
+  * keep the layout compact enough for token bags and rewards.
+* When `showName` is disabled:
+
+  * render only the token icon.
+  * preserve current spell-column layout.
+* Token count display should continue working.
+* The token name should not interfere with count display.
+* The token name should not interfere with drag-and-drop.
+
+Drag-And-Drop Requirement
+
+* Token names must not break dragging.
+* The token icon and its name should behave as one draggable item where the token is draggable.
+* Dragging from the token bag should still work.
+* Dragging reward tokens should still work.
+* Dragging tokens into spell slots should still work.
+* The tooltip should not block drag events.
+
+Reward Requirement
+
+* Token reward choices should use `TokenIcon` with the name visible.
+* This lets players see both:
+
+  * the token name.
+  * the tooltip explaining what it does.
+* When a Japanese-language player receives a token reward:
+
+  * the token name should be Japanese.
+  * the tooltip should be Japanese.
+* When an English-language player receives a token reward:
+
+  * the token name should be English.
+  * the tooltip should be English.
+
+Spells Modal Requirement
+
+* Tokens in the token bag area of the Spells modal should show token names.
+* Tokens inside spell slots should not show token names.
+* This applies to:
+
+  * normal Spells modal.
+  * reward token assignment screen.
+* Reward assignment new token area should show the token name.
+* Reward assignment discard/trash area should not require token names unless a token is currently placed or previewed there.
+
+Committed Token Requirement
+
+* Once a token is committed into a spell slot, the name should no longer be visible there.
+* This keeps committed spell tables compact.
+* The tooltip should still work on committed tokens if hover is supported.
+* Token glow should still work on committed tokens unless another feature says otherwise.
+
+Expected Behaviour
+
+* Token names exist in English and Japanese.
+* Token names appear underneath tokens in the token bag.
+* Token names appear underneath token rewards.
+* Token names appear underneath the new reward token in reward assignment.
+* Token names do not appear in committed spell columns.
+* Token names do not appear in battle spell columns.
+* Token names do not appear in compact spell-table columns.
+* Japanese players see Japanese token names.
+* English players see English token names.
+* Japanese players see Japanese token tooltips.
+* English players see English token tooltips.
+* Existing token glow still works.
+* Existing token counts still work.
+* Existing drag-and-drop still works.
+* Existing token effects are unchanged.
+
+Out Of Scope
+
+* No changes to token mechanics.
+* No changes to token rarity.
+* No changes to battle calculations.
+* No changes to reward generation.
+* No changes to potion names or potion tooltips.
+* No translation of potion tooltips in this feature.
+* No translation of battle debug controls.
+* No translation of reward page text beyond token names/tooltips.
+* No new token types.
+* No token image assets.
+* No unrelated UI redesign.
+
+Assumptions
+
+* The global `TokenIcon` component already exists or is being created from EPIC-007 Feature-004.
+* The app already has access to the current player language through the EPIC-008 language mechanism.
+* Token bag and reward displays can pass a prop to show token names.
+* Spell-column displays can pass a prop to hide token names.
+* Existing token tooltips can be changed from a single English string to language-keyed data.
+
+Stop Point
+
+* Stop once token names display bilingually underneath tokens outside spell columns, committed/spell-column tokens stay compact without names, and token tooltips switch between English and Japanese based on the current player’s selected language.
+
+Testing Checkpoints
+
+* Confirm Red has English name `Damage`.
+* Confirm Red has Japanese name `ダメージ`.
+* Confirm Blue has English name `Guard`.
+* Confirm Blue has Japanese name `ガード`.
+* Confirm Orange has English name `Counter`.
+* Confirm Orange has Japanese name `カウンター`.
+* Confirm Green has English name `Weaken`.
+* Confirm Green has Japanese name `弱体化`.
+* Confirm Light Blue has English name `Freeze`.
+* Confirm Light Blue has Japanese name `凍結`.
+* Confirm Light Green has English name `Health`.
+* Confirm Light Green has Japanese name `体力`.
+* Confirm Black has English name `Sacrifice`.
+* Confirm Black has Japanese name `身代わり`.
+* Confirm White has English name `Merge`.
+* Confirm White has Japanese name `合成`.
+* Confirm Purple has English name `Buff`.
+* Confirm Purple has Japanese name `強化`.
+* Confirm Yellow has English name `Charge`.
+* Confirm Yellow has Japanese name `チャージ`.
+* Confirm Grey has English name `Capacity`.
+* Confirm Grey has Japanese name `容量`.
+* Confirm token names appear in the token bag.
+* Confirm token names appear for token rewards.
+* Confirm token names appear for the new reward token in reward assignment.
+* Confirm token names do not appear inside gameplay spell columns.
+* Confirm token names do not appear inside battle spell columns.
+* Confirm token names do not appear inside Spells modal spell slots.
+* Confirm English players see English token names.
+* Confirm Japanese players see Japanese token names.
+* Confirm English players see English token tooltips.
+* Confirm Japanese players see Japanese token tooltips.
+* Confirm Red Japanese tooltip shows `ダメージ+10`.
+* Confirm Blue Japanese tooltip shows `ガード+5`.
+* Confirm Orange Japanese tooltip shows `カウンターダメージ+5`.
+* Confirm Green Japanese tooltip shows `弱体化+5`.
+* Confirm Light Blue Japanese tooltip shows `凍結`.
+* Confirm Light Green Japanese tooltip shows `体力+5`.
+* Confirm Black Japanese tooltip shows the battle-loss removal description.
+* Confirm White Japanese tooltip shows `合成トークン`.
+* Confirm Purple Japanese tooltip shows `強化+5`.
+* Confirm Yellow Japanese tooltip shows `チャージ`.
+* Confirm Grey Japanese tooltip shows the adjacent-column capacity description.
+* Confirm token counts still display correctly.
+* Confirm token glow still displays correctly.
+* Confirm token drag-and-drop still works.
+* Confirm reward token assignment still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Translate and restructure the battle rewards page
+
+Status
+
+* done
+
+Goal
+
+* Translate the battle rewards page.
+* Simplify reward item display.
+* Remove unnecessary reward category labels.
+* Use token and potion components directly.
+* Keep the battle background from the battle that was just completed.
+* Centre the reward section on the screen.
+* Improve reward layout and readability.
+
+Scope
+
+* Update the rewards page.
+* Add English/Japanese text for reward page labels.
+* Remove reward category text such as `Common Token`, `Rare Token`, `Common Potion`, and `Rare Potion`.
+* Update reward choice buttons.
+* Replace list-based layout with div-based layout.
+* Display reward options horizontally.
+* Keep the completed battle’s background image on the rewards page.
+* Add a semi-transparent white panel behind the reward content.
+* Preserve reward generation and reward assignment behaviour.
+
+Language Requirement
+
+* The rewards page should use the language of the player who won the battle.
+* If the player selected English, show English text.
+* If the player selected Japanese, show Japanese text.
+* If no language is found, fall back to English.
+* Continue using the player-based language system from EPIC-008.
+
+Translation Requirement
+
+* Translate this rewards page text:
+
+```txt id="zvbnxs"
+Choose one reward = 報酬を1つ選んでください
+Choose = 選ぶ
+```
+
+* Do not translate token names or potion names directly in this feature if they already come from their own components.
+* Token names and tooltips should use the TokenIcon component language behaviour from Feature-005.
+* Potion names and tooltips should use the PotionIcon component language behaviour where already implemented.
+
+Reward Category Text Removal Requirement
+
+* Remove visible reward category text such as:
+
+  * `Common Token`
+  * `Rare Token`
+  * `Common Potion`
+  * `Rare Potion`
+* Do not show these labels on the reward cards.
+* The player should see the actual reward item using its component.
+* Example:
+
+  * show the Red/Damage token component.
+  * do not show `Common Token`.
+* Example:
+
+  * show the Small Heal potion component.
+  * do not show `Common Potion`.
+
+Reward Item Component Requirement
+
+* Reward options should display the actual item component.
+* Token rewards should use the global `TokenIcon` component.
+* Potion rewards should use the global `PotionIcon` component.
+* The component should show the appropriate name and tooltip based on player language.
+* The reward item component should appear above or near its Choose button.
+* Do not create separate one-off reward item visuals.
+
+Choose Button Requirement
+
+* Reward choice buttons should say only:
+
+```txt id="5fq5sg"
+Choose
+```
+
+* Japanese button text should be:
+
+```txt id="i0nf62"
+選ぶ
+```
+
+* Do not include the reward name in the button.
+* Do not use text such as:
+
+  * `Choose Red`
+  * `Choose Damage`
+  * `Choose Small Heal`
+  * `Choose Common Token`
+* The button should be centred to the reward item.
+
+Layout Structure Requirement
+
+* Reward options should not be rendered as a `<ul>`.
+* Do not use `<li>` elements for reward choices.
+* Reward options should be rendered using divs.
+* Each reward option should be contained in its own element.
+* Each reward option container should include:
+
+  * the reward item component.
+  * the Choose button.
+* Suggested structure:
+
+```jsx id="cxc3f2"
+<div className="reward-options">
+  <div className="reward-option">
+    <TokenIcon ... />
+    <button>Choose</button>
+  </div>
+</div>
+```
+
+* Exact class names can vary.
+* Keep the structure easy to style.
+
+Horizontal Rewards Requirement
+
+* Rewards should be listed horizontally.
+* Each reward option should appear next to the others where there is enough space.
+* The Choose button should be centred to its item.
+* The layout should remain usable on smaller screens.
+* If the screen is too narrow, wrapping is acceptable.
+* Reward options should stay visually grouped and readable.
+
+Centred Reward Section Requirement
+
+* The reward content should be centred on the screen.
+* The title and reward options should be in the centre of the page.
+* The reward section should feel like a centred modal/panel over the battle background.
+* The section should not be stuck to the top-left.
+* The title should be centred.
+* Reward items should be centred underneath the title.
+
+Semi-Transparent Panel Requirement
+
+* Add a white background behind the whole reward content section.
+* This background should cover:
+
+  * the title.
+  * the reward options.
+  * the Choose buttons.
+* The background should use opacity `0.5`.
+* Do not set opacity on the whole section, because that would make the text and icons transparent.
+* Use an alpha background colour instead.
+
+Suggested CSS:
+
+```css id="nng5wi"
+background-color: rgba(255, 255, 255, 0.5);
+```
+
+* The item components, text, and buttons should remain fully opaque.
+* The panel can have rounded corners if it fits the existing style.
+* The panel should make the rewards readable over the battle background.
+
+Battle Background Requirement
+
+* The reward page should keep the background from the battle that was just finished.
+* If the battle used `fields`, the reward page should show the fields battle background.
+* If the battle used `forest`, the reward page should show the forest battle background.
+* This should use the battle environment value already added for battle backgrounds.
+* Do not reset the background to a plain page after battle win.
+* If no battle environment is available, fall back to `fields`.
+* The background should still span the screen width.
+* The background should sit behind the centred reward section.
+
+Reward Page Flow Requirement
+
+* Keep the existing reward generation flow.
+* Keep the existing reward choice logic.
+* Keep the existing assignment flow after choosing a reward.
+* This feature changes layout and text only.
+* Choosing a reward should still move the player to the correct next reward assignment step.
+* Token rewards should still go to token assignment.
+* Potion rewards should still go to potion assignment/capacity handling.
+
+Expected Behaviour
+
+* The rewards page shows the battle background from the battle that was just won.
+* The page title says `Choose one reward` for English players.
+* The page title says `報酬を1つ選んでください` for Japanese players.
+* Reward category labels are not visible.
+* Reward items are shown using TokenIcon or PotionIcon.
+* Reward options are not inside a `<ul>`.
+* Reward options are displayed in div-based containers.
+* Reward options are listed horizontally where space allows.
+* Each Choose button is centred under its reward item.
+* Choose buttons say only `Choose` in English.
+* Choose buttons say only `選ぶ` in Japanese.
+* The reward content is centred on the screen.
+* The title, items, and buttons sit on a semi-transparent white panel.
+* Text, token icons, potion icons, and buttons remain fully opaque.
+* Reward selection still works.
+* Reward assignment still works.
+
+Out Of Scope
+
+* No changes to reward generation chances.
+* No changes to reward categories internally.
+* No changes to token rarity.
+* No changes to potion rarity.
+* No changes to token assignment behaviour.
+* No changes to potion assignment behaviour.
+* No changes to battle win logic.
+* No changes to battle background selection beyond reusing the completed battle’s background.
+* No translation of debug controls.
+* No new token or potion data.
+* No potion effect implementation.
+* No unrelated reward page redesign.
+
+Assumptions
+
+* Battle reward context already knows the battle level and environment.
+* The reward page can access the completed battle’s environment value.
+* TokenIcon and PotionIcon already handle their own names, colours, glow, and tooltips.
+* The player who won the battle can be identified for language selection.
+* The reward page currently displays reward choices and can be restyled without changing the reward generation logic.
+
+Stop Point
+
+* Stop once the reward page is centred over the completed battle background, uses bilingual title and Choose button text, displays only actual reward item components, removes category labels, and uses a horizontal div-based reward layout inside a semi-transparent white panel.
+
+Testing Checkpoints
+
+* Win a battle with an English-language player.
+* Confirm the title says `Choose one reward`.
+* Confirm reward buttons say only `Choose`.
+* Confirm reward category labels such as `Common Token` are not visible.
+* Confirm reward category labels such as `Rare Potion` are not visible.
+* Confirm token rewards display using TokenIcon.
+* Confirm potion rewards display using PotionIcon.
+* Confirm reward options are not rendered as a `<ul>`.
+* Confirm each reward option uses a div-style container.
+* Confirm reward options appear horizontally where space allows.
+* Confirm each Choose button is centred to its reward item.
+* Confirm the reward section is centred on the screen.
+* Confirm the reward section has a semi-transparent white background.
+* Confirm item components and text remain fully opaque.
+* Confirm the battle background from the completed battle remains visible.
+* Win a battle with a Japanese-language player.
+* Confirm the title says `報酬を1つ選んでください`.
+* Confirm reward buttons say only `選ぶ`.
+* Confirm Japanese token names/tooltips still work through TokenIcon.
+* Confirm Japanese potion names/tooltips still work where implemented.
+* Confirm reward selection still progresses to token assignment for token rewards.
+* Confirm reward selection still progresses to potion assignment for potion rewards.
+* Confirm invalid or missing battle environment falls back to `fields`.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-007: Add bilingual potion names and descriptions
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the exact Japanese name and description for all 21 potion definitions while preserving every existing English field, ID, rarity, availability, and colour.
+* Added small shared potion text selectors that use Japanese only for `jp`, otherwise fall back to English, and independently fall back when a Japanese name or description is empty or missing.
+* Updated the global `PotionIcon` to localize its visible name, accessible label, and tooltip while retaining the existing flask icon, colour glow, focus behavior, wrapping, and viewport-aware tooltip CSS.
+* Passed the active player's language through Gameplay, reward choices, selected/full-capacity reward assignment, and debug potion grant displays without changing potion capacity, assignment, generation, or effects.
+* Kept debug controls and status labels in English and added no potion mechanics, design changes, routes, dependencies, abstractions, or unrelated refactors.
+
+Goal
+
+* Add Japanese translations for potion names and potion descriptions.
+* Ensure potion names display in the correct language based on the current player’s selected language.
+* Ensure potion tooltips display in the correct language based on the current player’s selected language.
+* Keep existing potion rarity, Battle/Board type, colour, ownership, reward, and debug logic unchanged.
+
+Scope
+
+* Update potion data.
+* Add Japanese potion names.
+* Add Japanese potion descriptions.
+* Update the global `PotionIcon` component so it reads potion name and description by language.
+* Ensure potion reward choices display the correct language.
+* Ensure gameplay potion displays show the correct language.
+* Ensure potion tooltips show the correct language.
+* Preserve existing potion effects being out of scope.
+
+Language Requirement
+
+* Potion names and descriptions should display based on the current player’s selected language.
+* If the current player selected English:
+
+  * show English potion name.
+  * show English potion tooltip description.
+* If the current player selected Japanese:
+
+  * show Japanese potion name.
+  * show Japanese potion tooltip description.
+* If language is missing or invalid:
+
+  * fall back to English.
+* Continue using the player-turn-based language system from EPIC-008.
+* Do not make potion language a global setting.
+
+Potion Data Structure Requirement
+
+* Potion data should store English and Japanese names.
+* Potion data should store English and Japanese descriptions.
+* Do not hardcode Japanese potion text inside the `PotionIcon` component.
+* The component should receive potion data and select the correct text by language.
+* Suggested structure:
+
+```js id="9rc00y"
+{
+  id: "roll-choice",
+  name: {
+    en: "Roll Choice",
+    jp: "出目選択"
+  },
+  availability: "Both",
+  rarity: "Rare",
+  description: {
+    en: "Choose the next roll of the dice",
+    jp: "次に振るサイコロの出目を選ぶ。"
+  },
+  colour: "Blue"
+}
+```
+
+* Exact structure can vary if the current potion data uses different field names.
+* The important requirement is that `name` and `description` are language-aware.
+
+Potion Translation Data
+
+```txt id="xrj4li"
+Roll Choice | 出目選択 | Both | Rare | Choose the next roll of the dice | 次に振るサイコロの出目を選ぶ。 | Blue
+Small Heal | 小回復 | Both | Common | Recover 30% HP | HPを30％回復する。 | Green
+Heal | 回復 | Both | Rare | Recover 60% HP | HPを60％回復する。 | Green
+First Aid | 応急処置 | Battle | Common | Recover 50% HP | HPを50％回復する。 | Green
+Teleport to * | *へテレポート | Board | Common | Teleport to *feature*, then roll the dice starting from there. | *feature*へテレポートし、そこを起点としてサイコロを振る。 | Yellow
+Copy and Paste | コピー＆ペースト | Board | Common | Duplicate any common token in the token pouch | トークンポーチにある好きなコモントークンを1個複製する。 | Orange
+Gambeller | ギャンブラー | Board | Common | Discard two tokens of your choice from your token pouch and roll the dice for your turn. If the roll is even, gain a new token. | トークンポーチから好きなトークンを2個捨て、このターンのサイコロを振る。出目が偶数なら、新しいトークンを1個獲得する。 | Red
+Starting Charge | 初期チャージ | Board | Rare | If you encounter a battle this turn, all your slots are charged by 10 on your first turn in battle | このターンにバトルが発生した場合、バトルでの最初のターンに、すべてのスロットが10チャージされる。 | Yellow
+Tokensmith | トークン職人 | Board | Common | Remove a token from a slot and put it into your token pouch | スロットからトークンを1個取り外し、トークンポーチに入れる。 | Grey
+Ice Beam | アイスビーム | Battle | Common | Freeze your opponent | 対戦相手を凍結させる。 | Light Blue
+Charger | チャージャー | Battle | Common | Charge your attacks by 5 next turn | 次のターン、攻撃を5チャージする。 | Yellow
+Heavy Weight | ヘビーウェイト | Board | Rare | The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn. I.E if they roll a 5, they will only be able to move 3 places next turn. | 自分に最も近いプレイヤーは、次のターンのサイコロの出目が半分になる（端数は切り上げ）。同じ距離に複数のプレイヤーがいる場合は、対象をランダムに決める。例：5が出た場合、移動できるのは3マスとなる。 | Blue
+Troublemaker | トラブルメーカー | Board | Rare | Choose any other player and roll the dice for your turn. If even they lose all tokens from their token pouch, if odd you lose all your tokens from your token pouch | 他のプレイヤーを1人選び、このターンのサイコロを振る。出目が偶数なら、そのプレイヤーはトークンポーチ内のすべてのトークンを失う。奇数なら、自分がトークンポーチ内のすべてのトークンを失う。 | Purple
+Devine Chance | 神の好機 | Board | Common | Roll the dice for your turn. If even you heal to full HP. If odd everyone else does. | このターンのサイコロを振る。出目が偶数なら、自分のHPが全回復する。奇数なら、自分以外のすべてのプレイヤーのHPが全回復する。 | Green
+Buy and Sell | 売買 | Board | Rare | Discard four tokens from your token pouch. Get a choice of 2 random token and pick one to gain. | トークンポーチからトークンを4個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。 | Orange
+Cauldron | 大釜 | Board | Common | See 3 different potions, they are mixed up, you must blind pick and gain 1. | 異なる3つのポーションを確認する。その後ポーションがシャッフルされ、見ずに1つ選んで獲得する。 | Red
+Storm Master | 嵐の支配者 | Board | Rare | Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over. | このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまる。奇数なら、自分はこのターン移動できず、そのままターンを終了する。 | Red
+Double Dice | ダブルダイス | Board | Common | Roll 2 dice this turn. | このターンはサイコロを2個振る。 | Blue
+Bridge Builder | 橋職人 | Board | Common | Auto win a River Mini Game | 川のミニゲームに自動的に勝利する。 | Light Blue
+Good Decisions | 賢明な選択 | Board | Common | Remove any forfeits from a decision | 選択によって受けるペナルティをすべて無効にする。 | Orange
+Cave Runner | 洞窟ランナー | Board | Common | Escape a cave encounter with no damage but lose any prizes you had. | ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。 | Grey
+```
+
+PotionIcon Requirement
+
+* Update the global `PotionIcon` component so it displays the potion name by language.
+* The potion name should still appear underneath the flask icon.
+* English players should see the English potion name.
+* Japanese players should see the Japanese potion name.
+* The component should use the existing Font Awesome `faFlask` icon.
+* The flask colour should continue using the potion colour value.
+* The animated glow should continue matching the potion colour.
+* Tooltip behaviour should remain the same except that tooltip text is now language-aware.
+
+Potion Tooltip Requirement
+
+* Potion tooltips should display the potion description in the active player’s language.
+* English players should see the English description.
+* Japanese players should see the Japanese description.
+* Long Japanese descriptions should wrap cleanly.
+* Tooltips should still remain entirely in view where practical.
+* Tooltip accessibility from the previous PotionIcon feature should be preserved.
+
+Potion Display Locations Requirement
+
+* The updated bilingual potion name and tooltip should work wherever potions appear.
+* This includes:
+
+  * gameplay potion display.
+  * reward choices.
+  * reward potion assignment flow.
+  * potion full-capacity discard choice screen.
+  * debug potion grant displays, if visible.
+  * any other current potion list.
+* Do not create separate potion renderers for different screens.
+* All potion displays should use the global `PotionIcon`.
+
+Reward Page Requirement
+
+* When a potion appears as a battle reward, it should display in the winner’s selected language.
+* If the winning player uses Japanese:
+
+  * the potion name should be Japanese.
+  * the tooltip should be Japanese.
+* If the winning player uses English:
+
+  * the potion name should be English.
+  * the tooltip should be English.
+* Existing reward selection and assignment logic should not change.
+
+Gameplay Potion Display Requirement
+
+* The current player’s potion list should display potion names based on the current player’s selected language.
+* When the turn changes to a player using a different language, potion names and tooltips should update.
+* Potion effects should remain inactive unless implemented by a later feature.
+
+Fallback Requirement
+
+* If a Japanese name is missing, fall back to the English name.
+* If a Japanese description is missing, fall back to the English description.
+* If the selected language is missing or invalid, fall back to English.
+* Avoid displaying empty names or empty tooltips.
+
+Expected Behaviour
+
+* Roll Choice displays as `Roll Choice` in English and `出目選択` in Japanese.
+* Small Heal displays as `Small Heal` in English and `小回復` in Japanese.
+* Heal displays as `Heal` in English and `回復` in Japanese.
+* First Aid displays as `First Aid` in English and `応急処置` in Japanese.
+* Teleport to * displays as `Teleport to *` in English and `*へテレポート` in Japanese.
+* Copy and Paste displays as `Copy and Paste` in English and `コピー＆ペースト` in Japanese.
+* Gambeller displays as `Gambeller` in English and `ギャンブラー` in Japanese.
+* Starting Charge displays as `Starting Charge` in English and `初期チャージ` in Japanese.
+* Tokensmith displays as `Tokensmith` in English and `トークン職人` in Japanese.
+* Ice Beam displays as `Ice Beam` in English and `アイスビーム` in Japanese.
+* Charger displays as `Charger` in English and `チャージャー` in Japanese.
+* Heavy Weight displays as `Heavy Weight` in English and `ヘビーウェイト` in Japanese.
+* Troublemaker displays as `Troublemaker` in English and `トラブルメーカー` in Japanese.
+* Devine Chance displays as `Devine Chance` in English and `神の好機` in Japanese.
+* Buy and Sell displays as `Buy and Sell` in English and `売買` in Japanese.
+* Cauldron displays as `Cauldron` in English and `大釜` in Japanese.
+* Storm Master displays as `Storm Master` in English and `嵐の支配者` in Japanese.
+* Double Dice displays as `Double Dice` in English and `ダブルダイス` in Japanese.
+* Bridge Builder displays as `Bridge Builder` in English and `橋職人` in Japanese.
+* Good Decisions displays as `Good Decisions` in English and `賢明な選択` in Japanese.
+* Cave Runner displays as `Cave Runner` in English and `洞窟ランナー` in Japanese.
+* Potion tooltips show English descriptions for English players.
+* Potion tooltips show Japanese descriptions for Japanese players.
+* Potion colours and rarity data remain unchanged.
+* Potion effects remain out of scope.
+
+Out Of Scope
+
+* No potion effect implementation.
+* No changes to potion colours.
+* No changes to potion rarity.
+* No changes to Battle/Board availability.
+* No changes to reward generation chances.
+* No changes to reward assignment behaviour.
+* No changes to potion capacity.
+* No changes to token translations.
+* No changes to battle mechanics.
+* No translation of debug control labels unless already handled elsewhere.
+* No save/load persistence.
+* No unrelated UI redesign.
+
+Assumptions
+
+* The global `PotionIcon` component already exists from EPIC-007 Feature-005.
+* Potion data already exists from EPIC-007 Feature-002.
+* The current player language is available through the EPIC-008 language mechanism.
+* Potion names are unique or have stable IDs for lookup.
+* Existing potion display screens can pass active language into `PotionIcon`, or `PotionIcon` can read it through an existing context/helper.
+
+Stop Point
+
+* Stop once every potion display uses bilingual potion data, potion names switch between English and Japanese correctly, and potion tooltips show the correct English or Japanese description based on the current player’s selected language.
+
+Testing Checkpoints
+
+* Confirm every potion has an English name.
+* Confirm every potion has a Japanese name.
+* Confirm every potion has an English description.
+* Confirm every potion has a Japanese description.
+* Confirm English players see English potion names.
+* Confirm Japanese players see Japanese potion names.
+* Confirm English players see English potion tooltips.
+* Confirm Japanese players see Japanese potion tooltips.
+* Confirm Roll Choice displays as `出目選択` for Japanese players.
+* Confirm Small Heal displays as `小回復` for Japanese players.
+* Confirm Heal displays as `回復` for Japanese players.
+* Confirm First Aid displays as `応急処置` for Japanese players.
+* Confirm Teleport to * displays as `*へテレポート` for Japanese players.
+* Confirm Copy and Paste displays as `コピー＆ペースト` for Japanese players.
+* Confirm Gambeller displays as `ギャンブラー` for Japanese players.
+* Confirm Starting Charge displays as `初期チャージ` for Japanese players.
+* Confirm Tokensmith displays as `トークン職人` for Japanese players.
+* Confirm Ice Beam displays as `アイスビーム` for Japanese players.
+* Confirm Charger displays as `チャージャー` for Japanese players.
+* Confirm Heavy Weight displays as `ヘビーウェイト` for Japanese players.
+* Confirm Troublemaker displays as `トラブルメーカー` for Japanese players.
+* Confirm Devine Chance displays as `神の好機` for Japanese players.
+* Confirm Buy and Sell displays as `売買` for Japanese players.
+* Confirm Cauldron displays as `大釜` for Japanese players.
+* Confirm Storm Master displays as `嵐の支配者` for Japanese players.
+* Confirm Double Dice displays as `ダブルダイス` for Japanese players.
+* Confirm Bridge Builder displays as `橋職人` for Japanese players.
+* Confirm Good Decisions displays as `賢明な選択` for Japanese players.
+* Confirm Cave Runner displays as `洞窟ランナー` for Japanese players.
+* Confirm Japanese tooltip text wraps cleanly.
+* Confirm long Japanese tooltips remain in view where practical.
+* Confirm potion reward choices use the correct language.
+* Confirm gameplay potion displays use the correct language.
+* Confirm potion discard/capacity screens use the correct language.
+* Confirm potion colours still display correctly.
+* Confirm potion glow animation still works.
+* Confirm potion effects remain inactive.
+* Confirm missing Japanese text falls back safely to English.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

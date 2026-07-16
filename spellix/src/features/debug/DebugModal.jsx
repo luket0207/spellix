@@ -160,6 +160,8 @@ function DebugModal({
                   />
                   <Token
                     ariaLabel={`${getDebugTokenTypeLabel(token.type)} token`}
+                    language={currentPlayer.language}
+                    showName
                     tokenType={token.type}
                   />
                   <span>{getDebugTokenTypeLabel(token.type)}</span>

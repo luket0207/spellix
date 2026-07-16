@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { TOKEN_DEFINITIONS } from '../../data/tokens';
+import { getTokenDescription, getTokenName } from '../../data/tokens';
 import './token.css';
 
 function Token({
@@ -9,17 +9,23 @@ function Token({
   descriptionId: providedDescriptionId,
   faded = false,
   focusable = true,
+  language,
+  showName = false,
+  showTooltip = true,
   tokenType,
 }) {
   const generatedDescriptionId = useId();
   const descriptionId = providedDescriptionId ?? generatedDescriptionId;
-  const description = TOKEN_DEFINITIONS[tokenType]?.description;
+  const normalizedLanguage = language === 'jp' ? 'jp' : 'en';
+  const description = getTokenDescription(tokenType, normalizedLanguage);
+  const tooltipDescription = showTooltip ? description : '';
+  const name = getTokenName(tokenType, normalizedLanguage);
   const hasCount = typeof count === 'number' && count > 1;
 
   return (
-    <>
+    <span className="token-display-wrapper">
       <span
-        aria-describedby={description ? descriptionId : undefined}
+        aria-describedby={tooltipDescription ? descriptionId : undefined}
         aria-label={ariaLabel}
         className={`token-display token-display--glow token-display--${tokenType}${
           committed ? ' token-display--committed' : ''
@@ -28,17 +34,20 @@ function Token({
         }`}
         role="img"
         style={faded ? { opacity: 0.5 } : undefined}
-        tabIndex={description && focusable ? 0 : undefined}
-        title={description}
+        tabIndex={tooltipDescription && focusable ? 0 : undefined}
+        title={tooltipDescription || undefined}
       >
         {hasCount ? <span className="token-display-count">{count}</span> : null}
       </span>
-      {description ? (
+      {showName && name ? (
+        <span className={`token-display-name language-${normalizedLanguage}`}>{name}</span>
+      ) : null}
+      {tooltipDescription ? (
         <span className="token-display-description" id={descriptionId}>
-          {description}
+          {tooltipDescription}
         </span>
       ) : null}
-    </>
+    </span>
   );
 }
 
