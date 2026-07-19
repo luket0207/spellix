@@ -1,0 +1,14 @@
+.start-page-background {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  transition: opacity 1500ms ease;
+  z-index: 0;
+}
+
+.start-page-background--visible {
+  opacity: 1;
+}

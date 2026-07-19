@@ -214,25 +214,23 @@ describe('board start area and protected field zone', () => {
     expect(getFirstStartAreaPosition(board)).toEqual({ x: 0, y: 29 });
   });
 
-  test('generates 3 easy features and 3 hard features with the stricter spacing rules', () => {
+  test('generates one easy and one hard feature with seven-square clearance', () => {
     const board = createBoard(() => 0);
     const fixedSquares = board.squares.filter((square) => square.isFixedArea);
 
-    expect(board.features).toHaveLength(6);
-    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(3);
-    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(3);
+    expect(board.features).toHaveLength(2);
+    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(1);
+    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(1);
 
     board.features.forEach((feature) => {
       const featureSquares = board.squares.filter((square) => square.featureId === feature.id);
 
       expect(featureSquares).toHaveLength(4);
-      expect(feature.x).toBeGreaterThanOrEqual(2);
-      expect(feature.y).toBeGreaterThanOrEqual(2);
-      expect(feature.x).toBeLessThanOrEqual(27);
-      expect(feature.y).toBeLessThanOrEqual(27);
+      expect(featureSquares.every((square) => square.x >= 7 && square.x <= 23)).toBe(true);
+      expect(featureSquares.every((square) => square.y >= 7 && square.y <= 23)).toBe(true);
       expect(
         getMinimumDistanceBetweenSquareSets(featureSquares, fixedSquares)
-      ).toBeGreaterThanOrEqual(5);
+      ).toBeGreaterThanOrEqual(7);
       expect(
         featureSquares.every((square) => !square.isProtectedStartFieldZone && square.section === feature.section)
       ).toBe(true);
@@ -246,9 +244,99 @@ describe('board start area and protected field zone', () => {
 
         expect(
           getMinimumDistanceBetweenSquareSets(featureSquares, otherFeatureSquares)
-        ).toBeGreaterThanOrEqual(5);
+        ).toBeGreaterThanOrEqual(7);
       });
     });
+  });
+
+  test('reliably preserves feature count and placement rules across generated boards', () => {
+    for (let seed = 1; seed <= 25; seed += 1) {
+      const board = createBoard(createSeededRandomFn(seed));
+      const easyFeature = board.features.find((feature) => feature.section === 'easy');
+      const hardFeature = board.features.find((feature) => feature.section === 'hard');
+      const easyFeatureSquares = board.squares.filter(
+        (square) => square.featureId === easyFeature?.id
+      );
+      const hardFeatureSquares = board.squares.filter(
+        (square) => square.featureId === hardFeature?.id
+      );
+
+      expect(board.features).toHaveLength(2);
+      expect(easyFeature).toBeDefined();
+      expect(hardFeature).toBeDefined();
+      expect(easyFeatureSquares).toHaveLength(4);
+      expect(hardFeatureSquares).toHaveLength(4);
+      expect(
+        getMinimumDistanceBetweenSquareSets(easyFeatureSquares, hardFeatureSquares)
+      ).toBeGreaterThanOrEqual(7);
+    }
+  });
+
+  test('stores fixed and generated feature image zones without changing their geometry', () => {
+    const board = createBoard(() => 0);
+    const easyFeature = board.features.find((feature) => feature.section === 'easy');
+    const hardFeature = board.features.find((feature) => feature.section === 'hard');
+
+    expect(board.featureImages).toEqual(
+      expect.arrayContaining([
+        { id: 'start', imageName: 'home.png', x: 0, y: 29, width: 2, height: 2 },
+        {
+          id: 'elite-top-left',
+          imageName: 'elite-tower-gravel.png',
+          x: 0,
+          y: 0,
+          width: 2,
+          height: 2,
+        },
+        { id: 'boss', imageName: 'boss-castle.png', x: 29, y: 0, width: 2, height: 2 },
+        {
+          id: 'elite-bottom-right',
+          imageName: 'elite-tower-woods.png',
+          x: 29,
+          y: 29,
+          width: 2,
+          height: 2,
+        },
+        {
+          id: easyFeature.id,
+          imageName: 'village-field.png',
+          x: easyFeature.x,
+          y: easyFeature.y,
+          width: easyFeature.width,
+          height: easyFeature.height,
+        },
+        {
+          id: hardFeature.id,
+          imageName: 'village-forest.png',
+          x: hardFeature.x,
+          y: hardFeature.y,
+          width: hardFeature.width,
+          height: hardFeature.height,
+        },
+      ])
+    );
+    expect(board.featureImages).toHaveLength(6);
+  });
+
+  test('uses both elite images once and can reverse their board-generation assignment', () => {
+    const firstBoardEliteImages = createBoard(() => 0).featureImages.filter((featureImage) =>
+      featureImage.id.startsWith('elite-')
+    );
+    const secondBoardEliteImages = createBoard(() => 0.999999).featureImages.filter(
+      (featureImage) => featureImage.id.startsWith('elite-')
+    );
+
+    expect(firstBoardEliteImages.map((featureImage) => featureImage.imageName).sort()).toEqual([
+      'elite-tower-gravel.png',
+      'elite-tower-woods.png',
+    ]);
+    expect(secondBoardEliteImages.map((featureImage) => featureImage.imageName).sort()).toEqual([
+      'elite-tower-gravel.png',
+      'elite-tower-woods.png',
+    ]);
+    expect(firstBoardEliteImages.map((featureImage) => featureImage.imageName)).toEqual(
+      secondBoardEliteImages.map((featureImage) => featureImage.imageName).reverse()
+    );
   });
 });
 

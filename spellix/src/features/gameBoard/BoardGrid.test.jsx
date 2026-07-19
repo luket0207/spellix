@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { getPlayerPieceImageName } from '../gameSetup/pieceImages';
 import BoardGrid from './BoardGrid';
 
 function createBoard() {
   return {
+    featureImages: [],
     height: 1,
     squareSize: 30,
     squares: [
@@ -19,6 +20,65 @@ function createBoard() {
       },
     ],
     width: 1,
+  };
+}
+
+function createBoardWithFeatureImages() {
+  return {
+    ...createBoard(),
+    featureImages: [
+      { id: 'start', imageName: 'home.png', x: 0, y: 29, width: 2, height: 2 },
+      {
+        id: 'elite-top-left',
+        imageName: 'elite-tower-gravel.png',
+        x: 0,
+        y: 0,
+        width: 2,
+        height: 2,
+      },
+      { id: 'boss', imageName: 'boss-castle.png', x: 29, y: 0, width: 2, height: 2 },
+      {
+        id: 'elite-bottom-right',
+        imageName: 'elite-tower-woods.png',
+        x: 29,
+        y: 29,
+        width: 2,
+        height: 2,
+      },
+      {
+        id: 'feature-1',
+        imageName: 'village-field.png',
+        x: 8,
+        y: 20,
+        width: 2,
+        height: 2,
+      },
+      {
+        id: 'feature-2',
+        imageName: 'village-forest.png',
+        x: 20,
+        y: 8,
+        width: 2,
+        height: 2,
+      },
+    ],
+    height: 31,
+    squares: Array.from({ length: 31 * 31 }, (_, index) => {
+      const x = index % 31;
+      const y = Math.floor(index / 31);
+
+      return {
+        areaType: 'normal',
+        environmentType: null,
+        environmentVariation: null,
+        id: `square-${x}-${y}`,
+        isFixedArea: false,
+        section: y >= x ? 'easy' : 'hard',
+        x,
+        y,
+      };
+    }),
+    width: 31,
   };
 }
 
@@ -145,12 +205,12 @@ describe('BoardGrid player piece images', () => {
     const blueGlow = bluePiece.parentElement.querySelector('.board-player-marker-glow');
 
     expect(redPiece.parentElement.querySelector('.board-player-marker-glow')).toBeNull();
-    expect(redPiece.parentElement).toHaveStyle({ zIndex: '1' });
+    expect(redPiece.parentElement).toHaveStyle({ zIndex: '3' });
 
     expect(blueGlow).toBeInTheDocument();
     expect(blueGlow.compareDocumentPosition(bluePiece)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(bluePiece.parentElement).toHaveAttribute('data-is-current-player', 'true');
-    expect(bluePiece.parentElement).toHaveStyle({ zIndex: '7' });
+    expect(bluePiece.parentElement).toHaveStyle({ zIndex: '9' });
   });
 
   test('falls back to the player colour label when a piece image is missing', () => {
@@ -175,4 +235,100 @@ describe('BoardGrid player piece images', () => {
     expect(screen.getByLabelText(/orange player piece/i)).toHaveTextContent('orange');
     expect(screen.queryByRole('img', { name: /orange player piece/i })).not.toBeInTheDocument();
   });
+});
+
+describe('BoardGrid feature images', () => {
+  test('keeps feature images in a non-displacing absolute overlay layer', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    const board = screen.getByLabelText('Game board');
+    const overlayLayer = screen.getByTestId('board-feature-overlay-layer');
+    const startImage = screen.getByTestId('board-feature-start');
+
+    expect(board).toHaveStyle({ height: '930px', position: 'relative', width: '930px' });
+    expect(within(board).getAllByRole('button')).toHaveLength(31 * 31);
+    expect(overlayLayer).toContainElement(startImage);
+    expect(overlayLayer).toHaveStyle({
+      height: '930px',
+      pointerEvents: 'none',
+      position: 'absolute',
+      width: '930px',
+    });
+    expect(startImage).toHaveStyle({
+      height: '60px',
+      left: '0px',
+      pointerEvents: 'none',
+      position: 'absolute',
+      top: '870px',
+      width: '60px',
+    });
+  });
+
+  test('renders each fixed and generated zone once using the lowercase feature image', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    const featureImages = screen.getAllByRole('img', { name: /board feature/i });
+
+    expect(featureImages).toHaveLength(6);
+    [
+      'home.png',
+      'elite-tower-gravel.png',
+      'elite-tower-woods.png',
+      'boss-castle.png',
+      'village-field.png',
+      'village-forest.png',
+    ].forEach((imageName) => {
+      expect(
+        featureImages.filter((image) => image.getAttribute('src').includes(imageName))
+      ).toHaveLength(1);
+    });
+  });
+
+  test('positions one complete image across each multi-square zone', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    const startImage = screen.getByTestId('board-feature-start');
+    const hardFeatureImage = screen.getByTestId('board-feature-feature-2');
+
+    expect(startImage).toHaveStyle({
+      height: '60px',
+      left: '0px',
+      top: '870px',
+      width: '60px',
+    });
+    expect(hardFeatureImage).toHaveStyle({
+      height: '60px',
+      left: '600px',
+      top: '240px',
+      width: '60px',
+    });
+  });
+
 });

@@ -149,7 +149,7 @@ function SpellTokenAssignment({
     >
       <div
         aria-label={isRewardAssignment ? 'Reward token assignment' : 'Spell token assignment'}
-        className={`language-${currentLanguage}`}
+        className={`spell-token-assignment language-${currentLanguage}`}
       >
         <section className="spell-slot-section">
           <div className="spell-slot-scroll">
@@ -198,7 +198,7 @@ function SpellTokenAssignment({
           </div>
         </section>
         <section className="spell-token-source">
-          <p>{tokenSourceLabel ?? translations.tokenBag}</p>
+          <h2>{tokenSourceLabel ?? translations.tokenBag}</h2>
           <TokenDropZone id={TOKEN_BAG_DROP_ZONE_ID} label="Token bag drop zone">
             {displayedTokenBag.length > 0 ? (
               displayedTokenBag.map((token) => (

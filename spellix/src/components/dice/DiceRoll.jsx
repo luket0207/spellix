@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Button from '../common/Button/Button';
 import './DiceRoll.css';
 
 export const PERSISTENT_ROLL_DURATION_MS = 2000;
@@ -154,14 +155,14 @@ function DiceRoll({
       </p>
 
       {mode === 'persistent' ? (
-        <button
+        <Button
           className={rollButtonClassName}
           disabled={disabled || phase !== 'rest'}
           type="button"
           onClick={() => startRoll()}
         >
           {rollButtonLabel}
-        </button>
+        </Button>
       ) : null}
     </section>
   );

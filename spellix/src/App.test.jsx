@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
@@ -244,34 +244,44 @@ describe('App routing flow', () => {
     renderApp();
 
     expect(screen.getByRole('heading', { name: /spellix/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /go to game setup/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/start a new game/i)).not.toBeInTheDocument();
   });
 
   test('shows a valid default setup on the setup page', () => {
     renderApp('/setup');
 
-    expect(screen.getByLabelText(/number of players/i)).toHaveValue('2');
-    expect(screen.getByLabelText(/player 1 colour/i)).toHaveValue('red');
-    expect(screen.getByLabelText(/player 2 colour/i)).toHaveValue('blue');
+    expect(screen.getByRole('button', { name: /^2$/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(
+      within(screen.getByRole('group', { name: /player 1/i })).getByLabelText(/colour/i)
+    ).toHaveValue('red');
+    expect(
+      within(screen.getByRole('group', { name: /player 2/i })).getByLabelText(/colour/i)
+    ).toHaveValue('blue');
   });
 
   test('navigates from the start page to setup and gameplay with stored setup data', async () => {
     renderApp();
 
-    fireEvent.click(screen.getByRole('button', { name: /go to game setup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
     expect(screen.getByRole('heading', { name: /game setup/i })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/number of players/i), {
-      target: { value: '4' },
-    });
-    fireEvent.change(screen.getByLabelText(/player 3 colour/i), {
+    fireEvent.click(screen.getByRole('button', { name: /^4$/i }));
+    fireEvent.change(
+      within(screen.getByRole('group', { name: /player 3/i })).getByLabelText(/colour/i),
+      {
       target: { value: 'orange' },
-    });
-    fireEvent.change(screen.getByLabelText(/player 4 colour/i), {
+      }
+    );
+    fireEvent.change(
+      within(screen.getByRole('group', { name: /player 4/i })).getByLabelText(/colour/i),
+      {
       target: { value: 'purple' },
-    });
+      }
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /start game/i }));
     expect(screen.getByLabelText(/board panel/i)).toBeInTheDocument();
@@ -372,12 +382,12 @@ describe('App routing flow', () => {
   test('updates the number of colour selectors when the player count changes', () => {
     renderApp('/setup');
 
-    fireEvent.change(screen.getByLabelText(/number of players/i), {
-      target: { value: '6' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: /^6$/i }));
 
-    expect(screen.queryByLabelText(/player 7 colour/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/player 6 colour/i)).toHaveValue('orange');
+    expect(screen.queryByRole('group', { name: /player 7/i })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('group', { name: /player 6/i })).getByLabelText(/colour/i)
+    ).toHaveValue('orange');
   });
 
   test('shows the dice result and ends the turn after moving', async () => {
@@ -427,7 +437,8 @@ describe('App routing flow', () => {
     const hardSectionSquare = screen.getByLabelText('Square 28, 3');
 
     expect(board).toHaveStyle({ width: '930px', height: '930px' });
-    expect(board.children).toHaveLength(31 * 31);
+    expect(within(board).getAllByRole('button')).toHaveLength(31 * 31);
+    expect(within(board).getAllByRole('img', { name: /board feature/i })).toHaveLength(6);
 
     expect(screen.getByLabelText(/square 0, 28/i)).toHaveAttribute('data-area-type', 'start-area');
     expect(screen.getByLabelText(/square 0, 0/i)).toHaveAttribute('data-area-type', 'elite-battle');
@@ -719,7 +730,7 @@ describe('App routing flow', () => {
     expect(bossMountainClusterSquareKeys.size).toBeLessThanOrEqual(20);
   });
 
-  test('generates four spaced 2x2 feature areas across the easy and hard sections', () => {
+  test('generates two centrally inset 2x2 feature areas across the easy and hard sections', () => {
     const board = createBoard(
       createCyclingRandomFn([0.1, 0.7, 0.3, 0.9, 0.2, 0.8, 0.4, 0.6, 0.5])
     );
@@ -728,9 +739,9 @@ describe('App routing flow', () => {
     );
     const fixedSquares = board.squares.filter((square) => square.isFixedArea);
 
-    expect(board.features).toHaveLength(4);
-    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(2);
-    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(2);
+    expect(board.features).toHaveLength(2);
+    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(1);
+    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(1);
 
     board.features.forEach((feature) => {
       const featureSquares = [
@@ -750,7 +761,9 @@ describe('App routing flow', () => {
       expect(featureSquares.every((square) => square.section === feature.section)).toBe(true);
       expect(featureSquares.every((square) => square.environmentType === null)).toBe(true);
       expect(featureSquares.every((square) => square.environmentVariation === null)).toBe(true);
-      expect(getMinimumDistanceBetweenSquareSets(featureSquares, fixedSquares)).toBeGreaterThanOrEqual(3);
+      expect(featureSquares.every((square) => square.x >= 7 && square.x <= 23)).toBe(true);
+      expect(featureSquares.every((square) => square.y >= 7 && square.y <= 23)).toBe(true);
+      expect(getMinimumDistanceBetweenSquareSets(featureSquares, fixedSquares)).toBeGreaterThanOrEqual(7);
     });
 
     board.features.forEach((feature, featureIndex) => {
@@ -769,7 +782,7 @@ describe('App routing flow', () => {
           squareLookup.get(getSquareKey(otherFeature.x + 1, otherFeature.y + 1)),
         ];
 
-        expect(getMinimumDistanceBetweenSquareSets(featureSquares, otherFeatureSquares)).toBeGreaterThanOrEqual(3);
+        expect(getMinimumDistanceBetweenSquareSets(featureSquares, otherFeatureSquares)).toBeGreaterThanOrEqual(7);
       });
     });
   });

@@ -4,6 +4,8 @@
   grid-template-rows: repeat(31, 30px);
   width: 930px;
   height: 930px;
+  border: solid 5px #302419;
+  border-radius: 5px;
 }
 
 .board-panel {
@@ -35,6 +37,11 @@
 
 .board-square--feature {
   background: orange;
+}
+
+.board-feature-image {
+  display: block;
+  object-fit: fill;
 }
 
 .board-square--highlighted {

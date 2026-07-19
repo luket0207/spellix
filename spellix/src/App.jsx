@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
+import Button from './components/common/Button/Button';
 import Modal from './components/Modal';
 import { POTION_DEFINITIONS } from './data/potions';
 import DebugModal from './features/debug/DebugModal';
@@ -288,15 +289,15 @@ function App() {
       <Modal
         actions={
           <>
-            <button type="button" onClick={handleOpenDebug}>
+            <Button type="button" onClick={handleOpenDebug}>
               Debug
-            </button>
-            <button type="button" onClick={handleEndGame}>
+            </Button>
+            <Button type="button" onClick={handleEndGame}>
               End Game
-            </button>
-            <button type="button" onClick={() => setIsSettingsOpen(false)}>
+            </Button>
+            <Button type="button" onClick={() => setIsSettingsOpen(false)}>
               Close
-            </button>
+            </Button>
           </>
         }
         ariaLabel="Settings"

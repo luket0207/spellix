@@ -9,6 +9,12 @@ import Stream from './components/environments/stream/stream';
 import Woods from './components/environments/woods/woods';
 import { getPieceImageSource } from '../gameSetup/pieceImages';
 import { getMovementNodeIdFromCoordinates } from './movement';
+import bossCastleImage from '../../images/features/boss-castle.png';
+import eliteTowerGravelImage from '../../images/features/elite-tower-gravel.png';
+import eliteTowerWoodsImage from '../../images/features/elite-tower-woods.png';
+import homeImage from '../../images/features/home.png';
+import villageFieldImage from '../../images/features/village-field.png';
+import villageForestImage from '../../images/features/village-forest.png';
 import './BoardGrid.css';
 
 const PLAYER_MARKER_POSITIONS = [
@@ -30,6 +36,15 @@ const ENVIRONMENT_COMPONENTS = {
   river: River,
   stream: Stream,
   woods: Woods,
+};
+
+const FEATURE_IMAGE_SOURCES = {
+  'boss-castle.png': bossCastleImage,
+  'elite-tower-gravel.png': eliteTowerGravelImage,
+  'elite-tower-woods.png': eliteTowerWoodsImage,
+  'home.png': homeImage,
+  'village-field.png': villageFieldImage,
+  'village-forest.png': villageForestImage,
 };
 
 function getSquareKey(x, y) {
@@ -80,7 +95,7 @@ function BoardGrid({
         style={{
           bottom: `${PLAYER_MARKER_POSITIONS[index]?.bottom ?? 0}px`,
           left: `${PLAYER_MARKER_POSITIONS[index]?.left ?? 0}px`,
-          zIndex: isCurrentPlayer ? PLAYER_MARKER_POSITIONS.length + 1 : index + 1,
+          zIndex: isCurrentPlayer ? PLAYER_MARKER_POSITIONS.length + 3 : index + 3,
         }}
       >
         {isCurrentPlayer ? <span aria-hidden="true" className="board-player-marker-glow" /> : null}
@@ -109,6 +124,7 @@ function BoardGrid({
           gridTemplateRows: `repeat(${board.height}, ${board.squareSize}px)`,
           width: `${board.width * board.squareSize}px`,
           height: `${board.height * board.squareSize}px`,
+          position: 'relative',
         }}
       >
         {board.squares.map((square) => {
@@ -160,6 +176,36 @@ function BoardGrid({
             </div>
           );
         })}
+        <div
+          className="board-feature-overlay-layer"
+          data-testid="board-feature-overlay-layer"
+          style={{
+            width: `${board.width * board.squareSize}px`,
+            height: `${board.height * board.squareSize}px`,
+            inset: 0,
+            pointerEvents: 'none',
+            position: 'absolute',
+            zIndex: 1,
+          }}
+        >
+          {(board.featureImages ?? []).map((featureImage) => (
+            <img
+              key={featureImage.id}
+              alt={`${featureImage.id} board feature`}
+              className="board-feature-image"
+              data-testid={`board-feature-${featureImage.id}`}
+              src={FEATURE_IMAGE_SOURCES[featureImage.imageName]}
+              style={{
+                position: 'absolute',
+                pointerEvents: 'none',
+                left: `${featureImage.x * board.squareSize}px`,
+                top: `${featureImage.y * board.squareSize}px`,
+                width: `${featureImage.width * board.squareSize}px`,
+                height: `${featureImage.height * board.squareSize}px`,
+              }}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

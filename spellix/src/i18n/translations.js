@@ -47,7 +47,9 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     spellSlotLocation: (slotNumber) => `spell slot ${slotNumber}`,
     spells: 'Spells',
     startingTokenWarning:
-      'You must place all 7 starting tokens into spell slots before rolling dice.',
+      'You must place all 7 starting tokens into spell slots before rolling dice. Place your tokens by dragging them from your token bag into the spell slots.',
+    spellsInfo:
+      'Drag and drop tokens from your token bag into spell slots to assign them. Once you have committed your tokens, they cannot be moved again.',
     tokenBag: 'Token Bag',
     tokenBagLocation: 'token bag',
     yes: 'Yes',
@@ -72,8 +74,10 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
       'これらの呪文スロットにトークンを確定しますか？保存後は、ポーションを使用しない限り変更できません。',
     spellSlotLocation: (slotNumber) => `呪文スロット${slotNumber}`,
     spells: '呪文',
-    startingTokenWarning:
-      'サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。',
+     startingTokenWarning:
+      'サイコロを振る前に、7個すべての初期トークンをスペルスロットに配置する必要があります。トークンバッグからスペルスロットにドラッグして、トークンを配置してください。',
+    spellsInfo:
+      'トークンバッグからスペルスロットにトークンをドラッグ＆ドロップして割り当ててください。一度トークンの配置を確定すると、その後は移動できません。',
     tokenBag: 'トークンバッグ',
     tokenBagLocation: 'トークンバッグ',
     yes: 'はい',

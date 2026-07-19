@@ -1,0 +1,42 @@
+.fantasy-button {
+  border: 2px solid;
+  border-radius: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-family: 'Unkempt', cursive;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  padding: 8px 16px;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.fantasy-button--primary {
+  background: #302419;
+  border-color: #C6CC0C;
+  box-shadow: 0 3px 0 #17100B;
+  color: #FFF4CF;
+}
+
+.fantasy-button--secondary {
+  background: #D8C79A;
+  border-color: #665132;
+  box-shadow: 0 3px 0 #3D3020;
+  color: #271D13;
+}
+
+.fantasy-button:not(:disabled):hover {
+  border-color: #F0F56A;
+  box-shadow: 0 3px 0 #17100B, 0 0 10px #C6CC0C;
+  transform: translateY(-2px);
+}
+
+.fantasy-button:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 3px;
+}
+
+.fantasy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

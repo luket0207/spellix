@@ -94,14 +94,14 @@ export const WATER_ENVIRONMENT_CONFIGS = [
 ];
 
 const FEATURE_AREA_CONFIGS = [
-  { section: 'easy', count: 3 },
-  { section: 'hard', count: 3 },
+  { section: 'easy', count: 1 },
+  { section: 'hard', count: 1 },
 ];
 const FEATURE_AREA_WIDTH = 2;
 const FEATURE_AREA_HEIGHT = 2;
-const FEATURE_AREA_EDGE_INSET = 2;
-const FEATURE_AREA_MINIMUM_CLEAR_SPACING = 4;
-const FEATURE_AREA_MINIMUM_SQUARE_DISTANCE = FEATURE_AREA_MINIMUM_CLEAR_SPACING + 1;
+const FEATURE_AREA_EDGE_INSET = 7;
+const FEATURE_AREA_MINIMUM_SQUARE_DISTANCE = 7;
+const FEATURE_AREA_MAXIMUM_RANDOM_ATTEMPTS = 50;
 const EASY_SECTION_MINIMUM_WOODS_SQUARES = 150;
 const HARD_SECTION_MINIMUM_FOREST_SQUARES = 150;
 
@@ -112,6 +112,15 @@ const ORTHOGONAL_DIRECTIONS = [
   { x: 0, y: 1 },
 ];
 const ENVIRONMENT_VARIATION_VALUES = [1, 2, 3, 4, 5, 6];
+
+const FIXED_FEATURE_IMAGE_AREAS = {
+  start: { id: 'start', imageName: 'home.png', x: 0, y: 29, width: 2, height: 2 },
+  boss: { id: 'boss', imageName: 'boss-castle.png', x: 29, y: 0, width: 2, height: 2 },
+};
+const ELITE_FEATURE_IMAGE_NAMES = [
+  'elite-tower-gravel.png',
+  'elite-tower-woods.png',
+];
 
 const START_AREA_POSITION_SEQUENCE = [
   { x: 0, y: 29 },
@@ -440,37 +449,66 @@ function createFeatureAreas(squares, randomFn) {
     }
 
     for (let featureIndex = 0; featureIndex < config.count && candidateOrigins.length > 0; featureIndex += 1) {
-      let placedFeature = false;
+      let selectedOrigin = null;
+      let attemptCount = 0;
 
-      while (candidateOrigins.length > 0 && !placedFeature) {
+      while (
+        candidateOrigins.length > 0 &&
+        !selectedOrigin &&
+        attemptCount < FEATURE_AREA_MAXIMUM_RANDOM_ATTEMPTS
+      ) {
+        attemptCount += 1;
         const candidateIndex = getRandomInteger(0, candidateOrigins.length - 1, randomFn);
         const candidateOrigin = candidateOrigins.splice(candidateIndex, 1)[0];
         const candidateSquares = getFeatureSquares(candidateOrigin.x, candidateOrigin.y, squareLookup);
 
-        if (!canPlaceFeatureArea(candidateSquares, config.section, fixedSquares, placedFeatures)) {
-          continue;
+        if (canPlaceFeatureArea(candidateSquares, config.section, fixedSquares, placedFeatures)) {
+          selectedOrigin = candidateOrigin;
+        }
+      }
+
+      if (!selectedOrigin) {
+        const fallbackIndex = candidateOrigins.findIndex((candidateOrigin) =>
+          canPlaceFeatureArea(
+            getFeatureSquares(candidateOrigin.x, candidateOrigin.y, squareLookup),
+            config.section,
+            fixedSquares,
+            placedFeatures
+          )
+        );
+
+        if (fallbackIndex >= 0) {
+          selectedOrigin = candidateOrigins.splice(fallbackIndex, 1)[0];
+        }
+      }
+
+      if (!selectedOrigin) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`Unable to place a valid ${config.section} board feature.`);
         }
 
-        const feature = {
-          id: `feature-${placedFeatures.length + 1}`,
-          x: candidateOrigin.x,
-          y: candidateOrigin.y,
-          width: FEATURE_AREA_WIDTH,
-          height: FEATURE_AREA_HEIGHT,
-          section: config.section,
-          areaType: 'feature',
-          squares: candidateSquares,
-        };
-
-        candidateSquares.forEach((square) => {
-          square.areaType = 'feature';
-          square.environmentType = null;
-          square.featureId = feature.id;
-        });
-
-        placedFeatures.push(feature);
-        placedFeature = true;
+        continue;
       }
+
+      const candidateSquares = getFeatureSquares(selectedOrigin.x, selectedOrigin.y, squareLookup);
+      const feature = {
+        id: `feature-${placedFeatures.length + 1}`,
+        x: selectedOrigin.x,
+        y: selectedOrigin.y,
+        width: FEATURE_AREA_WIDTH,
+        height: FEATURE_AREA_HEIGHT,
+        section: config.section,
+        areaType: 'feature',
+        squares: candidateSquares,
+      };
+
+      candidateSquares.forEach((square) => {
+        square.areaType = 'feature';
+        square.environmentType = null;
+        square.featureId = feature.id;
+      });
+
+      placedFeatures.push(feature);
     }
   });
 
@@ -956,6 +994,44 @@ export function getAreaType(x, y) {
   return 'normal';
 }
 
+function createFeatureImages(features, randomFn) {
+  const eliteImageNames =
+    randomFn() < 0.5
+      ? ELITE_FEATURE_IMAGE_NAMES
+      : [...ELITE_FEATURE_IMAGE_NAMES].reverse();
+  const generatedFeatureImages = features.map((feature) => ({
+    id: feature.id,
+    imageName:
+      feature.section === 'easy' ? 'village-field.png' : 'village-forest.png',
+    x: feature.x,
+    y: feature.y,
+    width: feature.width,
+    height: feature.height,
+  }));
+
+  return [
+    FIXED_FEATURE_IMAGE_AREAS.start,
+    {
+      id: 'elite-top-left',
+      imageName: eliteImageNames[0],
+      x: 0,
+      y: 0,
+      width: 2,
+      height: 2,
+    },
+    FIXED_FEATURE_IMAGE_AREAS.boss,
+    {
+      id: 'elite-bottom-right',
+      imageName: eliteImageNames[1],
+      x: 29,
+      y: 29,
+      width: 2,
+      height: 2,
+    },
+    ...generatedFeatureImages,
+  ];
+}
+
 export function createBoard(randomFn = Math.random) {
   const squares = [];
 
@@ -992,6 +1068,7 @@ export function createBoard(randomFn = Math.random) {
   balanceEasySectionWoodsCoverage(squares, randomFn);
   balanceHardSectionForestCoverage(squares, randomFn);
   assignEnvironmentVariations(squares, randomFn);
+  const featureImages = createFeatureImages(features, randomFn);
 
   return {
     width: BOARD_WIDTH,
@@ -999,6 +1076,7 @@ export function createBoard(randomFn = Math.random) {
     squareSize: BOARD_SQUARE_SIZE,
     squares,
     features,
+    featureImages,
   };
 }
 

@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShield, faSnowflake } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
@@ -470,9 +471,9 @@ function BattlePage() {
 
       <Modal
         actions={
-          <button type="button" onClick={handleRespawn}>
+          <Button type="button" variant="secondary" onClick={handleRespawn}>
             Respawn
-          </button>
+          </Button>
         }
         ariaLabel="Battle lost"
         isOpen={showLoseModal}

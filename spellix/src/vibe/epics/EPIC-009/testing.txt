@@ -1,0 +1,479 @@
+Feature-001: Reduce board features and update feature placement rules
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and reach the generated board.
+   Expected: Exactly two yellow generated feature areas appear, each occupying a 2x2 group of squares.
+2. Identify the board's easy and hard sections.
+   Expected: One generated feature is fully inside the easy section and one is fully inside the hard section.
+3. Count squares from every occupied feature square to the nearest top, right, bottom, and left map edge.
+   Expected: Every occupied feature square is at least seven squares from every edge; on the 31x31 board all feature squares use coordinates from 7 through 23.
+4. Compare the nearest occupied squares of the two generated features horizontally, vertically, and diagonally.
+   Expected: Their Chebyshev distance is at least seven squares, so diagonal closeness is rejected as well as horizontal or vertical closeness.
+5. Inspect the Start Area, protected Start Area field zone, Elite Battle areas, Boss Battle area, and generated feature squares.
+   Expected: Generated features do not overlap those fixed/protected areas or each other, and all fixed areas remain unchanged.
+6. Start several new games and inspect land environments, streams, rivers, woods, forest, and feature placement each time.
+   Expected: Every board completes without hanging, retains exactly two valid features, and preserves existing environment generation without console errors or placement warnings.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/board.test.js` verifies exactly two features, one per section, four occupied squares per feature, coordinates 7 through 23, seven-square fixed-area clearance, seven-square occupied-area separation including diagonals, protected-zone exclusion, and 25 seeded repeated generations.
+* All 15 board-generator tests passed, including existing Start Area, protected field zone, water path, easy woods, hard forest, fixed-area, feature, water, and mountain preservation checks.
+* The focused `src/App.test.jsx` integration regression passed for the two 2x2 feature areas, section split, board-square metadata, edge bounds, fixed-area clearance, and mutual distance.
+* `src/features/gameBoard/board.js` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The complete `src/App.test.jsx` command hit an existing `source-map-support` `generatedLine` runner error before Jest reported test results; the focused Feature-001 App test passed separately.
+* The broader `src/App.test.jsx` and `src/features/gameBoard/board.test.js` files retain pre-existing Testing Library and conditional-expect lint violations outside the Feature-001 changes. Production `board.js` lint passes.
+* The development warning path for an impossible board has not been forced through the public `createBoard` API because the current 31x31 board always has valid fallback candidates under these rules.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually count the two yellow areas over several generated boards, inspect edge/section placement, confirm fixed areas and environments, and check the console for warnings or errors.
+
+---
+
+Feature-002: Style the start screen with title, fantasy start button, slideshow background, and random enemies
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the root Start screen on a desktop viewport.
+   Expected: The screen shows only the centred `Spellix` title and `Start` action as main content; `Start a new game` and `Go to game setup` are absent.
+2. Inspect the title and Start button.
+   Expected: The title uses Fontdiner Swanky at 72px in `#C6CC0C`; the button uses Unkempt, is smaller than the title, has its bespoke fantasy treatment, and sits exactly 50px below the title.
+3. Hover the Start button, then focus it with the keyboard and activate it.
+   Expected: Hover and keyboard focus remain clearly visible without layout shift, and activation navigates to Game Setup exactly as before.
+4. Stay on the Start screen for at least 48 seconds.
+   Expected: The full-screen, non-tiling background changes every six seconds through fields, hills, gravel, mud, woods, forest, and mountains, then loops to fields.
+5. Watch several enemy appearances at desktop size.
+   Expected: One existing enemy image appears at a time, at varying times and positions, inside a 150px battle-sized box; it disappears automatically and never affects navigation.
+6. Watch the title/button area while enemies appear, then resize to narrow and short viewports while an enemy is visible.
+   Expected: Enemies remain outside the central content plus its buffer; a visible enemy clears on resize, and the title and button remain centred, readable, and above the enemy layer.
+7. Navigate repeatedly between Start and Game Setup, then inspect the console.
+   Expected: Background/enemy timers stop when leaving Start, restart when returning, and no timer, image, font, routing, or console errors appear.
+
+Automated Tests Completed
+
+* `src/pages/StartPage.test.jsx` verifies exact title/button copy, removal of the old sentence, bespoke class use, and unchanged `/setup` navigation.
+* The dedicated suite verifies the six-second background advance and complete seven-image loop using the existing battle environment order.
+* The enemy regression rejects a deliberately overlapping candidate, accepts an outside position, renders one decorative existing enemy image, clears it on resize, and confirms all timers are removed on unmount.
+* CSS/source checks verify central Fontdiner Swanky loading, the requested title colour and 72px size, Unkempt button styling and hover rule, 50px title/button gap, cover/no-repeat full-screen background, 150px enemy box, and required layer order.
+* All four dedicated Start page tests passed.
+* The existing App Start-render and Start-page settings-modal checks passed with the new screen, and the dedicated navigation test independently confirms the Start action reaches `/setup`.
+* `src/pages/StartPage.jsx` and `src/pages/StartPage.test.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully with the reused background and enemy assets.
+
+Automated Tests Still Needed
+
+* The existing App test filtered by `start` also selected two unrelated stale assertions: one expects old player-specific setup colour labels after Start navigation, and one expects the Start Area at the old `0, 28` coordinate. Both fail after reaching their unrelated assertions; the Feature-002 Start-render/settings checks pass.
+* JSDOM cannot verify actual Google Font rendering, image visual quality, hover appearance, random timing feel, viewport composition, or memory behavior over extended real-browser navigation.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for actual font loading, all seven visual backgrounds, enemy image sizing and randomness, safe-zone behavior across responsive viewports, hover/focus appearance, repeated navigation cleanup, and console errors.
+
+---
+
+Feature-003: Create global fantasy Button component and apply it across the game
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a game and inspect setup, gameplay, persistent dice, reward, potion-capacity, and settings actions.
+   Expected: Each normal action uses the shared fantasy treatment, remains readable, and performs exactly the same action as before.
+2. Open the Spells modal, movement confirmations, turn notification, and battle-loss Respawn modal.
+   Expected: Yes, No, Cancel, Save, OK, and Respawn use the less-prominent secondary treatment while preserving their existing handlers.
+3. Hover and keyboard-focus enabled primary and secondary buttons, then inspect disabled buttons.
+   Expected: Enabled buttons have clear hover/focus feedback; disabled buttons look disabled and do not receive the active hover treatment.
+4. Inspect the Start screen, floating settings cog, debug modal, debug battle controls, forced-dice controls, and draggable spell tokens.
+   Expected: These explicit exclusions retain their existing bespoke, icon, debug, or draggable control styling.
+5. Submit Game Setup and exercise converted actions in English and Japanese.
+   Expected: Form submission, routing, disabled logic, action labels, and translation font classes remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* `src/components/common/Button/Button.test.jsx` passed all three behavior and CSS-contract tests for the primary default, secondary variant, prop forwarding, submit type, disabled state, focus, and guarded hover styling.
+* `src/components/common/Button/ButtonAdoption.test.jsx` passed all nine source contracts covering every in-scope surface, primary/secondary classification, settings actions, battle Respawn, and all required exclusions.
+* Focused settings-modal coverage passed all three settings access flows, and the focused battle loss/Respawn interaction passed.
+* The affected regression batch passed 42 of 48 tests, including the complete Game Setup and Start suites; the six failures are stale display-copy/count assertions from earlier Epic-009 work rather than Button behavior.
+* All Feature-003 production and test files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* Existing stale assertions remain in the DiceRoll, Gameplay, Reward, and Spells modal suites. They expect superseded result labels or token-count copy and fail after the converted controls have already rendered or handled their interactions.
+* JSDOM and source contracts cannot verify the final visual prominence, font rendering, hover feel, or responsive composition in a real browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to compare primary and secondary visual hierarchy, hover/focus/disabled appearance, responsive layouts, English/Japanese font rendering, every converted action, preserved exclusions, and the browser console.
+
+---
+
+Bug-001: Start screen background and enemy appearances need fade animations
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the Start screen and watch one background for 15 seconds.
+   Expected: The background remains unchanged for the full interval, then smoothly crossfades to the next existing battle background over about 1.5 seconds without a white or blank flash.
+2. Leave the Start screen open through all seven backgrounds.
+   Expected: Fields, hills, gravel, mud, woods, forest, and mountains appear in order and the slideshow crossfades back to fields after the seventh interval.
+3. Watch several decorative enemy appearances.
+   Expected: One 150px existing enemy image fades in over 600ms, remains visible briefly, fades out over 600ms, and is removed only after its fade-out finishes.
+4. Watch enemies near the central content and resize the window while an enemy is visible.
+   Expected: Enemies remain outside the title/button safe zone; resizing clears the current enemy and does not affect title, button, or background layering.
+5. Click Start, return to the Start screen several times, and inspect the console.
+   Expected: Navigation remains unchanged, slideshow/enemy timers and animation frames are cleaned up when leaving, and no timer or rendering errors appear.
+
+Automated Tests Completed
+
+* `src/pages/StartPage.test.jsx` passed all five tests, including the unchanged bespoke Start action and `/setup` navigation.
+* The background regression proves no change occurs at 14,999ms, the next layer becomes visible at 15,000ms, and all seven layers loop back to fields.
+* The enemy regression proves hidden mounting, fade-in class activation, fade-out while still mounted, removal after 600ms, safe-zone placement, resize clearing, and zero remaining timers after unmount.
+* CSS contracts verify 1500ms background opacity transitions, 600ms enemy opacity transitions, full-screen background coverage, 150px enemy sizing, and unchanged layer order.
+* Focused `src/App.test.jsx` Start rendering and Start-page settings-modal regressions both passed.
+* `src/pages/StartPage.jsx` and `src/pages/StartPage.test.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* JSDOM can verify transition state and timing but cannot render or judge the visual smoothness of CSS opacity interpolation or detect a real-browser image-loading flash.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm perceived fade smoothness, absence of image-loading flashes, safe-zone behavior across real viewport sizes, repeated navigation cleanup, title/button readability, and console output.
+
+---
+
+Bug-002: Start screen enemy fade timing and Spellix title background polish
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the Start screen and watch several enemies enter and leave.
+   Expected: Each enemy fades in and fades out at the same smooth one-second pace without popping or disappearing before the exit fade completes.
+2. Observe enemy placement while the longer fades run.
+   Expected: One existing 150px enemy appears at a time, remains outside the expanded title/button safe zone, and retains random timing and positioning.
+3. Inspect the `Spellix` title.
+   Expected: The title has a rounded black background at 50% alpha while the yellow title text remains fully opaque, Fontdiner Swanky, and 72px.
+4. Watch the title background for several seconds.
+   Expected: A black glow pulses slowly over a three-second cycle without moving the title or making it unreadable.
+5. Click Start, return to the Start screen, resize the window, and inspect the console.
+   Expected: Start navigation, centring, enemy resize clearing, timer cleanup, background timing/crossfade, and console behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/StartPage.test.jsx` passed all five tests.
+* The enemy timing regression proves fade-out begins while the enemy remains mounted, the enemy is still present at 999ms, and removal occurs at 1000ms; the same one-second CSS transition controls both opacity directions.
+* CSS contracts verify `ease-in-out`, the 50%-alpha black title background, 24px radius, padding, fully opaque title rule, unchanged font/colour/size, and the three-second black glow keyframes.
+* Existing regressions continue to prove seven-background timing/looping, safe-zone placement, resize and unmount cleanup, bespoke Start styling, and `/setup` navigation.
+* Focused `src/App.test.jsx` Start rendering and Start-page settings-modal tests both passed.
+* `src/pages/StartPage.jsx` and `src/pages/StartPage.test.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* JSDOM cannot render or judge the perceived smoothness of the one-second fades, the pulsing box-shadow, font rendering, or visual readability over every background image.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm balanced fade pacing, full exit visibility, glow subtlety, title readability, responsive safe-zone behavior, repeated navigation cleanup, and console output.
+
+---
+
+Feature-004: Style global modals with fantasy background image
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open settings, Spells, spell-save/cancel confirmations, turn-change, battle-turn, and battle-loss/Respawn modals.
+   Expected: Every normal modal uses `modalBackground.png`, has bold `#F5FA00` text, remains centred, and keeps its existing content and actions.
+2. Inspect normal modals on a viewport wider than 632px and taller than 432px.
+   Expected: Each normal modal is at least 600px wide and 400px high; the background image stretches across the full panel without the old white background showing.
+3. Resize below the normal minimum dimensions and open content-heavy Spells or debug modals.
+   Expected: The panel stays within 16px of each viewport edge and scrolls internally when needed, so content and controls remain usable.
+4. Roll the dice from Gameplay and observe the temporary dice-result modal through its full sequence.
+   Expected: The dice modal retains its previous white 320px responsive panel, text treatment, dice animation, timing, and automatic close behavior.
+5. Exercise English/Japanese modal text and click modal actions including Yes, No, Cancel, Save, OK, Close, and Respawn.
+   Expected: Translations, language classes, shared Button variants, handlers, routing, and game state changes remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* `src/components/Modal.test.jsx` passed all four tests for the default fantasy class, existing prop/custom-class behavior, isolated dice class, CSS requirements, and the single dice-variant call site.
+* CSS contracts verify the stretched `modalBackground.png`, bold `#F5FA00` text, responsive 600px by 400px minimum, and unchanged legacy white/bordered 320px dice panel declarations.
+* Focused Gameplay coverage passed forced Spells setup, translated modal labels, and unchanged no-change Cancel behavior; the dice flow reached the isolated dice modal before its unrelated stale result-copy assertion.
+* Focused settings modal access tests passed, all ten DebugModal tests passed, and both battle-turn language and battle-loss/Respawn regressions passed.
+* Spells modal regressions render the new default class and pass later normal/Japanese visits; one unrelated stale token-count assertion still expects `0 of 5 tokens` instead of the current `0 / 5`.
+* `src/components/Modal.jsx`, `src/components/Modal.test.jsx`, and `src/pages/GameplayPage.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* Existing stale display-copy assertions remain in the focused Gameplay dice test and first Spells modal test; both fail after the relevant modal has rendered successfully and are outside Feature-004 styling scope.
+* JSDOM and source contracts cannot verify image rendering quality, text contrast, physical viewport dimensions, internal scrolling feel, or visual centring in a real browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed across all normal modal surfaces and the excluded dice modal to verify background stretching, text readability, 600px by 400px desktop sizing, small-screen scrolling, translations, actions, and console output.
+
+---
+
+Feature-005: Style Game Setup page with slideshow background and fantasy setup container
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Game Setup and compare its background with Start for at least 15 seconds.
+   Expected: The same seven battle backgrounds cover the page and crossfade on the same 15-second schedule; no decorative enemies appear on Setup.
+2. Inspect Setup on a desktop viewport at least 832px by 632px.
+   Expected: A centred 800px by 600px `modalBackground.png` panel contains the bilingual Fontdiner Swanky `#C6CC0C` title, yellow panel text, count controls, player pods, and Start Game action.
+3. Click player-count buttons 2 through 6.
+   Expected: The selected secondary button has a clear active state, exactly that many player pods exist, removed players no longer reserve colours, and newly added players receive valid defaults.
+4. Select six players and inspect/edit every pod.
+   Expected: Players 1-3 occupy the left column, Players 4-6 occupy the right column, each pod is 350px by 150px, and language, gender, colour, exclusivity, and piece-image state behave as before.
+5. Resize to a viewport narrower than 760px and shorter than 600px.
+   Expected: The panel remains within the viewport, pods use a single readable column, and internal scrolling keeps all fields and Start Game accessible.
+6. Click the secondary `Start Game - ゲーム開始` action after changing the player count and colours.
+   Expected: Gameplay opens with the selected player state, while setup labels/options, routing, board generation, and console behavior remain unchanged.
+
+Automated Tests Completed
+
+* `src/pages/GameSetupPage.test.jsx` and `src/pages/StartPage.test.jsx` passed all 14 tests.
+* Setup tests verify all five secondary count buttons, selected `aria-pressed` state, adding/removing pods, six-player defaults, independent languages, gender/piece updates, colour exclusivity, no old count combobox, and secondary Start Game styling.
+* Shared slideshow coverage verifies the same fields-to-hills transition at 15 seconds on Setup, the complete seven-image Start loop, timer cleanup, and the absence of Start-only enemy markup on Setup.
+* CSS/source contracts verify the responsive 800px by 600px image panel, required title/font/colour rules, 350px by 150px pods, explicit 1-3/4-6 columns, readable select styling, and narrow-screen fallback.
+* Three focused App setup tests pass for default state, route rendering, and six-player expansion. The full Start-to-Setup-to-Gameplay flow reaches the generated board with the selected orange/purple player state before a pre-existing stale turn-sentence assertion.
+* `src/components/BattleBackgroundSlideshow.jsx`, StartPage files, and GameSetupPage files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* The focused App navigation test still expects a removed `It is currently red player's turn.` sentence after successfully reaching Gameplay; this stale assertion is unrelated to Feature-005 setup behavior.
+* The broader `src/App.test.jsx` file retains 15 pre-existing Testing Library and conditional-expect lint violations outside the Feature-005 edits.
+* JSDOM and source contracts cannot verify actual background rendering, font fallback rendering, visual fit of six pods, active-button prominence, physical dimensions, or scrolling usability in a real browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for the full slideshow, exact desktop panel/pod dimensions, all six-pod fit, fonts and text contrast, active count styling, select readability, narrow-screen scrolling, Start Game navigation, and console output.
+
+---
+
+Feature-006: Improve Token Assignment layout and shared modal spacing
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the forced starting-token Spells modal in English and Japanese.
+   Expected: The translated Spells title is bold and 32px, the starting-token warning remains conditional and sits about 30px below it, and the 150px player image stays in the top-right without overlapping the copy.
+2. Inspect all six spell columns in the starting setup and a later normal Spells visit.
+   Expected: Each heading remains only its number, is centred at 42px, and each drop zone has a dark-brown background with a very-dark-brown border rather than a black border.
+3. Drag tokens over a spell slot and the token bag, then move away, cancel, and complete valid drops.
+   Expected: The active target changes to lighter brown only while hovered, clears afterward, token-bag text remains yellow and readable, and existing assignment behavior is unchanged.
+4. Complete a battle that grants a token reward and exercise slot, bag, discard, and replacement assignment paths.
+   Expected: The reward screen uses the same default and active drop-zone styling while preserving staging, confirmation, capacity, and replacement behavior.
+5. Open normal settings, Spells, turn, and battle modals, then roll dice.
+   Expected: Normal fantasy modals have 50px internal padding and no black outer border; the isolated dice modal keeps its previous 16px padding, white background, black border, sizing, and behavior.
+
+Automated Tests Completed
+
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies 42px centred slot headings, dark-brown drop surfaces, lighter-brown `isOver` styling, yellow token-bag text, and the existing shared drag-state class that clears with the droppable state.
+* `src/features/spells/SpellsModal.test.jsx` verifies the translated title and warning remain grouped, the required 32px/30px styling, the 150px aspect-ratio-preserving player image, forced-warning visibility, later normal visits, and Japanese copy.
+* `src/components/Modal.test.jsx` verifies normal modals use 50px padding and no border while the dice variant retains 16px padding, its black border, white background, and isolated Gameplay call site.
+* The focused shared Spells, modal, RewardPage, and reward-assignment batch passed all 46 tests, including normal and reward token rendering and assignment behavior.
+* All JavaScript files changed for Feature-006 passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* JSDOM and stylesheet contracts cannot render the actual colour contrast, spacing, image overlap, modal background fit, or pointer-driven drag transition timing in a real browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed across starting setup, normal Spells, reward assignment, normal modal consumers, and the excluded dice modal to confirm visual spacing, colour contrast, drag-over transitions, responsive fit, and console output.
+
+---
+
+Bug-003: Token Assignment modal should expand to fit spell columns and fix drop zone/token name styling
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open the forced starting-token Spells modal on a viewport wide enough for all six columns.
+   Expected: The fantasy modal expands to the assignment content, retains its 50px padding and borderless background, and shows all six columns without a spell-column scroll bar or clipping.
+2. Open the normal Spells modal and inspect the spell-slot wrapper and drop zones.
+   Expected: The wrapper does not scroll or hidden-scroll, each dark-brown drop zone has an 8px corner radius, and the lighter-brown drag-over state still appears and clears normally.
+3. Inspect token names in the token bag, available/new reward token area, and discard or replacement previews.
+   Expected: Every visible token name in the shared assignment surface is `#F5FA00`, names inside spell slots remain hidden, and names still disappear while dragging.
+4. Complete valid token drops in starting setup, a later Spells visit, and reward assignment.
+   Expected: Slot, bag, discard, staging, confirmation, capacity, and replacement behavior remain unchanged.
+5. Repeat the modal check on a viewport too narrow for the full desktop layout.
+   Expected: Scrolling falls back to the existing modal-level overflow, not the spell-slot wrapper, so no column becomes inaccessible and the dice modal remains unchanged.
+
+Automated Tests Completed
+
+* The bug was reproduced with focused contracts: the 960px border-box modal left only 860px after padding for a 900px six-column row, `.spell-slot-scroll` used `overflow-x: auto`, drop zones lacked the requested radius, and yellow names were scoped only to the token bag.
+* `src/features/spells/SpellTokenAssignment.test.jsx` verifies the shared assignment class, visible wrapper overflow with no `auto` or `scroll`, fixed columns, 8px dark-brown drop zones, active drag styling, assignment-wide yellow token names, and preserved drag-name hiding.
+* `src/features/spells/SpellsModal.test.jsx` verifies the content-sized modal width and viewport maximum alongside the existing translated title, warning, and player-image layout.
+* The focused shared Spells, modal, RewardPage, and reward-assignment batch passed all 46 tests.
+* All JavaScript files changed for Bug-003 passed the repository-installed ESLint binary.
+* `npm run build` completed successfully.
+
+Automated Tests Still Needed
+
+* JSDOM and stylesheet contracts cannot calculate physical overflow, render the fantasy background, or exercise pointer drag transitions at real viewport sizes.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed at wide and narrow viewport sizes to confirm physical modal fit, absence of assignment-level scroll bars, token-name contrast, drag-over appearance, modal-level responsive scrolling, and console output.
+
+---
+
+Feature-007: Centre all modal buttons horizontally
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Settings and inspect its Debug, End Game, and Close buttons, then activate Close.
+   Expected: All three buttons are centred as one group with consistent spacing, wrap if the modal narrows, and Close still dismisses Settings.
+2. Open the save and cancel confirmation modals from Spells.
+   Expected: Each Yes/No pair is centred as a group, retains the secondary Button variant, and performs its existing confirm or dismiss action.
+3. Open the turn-change and battle-loss modals.
+   Expected: The single OK or Respawn action is horizontally centred and its existing handler still closes or advances the flow.
+4. Open forced and normal Spells assignment modals.
+   Expected: Cancel and Save are centred with the same 16px action spacing, wrap cleanly when needed, and preserve their disabled state and handlers.
+5. Roll dice and compare the temporary dice modal with normal modals at wide and narrow viewport sizes.
+   Expected: Normal action rows remain centred and wrapped; the separately styled translucent 220px dice modal remains unchanged and receives no normal action wrapper.
+
+Automated Tests Completed
+
+* `src/components/Modal.test.jsx` verifies one and three normal actions render inside the shared action row, all wrapped click handlers still fire, the row uses centred flex layout with 16px spacing and wrapping, and dice actions remain outside that normal wrapper.
+* `src/features/spells/SpellsModal.test.jsx` verifies the existing nested Spells action row uses centred, wrapping 16px layout while preserving the current user-side title, warning, image, and modal-width styling.
+* The shared Modal and global Button adoption batch passed all 14 tests, confirming existing primary/secondary classifications and required exclusions were not changed.
+* All 10 DebugModal tests passed, including its single Close action and existing debug interactions.
+* All three focused battle loss/Respawn tests passed, including the centred action's existing state transitions.
+* The focused Settings open/close App test passed. Two selected App Spells tests stop at stale removed-copy assertions after their modals render.
+* The Gameplay suite passed 11 of 13 tests, including forced setup, turn-change modal, and modal rendering paths. Its two existing failures expect old dice-result copy and the former 100px Spells image.
+* `src/components/Modal.jsx`, `src/components/Modal.test.jsx`, and `src/features/spells/SpellsModal.test.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* The stale App and Gameplay assertions should be updated in their own scoped maintenance pass before those complete files can provide a fully green regression signal.
+* JSDOM and stylesheet contracts cannot judge physical centring, wrapping appearance, or touch-sized viewport behavior in a real browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed across settings, confirmation, Spells, turn-change, battle-loss, and any potion/reward modal that supplies shared actions to confirm physical centring, wrapping, spacing, click behavior, dice exclusion, and console output.
+
+---
+
+Feature-008: Display feature images on the board
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and inspect all fixed board zones.
+   Expected: The bottom-left Start zone shows one complete `home.png`, the top-right Boss zone shows one complete `boss-castle.png`, and the two Elite zones show exactly one gravel tower and one woods tower.
+2. Return to setup and generate several new boards while comparing the two Elite zones.
+   Expected: Each board keeps its Elite assignment throughout play, both tower images are always present exactly once, and new boards can reverse which Elite zone receives each image.
+3. Inspect the generated easy and hard features on several boards.
+   Expected: The easy 2x2 feature shows one complete `village-field.png`, the hard 2x2 feature shows one complete `village-forest.png`, and both images follow their generated positions without tiling.
+4. Roll and move onto or across Start, Elite, Boss, and generated feature squares.
+   Expected: Squares remain clickable, legal movement highlighting remains visible, grouped-zone movement remains unchanged, and player pieces stay above every feature image.
+5. Exercise the existing Elite, Boss, and generated-feature gameplay flows, then inspect the browser console.
+   Expected: Existing triggers and outcomes are unchanged, all six lowercase image imports load, and no rendering or import errors appear.
+
+Automated Tests Completed
+
+* Tests were added first and failed on the missing `featureImages` board state and missing overlay rendering before implementation.
+* `src/features/gameBoard/board.test.js` verifies six stored image zones, exact fixed and generated geometry, lowercase filenames, one of each Elite image, and both possible Elite assignments from separate board generations.
+* `src/features/gameBoard/BoardGrid.test.jsx` verifies all six assets render exactly once as one grid-spanning image per zone, with the expected Start and generated-feature grid coordinates. Existing marker tests verify player z-index starts above the feature-image and highlight layers.
+* The final board, BoardGrid, and movement batch passed all 34 tests, preserving generated-feature placement rules and grouped-zone movement behavior.
+* `src/features/gameBoard/board.js` and `src/features/gameBoard/BoardGrid.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, all feature image references were confirmed lowercase, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* The targeted `src/App.test.jsx` integration subset could not start because the existing source-map-support stack crashed while preparing the suite, even after clearing Jest's cache.
+* An attempted full-suite run passed 34 of 41 suites and 341 of 358 tests. The remaining failures are existing current-worktree expectations outside this feature, including stale dice/UI assertions and the same App source-map crash.
+* JSDOM cannot visually confirm full-image fit, pixel alignment, overlap, or the apparent stacking order in a browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm image fit and alignment, Elite assignment persistence and variation, pointer interaction, player/highlight stacking, existing feature and battle flows, and console output.
+
+---
+
+Bug-004: Feature images must overlay board areas without displacing the map grid
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a new game and inspect the complete board before moving any player.
+   Expected: The map remains a 31x31 grid measuring 930px by 930px, every square remains 30px by 30px, and no row or column is shifted by a feature image.
+2. Compare the Start, Boss, both Elite, and both generated feature images with their underlying squares.
+   Expected: Each image covers its existing 2x2 area exactly, without creating cells, moving environment tiles, or changing the stored area type.
+3. Roll the dice and select highlighted destinations around fixed and generated feature areas.
+   Expected: Highlights align with the intended squares, clicks pass through the pointer-transparent feature layer, and movement behavior is unchanged.
+4. Move player pieces onto feature-image areas and exercise the existing feature and battle flows.
+   Expected: Player pieces remain above the images, and Start, Elite, Boss, and generated-feature behavior remains unchanged.
+5. Inspect the board at the edges and check the browser console.
+   Expected: All overlays remain inside the 930px board, lowercase assets load, and no layout, image, or interaction errors appear.
+
+Automated Tests Completed
+
+* The bug was reproduced with a failing BoardGrid test: all six feature images were direct CSS Grid children before the first square and no non-displacing overlay layer existed.
+* `src/features/gameBoard/BoardGrid.test.jsx` now renders a full 31x31 fixture and verifies the 930px relative board retains all 961 square controls while all six images live inside one 930px absolute, pointer-transparent overlay layer.
+* BoardGrid tests verify image positions and dimensions are calculated from the existing board coordinates and 30px square size, including the bottom-left Start area and generated hard feature.
+* The final board-generation, BoardGrid, and movement batch passed all 35 tests, including feature geometry, grouped fixed areas, legal destinations, and river movement behavior.
+* `src/features/gameBoard/BoardGrid.jsx` passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* JSDOM does not perform browser layout or pointer hit-testing, so it cannot visually prove pixel alignment, stacking appearance, or real pointer pass-through.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm physical 31x31 alignment, image fit, player/highlight stacking, pointer interaction, existing area triggers, and console output.

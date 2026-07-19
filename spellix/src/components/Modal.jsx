@@ -1,6 +1,13 @@
 import './Modal.css';
 
-function Modal({ actions, ariaLabel, children, isOpen, panelClassName = '' }) {
+function Modal({
+  actions,
+  ariaLabel,
+  children,
+  isOpen,
+  panelClassName = '',
+  variant = 'default',
+}) {
   if (!isOpen) {
     return null;
   }
@@ -10,11 +17,19 @@ function Modal({ actions, ariaLabel, children, isOpen, panelClassName = '' }) {
       <div
         aria-label={ariaLabel}
         aria-modal="true"
-        className={`modal-panel${panelClassName ? ` ${panelClassName}` : ''}`}
+        className={`modal-panel modal-panel--${variant}${
+          panelClassName ? ` ${panelClassName}` : ''
+        }`}
         role="dialog"
       >
         {children}
-        {actions}
+        {actions && variant === 'default' ? (
+          <div className="modal-actions" data-testid="modal-actions">
+            {actions}
+          </div>
+        ) : (
+          actions
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
@@ -280,7 +281,7 @@ function GameplayPage() {
               height: '150px',
               player: currentPlayer,
               style: {
-                alignSelf: 'flex-start',
+                alignSelf: 'center',
                 width: 'auto',
               },
             })}
@@ -293,7 +294,7 @@ function GameplayPage() {
           <p>Preparing turn order.</p>
         )}
 
-        <button
+        <Button
           className={languageClassName}
           type="button"
           disabled={
@@ -306,16 +307,16 @@ function GameplayPage() {
           onClick={handleRollDice}
         >
           {gameplayTranslations.rollDice}
-        </button>
+        </Button>
 
-        <button
+        <Button
           className={languageClassName}
           disabled={!currentPlayer || showDiceModal || showSpellsModal || showTurnModal}
           type="button"
           onClick={() => setShowSpellsModal(true)}
         >
           {gameplayTranslations.spells}
-        </button>
+        </Button>
 
         {currentPlayer?.hasCommittedInitialSpells ? (
           <CommittedSpellSlots
@@ -350,20 +351,22 @@ function GameplayPage() {
       <Modal
         actions={
           <>
-            <button
+            <Button
               className={languageClassName}
               type="button"
+              variant="secondary"
               onClick={handleConfirmSpellCancel}
             >
               {spellAssignmentTranslations.yes}
-            </button>
-            <button
+            </Button>
+            <Button
               className={languageClassName}
               type="button"
+              variant="secondary"
               onClick={() => setShowSpellCancelConfirmation(false)}
             >
               {spellAssignmentTranslations.no}
-            </button>
+            </Button>
           </>
         }
         ariaLabel="Cancel spells confirmation"
@@ -375,31 +378,34 @@ function GameplayPage() {
       <Modal
         actions={
           <>
-            <button
+            <Button
               className={languageClassName}
               type="button"
+              variant="secondary"
               onClick={handleConfirmSpellSave}
             >
               {spellAssignmentTranslations.yes}
-            </button>
-            <button
+            </Button>
+            <Button
               className={languageClassName}
               type="button"
+              variant="secondary"
               onClick={() => setShowSpellSaveConfirmation(false)}
             >
               {spellAssignmentTranslations.no}
-            </button>
+            </Button>
           </>
         }
         ariaLabel="Save spells confirmation"
         isOpen={showSpellSaveConfirmation}
       >
-        <p className={languageClassName}>{spellAssignmentTranslations.saveConfirmation}</p>
+        <p className={`larger-text ${languageClassName}`}>{spellAssignmentTranslations.saveConfirmation}</p>
       </Modal>
 
       <Modal
         ariaLabel="Dice result"
         isOpen={showDiceModal}
+        variant="dice"
       >
         {currentPlayer?.anywhereMode ? <p>Anywhere Mode</p> : null}
         <DiceRoll
@@ -412,22 +418,28 @@ function GameplayPage() {
       {currentPlayer ? (
         <Modal
           actions={
-            <button type="button" onClick={() => setShowTurnModal(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowTurnModal(false)}
+            >
               OK
-            </button>
+            </Button>
           }
           ariaLabel="Turn change"
           isOpen={showTurnModal}
         >
-          <p className={languageClassName}>
+          <div className="turn-change-modal-content">
+          <h1 className={languageClassName}>
             {getNextTurnMessage(currentLanguage, currentPlayer.colour)}
-          </p>
+          </h1>
           {renderPlayerPiece({
             ariaLabel: 'Turn change player piece',
             className: 'turn-change-player-piece',
-            height: '150px',
+            height: '200px',
             player: currentPlayer,
           })}
+          </div>
         </Modal>
       ) : null}
     </main>

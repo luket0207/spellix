@@ -1,0 +1,870 @@
+---
+
+Bug-001: Start screen background and enemy appearances need fade animations
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Style the start screen with title, fantasy start button, slideshow background, and random enemies
+
+Bug Summary
+
+* The Start screen background slideshow currently changes too sharply.
+* Backgrounds should fade between each other instead of instantly switching.
+* Each background should stay on screen longer.
+* Enemy images should also fade in and fade out when they appear and disappear.
+
+Repro Steps
+
+* Open the Start screen.
+* Watch the background slideshow.
+* Observe how the background changes.
+* Watch the random enemy images appear and disappear.
+* Check whether the background and enemy image transitions are sharp or animated.
+
+Expected Behaviour
+
+* Each background image should stay visible for:
+
+```txt id="0nl8ct"
+15 seconds
+```
+
+* Background changes should use a fade transition.
+* The background should not sharply snap from one image to the next.
+* The fade should feel smooth and subtle.
+* Random enemy images should fade in when they appear.
+* Random enemy images should fade out when they disappear.
+* Enemy images should still appear at random positions and random times.
+* Enemy images should still stay outside the title/button safe zone.
+* The title and Start button should remain readable throughout transitions.
+
+Actual Behaviour
+
+* Backgrounds change sharply.
+* Backgrounds currently change too quickly.
+* Enemy images appear/disappear too sharply.
+
+Required Fix
+
+* Change the Start screen background slideshow duration from 6 seconds to 15 seconds.
+* Add a fade transition between background images.
+* Add fade-in and fade-out behaviour to random enemy image appearances.
+* Ensure timers are still cleaned up when leaving the Start screen.
+* Ensure the fade transition does not break the looping slideshow.
+* Ensure enemy images do not fade in behind the title or Start button.
+* Ensure the safe zone still applies before enemy images are positioned.
+
+Background Slideshow Timing Requirement
+
+* Replace the old duration:
+
+```txt id="fhzj5d"
+6 seconds
+```
+
+* With the new duration:
+
+```txt id="95fwxc"
+15 seconds
+```
+
+* The background should remain visible for the full 15 seconds before transitioning.
+* The fade transition can be included within the timing if simpler, but the background should not feel like it changes too frequently.
+
+Background Fade Requirement
+
+* Use a fade between background images.
+* Acceptable implementation:
+
+  * crossfade between two background layers.
+  * fade out current image and fade in next image.
+  * use CSS opacity transitions.
+* Avoid a sharp background swap.
+* The fade should be smooth.
+* Suggested transition duration:
+
+```txt id="ql2o4k"
+1s to 2s
+```
+
+* Exact duration can vary if it feels better.
+* The background should continue to cover the screen.
+* The background should not flash white or blank during transitions.
+
+Enemy Fade Requirement
+
+* Enemy images should fade in when they appear.
+* Enemy images should fade out before they are removed or replaced.
+* The enemy should not pop in sharply.
+* The enemy should not vanish sharply.
+* The fade should be simple and smooth.
+* Enemy image size should remain the same as battle enemy size.
+* Enemy image positioning rules from Feature-002 still apply.
+
+Suggested Enemy Animation Direction
+
+```css id="4n41bu"
+.start-screen-enemy {
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.start-screen-enemy.is-visible {
+  opacity: 1;
+}
+```
+
+* Exact class names can vary.
+* Use a cleanup delay if needed so the enemy is only removed after fade-out completes.
+
+Layering Requirement
+
+* Background layers should remain behind everything.
+* Enemy images should remain above the background.
+* Title and Start button should remain above enemy images.
+* Fades should not change the z-index layering.
+* The safe zone should still prevent enemies appearing behind the title or button.
+
+Out Of Scope
+
+* No changes to the Spellix title styling.
+* No changes to the Start button styling.
+* No changes to Start button behaviour.
+* No new battle backgrounds.
+* No new enemy images.
+* No changes to enemy safe zone size unless needed to preserve the current no-overlap rule.
+* No changes to routing.
+* No changes to Game Setup.
+* No unrelated Start screen redesign.
+
+Suspected Cause
+
+* The slideshow likely swaps the background image immediately instead of using overlapping layers or opacity transitions.
+* Enemy images may be mounted and unmounted immediately with no visible transition.
+* The old Feature-002 duration was 6 seconds and now needs to be updated.
+
+Attempted Fixes
+
+* Replaced the single inline background image with persistent background layers so the outgoing and incoming images can overlap during opacity transitions.
+* Increased the slideshow interval from 6 seconds to 15 seconds and kept the existing seven-background order and looping behavior.
+* Added explicit enemy fade-in and fade-out state, retaining the enemy element for 600ms after fade-out begins before removing it and scheduling the next appearance.
+* Preserved immediate enemy clearing on resize and added cleanup for the animation frame plus all appearance, fade, removal, and slideshow timers.
+
+Final Fix
+
+* Start backgrounds now crossfade over 1500ms after each full 15-second display interval without a blank intermediate state.
+* Decorative enemies now transition from hidden to visible and back over 600ms, then unmount only after fade-out completes.
+* The existing safe-zone calculation, 150px enemy size, layering, random timing/positioning, asset set, and Start navigation remain unchanged.
+
+Testing Required
+
+* Confirm background images stay on screen for 15 seconds.
+* Confirm backgrounds no longer change every 6 seconds.
+* Confirm background transitions fade smoothly.
+* Confirm there is no blank flash between backgrounds.
+* Confirm the slideshow still loops.
+* Confirm each battle background can still appear.
+* Confirm enemy images fade in when they appear.
+* Confirm enemy images fade out before disappearing.
+* Confirm enemy images still appear at random times.
+* Confirm enemy images still appear at random positions.
+* Confirm enemy images stay outside the title/button safe zone.
+* Confirm enemy images remain the same size as battle enemies.
+* Confirm title remains readable during fades.
+* Confirm Start button remains readable during fades.
+* Confirm clicking Start still navigates to Game Setup.
+* Confirm timers are cleaned up when leaving the Start screen.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+---
+Bug-002: Start screen enemy fade timing and Spellix title background polish
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Style the start screen with title, fantasy start button, slideshow background, and random enemies
+
+Related Bug
+
+* Bug-001: Start screen background and enemy appearances need fade animations
+
+Bug Summary
+
+* Enemy images on the Start screen fade in too quickly.
+* Enemy fade-in and fade-out should happen at the same pace.
+* The `Spellix` title also needs a rounded semi-transparent background.
+* The title background should have an animated pulsing black glow.
+
+Repro Steps
+
+* Open the Start screen.
+* Wait for a random enemy image to appear.
+* Observe the fade-in speed.
+* Wait for the enemy image to disappear.
+* Compare the fade-in and fade-out speeds.
+* Observe the `Spellix` title area.
+
+Expected Behaviour
+
+* Enemy images should fade in smoothly.
+* Enemy images should fade out smoothly.
+* Enemy fade-in and fade-out should use the same timing.
+* The fade-in should not feel sudden or too fast.
+* The `Spellix` title should have a rounded background behind it.
+* The title background should use opacity `0.5`.
+* The title background should not make the title text itself transparent.
+* The title background should have a pulsing black glow animation.
+* The glow should pulse subtly behind the title background.
+* The title should remain readable and centred.
+
+Actual Behaviour
+
+* Enemy images fade in too quickly.
+* Fade-in and fade-out do not feel balanced.
+* The `Spellix` title does not yet have the requested rounded background and pulsing black glow.
+
+Required Fix
+
+* Update the Start screen enemy fade animation.
+* Use the same duration and easing for fade-in and fade-out.
+* Ensure enemy images are not removed from the DOM before fade-out completes.
+* Add a rounded background behind the `Spellix` title.
+* Use an alpha background colour instead of applying opacity to the whole title.
+* Add a pulsing black glow animation behind or around the title background.
+
+Enemy Fade Requirement
+
+* Enemy images should fade in and out at the same pace.
+* Use one shared transition value for both fade directions.
+* Suggested timing:
+
+```css id="gh7azf"
+transition: opacity 1s ease-in-out;
+```
+
+* Exact duration can vary if it feels better, but fade-in and fade-out should match.
+* Do not use a much shorter fade-in than fade-out.
+* Do not instantly mount enemies at full opacity.
+* Do not instantly remove enemies before fade-out finishes.
+
+Spellix Title Background Requirement
+
+* Add a rounded background behind the `Spellix` title.
+* The background should have opacity `0.5`.
+* Do not set `opacity: 0.5` on the title container if that makes the text transparent.
+* Use an alpha background colour instead.
+* Suggested CSS:
+
+```css id="cfu3jx"
+background-color: rgba(0, 0, 0, 0.5);
+border-radius: 24px;
+```
+
+* The title text should remain fully opaque.
+* The title colour should remain:
+
+```txt id="u91xqw"
+#C6CC0C
+```
+
+* The title font should remain:
+
+```txt id="sam6we"
+Fontdiner Swanky
+```
+
+* The title font size should remain:
+
+```txt id="endjgf"
+72px
+```
+
+Pulsing Black Glow Requirement
+
+* Add an animated pulsing black glow to the title background.
+* The glow should pulse slowly.
+* The glow should feel magical/fantasy themed but not distracting.
+* Suggested CSS direction:
+
+```css id="x2ow1n"
+.spellix-title {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 24px;
+  padding: 12px 32px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
+  animation: spellixTitleGlow 3s ease-in-out infinite;
+}
+
+@keyframes spellixTitleGlow {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(0, 0, 0, 0.55);
+  }
+
+  50% {
+    box-shadow: 0 0 34px rgba(0, 0, 0, 0.95);
+  }
+}
+```
+
+* Exact values can vary if they look better.
+* Keep the background rounded.
+* Keep the glow black.
+* Keep the background at 0.5 opacity.
+
+Out Of Scope
+
+* No changes to the Start button.
+* No changes to Start button behaviour.
+* No changes to the title text.
+* No changes to the title font, colour, or size.
+* No changes to background slideshow timing.
+* No changes to background slideshow fade unless needed to avoid conflict.
+* No new enemy images.
+* No changes to enemy safe-zone logic.
+* No changes to routing.
+* No unrelated Start screen redesign.
+
+Suspected Cause
+
+* Enemy images may be mounted and shown at full opacity too quickly.
+* Fade-in and fade-out may use different transition durations.
+* Enemy images may be removed before fade-out has time to complete.
+* The title currently has only text styling and no separate background/glow layer.
+
+Attempted Fixes
+
+* Bug-001 added fade behaviour, but the enemy fade-in speed still needs tuning.
+* Changed the shared enemy opacity transition and delayed-removal duration from 600ms to 1000ms, using the same `ease-in-out` transition for entering and exiting.
+* Added the requested alpha background, rounded corners, padding, and three-second pulsing black box-shadow animation directly to the existing title element so the text remains fully opaque.
+
+Final Fix
+
+* Enemy images now fade in and out at the same one-second pace and remain mounted for the full fade-out duration before removal.
+* The `Spellix` title now uses `rgba(0, 0, 0, 0.5)` behind fully opaque text, a 24px radius, and the requested slowly pulsing black glow.
+* The title text, Fontdiner Swanky font, `#C6CC0C` colour, 72px size, centring, Start button, background slideshow, safe-zone logic, assets, and routing remain unchanged.
+
+Testing Required
+
+* Confirm enemy images fade in smoothly.
+* Confirm enemy images fade out smoothly.
+* Confirm enemy fade-in and fade-out use the same pace.
+* Confirm enemies do not pop in suddenly.
+* Confirm enemies do not vanish suddenly.
+* Confirm enemies are not removed before fade-out completes.
+* Confirm enemies still appear at random positions.
+* Confirm enemies still appear outside the title/button safe zone.
+* Confirm the `Spellix` title has a rounded background.
+* Confirm the title background uses 0.5 opacity.
+* Confirm the title text remains fully opaque.
+* Confirm the title still uses Fontdiner Swanky.
+* Confirm the title remains `#C6CC0C`.
+* Confirm the title remains 72px.
+* Confirm the title has a pulsing black glow.
+* Confirm the pulsing glow animates smoothly.
+* Confirm the title and Start button remain centred.
+* Confirm clicking Start still navigates to Game Setup.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-003: Token Assignment modal should expand to fit spell columns and fix drop zone/token name styling
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Style global modals with fantasy background image
+* Feature-006: Improve Token Assignment layout and shared modal spacing
+
+Related Bugs
+
+* EPIC-007 Bug-002: Spell assignment columns should never show internal scroll bars
+* EPIC-007 Bug-003: Spell assignment columns should not scroll when dragged over
+* EPIC-007 Bug-004: Replace spell assignment list markup with divs to prevent hidden drag area
+* EPIC-009 Bug-002: Start screen enemy fade timing and Spellix title background polish
+
+Bug Summary
+
+* The `spell-slot-list` element is now causing a scroll bar because it cannot fit within the current modal width.
+* The modal should expand to fit the token assignment content instead of making the `spell-slot-list` scroll.
+* The `spell-drop-zone` elements also need slightly rounded corners.
+* The `token-display-name` elements are still black inside the modal and should be changed to the modal yellow colour.
+
+Repro Steps
+
+* Open the Token Assignment component inside a modal.
+* View the spell column area.
+* Check the `spell-slot-list` element.
+* Observe whether the `spell-slot-list` has a horizontal or vertical scroll bar.
+* Look at the `spell-drop-zone` elements.
+* Look at token names inside the modal.
+
+Expected Behaviour
+
+* The `spell-slot-list` should not show a scroll bar.
+* The Token Assignment modal should expand wide enough to fit the spell columns.
+* The modal should accommodate the content rather than forcing the spell column area to scroll.
+* The `spell-drop-zone` elements should have slightly rounded corners.
+* The `token-display-name` elements inside this modal should use:
+
+```txt id="rn7l2x"
+#F5FA00
+```
+
+* Token names should remain readable against the dark modal background.
+* Existing drag-and-drop behaviour should continue to work.
+
+Actual Behaviour
+
+* The `spell-slot-list` element creates a scroll bar because it cannot fit inside the modal width.
+* The `spell-drop-zone` corners are not rounded enough.
+* The `token-display-name` elements remain black inside the modal.
+
+Required Fix
+
+* Remove the scroll behaviour from the `spell-slot-list`.
+* Do not solve this by hiding the scroll bar while leaving clipped or hidden content.
+* Update the modal sizing so the modal can grow wide enough to fit the Token Assignment layout.
+* Ensure the Token Assignment modal can be wider than the default normal modal where needed.
+* Add slightly rounded corners to the `spell-drop-zone` elements.
+* Update `token-display-name` styling inside the Token Assignment modal so token names are yellow.
+* Apply the fix to the shared Token Assignment component so it works in:
+
+  * starting token setup.
+  * normal Spells modal.
+  * reward token assignment.
+
+Modal Width Requirement
+
+* The modal should make itself bigger to accommodate the `spell-slot-list`.
+* The `spell-slot-list` should not be forced into its own scrollable area.
+* The modal can exceed the default 600px minimum width from Feature-004.
+* The default modal minimum size should remain for smaller modals.
+* Token Assignment modals should use a wider content-aware size.
+* Suggested direction:
+
+```css id="z1w7zp"
+.token-assignment-modal {
+  width: max-content;
+  min-width: 600px;
+  max-width: calc(100vw - 48px);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the modal expands to fit the spell columns instead of making `spell-slot-list` scroll.
+* On smaller screens, the page/modal can use a responsive fallback, but avoid adding scroll bars directly to `spell-slot-list`.
+
+Spell Slot List Requirement
+
+* The `spell-slot-list` element should not have:
+
+  * `overflow: auto`.
+  * `overflow-x: auto`.
+  * `overflow-y: auto`.
+  * `overflow: scroll`.
+* It should not create its own scroll bar.
+* It should not clip spell columns.
+* It should not shrink below the width required by its columns.
+* It should keep the spell columns visible and usable.
+
+Spell Drop Zone Corner Requirement
+
+* Add slightly rounded corners to each `spell-drop-zone`.
+* Suggested value:
+
+```css id="9f1heu"
+border-radius: 8px;
+```
+
+* Exact value can vary slightly.
+* The corners should be visibly softened but not overly rounded.
+* Preserve the dark brown border and background from Feature-006.
+* Preserve the lighter brown active drag-over highlight.
+
+Token Display Name Colour Requirement
+
+* Inside the Token Assignment modal, `.token-display-name` should use:
+
+```css id="spkoxf"
+color: #F5FA00;
+```
+
+* This should apply to token names that appear inside:
+
+  * token bag.
+  * available tokens area.
+  * reward token area.
+  * any other token display within the Token Assignment modal.
+* Do not make token names black inside this modal.
+* Token names should remain hidden while dragging, as required by EPIC-007 Bug-005.
+* Token names should still remain hidden inside spell columns if that is the current intended behaviour.
+
+Responsive Requirement
+
+* The Token Assignment modal should expand on screens where there is enough space.
+* On smaller screens, it should remain usable.
+* Avoid making `spell-slot-list` itself scroll.
+* If scrolling is unavoidable on very small screens, prefer page-level or modal-level responsive behaviour rather than scroll bars on the spell slot list itself.
+* Do not make the spell columns inaccessible.
+
+Expected Behaviour After Fix
+
+* Opening the Token Assignment modal shows all spell columns without a `spell-slot-list` scroll bar.
+* The modal is wide enough to contain the spell column layout.
+* Spell drop zones have slightly rounded corners.
+* Spell drop zones keep their dark brown styling.
+* Spell drop zones still turn lighter brown when dragged over.
+* Token display names inside the modal are yellow.
+* Token names are readable against the dark modal background.
+* Token names still disappear while dragging.
+* Drag-and-drop still works correctly.
+
+Out Of Scope
+
+* No changes to token assignment rules.
+* No changes to starting token validation.
+* No changes to reward assignment logic.
+* No changes to token effects.
+* No changes to token translations.
+* No changes to potion styling.
+* No changes to Start screen styling.
+* No changes to Game Setup styling.
+* No changes to dice roll modal styling.
+* No unrelated modal redesign.
+
+Suspected Cause
+
+* The modal width is still too constrained for the wider Token Assignment content.
+* The `spell-slot-list` may still have overflow behaviour or be shrinking inside a flex/grid parent.
+* Token name colour may be inherited from a global token style instead of the modal text colour.
+
+Attempted Fixes
+
+* Feature-006 improved Token Assignment styling and modal padding.
+* Previous EPIC-007 bugs removed scroll bars and hidden scrolling from spell columns, but this new issue is caused by the overall `spell-slot-list` not fitting the modal width.
+* Reproduced the mismatch between the 900px six-column row and the modal's 860px content area after 50px side padding, then added failing width, overflow, radius, and assignment-wide token-name contracts.
+* Replaced the fixed 960px Spells modal width with a content-sized width capped to the viewport and moved narrow-screen overflow responsibility to the existing modal container.
+
+Final Fix
+
+* The Spells modal now uses `width: max-content` with the existing viewport maximum, allowing the six fixed columns and 50px modal padding to determine its desktop width.
+* The spell-slot wrapper now uses visible overflow instead of creating its own horizontal scroll area; on constrained screens the existing modal-level overflow remains available.
+* Shared spell drop zones now have an 8px radius while retaining their Feature-006 dark and active brown states.
+* The shared assignment root now scopes `#F5FA00` to every visible `.token-display-name`, covering normal token bags and reward source, discard, and replacement areas without changing name-hiding or drag behavior.
+
+Testing Required
+
+* Confirm the Token Assignment modal expands wide enough to fit the spell columns.
+* Confirm `spell-slot-list` has no scroll bar.
+* Confirm `spell-slot-list` does not hidden-scroll.
+* Confirm spell columns are not clipped.
+* Confirm all spell columns remain visible.
+* Confirm the modal still has the fantasy background image.
+* Confirm the modal still has 50px padding.
+* Confirm the modal still has no black outer border.
+* Confirm `spell-drop-zone` corners are slightly rounded.
+* Confirm `spell-drop-zone` dark brown styling remains.
+* Confirm `spell-drop-zone` drag-over highlight still works.
+* Confirm `.token-display-name` text is `#F5FA00` inside the Token Assignment modal.
+* Confirm token names remain readable in the token bag.
+* Confirm token names remain readable in the available tokens area.
+* Confirm token names remain readable in the reward token area.
+* Confirm token names still hide while dragging.
+* Confirm token names are still hidden inside spell columns where intended.
+* Confirm drag-and-drop still works in starting token setup.
+* Confirm drag-and-drop still works in normal Spells modal.
+* Confirm drag-and-drop still works in reward token assignment.
+* Confirm the modal remains usable on smaller screens.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: Feature images must overlay board areas without displacing the map grid
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-008: Display feature images on the board
+
+Bug Summary
+
+* Adding feature images to the board has caused a major rendering bug.
+* The images were supposed to be laid over the existing board areas.
+* Instead, the images appear to be displacing board cells or affecting the board layout.
+* This causes board squares, features, player pieces, and/or map areas to appear in the wrong places.
+* Feature images must be visual overlays only.
+* They must not affect the board grid structure, board coordinates, square positions, or layout flow.
+
+Repro Steps
+
+* Start a new game.
+* Generate the board.
+* Observe the board after Feature-008 image rendering is applied.
+* Check the positions of:
+
+  * environment tiles.
+  * start zone.
+  * elite zones.
+  * boss zone.
+  * generated easy feature.
+  * generated hard feature.
+  * player pieces.
+* Compare with the expected 31×31 board layout.
+
+Expected Behaviour
+
+* The board should remain a fixed 31×31 grid.
+* Each board square should remain exactly 30px by 30px.
+* Feature images should sit visually over their existing assigned areas.
+* Feature images should not add new grid cells.
+* Feature images should not push existing grid cells out of place.
+* Feature images should not change board row or column positions.
+* Feature images should not change the size of the board.
+* Feature images should not affect movement, click detection, or battle triggering.
+* Player pieces should still appear above feature images.
+* Existing board logic should behave exactly as it did before the images were added.
+
+Actual Behaviour
+
+* Feature images are displacing the board layout.
+* This causes the board map to render incorrectly.
+* Board elements appear in the wrong places.
+
+Required Fix
+
+* Change feature image rendering so feature images are overlays only.
+* Do not insert feature images into the board grid in a way that participates in grid or flex layout.
+* Do not render feature images as normal flow elements inside the square list if they can push or shift cells.
+* Use absolute positioning, CSS grid overlay positioning, or an equivalent non-displacing layer.
+* The board squares should remain the source of the map layout.
+* Feature images should be positioned based on existing board coordinates.
+* The image overlay layer should sit above environment tiles and below player pieces.
+
+Overlay Layer Requirement
+
+* Add or use a board overlay layer for feature images.
+* Suggested structure:
+
+```jsx id="jb1q72"
+<div className="board">
+  <div className="board-grid">
+    {/* existing 31x31 squares */}
+  </div>
+
+  <div className="feature-overlay-layer">
+    {/* feature images positioned by board coordinates */}
+  </div>
+
+  <div className="piece-overlay-layer">
+    {/* player pieces */}
+  </div>
+</div>
+```
+
+* Exact structure can vary.
+* The important rule is that feature images must not participate in the board grid layout.
+* The overlay layer should match the board dimensions exactly.
+
+Board Dimension Requirement
+
+* The board must remain:
+
+```txt id="fctwm4"
+31 squares by 31 squares
+```
+
+* Each square must remain:
+
+```txt id="xk9jrx"
+30px by 30px
+```
+
+* Total board size should remain:
+
+```txt id="w46hik"
+930px by 930px
+```
+
+* Feature images should be positioned using these dimensions.
+* Do not allow feature images to change the board size.
+
+Positioning Requirement
+
+* Feature overlays should be positioned using their existing board coordinates.
+* Suggested CSS positioning direction:
+
+```css id="p80ns7"
+.feature-overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.feature-image-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+```
+
+* Suggested coordinate calculation direction:
+
+```js id="xw2qhv"
+const squareSize = 30;
+
+const style = {
+  left: feature.x * squareSize,
+  top: feature.y * squareSize,
+  width: feature.width * squareSize,
+  height: feature.height * squareSize
+};
+```
+
+* Exact implementation can vary depending on current coordinate names.
+* The overlay should align exactly to the board grid.
+
+Layering Requirement
+
+* Board environment tiles should remain at the bottom.
+* Feature images should render above environment tiles.
+* Player pieces should render above feature images.
+* Suggested z-index order:
+
+```txt id="sxk6ju"
+environment tiles: 1
+feature image overlays: 2
+movement highlights: 3 if needed
+player pieces: 4 or above
+```
+
+* Exact values can vary.
+* Player pieces must not be hidden behind feature images.
+* Movement highlights should remain visible according to existing behaviour.
+
+Feature Image Requirement
+
+* Continue using lowercase image filenames from Feature-008:
+
+```txt id="i2un4e"
+home.png
+elite-tower-gravel.png
+elite-tower-woods.png
+boss-castle.png
+village-field.png
+village-forest.png
+```
+
+* These images should be overlaid onto:
+
+  * existing bottom-left start zone.
+  * existing top-left elite zone.
+  * existing bottom-right elite zone.
+  * existing top-right boss zone.
+  * generated easy feature location.
+  * generated hard feature location.
+* Do not render these images as additional squares.
+
+Existing Area Requirement
+
+* The images should be laid over the current areas.
+* The underlying board data should still know those areas exist.
+* Start zone should still be start zone.
+* Elite zones should still be elite zones.
+* Boss zone should still be boss zone.
+* Generated easy and hard features should still be feature tiles.
+* Existing area colours may be hidden visually by the image, but the area itself must not be removed or displaced.
+
+Interaction Requirement
+
+* Feature overlays should not block clicks unless the current board click system explicitly requires them to.
+* Prefer:
+
+```css id="u6e3e9"
+pointer-events: none;
+```
+
+* Board square click handling should continue to work through the image overlay.
+* Movement destination selection should still work.
+* Battle/feature triggering should still work.
+* Player pieces should still be clickable or visible according to existing behaviour.
+
+Immediate Stabilisation Requirement
+
+* If the current image rendering is breaking the board severely, temporarily remove or disable the displacing image elements first.
+* Restore the board to correct 31×31 rendering before reintroducing the images as overlays.
+* Do not continue building on the broken layout.
+
+Out Of Scope
+
+* No changes to feature generation rules.
+* No changes to feature image filenames.
+* No changes to board size.
+* No changes to square size.
+* No changes to movement rules.
+* No changes to battle triggering.
+* No changes to player piece rendering except z-index if needed.
+* No changes to environment generation.
+* No changes to Start screen or Game Setup styling.
+* No unrelated board redesign.
+
+Suspected Cause
+
+* Feature images may have been inserted directly into the board grid as normal elements.
+* The images may be participating in CSS grid, flexbox, or normal document flow.
+* This is likely pushing existing board cells out of their correct positions.
+* The images need to be moved into an absolutely positioned overlay layer instead.
+
+Attempted Fixes
+
+* Feature-008 added image rendering.
+* The current implementation has caused board layout displacement.
+* Reproduced the issue with a failing full-size BoardGrid contract that required a separate absolute overlay layer while retaining all 961 square controls.
+* Moved the six images out of direct CSS Grid participation and into one board-sized overlay, then changed image placement from grid tracks to absolute pixel coordinates derived from the existing feature records and square size.
+
+Final Fix
+
+* The 961 board squares are once again the only elements participating in grid placement, preserving the 31x31 map and all existing square coordinates.
+* A single 930px by 930px absolute layer now contains the six feature images without affecting layout flow.
+* Each image uses its existing board coordinates and dimensions multiplied by `board.squareSize`, preserving all fixed and generated 2x2 areas.
+* The overlay and images use `pointer-events: none`; feature images remain above environments while movement highlights and player markers retain their higher z-indexes.
+
+Testing Required
+
+* Confirm the board renders as a correct 31×31 grid.
+* Confirm the board remains 930px by 930px.
+* Confirm every square remains 30px by 30px.
+* Confirm feature images do not add extra cells.
+* Confirm feature images do not move existing cells.
+* Confirm feature images do not change row or column alignment.
+* Confirm `home.png` overlays the existing start zone.
+* Confirm `boss-castle.png` overlays the existing boss zone.
+* Confirm `elite-tower-gravel.png` overlays one existing elite zone.
+* Confirm `elite-tower-woods.png` overlays the other existing elite zone.
+* Confirm `village-field.png` overlays the generated easy feature.
+* Confirm `village-forest.png` overlays the generated hard feature.
+* Confirm player pieces appear above feature images.
+* Confirm movement highlights still align to the correct squares.
+* Confirm clicking board squares still works.
+* Confirm movement still works.
+* Confirm start zone behaviour still works.
+* Confirm elite battle triggering still works.
+* Confirm boss battle triggering still works.
+* Confirm generated feature behaviour still works.
+* Confirm no feature overlay blocks pointer events.
+* Confirm no missing image import errors occur.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

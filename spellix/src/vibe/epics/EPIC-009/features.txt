@@ -1,0 +1,2053 @@
+---
+
+Feature-001: Reduce board features and update feature placement rules
+
+Status
+
+* done
+
+Implementation Notes
+
+* Reduced generated features to exactly one easy-section feature and one hard-section feature.
+* Kept each 2x2 feature's occupied squares between coordinates 7 and 23, giving seven-square clearance from every edge of the 31x31 board.
+* Increased occupied-square Chebyshev clearance from fixed areas and the other generated feature to at least seven squares, including diagonally.
+* Preserved the existing fixed-area, protected Start Area field zone, section, environment, and feature collision checks.
+* Added a 50-attempt random placement limit followed by an exhaustive valid fallback. Development builds warn and omit the feature rather than silently place an invalid one if no valid candidate exists.
+
+Goal
+
+* Reduce the number of generated board features.
+* Features are the yellow locations currently generated on the board.
+* There should now be only 2 generated features on the whole board:
+
+  * 1 feature in the easy section.
+  * 1 feature in the hard section.
+* Features should be positioned more centrally by keeping them away from map edges and away from each other.
+
+Scope
+
+* Update board feature generation.
+* Reduce generated feature count.
+* Add stricter edge-distance rules.
+* Add stricter feature-to-feature distance rules.
+* Preserve existing fixed board areas.
+* Preserve existing board environment generation unless affected by feature placement.
+* Preserve existing feature visual styling unless required by the reduced count.
+
+Generated Feature Count Requirement
+
+* The board should generate only:
+
+```txt id="4f6k8r"
+2 features total
+```
+
+* These should be split as:
+
+  * 1 generated feature in the easy section.
+  * 1 generated feature in the hard section.
+* Do not generate 3 easy and 3 hard features anymore.
+* Do not generate 6 total features anymore.
+* Do not generate more than 2 generated features unless a future feature changes this again.
+
+Easy / Hard Section Requirement
+
+* One feature must be placed in the easy section.
+* One feature must be placed in the hard section.
+* Continue using the existing easy/hard board split logic unless another feature has changed it.
+* The easy feature should be fully inside the easy section where possible.
+* The hard feature should be fully inside the hard section where possible.
+* Do not allow both features to generate in the same section.
+
+Edge Distance Requirement
+
+* Features should always be at least:
+
+```txt id="7cseuq"
+7 squares away from the edge of the map
+```
+
+* This applies to every edge:
+
+  * top edge.
+  * right edge.
+  * bottom edge.
+  * left edge.
+* For a 31×31 board, this means generated feature top-left placement must be constrained so the whole feature remains at least 7 squares from the board edge.
+* The exact coordinate bounds should account for the size of the feature.
+* Do not place a feature so any part of it is within 7 squares of the edge.
+
+Feature Distance Requirement
+
+* Features should always be at least:
+
+```txt id="xffdoo"
+7 squares away from each other
+```
+
+* This distance should include diagonal distance.
+* Features should not be allowed to be too close diagonally.
+* Use a clear distance check based on the occupied area of each feature, not only the top-left coordinate if possible.
+* The easiest acceptable rule is to reject a new feature if its occupied squares are within 7 squares of any occupied square of another feature.
+* Existing fixed feature-like areas should also be considered if they are part of the current feature collision system.
+
+Generated Feature Placement Requirement
+
+* Generated features should not overlap:
+
+  * Start Area.
+  * protected Start Area field zone.
+  * Elite Battle areas.
+  * Boss Battle area.
+  * other generated features.
+  * water where existing rules prevent feature placement.
+  * any other non-overwritable fixed area.
+* Existing feature placement exclusions should remain in place unless they conflict with the new stricter rules.
+* The new 7-square edge distance and 7-square feature distance rules should be added on top of existing exclusions.
+
+Central Placement Intent
+
+* The stricter edge distance should make features appear more toward the middle of the board.
+* The stricter feature distance should keep the two features separated.
+* Do not force features to the exact centre.
+* Random generation is still fine as long as the rules are respected.
+* If many attempts fail, use a safe retry strategy rather than placing invalid features.
+
+Retry / Fallback Requirement
+
+* Feature generation should retry if a candidate violates the new rules.
+* Avoid infinite loops.
+* Use a maximum attempt count.
+* If placement fails after reasonable attempts:
+
+  * log a clear warning in development.
+  * use the best valid fallback available.
+  * do not break board generation.
+* Do not place invalid features silently.
+
+Expected Behaviour
+
+* A newly generated board has exactly 2 generated yellow features.
+* One generated feature appears in the easy section.
+* One generated feature appears in the hard section.
+* Both features are at least 7 squares away from all map edges.
+* The two generated features are at least 7 squares away from each other, including diagonally.
+* Features generally appear nearer the middle of the map than before.
+* Existing fixed areas still appear correctly.
+* Board generation still completes reliably.
+
+Out Of Scope
+
+* No new feature types.
+* No changes to feature visuals.
+* No changes to Elite Battle areas.
+* No changes to Boss Battle area.
+* No changes to Start Area.
+* No changes to battle triggering.
+* No changes to environment generation except avoiding invalid feature placement.
+* No changes to movement rules.
+* No changes to minimaps or UI labels.
+* No unrelated board generation redesign.
+
+Assumptions
+
+* Features are currently generated as yellow locations.
+* Existing generated features are separate from fixed Elite/Boss/Start areas.
+* The board still uses a 31×31 grid.
+* Easy and hard sections are already identifiable during generation.
+* Feature size and occupied squares can be checked during placement.
+
+Stop Point
+
+* Stop once the board reliably generates exactly 2 yellow features, one easy and one hard, both at least 7 squares from the map edge and at least 7 squares from each other.
+
+Testing Checkpoints
+
+* Generate a new board.
+* Confirm only 2 generated yellow features appear.
+* Confirm 1 generated feature is in the easy section.
+* Confirm 1 generated feature is in the hard section.
+* Confirm no generated feature is within 7 squares of the top edge.
+* Confirm no generated feature is within 7 squares of the right edge.
+* Confirm no generated feature is within 7 squares of the bottom edge.
+* Confirm no generated feature is within 7 squares of the left edge.
+* Confirm the 2 generated features are at least 7 squares apart.
+* Confirm diagonal closeness is also rejected.
+* Confirm generated features do not overlap fixed board areas.
+* Confirm generated features do not overlap the protected Start Area field zone.
+* Confirm board generation does not fail or hang.
+* Confirm repeated board generations respect the new rules.
+* Confirm existing environment generation still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Style the start screen with title, fantasy start button, slideshow background, and random enemies
+
+Status
+
+* done
+
+Implementation Notes
+
+* Replaced the old Start screen sentence and setup-labelled button with the centred `Spellix` title and bespoke `Start` button while preserving `/setup` navigation.
+* Added Fontdiner Swanky to the existing central Google Fonts import and applied the requested `#C6CC0C`, `72px` title treatment; the Start button keeps the existing Unkempt font and has feature-specific fantasy, hover, and keyboard-focus styling.
+* Reused all seven entries from `BATTLE_ENVIRONMENTS` and `getBattleBackgroundSource` for a looping six-second full-screen background slideshow.
+* Reused `ENEMIES` and `getEnemyImageSource` to show at most one decorative enemy in a 150x150 box, matching the battle actor's 150px image height without changing enemy assets or battle styling.
+* Enemy appearances use a random 1.5-to-4.5-second delay, remain visible for 2.5 seconds, and retry up to 30 random positions outside the measured title/button safe zone plus a 24px buffer.
+* Background and enemy timers, plus the resize listener, are cleaned up on navigation. A viewport resize immediately hides a visible enemy so layout changes cannot create safe-zone overlap.
+
+Goal
+
+* Add the first styled screen to the game.
+* Improve the Start screen with a fantasy-themed visual design.
+* Use the existing battle backgrounds as a slideshow.
+* Show random enemy images in random places at random times.
+* Keep the title and Start button centred and protected from enemy image overlap.
+
+Scope
+
+* Update the Start screen.
+* Style the Spellix title.
+* Remove unnecessary text.
+* Add bespoke Start button styling.
+* Add battle background slideshow.
+* Add random enemy image appearances.
+* Add a safe zone so enemy images never appear behind the title or button.
+* Keep routing behaviour unchanged.
+
+Remove Existing Text Requirement
+
+* Remove the text:
+
+```txt id="93axrs"
+Start a new game
+```
+
+* The Start screen should not show that text anymore.
+* Keep the actual Start button.
+
+Spellix Title Requirement
+
+* The title should display:
+
+```txt id="ahxpho"
+Spellix
+```
+
+* The title should use this font:
+
+```txt id="yij2se"
+Fontdiner Swanky
+```
+
+* The title colour should be:
+
+```txt id="g49cj7"
+#C6CC0C
+```
+
+* The title font size should be:
+
+```txt id="sr4o84"
+72px
+```
+
+* The title should be centred horizontally on the screen.
+* The title should be visually prominent.
+* Ensure the font is loaded correctly.
+* If the font is loaded through CSS imports, keep that setup clean and central.
+
+Start Button Requirement
+
+* The Start button should be bespoke for the Start screen.
+* This button should not use the global button component from Feature-003.
+* The button should say only:
+
+```txt id="5nfw2j"
+Start
+```
+
+* The button should use this font:
+
+```txt id="4nr308"
+Unkempt
+```
+
+* The button should have a fantasy-themed design.
+* The button should be large, but still smaller than the title.
+* The button should be centred horizontally.
+* The button should remain clearly clickable.
+* Add a hover effect if appropriate for the bespoke button.
+* Preserve existing Start button behaviour:
+
+  * clicking it should move to the game setup flow.
+
+Title And Button Layout Requirement
+
+* The title and Start button should both be centred on the screen.
+* There should be:
+
+```txt id="0jvgqj"
+50px vertical margin
+```
+
+between the title and the Start button.
+
+* They should remain together as the central safe content area.
+* The layout should remain usable on smaller screens.
+
+Background Slideshow Requirement
+
+* The Start screen background should be a slideshow of the battle background images.
+* Use the battle backgrounds already in the game.
+* Background images are from:
+
+```txt id="kkxh0p"
+src/images/battleBackgrounds
+```
+
+* Include the existing battle background environments:
+
+  * fields
+  * hills
+  * gravel
+  * mud
+  * woods
+  * forest
+  * mountains
+* The background should change every:
+
+```txt id="od8k1d"
+6 seconds
+```
+
+* The slideshow should loop.
+* The background should cover the screen.
+* The background should not tile.
+* The transition can be instant or lightly faded.
+* If adding a fade is simple, use a subtle transition.
+* Do not make the slideshow distract from the title and button.
+
+Random Enemy Display Requirement
+
+* Random enemy images should appear on the Start screen.
+* Enemy images should appear:
+
+  * at random times.
+  * in random places on the screen.
+* Enemy images should use existing enemy image assets.
+* Enemy images should be the same size as they are in battles.
+* Enemy images should not appear behind the title.
+* Enemy images should not appear behind the Start button.
+* Enemy images should not overlap the protected safe zone.
+* Enemies can appear and disappear.
+* Keep the behaviour decorative only.
+* Clicking enemies should not be required.
+* Enemies should not affect navigation.
+
+Enemy Safe Zone Requirement
+
+* Create a safe zone around the title and Start button.
+* Enemy images should never be positioned inside this safe zone.
+* The safe zone should cover:
+
+  * the title.
+  * the 50px vertical gap.
+  * the Start button.
+  * a small buffer around this central content.
+* Enemy images should only appear outside this safe zone.
+* The safe zone should work across responsive screen sizes.
+* If random placement chooses a location inside the safe zone, retry with another location.
+
+Random Enemy Timing Requirement
+
+* Enemy appearances should feel random.
+* Use a reasonable random interval or repeated timer.
+* Avoid spawning too many enemies at once.
+* A simple implementation is acceptable:
+
+  * show one random enemy.
+  * place it at a valid random position.
+  * keep it visible briefly.
+  * hide or replace it.
+* Ensure timers are cleaned up when leaving the Start screen.
+* Avoid memory leaks.
+
+Enemy Image Requirement
+
+* Use existing enemy images from:
+
+```txt id="p4zpdx"
+src/images/enemies
+```
+
+* Use the same rendered size as battle enemy images.
+* Do not create new enemy art.
+* Do not stretch enemy images incorrectly.
+* Keep enemy image aspect ratios.
+
+Layering Requirement
+
+* The background slideshow should be behind everything.
+* Random enemy images should appear above the background.
+* The title and Start button should appear above enemies if there is any accidental overlap.
+* The safe zone should prevent overlap, but z-index should still keep the main controls readable.
+* Suggested layering:
+
+  * background layer.
+  * enemy decorative layer.
+  * central title/button layer.
+
+Expected Behaviour
+
+* Start screen shows the Spellix title in Fontdiner Swanky.
+* Title colour is `#C6CC0C`.
+* Title font size is 72px.
+* `Start a new game` text is removed.
+* Button says only `Start`.
+* Start button uses Unkempt.
+* Start button has bespoke fantasy styling.
+* Title and button are centred.
+* There is a 50px vertical margin between title and button.
+* Background cycles through battle backgrounds every 6 seconds.
+* Random enemies appear at random times and positions.
+* Random enemies use existing enemy images.
+* Random enemies are the same size as battle enemies.
+* Random enemies never appear behind the title or Start button.
+* Start button still navigates to Game Setup.
+
+Out Of Scope
+
+* No changes to Game Setup.
+* No changes to gameplay.
+* No changes to battle page.
+* No changes to global button component.
+* No application of the new global button component to the Start button.
+* No new enemy images.
+* No new battle backgrounds.
+* No sound effects.
+* No save/load functionality.
+* No unrelated start screen redesign.
+
+Assumptions
+
+* Battle background images already exist.
+* Enemy images already exist.
+* Enemy battle display size is known or can be reused from battle CSS.
+* Fontdiner Swanky and Unkempt can be loaded through the app’s font loading approach.
+* The Start screen already has navigation to Game Setup.
+
+Stop Point
+
+* Stop once the Start screen has the styled Spellix title, bespoke fantasy Start button, battle background slideshow, and decorative random enemy images that never enter the title/button safe zone.
+
+Testing Checkpoints
+
+* Confirm the title says `Spellix`.
+* Confirm the title uses Fontdiner Swanky.
+* Confirm the title colour is `#C6CC0C`.
+* Confirm the title is 72px.
+* Confirm `Start a new game` text is removed.
+* Confirm the button says only `Start`.
+* Confirm the Start button uses Unkempt.
+* Confirm the Start button has bespoke fantasy styling.
+* Confirm the Start button is smaller than the title.
+* Confirm the title is centred.
+* Confirm the Start button is centred.
+* Confirm there is 50px vertical space between title and button.
+* Confirm the background uses battle background images.
+* Confirm the background changes every 6 seconds.
+* Confirm the slideshow loops.
+* Confirm the background covers the screen.
+* Confirm random enemy images appear.
+* Confirm enemy images appear at random positions.
+* Confirm enemy images appear at random times.
+* Confirm enemy images use existing enemy art.
+* Confirm enemy images match battle enemy size.
+* Confirm enemy images never appear behind the title.
+* Confirm enemy images never appear behind the Start button.
+* Confirm enemies remain outside the safe zone.
+* Confirm title and button remain readable.
+* Confirm clicking Start still navigates to Game Setup.
+* Confirm timers are cleaned up when leaving Start screen.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Create global fantasy Button component and apply it across the game
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added a reusable `Button` component with a primary default, an explicit secondary variant, forwarded native button props, and a safe default `type="button"`.
+* Added shared Unkempt fantasy styling for both variants, including keyboard focus, guarded hover states, and visibly disabled controls.
+* Converted normal setup, gameplay, reward, Spells modal, dice, battle Respawn, and settings actions without changing their handlers, labels, translation classes, disabled logic, form behavior, routing, or gameplay logic.
+* Classified confirmation-modal Yes, No, Cancel, Save, OK, and Respawn actions as secondary while leaving other normal actions primary.
+* Preserved the bespoke Start button, floating settings cog, debug menu controls, debug battle controls, forced-dice controls, and draggable spell-token controls unchanged as required exclusions.
+
+Goal
+
+* Create a reusable global fantasy-themed Button component.
+* Apply it to all current non-debug buttons in the game.
+* Keep the Start screen Start button bespoke and excluded.
+* Support primary and secondary button variants.
+* Add a hover effect.
+* Make modal confirmation buttons secondary.
+* Make all other normal game buttons primary.
+
+Scope
+
+* Create a global Button component.
+* Add primary and secondary variants.
+* Add fantasy-themed styling.
+* Add hover styling.
+* Replace current buttons throughout the app where in scope.
+* Exclude the bespoke Start screen Start button.
+* Exclude debug menu buttons.
+* Include settings menu buttons.
+* Preserve existing button behaviour.
+
+Global Button Component Requirement
+
+* Create a reusable button component.
+* Suggested component name:
+
+```txt id="klje0d"
+Button
+```
+
+* Suggested location:
+
+```txt id="dmtuuu"
+src/components/common/Button/Button.jsx
+src/components/common/Button/Button.css
+```
+
+* Exact location can vary if there is already a shared component folder.
+* The component should support normal button props:
+
+  * `onClick`.
+  * `type`.
+  * `disabled`.
+  * `className`.
+  * `children`.
+* Do not break form submit behaviour where buttons use `type="submit"`.
+
+Button Variants Requirement
+
+* The component should support two types:
+
+  * primary.
+  * secondary.
+* Suggested prop:
+
+```jsx id="ttzuiw"
+<Button variant="primary">Roll Dice</Button>
+<Button variant="secondary">Cancel</Button>
+```
+
+* If no variant is provided, default to primary.
+* Primary and secondary should be visually related, but clearly different.
+
+Primary Button Requirement
+
+* All normal game buttons should use the primary variant unless specifically classified as modal confirmation buttons.
+* Primary buttons should have a fantasy feel.
+* Primary buttons should have a hover effect.
+* Primary buttons should be readable and clearly clickable.
+* Use the game’s fantasy styling direction.
+
+Secondary Button Requirement
+
+* All confirmation buttons in modals should use the secondary variant.
+* This includes buttons such as:
+
+  * Yes.
+  * No.
+  * Cancel.
+  * Ok.
+  * OK.
+* Modal confirmation buttons should be secondary even if they perform an action.
+* Secondary buttons should still feel fantasy-themed.
+* Secondary buttons should feel less prominent than primary buttons.
+* Secondary buttons should also have a hover effect.
+
+Button Styling Requirement
+
+* The button should have a fantasy feel.
+* Styling can include:
+
+  * decorative border.
+  * parchment or dark fantasy colours.
+  * subtle shadow.
+  * slightly rounded corners.
+  * hover glow or lift.
+* The button should use a readable font.
+* If a font is needed, use the project’s fantasy UI font direction.
+* Keep styling reusable.
+* Avoid one-off button CSS scattered across components.
+
+Hover Effect Requirement
+
+* Buttons should have a visible hover effect.
+* Hover effect should work for both primary and secondary variants.
+* Acceptable hover effects:
+
+  * slight scale.
+  * brighter border.
+  * subtle glow.
+  * background change.
+  * box-shadow change.
+* Disabled buttons should not show active hover behaviour.
+* The hover effect should not cause layout shift.
+
+Disabled State Requirement
+
+* The Button component should handle disabled state.
+* Disabled buttons should look disabled.
+* Disabled buttons should not respond visually like active buttons.
+* Existing disabled logic should be preserved.
+* Important disabled buttons include:
+
+  * dice roll during animations.
+  * Save before validation is complete.
+  * assignment confirm buttons before valid placement.
+
+Application Requirement
+
+* Replace existing in-scope buttons with the new Button component.
+* In-scope buttons include:
+
+  * gameplay buttons.
+  * battle buttons.
+  * reward page buttons.
+  * Spells modal buttons.
+  * potion capacity flow buttons.
+  * death punishment/respawn screen buttons.
+  * settings menu buttons.
+  * modal buttons.
+* Debug menu buttons are out of scope.
+* The bespoke Start button on the Start screen is out of scope.
+* Do not convert the Start screen Start button to the global Button component.
+
+Modal Button Classification Requirement
+
+* Buttons in confirmation modals should be secondary.
+* This includes:
+
+  * Yes.
+  * No.
+  * Cancel.
+  * Ok.
+  * OK.
+* Apply this rule consistently across modals.
+* If a modal has a destructive button, it can still be secondary for now unless a later feature adds destructive styling.
+
+Non-Modal Button Classification Requirement
+
+* All other normal game buttons should be primary.
+* Examples:
+
+  * Roll Dice.
+  * Spells.
+  * Save outside modal confirmation if applicable.
+  * Assign reward.
+  * Choose.
+  * Respawn.
+  * End Game in settings if it is not inside a confirmation modal.
+* Use judgment where existing UI already distinguishes actions, but follow the primary/secondary rule above.
+
+Settings Menu Requirement
+
+* Buttons in the settings menu should use the new Button component.
+* Settings menu buttons are in scope.
+* Preserve settings menu behaviour.
+* The floating settings cog itself can remain unchanged unless it is implemented as a normal button and easy to convert safely.
+* End Game and Close should use the Button component if they are regular buttons.
+
+Debug Menu Exclusion Requirement
+
+* Buttons in the debug menu are out of scope.
+* Do not spend time converting debug menu buttons.
+* Debug buttons may keep their existing styling.
+* This includes:
+
+  * debug token grant controls.
+  * debug potion grant controls.
+  * debug battle triggers.
+  * forced dice buttons.
+  * debug win/loss buttons.
+
+Start Button Exclusion Requirement
+
+* The Start screen Start button should remain bespoke from Feature-002.
+* Do not replace it with the global Button component.
+* Do not force global button styling onto it.
+
+Expected Behaviour
+
+* A global Button component exists.
+* It supports primary and secondary variants.
+* Primary buttons have fantasy styling.
+* Secondary buttons have fantasy styling but are visually less prominent.
+* Buttons have hover effects.
+* Disabled buttons look disabled.
+* Current in-scope game buttons use the new component.
+* Modal Yes/No/Cancel/Ok buttons use secondary.
+* Other normal game buttons use primary.
+* Settings menu buttons use the new component.
+* Debug menu buttons are unchanged.
+* Start screen Start button remains bespoke.
+* Existing button behaviour still works.
+
+Out Of Scope
+
+* No conversion of debug menu buttons.
+* No conversion of bespoke Start screen Start button.
+* No new destructive button variant.
+* No new icon button variant unless needed by existing buttons.
+* No changes to button text.
+* No changes to translations.
+* No changes to routing.
+* No changes to game logic.
+* No unrelated UI redesign.
+
+Assumptions
+
+* Current buttons can be replaced without changing their handlers.
+* There may already be a generic button component, but this feature should create or update it to meet the new requirements.
+* Modal components accept custom button components or can be updated safely.
+* Debug menu buttons are visually separate enough to leave unchanged.
+
+Stop Point
+
+* Stop once all in-scope non-debug buttons use the new fantasy Button component, modal confirmation buttons use secondary, other game buttons use primary, the Start screen Start button remains bespoke, and all button behaviours still work.
+
+Testing Checkpoints
+
+* Confirm global Button component exists.
+* Confirm Button supports `primary`.
+* Confirm Button supports `secondary`.
+* Confirm default variant is primary.
+* Confirm primary buttons have fantasy styling.
+* Confirm secondary buttons have fantasy styling.
+* Confirm primary buttons have hover effect.
+* Confirm secondary buttons have hover effect.
+* Confirm disabled buttons look disabled.
+* Confirm disabled buttons do not behave like active hover buttons.
+* Confirm gameplay buttons use the new Button component.
+* Confirm battle buttons use the new Button component where not debug-only.
+* Confirm reward page buttons use the new Button component.
+* Confirm Spells modal buttons use the new Button component.
+* Confirm potion capacity flow buttons use the new Button component.
+* Confirm death punishment/respawn buttons use the new Button component.
+* Confirm settings menu buttons use the new Button component.
+* Confirm modal Yes buttons are secondary.
+* Confirm modal No buttons are secondary.
+* Confirm modal Cancel buttons are secondary.
+* Confirm modal Ok/OK buttons are secondary.
+* Confirm normal non-modal game buttons are primary.
+* Confirm debug menu buttons are unchanged.
+* Confirm Start screen Start button remains bespoke.
+* Confirm all converted buttons still run their original click handlers.
+* Confirm form submit buttons still work where relevant.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Style global modals with fantasy background image
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added a default Modal variant that stretches the existing `modalBackground.png` across every normal shared modal and applies bold `#F5FA00` text.
+* Normal modals now use responsive minimum dimensions of 600px by 400px where the viewport allows, with bounded width/height and scrolling on smaller screens.
+* Added an explicit `dice` variant and applied it only to the Gameplay dice-result modal, preserving its existing white background, border, 320px responsive width, content, timing, and animation.
+* Preserved all existing modal actions, secondary Button variants, custom panel classes, translations, routing, and gameplay behavior.
+
+Goal
+
+* Update the visual style of all normal modals.
+* Replace the current white modal background with the new fantasy modal background image.
+* Make modal text readable against the darker background.
+* Give all normal modals a consistent minimum size.
+* Exclude the dice roll modal from this styling for now.
+
+Scope
+
+* Update the shared modal component or modal styling.
+* Apply the new modal background image to all normal modals.
+* Update modal text colour.
+* Update modal font weight.
+* Add modal minimum size.
+* Ensure the background image stretches to fit the modal.
+* Keep the dice roll modal unchanged.
+
+Modal Background Requirement
+
+* Replace the current white modal background with this image:
+
+```txt id="e8bq7k"
+src/images/misc/modalBackground.png
+```
+
+* The background image should cover the full modal.
+* The image should fit the size of the modal.
+* It is acceptable for the image ratio to warp.
+* Use stretching behaviour if needed.
+* Suggested CSS direction:
+
+```css id="oc6pan"
+background-image: url("../../images/misc/modalBackground.png");
+background-size: 100% 100%;
+background-repeat: no-repeat;
+background-position: center;
+```
+
+* Exact path can vary based on the modal CSS file location.
+* Do not leave the old white background visible behind the image.
+
+Modal Text Requirement
+
+* All text inside normal modals should use this colour:
+
+```txt id="tw4fs4"
+#F5FA00
+```
+
+* All modal text should be bold.
+* This applies to:
+
+  * modal titles.
+  * modal body text.
+  * modal labels.
+  * modal confirmation text.
+  * modal warning text.
+  * any inline modal text.
+* Do not apply this to input text if a specific input style later overrides it.
+* Ensure links or special text inside modals remain readable.
+
+Suggested CSS direction:
+
+```css id="1g5x1c"
+.modal-content {
+  color: #F5FA00;
+  font-weight: 700;
+}
+```
+
+* Exact class names can vary.
+
+Modal Minimum Size Requirement
+
+* All normal modals should now have a minimum size.
+* Minimum modal width:
+
+```txt id="3xj2rg"
+600px
+```
+
+* Minimum modal height:
+
+```txt id="es3nt3"
+400px
+```
+
+* The modal should still behave safely on smaller screens.
+* If the viewport is narrower than 600px, the modal should not overflow unusably.
+* Use a responsive fallback where needed.
+* Suggested CSS direction:
+
+```css id="o56xor"
+min-width: min(600px, calc(100vw - 24px));
+min-height: 400px;
+```
+
+* Or equivalent responsive sizing.
+* Keep the modal centred.
+
+Dice Roll Modal Exclusion Requirement
+
+* This styling should not apply to the dice roll modal.
+* The dice roll modal should remain as it is for now.
+* Do not change:
+
+  * dice roll modal background.
+  * dice roll modal size.
+  * dice roll modal text styling.
+  * dice roll modal timing.
+  * dice roll modal animation.
+* Add a class, prop, or variant if needed to exclude the dice roll modal from global modal styling.
+
+Suggested Modal Variant Direction
+
+```jsx id="a0v1mu"
+<Modal variant="default" />
+<Modal variant="dice" />
+```
+
+* Exact implementation can vary.
+* The important requirement is that normal modals get the new style and dice roll modal does not.
+
+Modal Coverage Requirement
+
+* Apply this style to all normal modals, including:
+
+  * next-turn modals.
+  * confirmation modals.
+  * settings modals.
+  * Spells modal.
+  * reward assignment modals if they use the shared modal component.
+  * potion discard/capacity modals.
+  * battle turn modals.
+  * lose/respawn modals where applicable.
+* Do not apply it to the dice roll modal.
+
+Button Requirement
+
+* Modal buttons should continue using the global Button component from Feature-003.
+* Modal confirmation buttons should continue using the secondary variant.
+* Do not restyle buttons directly inside this feature unless needed to preserve readability.
+
+Expected Behaviour
+
+* Normal modals no longer have a white background.
+* Normal modals use `modalBackground.png`.
+* The modal background image stretches to the modal size.
+* Text inside normal modals is `#F5FA00`.
+* Text inside normal modals is bold.
+* Normal modals have a minimum size of 600px by 400px where viewport allows.
+* Normal modals remain centred.
+* Dice roll modal remains unchanged.
+* Existing modal behaviour still works.
+
+Out Of Scope
+
+* No dice roll modal styling changes.
+* No changes to dice animation.
+* No changes to modal behaviour.
+* No changes to button variants.
+* No changes to translations.
+* No changes to battle logic.
+* No changes to reward logic.
+* No unrelated UI redesign.
+
+Assumptions
+
+* There is a shared modal component or shared modal CSS.
+* `src/images/misc/modalBackground.png` already exists.
+* The dice roll modal can be identified separately from normal modals.
+* Existing modals can safely receive a class or variant if needed.
+
+Stop Point
+
+* Stop once all normal modals use the new fantasy background image, modal text is bold and `#F5FA00`, normal modals have the new minimum size, and the dice roll modal is unchanged.
+
+Testing Checkpoints
+
+* Confirm normal modal backgrounds use `modalBackground.png`.
+* Confirm the old white modal background is gone.
+* Confirm the modal background image stretches to fit the modal.
+* Confirm modal text is `#F5FA00`.
+* Confirm modal text is bold.
+* Confirm normal modals have at least 600px width where space allows.
+* Confirm normal modals have at least 400px height.
+* Confirm modals remain usable on smaller screens.
+* Confirm next-turn modal uses the new style.
+* Confirm confirmation modals use the new style.
+* Confirm settings modal uses the new style.
+* Confirm Spells modal uses the new style.
+* Confirm battle turn modal uses the new style.
+* Confirm reward-related modals use the new style where applicable.
+* Confirm the dice roll modal has not changed.
+* Confirm modal buttons still work.
+* Confirm modal translations still work.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Style Game Setup page with slideshow background and fantasy setup container
+
+Status
+
+* done
+
+Implementation Notes
+
+* Extracted the existing seven-image, 15-second, 1500ms crossfade into a shared `BattleBackgroundSlideshow` component used by both Start and Game Setup; decorative enemy logic remains Start-only.
+* Placed setup content in the requested responsive 800px by 600px `modalBackground.png` panel with Fontdiner Swanky title styling, `#C6CC0C` title text, `#F5FA00` panel text, and Unkempt/Noto Serif Japanese fallbacks.
+* Replaced the player-count select with secondary Button controls for 2 through 6, using `aria-pressed` plus the requested active visual state and the existing `setPlayerCount` state behavior.
+* Added fixed 350px by 150px player pods with Players 1-3 in the left column and Players 4-6 in the right column, plus a narrow-screen single-column fallback and internal panel scrolling.
+* Styled the existing language, gender, and colour selects for readability and changed the existing bilingual Start Game action to the secondary Button variant without changing options, validation, colour exclusivity, defaults, routing, or game logic.
+
+Goal
+
+* Update the Game Setup page styling.
+* Use the same transitioning battle-background slideshow as the Start screen.
+* Do not show random enemies on the Game Setup page.
+* Place all setup inputs inside a fixed-size fantasy container using `modalBackground.png`.
+* Replace the number of players input with player-count buttons.
+* Arrange six player setup pods in two columns.
+* Apply the project’s fantasy font and colour direction to the setup page.
+* Use the secondary Button component for Game Setup buttons.
+
+Scope
+
+* Update the Game Setup page layout.
+* Reuse the Start screen background slideshow logic.
+* Add a central setup container.
+* Use `modalBackground.png` as the setup container background.
+* Style the Game Setup title.
+* Replace the number of players input with buttons for 2–6 players.
+* Style player setup pods.
+* Arrange player pods into two columns.
+* Style labels and inputs.
+* Use language-appropriate fonts.
+* Use the secondary Button component.
+* Preserve existing setup behaviour.
+
+Background Slideshow Requirement
+
+* The Game Setup page should use the same background slideshow as the Start screen.
+* It should use the existing battle background images.
+* It should transition between backgrounds just like the Start screen.
+* Use the current Start screen slideshow timing and fade behaviour.
+* Do not duplicate slideshow logic if it can be shared.
+* The background should cover the whole page.
+* The background should not tile.
+* The background should sit behind the setup container.
+
+No Enemy Requirement
+
+* The Game Setup page should not show random enemies.
+* Only the Start screen should show decorative random enemies.
+* Do not reuse the Start screen enemy layer on Game Setup.
+* The slideshow background should be shared, but enemy spawning should remain Start-screen-only.
+
+Setup Container Requirement
+
+* Add a central fixed-size setup container.
+* The container should use this image as its background:
+
+```txt id="9xd0ep"
+src/images/misc/modalBackground.png
+```
+
+* Container size should be:
+
+```txt id="1xmndq"
+800px wide
+600px high
+```
+
+* The container should be centred in the page.
+* The background image should fit the container size.
+* It is acceptable for the image ratio to warp.
+* Suggested CSS direction:
+
+```css id="mi331y"
+.game-setup-panel {
+  width: 800px;
+  height: 600px;
+  background-image: url("../../images/misc/modalBackground.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+```
+
+* Exact path can vary.
+* The container should remain usable on smaller screens.
+* If needed, scale down or use responsive max dimensions.
+* Do not let the setup panel overflow the viewport unusably.
+
+Setup Title Requirement
+
+* The Game Setup title should remain bilingual from EPIC-008 Feature-001:
+
+```txt id="9g2e66"
+Game Setup - ゲームの準備
+```
+
+* The title should use this font:
+
+```txt id="v89f2l"
+Fontdiner Swanky
+```
+
+* The title colour should be:
+
+```txt id="9241sr"
+#C6CC0C
+```
+
+* The title should be at the top of the setup container.
+* The title should be centred horizontally.
+* The title should be visually separate from the player-count buttons and player setup pods.
+
+Number Of Players Button Requirement
+
+* Replace the number of players input with five buttons.
+* The buttons should be:
+
+```txt id="82v3dg"
+2
+3
+4
+5
+6
+```
+
+* These buttons should control how many player input pods are visible.
+* The buttons should be placed just below the Game Setup title.
+* The currently selected player count should be visually clear.
+* Selecting `2` should show only Player 1 and Player 2 pods.
+* Selecting `3` should show Player 1 to Player 3 pods.
+* Selecting `4` should show Player 1 to Player 4 pods.
+* Selecting `5` should show Player 1 to Player 5 pods.
+* Selecting `6` should show all six player pods.
+* The existing minimum of 2 players and maximum of 6 players should remain unchanged.
+* Do not keep the old number input visible.
+
+Player Count Button Styling Requirement
+
+* The player-count buttons should use the global Button component.
+* They should use the secondary variant.
+* They should match the fantasy styling from the rest of the game.
+* The selected player count should have an active visual state.
+* Suggested active state:
+
+  * brighter border.
+  * stronger glow.
+  * slightly different background.
+* The active state should not break the secondary button styling.
+
+Setup Container Text Colour Requirement
+
+* All text inside the setup container should use:
+
+```txt id="wbhs7n"
+#F5FA00
+```
+
+* This applies to:
+
+  * labels.
+  * player section titles.
+  * helper text.
+  * non-input text.
+* The setup title is an exception and should use:
+
+```txt id="9241sr"
+#C6CC0C
+```
+
+* Text inside inputs does not need to use `#F5FA00`.
+* Input text should remain readable.
+
+Font Requirement
+
+* The setup title should use Fontdiner Swanky.
+* The rest of the setup container text should use:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese.
+* Because the setup page is bilingual, mixed-language labels should support both fonts clearly.
+* Acceptable approach:
+
+  * apply Unkempt as the base font.
+  * wrap Japanese portions in a class using Noto Serif Japanese where practical.
+* Do not break the bilingual labels added in EPIC-008 Feature-001.
+
+Player Pod Requirement
+
+* There are up to six player setup sections.
+* Each player section should be a pod with fixed dimensions:
+
+```txt id="56e1pf"
+350px wide
+150px high
+```
+
+* Each pod should include the existing player setup inputs:
+
+  * Language.
+  * Gender.
+  * Colour.
+* Each pod should retain the bilingual player title:
+
+  * `Player 1 - プレイヤー1`
+  * `Player 2 - プレイヤー2`
+  * `Player 3 - プレイヤー3`
+  * `Player 4 - プレイヤー4`
+  * `Player 5 - プレイヤー5`
+  * `Player 6 - プレイヤー6`
+* The pod should visually group each player’s inputs.
+* Pod text should be `#F5FA00` unless inside inputs.
+* Pod styling should match the fantasy UI direction.
+* Hidden player pods should not take up layout space if the selected player count is lower.
+
+Two-Column Player Layout Requirement
+
+* Player pods should stack in two columns.
+* Left column:
+
+  * Player 1
+  * Player 2
+  * Player 3
+* Right column:
+
+  * Player 4
+  * Player 5
+  * Player 6
+* The six-pod layout should sit underneath the player-count buttons.
+* The layout should fit inside the 800px by 600px setup container.
+* Keep spacing compact enough to fit.
+* Do not let pods overflow the panel.
+* If a player pod is hidden because the selected player count is lower, the remaining visible pods should keep the same column structure.
+
+Suggested Layout Direction
+
+```txt id="6eqapm"
+Game Setup title
+Player count buttons: 2 3 4 5 6
+Player pods grid
+  left column: Player 1, Player 2, Player 3
+  right column: Player 4, Player 5, Player 6
+Start Game button
+```
+
+* The player-count buttons should be directly below the title.
+* The player pods should be below the player-count buttons.
+* The Start Game button should sit below the player pods or in a clear bottom area of the setup container.
+* The exact spacing can be adjusted to fit the 800px by 600px panel cleanly.
+
+Input Styling Requirement
+
+* Inputs should be styled to match the fantasy styling already implemented.
+* This includes:
+
+  * language select.
+  * gender select.
+  * colour select.
+* Input text should remain readable.
+* Input backgrounds should contrast against the dark panel.
+* Inputs should not inherit text styling that makes selected values hard to read.
+* Select dropdowns should remain usable.
+* Keep existing validation and options unchanged.
+* Do not style inputs in a way that makes Japanese text hard to read.
+
+Button Requirement
+
+* Buttons on the Game Setup page should use the global Button component.
+* Buttons should use the secondary variant.
+* This includes:
+
+  * player-count buttons.
+  * Start Game button.
+  * any other setup page buttons.
+* The Start Game button should keep the bilingual text:
+
+```txt id="w2jk88"
+Start Game - ゲーム開始
+```
+
+* Do not use the bespoke Start screen button here.
+* Preserve the existing Start Game behaviour.
+
+Player Count Behaviour Requirement
+
+* The selected player count should update the number of visible player setup pods.
+* The selected player count should continue to be stored in the same game setup state used by the rest of the app.
+* Existing colour selection rules should still work.
+* Existing gender selection rules should still work.
+* Existing language selection rules should still work.
+* When reducing player count:
+
+  * hidden players should not block starting the game.
+  * hidden players should not require valid selections.
+  * hidden players should not reserve colours if existing logic would cause conflicts.
+* When increasing player count:
+
+  * newly visible players should use valid default values where possible.
+  * colour conflicts should still be prevented.
+
+Responsive Requirement
+
+* The target design is an 800px by 600px panel.
+* On screens smaller than this, the setup page should remain usable.
+* Acceptable approaches:
+
+  * scale the panel down.
+  * use max-width/max-height.
+  * allow the page to scroll if absolutely necessary.
+* Do not break the fixed-size desktop layout.
+* Do not make controls inaccessible on smaller screens.
+
+Expected Behaviour
+
+* Game Setup page uses the same transitioning battle-background slideshow as the Start screen.
+* Game Setup page does not show random enemies.
+* Setup content is inside a centred 800px by 600px fantasy container.
+* The setup container uses `modalBackground.png`.
+* The Game Setup title is Fontdiner Swanky and `#C6CC0C`.
+* The number of players input is removed.
+* Five player-count buttons appear under the title: 2, 3, 4, 5, 6.
+* Clicking a player-count button changes how many player pods are visible.
+* The selected player-count button is visually clear.
+* Non-input text inside the panel is `#F5FA00`.
+* English text uses Unkempt.
+* Japanese text uses Noto Serif Japanese where applicable.
+* Player sections are 350px by 150px pods.
+* Player 1–3 pods are in the left column.
+* Player 4–6 pods are in the right column.
+* Inputs are styled to match the fantasy UI.
+* Setup page buttons use the secondary Button component.
+* Existing setup behaviour still works.
+
+Out Of Scope
+
+* No random enemy images on Game Setup.
+* No changes to setup translations.
+* No changes to player language options.
+* No changes to player gender options.
+* No changes to player colour options.
+* No changes to player count rules other than replacing the input with buttons.
+* No changes to Start screen styling.
+* No changes to gameplay.
+* No changes to battle.
+* No changes to debug controls.
+* No unrelated setup flow redesign.
+
+Assumptions
+
+* Start screen slideshow logic from Feature-002 and Bug-001 can be extracted or reused.
+* `modalBackground.png` already exists at `src/images/misc/modalBackground.png`.
+* The Game Setup page already has bilingual labels from EPIC-008 Feature-001.
+* The global Button component from Feature-003 already exists.
+* Fontdiner Swanky, Unkempt, and Noto Serif Japanese are already loaded or can be loaded centrally.
+* The current setup state can be updated from buttons just as it was previously updated from the number input.
+
+Stop Point
+
+* Stop once the Game Setup page has the transitioning battle-background slideshow, no enemies, a centred 800px by 600px modal-background panel, styled bilingual title, 2–6 player-count buttons, two-column player pod layout, fantasy-styled inputs, and secondary Button component usage.
+
+Testing Checkpoints
+
+* Confirm Game Setup page uses the battle background slideshow.
+* Confirm Game Setup backgrounds fade/transition like the Start screen.
+* Confirm backgrounds stay visible for the same duration as the Start screen.
+* Confirm no random enemies appear on Game Setup.
+* Confirm setup content is inside a centred panel.
+* Confirm the panel uses `modalBackground.png`.
+* Confirm the panel is 800px wide where space allows.
+* Confirm the panel is 600px tall where space allows.
+* Confirm the Game Setup title is visible at the top.
+* Confirm the title uses Fontdiner Swanky.
+* Confirm the title colour is `#C6CC0C`.
+* Confirm the old number of players input is removed.
+* Confirm player-count buttons 2, 3, 4, 5, and 6 appear below the title.
+* Confirm clicking 2 shows only Player 1 and Player 2 pods.
+* Confirm clicking 3 shows Player 1 to Player 3 pods.
+* Confirm clicking 4 shows Player 1 to Player 4 pods.
+* Confirm clicking 5 shows Player 1 to Player 5 pods.
+* Confirm clicking 6 shows all six player pods.
+* Confirm the selected player-count button has a clear active state.
+* Confirm non-input text inside the panel is `#F5FA00`.
+* Confirm English text uses Unkempt where applicable.
+* Confirm Japanese text uses Noto Serif Japanese where applicable.
+* Confirm Player 1 pod is 350px by 150px.
+* Confirm Player 2 pod is 350px by 150px.
+* Confirm Player 3 pod is 350px by 150px.
+* Confirm Player 4 pod is 350px by 150px.
+* Confirm Player 5 pod is 350px by 150px.
+* Confirm Player 6 pod is 350px by 150px.
+* Confirm Player 1–3 are in the left column.
+* Confirm Player 4–6 are in the right column.
+* Confirm hidden players do not block starting the game.
+* Confirm player language inputs still work.
+* Confirm player gender inputs still work.
+* Confirm player colour inputs still work.
+* Confirm colour exclusivity still works.
+* Confirm setup inputs are readable and styled.
+* Confirm setup page buttons use the secondary Button component.
+* Confirm Start Game still starts the game.
+* Confirm the page remains usable on smaller screens.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Improve Token Assignment layout and shared modal spacing
+
+Status
+
+* done
+
+Goal
+
+* Improve the visual structure of the shared Token Assignment component.
+* Make the Spells title, slot numbers, drop zones, token bag, and player image feel more polished.
+* Improve general modal spacing by adding internal padding.
+* Remove the black border from normal modals.
+
+Scope
+
+* Update the shared Token Assignment component styling.
+* Update the Spells title.
+* Update the starting-token warning spacing.
+* Update spell slot number styling.
+* Update spell drop zone styling.
+* Update token bag styling.
+* Update player image size in the Token Assignment component.
+* Update shared normal modal padding.
+* Remove shared normal modal black border.
+* Do not change the dice roll modal unless it shares these styles accidentally.
+
+Token Assignment Title Requirement
+
+* The `Spells` title in the Token Assignment component should be bigger and bold.
+* Font size should be:
+
+```txt id="39xuko"
+32px
+```
+
+* Font weight should be bold.
+* This applies to the title in the shared Token Assignment component.
+* Preserve translation behaviour:
+
+  * English: `Spells`
+  * Japanese: `呪文`
+
+Starting Warning Spacing Requirement
+
+* The warning paragraph should sit tighter to the `Spells` title.
+* This text is:
+
+```txt id="2q8flx"
+You must place all 7 starting tokens into spell slots before rolling dice.
+```
+
+* Japanese version:
+
+```txt id="6ttt59"
+サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。
+```
+
+* There should be approximately:
+
+```txt id="m2423c"
+30px
+```
+
+between the title and this paragraph.
+
+* Do not leave a large gap between the title and warning text.
+* Preserve the warning’s existing visibility rules.
+
+Spell Slot Number Requirement
+
+* The `h4` elements that contain the spell slot numbers should be made much bigger.
+* Font size should be:
+
+```txt id="7jqqky"
+42px
+```
+
+* The slot number should be centred to its column.
+* This applies to each spell column heading.
+* Do not re-add the word `Slot`.
+* The visible heading should remain just the number for each slot.
+
+Spell Drop Zone Styling Requirement
+
+* Remove the current black border from `.spell-drop-zone` elements.
+* Each spell drop zone should have:
+
+  * a very dark brown border.
+  * a dark brown background.
+* When a user drags a token over a spell drop zone but has not dropped it yet, the zone should change to a lighter brown colour.
+* This highlighted state should clearly show the current active drop target.
+* The highlighted colour should feel like part of the same fantasy styling.
+* The highlighted state should reset when the token leaves the drop zone or is dropped.
+
+Suggested CSS direction:
+
+```css id="g6kv0b"
+.spell-drop-zone {
+  border: 2px solid #2a160d;
+  background: #3a2013;
+}
+
+.spell-drop-zone.is-drag-over,
+.spell-drop-zone.drag-over,
+.spell-drop-zone.active {
+  border-color: #6b3f22;
+  background: #7a4a2a;
+}
+```
+
+* Exact class names can vary depending on the drag-and-drop implementation.
+* The important requirement is:
+
+  * no black border.
+  * dark brown default state.
+  * lighter brown active drag-over state.
+
+Token Bag Styling Requirement
+
+* The token bag should have the same visual treatment as the spell drop zones.
+* The token bag should have:
+
+  * very dark brown border.
+  * dark brown background.
+  * lighter brown active drag-over highlight.
+* The text within the token bag should use the game’s yellow text colour:
+
+```txt id="jju3s6"
+#F5FA00
+```
+
+* This is needed because token text is currently hard to see.
+* Token names and token-related text inside the token bag should remain readable.
+* Token bag styling should still support drag-and-drop correctly.
+
+Player Image Requirement
+
+* The player image in the top right of the Token Assignment component should be made larger.
+* Player image height should be:
+
+```txt id="vnb236"
+150px
+```
+
+* Preserve the image aspect ratio.
+* The image should remain in the top-right area.
+* The larger image should not overlap important controls.
+* The larger image should not push the Token Assignment layout into an unusable state.
+
+Shared Modal Padding Requirement
+
+* Normal modals should have padding around the whole modal content.
+* Padding should be:
+
+```txt id="n7u2cb"
+50px
+```
+
+* This should apply to the full internal modal area.
+* The padding should create space between modal content and the modal background edge.
+* This should work with the `modalBackground.png` styling from Feature-004.
+* The dice roll modal should remain unchanged if it is excluded from the shared normal modal styling.
+
+Shared Modal Border Requirement
+
+* Remove the black border around normal modals.
+* Normal modals should not have a black outer border.
+* The fantasy background image should define the modal shape visually.
+* Do not remove useful focus outlines from interactive elements.
+* Do not remove button borders from the global Button component.
+* This requirement is only for the modal container border.
+
+Dice Roll Modal Exclusion Requirement
+
+* The dice roll modal should remain as it is for now.
+* Do not intentionally apply the 50px modal padding to the dice roll modal.
+* Do not intentionally remove the dice roll modal border if it uses separate styling.
+* If the dice roll modal shares the global modal component, use the same variant/exclusion approach from Feature-004.
+
+Expected Behaviour
+
+* The `Spells` title is 32px and bold.
+* The starting-token warning paragraph is closer to the title, with about 30px spacing.
+* Spell slot number headings are 42px and centred in each column.
+* Spell drop zones no longer have black borders.
+* Spell drop zones use a very dark brown border and dark brown background.
+* Spell drop zones change to a lighter brown while actively dragged over.
+* The token bag uses the same dark brown treatment as spell drop zones.
+* The token bag highlights lighter brown when actively dragged over.
+* Text inside the token bag is `#F5FA00`.
+* The player image in the top right is 150px high.
+* Normal modals have 50px internal padding.
+* Normal modals no longer have a black border.
+* Dice roll modal remains unchanged.
+* Existing drag-and-drop behaviour still works.
+
+Out Of Scope
+
+* No changes to token assignment rules.
+* No changes to starting token validation.
+* No changes to token effects.
+* No changes to token translations.
+* No changes to potion styling.
+* No changes to reward generation.
+* No changes to spell slot capacity.
+* No changes to player piece images.
+* No changes to dice roll modal styling.
+* No unrelated modal redesign.
+* No unrelated page styling.
+
+Assumptions
+
+* The Token Assignment component is shared between starting setup, normal Spells modal, and reward token assignment.
+* The spell drop zones have identifiable CSS classes or can be given them.
+* The drag-and-drop library exposes an active drag-over state or class that can be used for highlighting.
+* The player image already appears in the top-right of the Token Assignment component.
+* Normal modals already use shared modal styling from Feature-004.
+
+Stop Point
+
+* Stop once the Token Assignment component has the updated title, warning spacing, slot headings, brown drop zones, brown token bag, yellow token bag text, larger player image, and normal modals have 50px padding with no black border.
+
+Testing Checkpoints
+
+* Confirm the `Spells` title is 32px.
+* Confirm the `Spells` title is bold.
+* Confirm the Japanese `呪文` title follows the same styling.
+* Confirm the starting-token warning is about 30px below the title.
+* Confirm each spell slot number is 42px.
+* Confirm each spell slot number is centred to its column.
+* Confirm spell drop zones have no black border.
+* Confirm spell drop zones have a very dark brown border.
+* Confirm spell drop zones have a dark brown background.
+* Confirm spell drop zones turn lighter brown when a token is dragged over them.
+* Confirm the spell drop zone highlight clears after leaving or dropping.
+* Confirm the token bag has the same dark brown styling.
+* Confirm the token bag turns lighter brown when dragged over.
+* Confirm token bag text is `#F5FA00`.
+* Confirm token names inside the token bag are readable.
+* Confirm the player image is 150px high.
+* Confirm the player image remains top right.
+* Confirm the player image does not overlap controls.
+* Confirm normal modals have 50px padding.
+* Confirm normal modals no longer have a black border.
+* Confirm the modal background image still fits correctly.
+* Confirm the dice roll modal remains unchanged.
+* Confirm drag-and-drop still works in starting token setup.
+* Confirm drag-and-drop still works in normal Spells modal.
+* Confirm drag-and-drop still works in reward token assignment.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-007: Centre all modal buttons horizontally
+
+Status
+
+* done
+
+Goal
+
+* Make modal button layouts more consistent.
+* All buttons inside normal modals should be horizontally centred.
+* This should apply across all modal types that use the shared modal component.
+* Dice roll modal should remain unchanged if it is excluded from the normal modal styling system.
+
+Scope
+
+* Update shared modal button layout styling.
+* Centre modal footer/action buttons horizontally.
+* Apply this to all normal modals.
+* Preserve existing button variants and behaviours.
+* Preserve the secondary button requirement from EPIC-009 Feature-003.
+
+Modal Button Alignment Requirement
+
+* All buttons inside normal modals should be horizontally centred.
+* This applies whether a modal has:
+
+  * one button.
+  * two buttons.
+  * three or more buttons.
+* Button groups should be centred as a group.
+* Individual buttons should not be left-aligned.
+* Individual buttons should not be right-aligned.
+* The button group should sit neatly inside the modal content area.
+
+Suggested CSS direction:
+
+```css id="iibc9n"
+.modal-actions,
+.modal-footer,
+.modal-button-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+```
+
+* Exact class names can vary.
+* Use the actual shared modal button container class if one already exists.
+* Keep spacing between buttons consistent.
+
+Modal Coverage Requirement
+
+* This should apply to normal modals, including:
+
+  * confirmation modals.
+  * settings modal.
+  * next-turn modal.
+  * battle turn modal.
+  * Spells modal.
+  * token assignment modal.
+  * reward assignment modal.
+  * potion capacity/discard modal.
+  * death/respawn modal if it uses the shared modal layout.
+* Do not manually centre each modal one by one if shared modal styling can handle it.
+
+Button Variant Requirement
+
+* Do not change button variants.
+* Confirmation modal buttons should remain secondary.
+* Modal `Yes`, `No`, `Cancel`, `Ok`, and `OK` buttons should remain secondary.
+* Do not change button text.
+* Do not change button click behaviour.
+
+Dice Roll Modal Exclusion Requirement
+
+* The dice roll modal should remain unchanged if it is still excluded from the normal modal styling system.
+* Do not intentionally restyle dice roll modal buttons as part of this feature.
+
+Expected Behaviour
+
+* Modal buttons are horizontally centred.
+* Single-button modals show the button centred.
+* Two-button modals show both buttons centred as a group.
+* Three-or-more-button modals show buttons centred and wrapped cleanly if needed.
+* Modal buttons still use the global Button component.
+* Modal confirmation buttons still use the secondary variant.
+* Existing modal actions still work.
+
+Out Of Scope
+
+* No changes to button styling.
+* No changes to button variants.
+* No changes to button text.
+* No changes to modal background image.
+* No changes to modal padding.
+* No changes to modal minimum size.
+* No changes to dice roll modal.
+* No changes to modal logic.
+* No unrelated modal redesign.
+
+Assumptions
+
+* Normal modals use a shared footer, actions row, or button container.
+* Modal buttons already use the global Button component from EPIC-009 Feature-003.
+* The dice roll modal is separately styled or can be excluded through the existing modal variant approach.
+
+Stop Point
+
+* Stop once all normal modal button groups are horizontally centred and existing modal button behaviour remains unchanged.
+
+Testing Checkpoints
+
+* Confirm single-button modals have the button centred.
+* Confirm two-button modals have buttons centred as a group.
+* Confirm three-button modals have buttons centred as a group.
+* Confirm modal button spacing is consistent.
+* Confirm modal buttons wrap cleanly if the modal is narrow.
+* Confirm confirmation modal buttons remain secondary.
+* Confirm settings modal buttons are centred.
+* Confirm Spells modal buttons are centred.
+* Confirm token assignment modal buttons are centred.
+* Confirm reward assignment modal buttons are centred.
+* Confirm potion capacity/discard modal buttons are centred.
+* Confirm death/respawn modal buttons are centred if applicable.
+* Confirm dice roll modal remains unchanged.
+* Confirm all modal button click handlers still work.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-008: Display feature images on the board
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added six board-state image records for the four fixed zones and two generated features without changing their coordinates, sizes, square data, or generation rules.
+* Stored a single random Elite tower ordering during `createBoard`, always using the gravel and woods images exactly once and keeping that assignment stable for the lifetime of the board.
+* Rendered each record once as a 2x2 CSS Grid overlay using only the required lowercase assets, with pointer events disabled so square interaction remains unchanged.
+* Kept feature images above environment tiles, movement highlights above feature images, and player markers above both layers.
+
+Goal
+
+* Replace the current plain coloured feature zones with the correct feature images.
+* Use the images from `src/images/features/`.
+* Place each feature image in the correct board location.
+* Preserve all existing board logic, movement logic, and feature collision rules.
+* Ensure all image filenames are lowercase.
+
+Scope
+
+* Add feature image rendering to the board.
+* Replace the visual appearance of:
+
+  * Start zone.
+  * Elite zones.
+  * Boss zone.
+  * generated easy feature.
+  * generated hard feature.
+* Preserve existing feature positions and generation rules.
+* Preserve existing zone sizes.
+* Preserve existing gameplay behaviour.
+
+Feature Image Folder
+
+* Feature images are stored in:
+
+```txt id="r6k6up"
+src/images/features/
+```
+
+Required Image Placement
+
+* Use the following image placements:
+
+```txt id="3n0mj3"
+home.png -> start zone in the bottom left
+elite-tower-gravel.png -> one elite zone
+elite-tower-woods.png -> the other elite zone
+boss-castle.png -> boss zone in the top right
+village-field.png -> generated feature in the easy zone
+village-forest.png -> generated feature in the hard zone
+```
+
+Start Zone Image Requirement
+
+* The start zone is currently in the bottom left.
+* It should display:
+
+```txt id="4b1emu"
+home.png
+```
+
+* The image should cover the whole start zone.
+* Do not tile the image across every square.
+* Render it as one complete feature image across the full start zone area.
+* Preserve start zone behaviour.
+
+Elite Zone Image Requirement
+
+* There are two elite zones:
+
+  * top left.
+  * bottom right.
+* These zones are currently coloured red.
+* Replace the red visual styling with elite tower images.
+* Use these two images:
+
+```txt id="np0e4v"
+elite-tower-gravel.png
+elite-tower-woods.png
+```
+
+* Both images must appear exactly once.
+* Either image can appear in either elite zone.
+* The assignment should be random per generated board.
+* Example valid assignment:
+
+```txt id="b20irc"
+top left: elite-tower-gravel.png
+bottom right: elite-tower-woods.png
+```
+
+* Example also valid:
+
+```txt id="gsqtgi"
+top left: elite-tower-woods.png
+bottom right: elite-tower-gravel.png
+```
+
+* Invalid assignment:
+
+```txt id="9hssms"
+top left: elite-tower-gravel.png
+bottom right: elite-tower-gravel.png
+```
+
+* Invalid assignment:
+
+```txt id="5jmrfm"
+top left: elite-tower-woods.png
+bottom right: elite-tower-woods.png
+```
+
+Boss Zone Image Requirement
+
+* The boss zone is currently in the top right and coloured black.
+* Replace the black visual styling with:
+
+```txt id="ebxdng"
+boss-castle.png
+```
+
+* The image should cover the full boss zone.
+* Do not tile the image per square.
+* Preserve boss zone behaviour.
+
+Generated Easy Feature Image Requirement
+
+* The generated feature in the easy zone should use:
+
+```txt id="7nnr5p"
+village-field.png
+```
+
+* This should apply to the one easy feature from EPIC-009 Feature-001.
+* The image should cover the full generated feature area.
+* Preserve the feature’s generated position.
+* Preserve its gameplay behaviour.
+
+Generated Hard Feature Image Requirement
+
+* The generated feature in the hard zone should use:
+
+```txt id="46q5zf"
+village-forest.png
+```
+
+* This should apply to the one hard feature from EPIC-009 Feature-001.
+* The image should cover the full generated feature area.
+* Preserve the feature’s generated position.
+* Preserve its gameplay behaviour.
+
+Image Rendering Requirement
+
+* Feature images should render as complete images over their full feature area.
+* Do not render the same image independently in each square of the feature.
+* Do not tile feature images.
+* Do not stretch an image beyond its assigned feature area.
+* It is acceptable for the image to stretch to match the feature area.
+* Feature images should sit above the normal environment tile backgrounds.
+* Feature images should not hide player pieces.
+* Player pieces should remain visible above feature images.
+* Existing board grid alignment should remain correct.
+
+Zone Size Requirement
+
+* Preserve existing zone sizes:
+
+  * start zone remains its current size.
+  * elite zones remain their current size.
+  * boss zone remains its current size.
+  * generated easy/hard features remain their current generated feature size.
+* Do not change board dimensions.
+* Do not change square size.
+* Do not change feature collision size.
+* Only change the visual rendering.
+
+Random Elite Assignment Requirement
+
+* Randomly choose which elite zone receives which elite tower image.
+* Both elite tower images must always be used.
+* Store the assignment as part of the generated board state so it does not change during play.
+* The images should not re-randomise on every render.
+* They should only randomise when a new board is generated.
+
+Filename Requirement
+
+* All feature image filenames are lowercase.
+* Do not import or reference capitalised versions of these filenames.
+* Use exactly:
+
+```txt id="i2un4e"
+home.png
+elite-tower-gravel.png
+elite-tower-woods.png
+boss-castle.png
+village-field.png
+village-forest.png
+```
+
+* Avoid references such as:
+
+  * `Home.png`
+  * `Elite-tower-gravel.png`
+  * `Elite-tower-woods.png`
+* This is important because filename casing can break imports depending on the environment.
+
+Expected Behaviour
+
+* The bottom-left start zone displays `home.png`.
+* The top-right boss zone displays `boss-castle.png`.
+* The top-left and bottom-right elite zones display one gravel tower and one woods tower.
+* The elite tower assignment is random per board generation.
+* The easy generated feature displays `village-field.png`.
+* The hard generated feature displays `village-forest.png`.
+* Feature images display as complete images across their full zones.
+* Player pieces remain visible above feature images.
+* Board movement and gameplay behaviour remain unchanged.
+* No image import errors occur because of filename capitalisation.
+
+Out Of Scope
+
+* No changes to feature generation count.
+* No changes to feature placement rules.
+* No changes to board size.
+* No changes to square size.
+* No changes to movement rules.
+* No changes to battle triggering.
+* No changes to start zone behaviour.
+* No changes to elite battle behaviour.
+* No changes to boss battle behaviour.
+* No new feature images.
+* No changes to environment tile images.
+* No unrelated board styling changes.
+
+Assumptions
+
+* The feature image files already exist in `src/images/features/`.
+* All feature image filenames are lowercase.
+* The fixed zones already have known board coordinates.
+* The generated easy and hard features already have stored positions.
+* The board renderer can render multi-square overlays or feature components.
+* Player pieces already render above board tiles and should continue to do so.
+
+Stop Point
+
+* Stop once all fixed and generated board features display the correct lowercase image files from `src/images/features/`, elite tower images are randomly assigned with one of each, and existing board behaviour remains unchanged.
+
+Testing Checkpoints
+
+* Confirm `home.png` appears on the bottom-left start zone.
+* Confirm `boss-castle.png` appears on the top-right boss zone.
+* Confirm one elite zone displays `elite-tower-gravel.png`.
+* Confirm the other elite zone displays `elite-tower-woods.png`.
+* Confirm both elite tower images appear exactly once.
+* Confirm elite tower assignment can vary between new board generations.
+* Confirm elite tower assignment does not change during the same game.
+* Confirm the generated easy feature displays `village-field.png`.
+* Confirm the generated hard feature displays `village-forest.png`.
+* Confirm feature images are not tiled per square.
+* Confirm feature images cover their full assigned zones.
+* Confirm feature images align to the board grid.
+* Confirm player pieces display above feature images.
+* Confirm board movement still works on feature zones.
+* Confirm elite battles still trigger correctly.
+* Confirm boss battle still triggers correctly.
+* Confirm generated features still behave as before.
+* Confirm board generation still respects EPIC-009 Feature-001 placement rules.
+* Confirm there are no missing image import errors.
+* Confirm there are no missing image import errors caused by filename capitalisation.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

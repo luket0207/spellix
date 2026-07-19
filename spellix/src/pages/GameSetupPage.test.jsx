@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'fs';
 import { MemoryRouter } from 'react-router-dom';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import GameSetupPage from './GameSetupPage';
@@ -27,6 +28,15 @@ function renderGameSetupPage() {
 }
 
 describe('GameSetupPage piece selection foundation', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
   test('renders the required bilingual setup copy and grouped player inputs', () => {
     renderGameSetupPage();
 
@@ -34,10 +44,25 @@ describe('GameSetupPage piece selection foundation', () => {
       screen.getByRole('heading', { name: 'Game Setup - ゲームの準備' })
     ).toBeInTheDocument();
     expect(screen.queryByText('Set up the game before play starts.')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Number of Players - プレイヤー人数')).toHaveValue('2');
+    const playerCountGroup = screen.getByRole('group', {
+      name: 'Number of Players - プレイヤー人数',
+    });
+
+    expect(
+      screen.queryByRole('combobox', { name: 'Number of Players - プレイヤー人数' })
+    ).toBeNull();
+    [2, 3, 4, 5, 6].forEach((count) => {
+      expect(within(playerCountGroup).getByRole('button', { name: String(count) })).toHaveClass(
+        'fantasy-button--secondary'
+      );
+    });
+    expect(within(playerCountGroup).getByRole('button', { name: '2' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     expect(
       screen.getByRole('button', { name: 'Start Game - ゲーム開始' })
-    ).toBeInTheDocument();
+    ).toHaveClass('fantasy-button--secondary');
 
     const playerOne = screen.getByRole('group', { name: 'Player 1 - プレイヤー1' });
     const playerTwo = screen.getByRole('group', { name: 'Player 2 - プレイヤー2' });
@@ -80,9 +105,7 @@ describe('GameSetupPage piece selection foundation', () => {
       'Orange - オレンジ',
     ];
 
-    fireEvent.change(screen.getByLabelText('Number of Players - プレイヤー人数'), {
-      target: { value: '6' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: '6' }));
 
     for (let playerNumber = 1; playerNumber <= 6; playerNumber += 1) {
       const playerSection = screen.getByRole('group', {
@@ -138,5 +161,60 @@ describe('GameSetupPage piece selection foundation', () => {
 
     expect(within(playerOneColour).getByRole('option', { name: 'Blue - 青' })).toBeInTheDocument();
     expect(within(playerTwoColour).queryByRole('option', { name: 'Red - 赤' })).toBeNull();
+  });
+
+  test('uses count buttons to add and remove only the selected player pods', () => {
+    renderGameSetupPage();
+
+    fireEvent.click(screen.getByRole('button', { name: '6' }));
+
+    expect(screen.getByRole('group', { name: 'Player 6 - プレイヤー6' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '6' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: '3' }));
+
+    expect(screen.getByRole('group', { name: 'Player 3 - プレイヤー3' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Player 4 - プレイヤー4' })).toBeNull();
+    expect(screen.queryByText(/player 4:/i)).toBeNull();
+    expect(screen.getByRole('button', { name: '3' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('reuses the Start slideshow without rendering decorative enemies', () => {
+    renderGameSetupPage();
+
+    const fieldsBackground = screen.getByTestId('start-page-background-fields');
+    const hillsBackground = screen.getByTestId('start-page-background-hills');
+
+    expect(fieldsBackground).toHaveClass('start-page-background--visible');
+    expect(hillsBackground).not.toHaveClass('start-page-background--visible');
+    expect(screen.queryByTestId('start-page-enemy')).toBeNull();
+
+    act(() => {
+      jest.advanceTimersByTime(15000);
+    });
+
+    expect(fieldsBackground).not.toHaveClass('start-page-background--visible');
+    expect(hillsBackground).toHaveClass('start-page-background--visible');
+  });
+
+  test('defines the required fixed panel, pod columns, fonts, colours, and responsive fallback', () => {
+    const pageSource = readFileSync(`${__dirname}/GameSetupPage.jsx`, 'utf8');
+    const stylesheet = readFileSync(`${__dirname}/GameSetupPage.css`, 'utf8');
+
+    expect(pageSource).toMatch(/import BattleBackgroundSlideshow from/);
+    expect(pageSource).not.toMatch(/ENEMIES|getEnemyImageSource|start-page-enemy/);
+    expect(stylesheet).toMatch(
+      /\.game-setup-panel\s*{[^}]*background-image:\s*url\('\.\.\/images\/misc\/modalBackground\.png'\);[^}]*background-size:\s*100% 100%;[^}]*height:\s*min\(600px,\s*calc\(100vh - 32px\)\);[^}]*width:\s*min\(800px,\s*calc\(100vw - 32px\)\);/s
+    );
+    expect(stylesheet).toMatch(
+      /\.game-setup-title\s*{[^}]*color:\s*#C6CC0C;[^}]*font-family:\s*'Fontdiner Swanky',\s*'Noto Serif JP',\s*serif;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.game-setup-player-pod\s*{[^}]*height:\s*150px;[^}]*width:\s*350px;/s
+    );
+    expect(stylesheet).toMatch(/\.game-setup-player-pod:nth-child\(-n\+3\)[^}]*grid-column:\s*1;/s);
+    expect(stylesheet).toMatch(/\.game-setup-player-pod:nth-child\(n\+4\)[^}]*grid-column:\s*2;/s);
+    expect(stylesheet).toMatch(/\.game-setup-panel\s+select\s*{[^}]*color:\s*#302419;/s);
+    expect(stylesheet).toMatch(/@media \(max-width:\s*760px\)/);
   });
 });

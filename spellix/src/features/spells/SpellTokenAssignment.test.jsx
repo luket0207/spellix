@@ -50,16 +50,20 @@ describe('SpellTokenAssignment', () => {
     expect(componentSource).toMatch(/<DragOverlay>/);
   });
 
-  test('disables drag auto-scrolling and vertical overscroll for spell columns', () => {
+  test('disables drag auto-scrolling and wrapper scroll bars for spell columns', () => {
     const componentSource = readFileSync(
       `${__dirname}/SpellTokenAssignment.jsx`,
       'utf8'
     );
     const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+    const spellSlotScrollRule = stylesheet.match(
+      /\.spell-slot-scroll\s*{([^}]*)}/s
+    )?.[1];
 
     expect(componentSource).toMatch(/<DndContext[^>]*autoScroll={false}/s);
-    expect(stylesheet).toMatch(
-      /\.spell-slot-scroll\s*{[^}]*overscroll-behavior-y:\s*none;/s
+    expect(spellSlotScrollRule).toMatch(/overflow:\s*visible;/);
+    expect(spellSlotScrollRule).not.toMatch(
+      /overflow(?:-x|-y)?:\s*(?:auto|scroll);/
     );
   });
 
@@ -89,11 +93,36 @@ describe('SpellTokenAssignment', () => {
 
     expect(within(firstSpellSlot).getAllByRole('button')).toHaveLength(10);
     expect(screen.getByText('10 / 10')).toBeInTheDocument();
-    expect(stylesheet).toMatch(
-      /\.spell-slot-scroll\s*{[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/s
-    );
+    expect(stylesheet).toMatch(/\.spell-slot-scroll\s*{[^}]*overflow:\s*visible;/s);
     expect(stylesheet).toMatch(
       /\.spell-slot-item \.spell-drop-zone\s*{[^}]*height:\s*60px;[^}]*min-height:\s*60px;/s
+    );
+  });
+
+  test('defines the polished spell slot and token bag visual states', () => {
+    const componentSource = readFileSync(
+      `${__dirname}/SpellTokenAssignment.jsx`,
+      'utf8'
+    );
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+
+    expect(componentSource).toMatch(
+      /className={`spell-drop-zone\${isOver \? ' spell-drop-zone--active' : ''}`}/
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-slot-item\s*>\s*h4\s*{[^}]*font-size:\s*42px;[^}]*text-align:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-drop-zone\s*{[^}]*border:\s*2px solid #2a160d;[^}]*background:\s*#3a2013;[^}]*border-radius:\s*8px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-drop-zone--active\s*{[^}]*border-color:\s*#6b3f22;[^}]*background:\s*#7a4a2a;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-token-source\s+\.spell-drop-zone\s*{[^}]*color:\s*#F5FA00;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.spell-token-assignment\s+\.token-display-name\s*{[^}]*color:\s*#F5FA00;/s
     );
   });
 
@@ -135,9 +164,12 @@ describe('SpellTokenAssignment', () => {
       />
     );
 
+    expect(screen.getByLabelText(/spell token assignment/i)).toHaveClass(
+      'spell-token-assignment'
+    );
     expect(screen.getByLabelText(/^spell slots$/i)).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 4 })).toHaveLength(6);
-    expect(screen.getAllByText(/^[0-1] of 5 tokens$/i)).toHaveLength(6);
+    expect(screen.getAllByText(/^[0-1] \/ 5$/i)).toHaveLength(6);
     expect(screen.getByLabelText(/token bag drop zone/i)).toBeInTheDocument();
     const moveableTokenButton = screen.getByRole('button', { name: /moveable red token/i });
     const committedTokenButton = screen.getByRole('button', { name: /committed blue token/i });
@@ -330,8 +362,8 @@ describe('SpellTokenAssignment', () => {
 
     expect(within(firstSlot).getByRole('heading', { name: '1', level: 4 })).toBeInTheDocument();
     expect(within(firstSlot).getByLabelText('Spell slot 1')).toBeInTheDocument();
-    expect(within(firstSlot).getByText('0 of 5 tokens', { selector: 'p' })).toBeInTheDocument();
-    expect(firstSlot).toHaveTextContent(/^1Drop tokens here0 of 5 tokens$/);
+    expect(within(firstSlot).getByText('0 / 5', { selector: 'p' })).toBeInTheDocument();
+    expect(firstSlot).toHaveTextContent(/^1Drop tokens here0 \/ 5$/);
     expect(within(firstSlot).queryByText(/Slot 1:/)).not.toBeInTheDocument();
   });
 

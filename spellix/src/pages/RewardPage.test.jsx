@@ -507,8 +507,8 @@ describe('RewardPage choice flow', () => {
     expect(screen.queryByRole('region', { name: /committed spell slots/i })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1', level: 4 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '3', level: 4 })).toBeInTheDocument();
-    expect(screen.getByText('5 of 5 tokens')).toBeInTheDocument();
-    expect(screen.getAllByText('0 of 5 tokens')).toHaveLength(5);
+    expect(screen.getByText('5 / 5')).toBeInTheDocument();
+    expect(screen.getAllByText('0 / 5')).toHaveLength(5);
     expect(screen.queryByLabelText(/spell slot assignment choices/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /select spell slot/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /confirm spell slot/i })).not.toBeInTheDocument();

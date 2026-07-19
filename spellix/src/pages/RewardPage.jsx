@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/common/Button/Button';
 import PotionIcon from '../components/potions/PotionIcon';
 import Token from '../components/tokens/Token';
 import { getPotionName } from '../data/potions';
@@ -221,9 +222,9 @@ function RewardPage() {
                     ? 'Reward potion replaced an existing potion.'
                     : 'Reward potion discarded.'}
             </p>
-            <button type="button" onClick={handleContinue}>
+            <Button type="button" onClick={handleContinue}>
               Continue
-            </button>
+            </Button>
             </>
           ) : isTokenReward ? (
             <>
@@ -243,34 +244,34 @@ function RewardPage() {
                   tokenBag={battlePlayer.tokenBag}
                 />
                 {selectedSpellSlotIndex >= 0 ? (
-                  <button
+                  <Button
                     className={languageClassName}
                     type="button"
                     onClick={() => assignSelectedRewardTokenToSpellSlot(selectedSpellSlotId)}
                   >
                     {spellAssignmentTranslations.confirm}
-                  </button>
+                  </Button>
                 ) : null}
               </>
             ) : null}
             {!isTokenBagAvailable ? <p>Token bag is full.</p> : null}
             {isTokenBagStaged ? (
-              <button
+              <Button
                 className={languageClassName}
                 type="button"
                 onClick={addSelectedRewardTokenToBag}
               >
                 {spellAssignmentTranslations.confirm}
-              </button>
+              </Button>
             ) : null}
             {isRewardTokenDiscardStaged ? (
-              <button
+              <Button
                 className={languageClassName}
                 type="button"
                 onClick={discardSelectedRewardToken}
               >
                 {spellAssignmentTranslations.confirm}
-              </button>
+              </Button>
             ) : null}
             {!isTokenBagAvailable && battlePlayer && isTokenBagReplacementRequested ? (
               <>
@@ -279,7 +280,7 @@ function RewardPage() {
                     <p>{`Selected token to replace: ${getDebugTokenTypeLabel(
                       selectedTokenBagReplacement.type
                     )} token ${selectedTokenBagReplacementIndex + 1}`}</p>
-                    <button
+                    <Button
                       className={languageClassName}
                       type="button"
                       onClick={() =>
@@ -287,7 +288,7 @@ function RewardPage() {
                       }
                     >
                       {spellAssignmentTranslations.confirm}
-                    </button>
+                    </Button>
                   </>
                 ) : (
                   <p>Choose a token to remove.</p>
@@ -306,7 +307,7 @@ function RewardPage() {
 
                   return (
                   <li key={`${potion.id}-${index}`}>
-                    <button
+                    <Button
                       aria-label={`Replace ${potionName}`}
                       type="button"
                       onClick={() => resolveSelectedPotionReward(index)}
@@ -317,15 +318,15 @@ function RewardPage() {
                         potion={potion}
                       />
                       <span>{`Replace ${potionName}`}</span>
-                    </button>
+                    </Button>
                   </li>
                   );
                 })}
               </ul>
             ) : null}
-            <button type="button" onClick={() => resolveSelectedPotionReward()}>
+            <Button type="button" onClick={() => resolveSelectedPotionReward()}>
               Discard new potion
-            </button>
+            </Button>
             </>
           )}
         </section>
@@ -360,13 +361,13 @@ function RewardPage() {
               ) : (
                 <PotionIcon language={currentLanguage} potion={rewardChoice.item} />
               )}
-              <button
+              <Button
                 className={languageClassName}
                 type="button"
                 onClick={() => selectBattleReward(rewardChoice.id)}
               >
                 {rewardPageTranslations.choose}
-              </button>
+              </Button>
             </div>
           );
           })}

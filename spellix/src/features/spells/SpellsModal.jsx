@@ -1,3 +1,4 @@
+import Button from '../../components/common/Button/Button';
 import Modal from '../../components/Modal';
 import {
   getGameplayLanguage,
@@ -28,22 +29,24 @@ function SpellsModal({
     <Modal
       actions={
         <div className="spell-modal-actions">
-          <button
+          <Button
             className={languageClassName}
             disabled={isForcedSetup}
             onClick={onCancel}
             type="button"
+            variant="secondary"
           >
             {translations.cancel}
-          </button>
-          <button
+          </Button>
+          <Button
             className={languageClassName}
             disabled={isSaveDisabled}
             onClick={onSave}
             type="button"
+            variant="secondary"
           >
             {translations.save}
-          </button>
+          </Button>
         </div>
       }
       ariaLabel={translations.spells}
@@ -52,30 +55,41 @@ function SpellsModal({
     >
       {currentPlayer ? (
         <div className="spells-layout">
-            <div className="spells-header">
-              <h2 className={languageClassName}>{translations.spells}</h2>
-              {pieceImageSource ? (
-                <img
-                  alt="Spell player piece"
-                  aria-label="Spell player piece"
-                  className="spells-player-piece"
-                  src={pieceImageSource}
-                  style={{ height: '100px' }}
-                />
+          <div className="spells-header">
+            <div className="spells-header-copy">
+              <h1 className={`spells-title ${languageClassName}`}>
+                {translations.spells}
+              </h1>
+              {isForcedSetup ? (
+                <p className={`spells-starting-warning ${languageClassName}`}>
+                  {translations.startingTokenWarning}
+                </p>
               ) : (
-                <span aria-label="Spell player piece">{currentPlayer.colour}</span>
+                <p className={`spells-starting-warning ${languageClassName}`}>
+                  {translations.spellsInfo}
+                </p>
               )}
+              {validationMessage ? (
+                <p className={languageClassName}>{validationMessage}</p>
+              ) : null}
             </div>
-            {isForcedSetup ? (
-              <p className={languageClassName}>{translations.startingTokenWarning}</p>
-            ) : null}
-            {validationMessage ? <p className={languageClassName}>{validationMessage}</p> : null}
-            <SpellTokenAssignment
-              language={currentLanguage}
-              onTokenDrop={onTokenDrop}
-              spellSlots={draftSpellSlots}
-              tokenBag={draftTokenBag}
-            />
+            {pieceImageSource ? (
+              <img
+                alt="Spell player piece"
+                aria-label="Spell player piece"
+                className="spells-player-piece"
+                src={pieceImageSource}
+              />
+            ) : (
+              <span aria-label="Spell player piece">{currentPlayer.colour}</span>
+            )}
+          </div>
+          <SpellTokenAssignment
+            language={currentLanguage}
+            onTokenDrop={onTokenDrop}
+            spellSlots={draftSpellSlots}
+            tokenBag={draftTokenBag}
+          />
         </div>
       ) : null}
     </Modal>
