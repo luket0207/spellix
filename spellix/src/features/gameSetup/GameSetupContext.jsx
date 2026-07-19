@@ -198,6 +198,87 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
+  const startMiniGame = (type, playerId) => {
+    setGameSetup((currentSetup) => {
+      const playerExists = currentSetup.players.some((player) => player.id === playerId);
+
+      if (!type || !playerExists) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        miniGameResult: {
+          type,
+          result: null,
+          playerId,
+          returnBehaviour: null,
+        },
+        miniGameReturnNotice: null,
+      };
+    });
+  };
+
+  const completeMiniGame = (result) => {
+    setGameSetup((currentSetup) => {
+      if (!currentSetup.miniGameResult || !['win', 'loss'].includes(result)) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        miniGameResult: {
+          ...currentSetup.miniGameResult,
+          result,
+          returnBehaviour: result === 'win' ? 'samePlayerRollAgain' : 'nextPlayerTurn',
+        },
+      };
+    });
+  };
+
+  const returnFromMiniGame = () => {
+    setGameSetup((currentSetup) => {
+      const result = currentSetup.miniGameResult;
+
+      if (!result?.result) {
+        return {
+          ...currentSetup,
+          miniGameResult: null,
+        };
+      }
+
+      const playerTurnIndex = currentSetup.turnOrder.indexOf(result.playerId);
+      const isLoss = result.returnBehaviour === 'nextPlayerTurn';
+      const nextTurnIndex =
+        playerTurnIndex >= 0 && currentSetup.turnOrder.length > 0
+          ? isLoss
+            ? (playerTurnIndex + 1) % currentSetup.turnOrder.length
+            : playerTurnIndex
+          : currentSetup.currentTurnIndex;
+
+      return {
+        ...currentSetup,
+        currentTurnIndex: nextTurnIndex,
+        miniGameResult: null,
+        miniGameReturnNotice:
+          result.type === 'river' && result.result === 'win'
+            ? {
+                message: 'You crossed the river! You may roll again.',
+                playerId: result.playerId,
+                type: result.type,
+              }
+            : null,
+      };
+    });
+  };
+
+  const dismissMiniGameReturnNotice = () => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      miniGameReturnNotice: null,
+    }));
+  };
+
   const initializeBoard = () => {
     setGameSetup((currentSetup) => {
       if (currentSetup.board) {
@@ -878,17 +959,22 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         applyBattleDiceResult,
         clearActiveBattle,
         currentPlayer: getCurrentPlayer(gameSetup),
+        completeMiniGame,
+        dismissMiniGameReturnNotice,
         discardSelectedRewardToken,
         grantPotionToPlayer,
         advanceTurn,
         initializeBoard,
         initializeTurnOrder,
+        miniGameResult: gameSetup.miniGameResult ?? null,
+        miniGameReturnNotice: gameSetup.miniGameReturnNotice ?? null,
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,
         resolvePendingPotionGrant,
         resolveSelectedPotionReward,
         finalizeBattleEffects,
         resetGame,
+        returnFromMiniGame,
         resolveBattleFreezeCheck,
         selectBattleReward,
         setActiveBattlePhase,
@@ -900,6 +986,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         setPlayerLanguage,
         setPlayerCount,
         startBattle,
+        startMiniGame,
         updatePlayerSpells,
       }}
     >

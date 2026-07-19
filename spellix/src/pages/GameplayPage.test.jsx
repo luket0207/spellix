@@ -118,6 +118,14 @@ function renderGameplayPage() {
   );
 }
 
+test('renders the decorative magical night sky only as gameplay background content', () => {
+  renderGameplayPage();
+
+  expect(screen.getByTestId('magical-night-sky')).toHaveAttribute('aria-hidden', 'true');
+  expect(screen.getByLabelText(/game board/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/gameplay panel/i)).toBeInTheDocument();
+});
+
 describe('GameplayPage spell modal unsaved change behavior', () => {
   test.each([0, 1, 6])(
     'keeps forced setup Save disabled with %i starting tokens placed',
@@ -156,9 +164,14 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     fireEvent.click(saveButton);
 
+    const confirmationDialog = screen.getByRole('dialog', {
+      name: /save spells confirmation/i,
+    });
+
+    expect(confirmationDialog).toBeInTheDocument();
     expect(
-      screen.getByRole('dialog', { name: /save spells confirmation/i })
-    ).toBeInTheDocument();
+      within(confirmationDialog).getByText(/commit your tokens to these spell slots/i)
+    ).toHaveClass('larger-text', 'language-en');
   });
 
   test('switches the listed gameplay labels and font classes with each player turn', () => {
@@ -277,7 +290,10 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
   test('shows no potions for an empty collection', () => {
     renderGameplayPage();
 
-    expect(screen.getByRole('region', { name: /potions/i })).toHaveTextContent('No potions');
+    const potionsArea = screen.getByRole('region', { name: /potions/i });
+
+    expect(potionsArea).toHaveTextContent('0/3');
+    expect(within(potionsArea).queryByText('No potions')).not.toBeInTheDocument();
   });
 
   test('shows the current player potions and updates them when the turn changes', () => {
@@ -301,7 +317,8 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     const firstPlayerPotions = screen.getByRole('region', { name: /potions/i });
 
     expect(within(firstPlayerPotions).getByText('Roll Choice')).toBeInTheDocument();
-    expect(within(firstPlayerPotions).getByText('Rare | Both')).toBeInTheDocument();
+    expect(within(firstPlayerPotions).getByText('1/3')).toBeInTheDocument();
+    expect(within(firstPlayerPotions).queryByText('Rare | Both')).not.toBeInTheDocument();
     expect(
       within(firstPlayerPotions).getByRole('group', { name: /roll choice potion/i })
     ).toHaveClass('potion-icon--blue');
@@ -314,7 +331,8 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     const secondPlayerPotions = screen.getByRole('region', { name: 'ポーション' });
 
     expect(within(secondPlayerPotions).getByText('小回復')).toHaveClass('language-jp');
-    expect(within(secondPlayerPotions).getByText('Common | Both')).toBeInTheDocument();
+    expect(within(secondPlayerPotions).getByText('1/3')).toBeInTheDocument();
+    expect(within(secondPlayerPotions).queryByText('Common | Both')).not.toBeInTheDocument();
     expect(
       within(secondPlayerPotions).getByRole('group', { name: '小回復 potion' })
     ).toHaveAccessibleDescription('HPを30％回復する。');

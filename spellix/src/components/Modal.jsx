@@ -22,7 +22,13 @@ function Modal({
         }`}
         role="dialog"
       >
-        {children}
+        {variant === 'default' ? (
+          <div className="modal-body" data-testid="modal-body">
+            {children}
+          </div>
+        ) : (
+          children
+        )}
         {actions && variant === 'default' ? (
           <div className="modal-actions" data-testid="modal-actions">
             {actions}

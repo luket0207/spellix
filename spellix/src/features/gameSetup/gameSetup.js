@@ -84,6 +84,8 @@ export function createPlayers(playerCount, existingPlayers = []) {
 export function createInitialGameSetup() {
   return {
     activeBattle: null,
+    miniGameResult: null,
+    miniGameReturnNotice: null,
     pendingPotionGrant: null,
     playerCount: MIN_PLAYER_COUNT,
     players: createPlayers(MIN_PLAYER_COUNT),

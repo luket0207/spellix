@@ -24,6 +24,33 @@ const REWARD_PAGE_TRANSLATIONS = {
   },
 };
 
+const RIVER_MINI_GAME_TRANSLATIONS = {
+  en: {
+    continue: 'Continue',
+    loss: 'You fell in the river and had to swim to the riverbank.',
+    mainInstruction: 'Get over the 3 rows of rocks to make it to the other side.',
+    returnNotice: 'You crossed the river! You may roll again.',
+    rowInstructions: [
+      'Choose a safe rock in the first row.',
+      'Choose a safe rock in the second row.',
+      'Choose a safe rock to make it to the other side.',
+    ],
+    win: 'You made it to the other side! Take your reward and roll again.',
+  },
+  jp: {
+    continue: '続ける',
+    loss: '川に落ちてしまい、岸まで泳がなければなりませんでした。',
+    mainInstruction: '3列の岩を越えて、反対岸にたどり着いてください。',
+    returnNotice: '川を渡り切りました！もう一度サイコロを振ることができます。',
+    rowInstructions: [
+      '1列目から安全な岩を選んでください。',
+      '2列目から安全な岩を選んでください。',
+      '反対岸にたどり着くため、安全な岩を選んでください。',
+    ],
+    win: '反対岸にたどり着きました！報酬を受け取り、もう一度サイコロを振ってください。',
+  },
+};
+
 const SPELL_ASSIGNMENT_TRANSLATIONS = {
   en: {
     assignReward: 'Assign reward',
@@ -103,6 +130,10 @@ export function getGameplayTranslations(language) {
 
 export function getRewardPageTranslations(language) {
   return REWARD_PAGE_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
+export function getRiverMiniGameTranslations(language) {
+  return RIVER_MINI_GAME_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
 export function getSpellAssignmentTranslations(language) {

@@ -1,0 +1,2472 @@
+---
+
+Feature-001: Add animated magical night sky background to gameplay layout
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added a dedicated `MagicalNightSky` component with 48 mount-time randomized stars and nine guaranteed mixed orb, comet, and swirl effects animated entirely through CSS.
+* Used a component-local seeded random generator so decorative generation does not consume the global `Math.random` values used by gameplay, and kept generated descriptors stable across rerenders.
+* Mounted the aria-hidden, pointer-transparent layer only inside `gameplay-layout`, with the existing board and sidebar above it and existing modal layering unchanged.
+* Added the requested dark night-sky gradient, varied fade/movement cycles, viewport clipping, and a reduced-motion fallback without adding a dependency, timers, animation loops, routes, or gameplay state.
+
+Goal
+
+* Add an animated background effect to `gameplay-layout`.
+* The background should feel like a magical night sky.
+* It should include random twinkling stars.
+* It should also include colourful spell-like visual effects.
+* Spell effects can include:
+
+  * glowing orbs with comet-like tails.
+  * swirls.
+  * particles.
+  * small magical bursts.
+* The effect should be decorative only and must not affect gameplay.
+
+Scope
+
+* Update the `gameplay-layout` background.
+* Add animated night sky visuals.
+* Add random twinkling stars.
+* Add random colourful magical effects.
+* Optionally use one third-party animation/particle library.
+* If a third-party library is used, use only one and use it consistently.
+* Preserve all existing gameplay layout, board, panel, modal, and interaction behaviour.
+
+Gameplay Layout Target
+
+* Apply the animated background to the main gameplay layout container.
+* Target the element currently known as:
+
+```txt id="aof0gk"
+gameplay-layout
+```
+
+* This should sit behind the board and gameplay UI.
+* Do not apply this to:
+
+  * Start screen.
+  * Game Setup page.
+  * Battle page.
+  * Reward page.
+  * modals.
+  * dice roll modal.
+
+Night Sky Requirement
+
+* The gameplay layout background should look like a night sky.
+* It should have a dark base colour.
+* Suggested colour direction:
+
+  * dark navy.
+  * deep purple.
+  * near-black blue.
+* The background should feel magical rather than plain black.
+* A subtle gradient is acceptable.
+* The background should fill the full gameplay layout area.
+
+Suggested CSS direction:
+
+```css id="0xc1ey"
+.gameplay-layout {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(38, 28, 88, 0.75), transparent 45%),
+    linear-gradient(180deg, #050617 0%, #10102a 60%, #050617 100%);
+}
+```
+
+* Exact colours can vary if they look better with the existing game styling.
+
+Twinkling Stars Requirement
+
+* Add random twinkling stars across the gameplay background.
+* Stars should:
+
+  * vary slightly in size.
+  * vary slightly in opacity.
+  * twinkle at different timings.
+  * feel random rather than uniform.
+* Stars should be decorative only.
+* Stars should not distract from the board.
+* Stars should not appear above modals.
+* Stars should not block clicks.
+
+Suggested behaviour:
+
+```txt id="3xebpu"
+Small stars randomly fade between dim and bright states.
+Different stars use different animation delays.
+```
+
+Magical Spell Effect Requirement
+
+* Add colourful spell-like shapes randomly across the background.
+* Effects can include:
+
+  * glowing orbs.
+  * comet-like orbs with tails.
+  * swirling shapes.
+  * floating magical particles.
+  * small colourful bursts.
+* Effects should appear at random positions and random intervals.
+* Effects should animate smoothly.
+* Effects should fade in and out.
+* Effects should not permanently clutter the screen.
+* Effects should feel magical, fantasy-themed, and subtle.
+* Effects should sit behind the gameplay content.
+
+Comet / Orb Direction
+
+* Orbs with tails should look like small magical comets.
+* They can move diagonally, horizontally, or in gentle arcs.
+* They should fade out before disappearing.
+* Colours can vary randomly.
+* Suggested colours:
+
+  * blue.
+  * purple.
+  * green.
+  * yellow.
+  * pink.
+  * orange.
+* Do not make the effects so bright that they overpower the board.
+
+Swirl / Particle Direction
+
+* Swirls and particle effects are allowed.
+* They should be subtle and decorative.
+* They should not appear as gameplay indicators.
+* They should not be confused with movement highlights, token effects, or battle effects.
+
+Third-Party Library Requirement
+
+* A third-party library may be used if needed.
+* If a library is used:
+
+  * use only one animation/particle library.
+  * use that same library consistently for the whole magical background.
+  * do not add multiple libraries for separate star/comet/swirl effects.
+* Acceptable examples include a particle/canvas animation library if it fits the project.
+* Do not use a large or heavy library if simple CSS/canvas can achieve the effect.
+* If no library is needed, a custom CSS/canvas implementation is acceptable.
+
+Recommended Implementation Direction
+
+* Prefer a dedicated decorative component.
+* Suggested component:
+
+```txt id="9r3txc"
+src/components/gameplay/MagicalNightSky/MagicalNightSky.jsx
+src/components/gameplay/MagicalNightSky/MagicalNightSky.css
+```
+
+* Exact location can vary if the project has a better component structure.
+* The component should be rendered inside `gameplay-layout`.
+* It should sit behind gameplay content.
+
+Suggested structure:
+
+```jsx id="6puqti"
+<div className="gameplay-layout">
+  <MagicalNightSky />
+  <div className="gameplay-content">
+    {/* existing gameplay board and UI */}
+  </div>
+</div>
+```
+
+Layering Requirement
+
+* The animated background should be behind all gameplay content.
+* Suggested layering:
+
+```txt id="2nafo5"
+animated background: z-index 0
+gameplay board and UI: z-index 1
+modals: existing modal z-index above gameplay
+```
+
+* The background layer should use:
+
+```css id="jcmic3"
+pointer-events: none;
+```
+
+* It must not block:
+
+  * board clicks.
+  * movement selection.
+  * Roll Dice button.
+  * Spells button.
+  * Potions UI.
+  * settings cog.
+  * modal interactions.
+
+Performance Requirement
+
+* The animation should be performant.
+* Avoid creating too many DOM nodes.
+* Avoid expensive re-renders.
+* Prefer CSS animations, canvas, or a single efficient particle layer.
+* Timers or animation loops should be cleaned up when leaving gameplay.
+* The animation should not noticeably slow down:
+
+  * board rendering.
+  * drag-and-drop.
+  * dice rolling.
+  * battle navigation.
+  * modal interactions.
+
+Randomness Requirement
+
+* Star placement should feel random.
+* Spell effects should appear at random positions.
+* Spell effects should appear at random times.
+* The animation does not need to be deterministic.
+* The background can regenerate when gameplay loads.
+* Do not store these decorative random effects in game state unless needed.
+
+Responsive Requirement
+
+* The animated background should cover the gameplay viewport.
+* It should work if the page size changes.
+* It should still fill the background behind the 930px board.
+* It should not create scroll bars by itself.
+* It should not change the layout size of `gameplay-layout`.
+
+Visual Intensity Requirement
+
+* The background should improve the feel of the game without making gameplay harder.
+* Keep effects behind the board and UI.
+* Avoid high-frequency flashing.
+* Avoid strong strobing.
+* Avoid animations that make text difficult to read.
+* Avoid effects that look like active gameplay signals.
+
+Expected Behaviour
+
+* Gameplay layout has a magical night sky background.
+* Stars twinkle randomly.
+* Colourful spell-like effects appear randomly.
+* Effects can include orbs, comet tails, swirls, or particles.
+* Effects fade in and out smoothly.
+* The animated background sits behind all gameplay content.
+* The background does not block clicks.
+* The background does not affect gameplay state.
+* The background does not appear on the Start screen, Game Setup, Battle page, or Reward page.
+* Gameplay remains responsive.
+
+Out Of Scope
+
+* No changes to board generation.
+* No changes to board images.
+* No changes to feature images.
+* No changes to movement rules.
+* No changes to battle logic.
+* No changes to token assignment.
+* No changes to modal styling.
+* No changes to Start screen slideshow.
+* No changes to Game Setup background.
+* No sound effects.
+* No new gameplay mechanics.
+* No gameplay meaning attached to the background particles.
+
+Assumptions
+
+* `gameplay-layout` is the main wrapper for the gameplay page.
+* Existing gameplay content can be layered above a decorative background.
+* The project can either support a small animation library or a custom CSS/canvas solution.
+* The animation is decorative and does not need to be saved or replayed exactly.
+
+Stop Point
+
+* Stop once `gameplay-layout` has a performant animated magical night sky background with twinkling stars and random colourful spell-like effects, all sitting behind gameplay content without affecting layout or interactions.
+
+Testing Checkpoints
+
+* Confirm `gameplay-layout` has a night sky background.
+* Confirm the background fills the gameplay layout.
+* Confirm stars are visible.
+* Confirm stars twinkle.
+* Confirm star twinkling is not uniform.
+* Confirm colourful spell-like effects appear.
+* Confirm spell effects appear at random positions.
+* Confirm spell effects appear at random times.
+* Confirm spell effects fade in and out.
+* Confirm at least one effect resembles a glowing orb or comet-like spell.
+* Confirm swirls or particles appear if implemented.
+* Confirm effects stay behind the board and UI.
+* Confirm the board remains readable.
+* Confirm gameplay text remains readable.
+* Confirm the background does not block board clicks.
+* Confirm the background does not block buttons.
+* Confirm the background does not block settings.
+* Confirm the background does not appear on the Start screen.
+* Confirm the background does not appear on the Game Setup page.
+* Confirm the background does not appear on the Battle page.
+* Confirm the background does not appear on the Reward page.
+* Confirm no extra scroll bars are created.
+* Confirm animations are cleaned up when leaving gameplay.
+* Confirm gameplay performance remains acceptable.
+* Confirm drag-and-drop still works smoothly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Add styled Potions area to gameplay UI
+
+Status
+
+* done
+
+Goal
+
+* Add a dedicated Potions area to the gameplay UI.
+* The Potions area should sit near the existing Spells table.
+* It should be styled similarly to the Spells table.
+* It should display the current player’s potions.
+* It should show potion capacity using a simple number format such as `1/3`.
+* It should support English and Japanese title translations.
+* Potion items should be rendered with `div` elements, not `ul` or `li`.
+
+Scope
+
+* Add a Potions display area to the gameplay UI.
+* Position it close to the existing Spells table.
+* Style it to visually match the Spells table.
+* Use the global `PotionIcon` component for potion display.
+* Display current potion capacity.
+* Translate the section title based on the current player’s language.
+* Preserve existing potion storage and reward logic.
+
+Potions Area Placement Requirement
+
+* The Potions area should appear in the gameplay UI near the Spells table.
+* It should be placed just below the Spells table unless the existing layout has a better nearby space.
+* The Potions area should feel like part of the same UI group as Spells.
+* It should not overlap:
+
+  * board.
+  * Roll Dice button.
+  * Spells button.
+  * settings cog.
+  * player info.
+  * modal overlays.
+
+Title Requirement
+
+* The Potions area should have a title.
+* The title should translate based on the current player’s selected language.
+* English title:
+
+```txt id="6ahrc1"
+Potions
+```
+
+* Japanese title:
+
+```txt id="2sfk4m"
+ポーション
+```
+
+* Use the player-turn-based language system from EPIC-008.
+* If language is missing or invalid, fall back to English.
+
+Capacity Display Requirement
+
+* The Potions area should show current potion capacity.
+* Display this using only numbers with a slash in the middle.
+* Example:
+
+```txt id="tz8r53"
+1/3
+```
+
+* The first number is the number of potions the current player currently has.
+* The second number is the maximum potion capacity.
+* Current maximum capacity is:
+
+```txt id="46ya83"
+3
+```
+
+* Example states:
+
+  * no potions: `0/3`
+  * one potion: `1/3`
+  * two potions: `2/3`
+  * three potions: `3/3`
+* Do not display extra text such as `Potion capacity`.
+* The number display should be clearly visible near the Potions title.
+
+Suggested Header Layout
+
+```txt id="1su6ce"
+Potions        1/3
+```
+
+* Exact layout can vary.
+* The title and capacity should feel visually connected.
+
+Potion Item Rendering Requirement
+
+* Potions should not be displayed in a `ul`.
+* Potions should not be displayed in `li` elements.
+* Use `div` elements for the potions list and potion items.
+* Suggested structure:
+
+```jsx id="yw163j"
+<div className="potions-area">
+  <div className="potions-area-header">
+    <h3>{potionsTitle}</h3>
+    <div className="potions-capacity">1/3</div>
+  </div>
+
+  <div className="potions-list">
+    <div className="potion-slot">
+      <PotionIcon potion={potion} language={currentLanguage} />
+    </div>
+  </div>
+</div>
+```
+
+* Exact class names can vary.
+* The important requirement is no `ul` or `li`.
+
+Potion Display Requirement
+
+* Use the global `PotionIcon` component from EPIC-007 Feature-005.
+* Potion names should display according to EPIC-008 Feature-007:
+
+  * English names for English players.
+  * Japanese names for Japanese players.
+* Potion tooltips should also use the current player’s language.
+* Potion colours should remain unchanged.
+* Potion glow styling should remain unchanged.
+* Potion effects remain out of scope unless already implemented elsewhere.
+
+Empty State Requirement
+
+* If the player has no potions, the Potions area should still appear.
+* It should display:
+
+```txt id="e852ts"
+0/3
+```
+
+* The empty area should look intentional.
+* Optional empty text is allowed if useful, but it must be translated if added.
+* Prefer keeping it simple with the title, capacity, and empty slots/space.
+
+Styling Requirement
+
+* The Potions area should be styled similarly to the Spells table above it.
+* It should use the same fantasy UI direction already implemented.
+* It should visually belong with the gameplay UI.
+* Suggested styling:
+
+  * dark brown background.
+  * very dark brown border.
+  * slightly rounded corners.
+  * yellow text.
+  * clear spacing.
+* Use this yellow text colour where appropriate:
+
+```txt id="6ht9tu"
+#F5FA00
+```
+
+* Do not make potion names hard to read.
+* Keep the layout compact enough for gameplay.
+
+Suggested CSS Direction
+
+```css id="wr2yt6"
+.potions-area {
+  border: 2px solid #2a160d;
+  background: #3a2013;
+  border-radius: 8px;
+  padding: 12px;
+  color: #F5FA00;
+}
+
+.potions-area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.potions-list {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+```
+
+* Exact values can vary to match the current Spells table styling.
+* The important requirement is that the Potions area feels visually consistent with Spells.
+
+Potion Slot Requirement
+
+* The Potions area should visually support up to 3 potions.
+* The layout should not break when the player has:
+
+  * 0 potions.
+  * 1 potion.
+  * 2 potions.
+  * 3 potions.
+* The layout should not use scroll bars.
+* The layout should not use `ul` or `li`.
+* If empty potion slots are shown, they should be divs.
+
+Current Player Requirement
+
+* The Potions area should display the current player’s potions.
+* When the active turn changes, the Potions area should update to show the new current player’s potions.
+* The title language should also update when the active player changes.
+* The capacity count should update when potions are gained, discarded, or otherwise removed.
+
+Expected Behaviour
+
+* Gameplay UI shows a Potions area near the Spells table.
+* The title displays `Potions` for English players.
+* The title displays `ポーション` for Japanese players.
+* The area displays capacity as `0/3`, `1/3`, `2/3`, or `3/3`.
+* Potions render using `PotionIcon`.
+* Potion names and tooltips use the current player’s language.
+* Potions are rendered using `div` elements, not `ul` or `li`.
+* The area is styled similarly to the Spells table.
+* The Potions area updates when the turn changes.
+
+Out Of Scope
+
+* No potion effect implementation.
+* No changes to potion reward generation.
+* No changes to potion capacity.
+* No changes to potion rarity.
+* No changes to potion translations.
+* No changes to PotionIcon styling unless needed for layout.
+* No changes to the Spells table.
+* No changes to token assignment.
+* No changes to battle logic.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* Players can currently hold up to 3 potions.
+* Player potion data already exists from EPIC-007 Feature-002.
+* Potion translations already exist from EPIC-008 Feature-007.
+* `PotionIcon` already supports language-aware names and tooltips.
+* The gameplay UI already has access to the current player and their language.
+
+Stop Point
+
+* Stop once the gameplay UI has a styled Potions area near the Spells table, displays the current player’s potions using divs, translates the title, and shows capacity as `current/max`.
+
+Testing Checkpoints
+
+* Confirm the Potions area appears in the gameplay UI.
+* Confirm it appears near the Spells table.
+* Confirm the title displays `Potions` for English players.
+* Confirm the title displays `ポーション` for Japanese players.
+* Confirm capacity displays as `0/3` when the player has no potions.
+* Confirm capacity displays as `1/3` when the player has one potion.
+* Confirm capacity displays as `2/3` when the player has two potions.
+* Confirm capacity displays as `3/3` when the player has three potions.
+* Confirm potion items are rendered with `div` elements.
+* Confirm no `ul` is used for the potion list.
+* Confirm no `li` is used for potion items.
+* Confirm potions use the global `PotionIcon` component.
+* Confirm potion names display in English for English players.
+* Confirm potion names display in Japanese for Japanese players.
+* Confirm potion tooltips display in English for English players.
+* Confirm potion tooltips display in Japanese for Japanese players.
+* Confirm the Potions area updates when the current player changes.
+* Confirm the Potions area updates after gaining a potion.
+* Confirm the Potions area updates after discarding or removing a potion.
+* Confirm the Potions area supports 0, 1, 2, and 3 potions without scroll bars.
+* Confirm the Potions area styling matches the fantasy direction of the Spells table.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Upgraded the existing Gameplay `PotionList` directly below committed Spells instead of adding a second potion display or changing layout structure.
+* Reused `POTION_MAX_CAPACITY` and the global language-aware `PotionIcon`; potion storage, capacity, rewards, effects, colours, glow, and tooltips remain unchanged.
+* Added a persistent compact brown panel with yellow title/capacity text, exact `current/3` display, div-based slots for 0-3 potions, and no scroll containers.
+* Added component and Gameplay regressions for all capacity states, gain/removal rerenders, current-player turn changes, English/Japanese content, div-only markup, styling, and build/lint safety.
+
+---
+
+Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added a Mini Games section to the existing Debug modal and wired its River trigger through the current-player game context to `/mini-game/river`.
+* Added stable per-attempt River row generation with three rows of three rocks, exact 2/2/1 safe counts, active-row-only interaction, staged instructions, and a cleaned-up one-second unsafe animation before loss navigation.
+* Added shared `/mini-game/loot-chest` and `/mini-game/lose` placeholder pages using the global Button component and a centralized mini-game result lifecycle that stores game type, result, player, and return behavior.
+* River wins preserve the playing turn and create the dismissible roll-again notice on Gameplay; losses advance from the recorded mini-game player to the next existing turn-order player.
+* Reused React Router, `GameSetupContext`, the existing turn order, Debug modal, global Button, and Modal rather than adding a new state layer, route abstraction, reward logic, or board trigger; the supplied `src/images/miniGames/river.png` asset was consumed without modification.
+
+Goal
+
+* Start building the mini game system.
+* Add a new debug menu area that can trigger mini games.
+* Add the first mini game: River Mini Game.
+* Add a standalone River Mini Game page.
+* Add a shared Loot Chest page for mini game wins.
+* Add a shared Mini Game Lose page for mini game losses.
+* Handle turn flow correctly after mini games.
+* Preserve existing board, battle, reward, and turn systems.
+
+Scope
+
+* Add mini game debug trigger area.
+* Add routing for mini game pages.
+* Add River Mini Game page.
+* Add River Mini Game state and logic.
+* Add clickable rocks.
+* Add instructions for each stage.
+* Add unsafe-rock animation.
+* Add shared Loot Chest page placeholder.
+* Add shared Mini Game Lose page placeholder.
+* Add return-to-board handling.
+* Add correct turn behaviour for mini game win/loss.
+* Add return modal after River Mini Game win telling the player they may roll again.
+
+Mini Game Debug Menu Requirement
+
+* Add a new area in the debug menu for mini games.
+* This area should allow manually triggering mini games.
+* For now, it only needs to include the River Mini Game.
+* Suggested debug button text:
+
+```txt id="u6mftq"
+Start River Mini Game
+```
+
+* Clicking this debug button should take the current player to the River Mini Game page.
+* Debug menu styling is still out of scope unless already handled elsewhere.
+* This debug trigger is for testing and development.
+* It should not require the player to land on a real river square yet.
+
+Mini Game Turn Flow Requirement
+
+* Mini games should follow this default rule:
+
+```txt id="kxjhdu"
+When a mini game ends, return to the board and move on to the next player's turn.
+```
+
+* Individual mini games may override this rule.
+* River Mini Game has a special win rule:
+
+  * if the player wins, they return to the board and may roll again.
+  * this means the turn should not move to the next player on River Mini Game win.
+* River Mini Game loss follows the default rule:
+
+  * return to the board.
+  * move on to the next player’s turn.
+
+Routing Requirement
+
+* Add routes/pages for:
+
+  * River Mini Game.
+  * Loot Chest page.
+  * Mini Game Lose page.
+* Suggested route names:
+
+```txt id="tdmil1"
+/mini-game/river
+/mini-game/loot-chest
+/mini-game/lose
+```
+
+* Exact route names can vary if the project already has a route convention.
+* These pages should be standalone pages, not modals.
+* They should work through React Router.
+* Do not break existing Start, Game Setup, Gameplay, Battle, or Reward routes.
+
+River Mini Game Page Requirement
+
+* Create a new page for the River Mini Game.
+* Suggested file:
+
+```txt id="ahry3p"
+src/pages/MiniGames/RiverMiniGame.jsx
+```
+
+* Exact location can vary if the project has an existing pages structure.
+* The page background should use this image:
+
+```txt id="9wm254"
+src/images/miniGames/river.png
+```
+
+* The background image should cover the full screen.
+* The background should not tile.
+* The mini game content should sit above the background.
+* The page should clearly show the current player.
+
+River Mini Game Rules
+
+* The player must cross a river using rocks.
+* The player has 3 rows of rocks.
+* Each row contains 3 rocks.
+* The player must choose one rock in each row.
+* The player wins if they choose a safe rock in all 3 rows.
+* The player loses immediately if they choose an unsafe rock.
+* The game ends immediately on an unsafe choice, no matter which row the player is on.
+
+Safe Rock Rules
+
+* Row 1:
+
+  * 3 rocks total.
+  * 2 rocks are safe.
+  * 1 rock is unsafe.
+* Row 2:
+
+  * 3 rocks total.
+  * 2 rocks are safe.
+  * 1 rock is unsafe.
+* Row 3:
+
+  * 3 rocks total.
+  * 1 rock is safe.
+  * 2 rocks are unsafe.
+
+Safe Rock Randomisation Requirement
+
+* Safe rocks should be randomly selected when the River Mini Game starts.
+* Safe rocks should stay fixed for that mini game attempt.
+* They should not change after each click.
+* They should not change after a re-render.
+* They should only regenerate when a new River Mini Game starts.
+* The player should not know which rocks are safe before clicking.
+
+Suggested state shape:
+
+```js id="dfx3x4"
+const riverRows = [
+  { row: 1, safeCount: 2, rocks: [...] },
+  { row: 2, safeCount: 2, rocks: [...] },
+  { row: 3, safeCount: 1, rocks: [...] }
+];
+```
+
+Rock Interaction Requirement
+
+* Rocks should be clickable.
+* Only rocks in the current active row should be clickable.
+* Previous rows should no longer be clickable after a safe choice.
+* Future rows should not be clickable until reached.
+* Clicking a safe rock should:
+
+  * mark that row as passed.
+  * move the player to the next row.
+  * update the instructions.
+* Clicking an unsafe rock should:
+
+  * trigger unsafe-rock animation.
+  * end the mini game as a loss after the animation.
+  * navigate to the Mini Game Lose page.
+
+Rock Display Requirement
+
+* The River Mini Game should visually show:
+
+  * 3 rows.
+  * 3 rocks per row.
+* The rows should be visually clear.
+* The current active row should be obvious.
+* Rocks should look clickable.
+* Safe/unsafe status should not be visible before a click.
+* Once clicked, the selected rock can visually show whether it was safe or unsafe.
+
+Instruction Requirement
+
+* The page should show instructions at each stage.
+* Instructions should explain what the player needs to do.
+* Suggested English instruction examples:
+
+```txt id="wki24l"
+Choose a safe rock in the first row.
+Good choice. Choose a safe rock in the second row.
+Almost there. Choose a safe rock in the final row.
+That rock was unsafe!
+You crossed the river!
+```
+
+* Japanese translation is out of scope unless already part of the mini game translation system.
+* Keep instructions clear and visible.
+* Instructions should update after each safe choice.
+* Instructions should update immediately after an unsafe choice.
+
+Unsafe Rock Animation Requirement
+
+* If the player clicks an unsafe rock, show an animation before leaving the page.
+* The animation should make it clear that the selected rock was unsafe.
+* Acceptable animation ideas:
+
+  * rock shakes.
+  * rock sinks.
+  * splash effect.
+  * red flash.
+  * water ripple.
+* The mini game should not instantly navigate away before the player sees the unsafe result.
+* Suggested timing:
+
+```txt id="p72pml"
+800ms to 1500ms
+```
+
+* Exact timing can vary.
+* After the animation finishes, navigate to the Mini Game Lose page.
+
+Win Behaviour Requirement
+
+* If the player selects safe rocks in all 3 rows:
+
+  * the River Mini Game is won.
+  * navigate to the Loot Chest page.
+* The player should not immediately return to the board from the River Mini Game page.
+* The Loot Chest page should handle the next step.
+
+Loot Chest Page Requirement
+
+* Create a standalone shared Loot Chest page.
+* This page will be reused by other mini games later.
+* For now, the actual loot logic is out of scope.
+* The page only needs:
+
+  * a title.
+  * placeholder text if useful.
+  * a Continue button.
+* Suggested title:
+
+```txt id="7u80gt"
+Loot Chest
+```
+
+* Suggested button text:
+
+```txt id="qg5o24"
+Continue
+```
+
+* Clicking Continue should return the player to the board.
+* For River Mini Game wins, clicking Continue should return to the board without advancing to the next player.
+* The same player should still be active.
+* The same player may roll again.
+
+River Win Return Modal Requirement
+
+* After the player wins the River Mini Game and returns from the Loot Chest page to the board, show a modal.
+* This modal should tell the player that they may roll again.
+* This is important to prevent the next player accidentally taking the turn.
+* Suggested modal text:
+
+```txt id="sfagry"
+You crossed the river! You may roll again.
+```
+
+* The modal should appear after returning to the board.
+* The current player should remain the same.
+* Roll Dice should be available to that player after the modal is closed.
+* Do not advance to the next player on River Mini Game win.
+
+Mini Game Lose Page Requirement
+
+* Create a standalone shared Mini Game Lose page.
+* This page will be reused by other mini games later.
+* For now, it only needs:
+
+  * a title.
+  * placeholder text if useful.
+  * a button to return to the board.
+* Suggested title:
+
+```txt id="jt2efe"
+Mini Game Failed
+```
+
+* Suggested button text:
+
+```txt id="r2slzk"
+Return to Board
+```
+
+* Clicking the button should:
+
+  * return to the board.
+  * move on to the next player’s turn.
+* River Mini Game loss should use this page.
+* Mini game death token punishment is out of scope unless already implemented elsewhere.
+
+Mini Game Result State Requirement
+
+* Store enough state to know:
+
+  * which mini game was played.
+  * whether it was won or lost.
+  * which player played it.
+  * whether returning to board should advance the turn.
+  * whether returning to board should allow the same player to roll again.
+* Do not rely only on route history if that makes turn behaviour fragile.
+* Suggested result shape:
+
+```js id="szlshn"
+{
+  type: "river",
+  result: "win",
+  playerId,
+  returnBehaviour: "samePlayerRollAgain"
+}
+```
+
+* For loss:
+
+```js id="pjkvry"
+{
+  type: "river",
+  result: "loss",
+  playerId,
+  returnBehaviour: "nextPlayerTurn"
+}
+```
+
+* Exact implementation can vary.
+
+Board Return Behaviour Requirement
+
+* When returning from Loot Chest after River win:
+
+  * go back to Gameplay page.
+  * keep the same current player.
+  * show the “you may roll again” modal.
+  * allow that player to roll again.
+* When returning from Mini Game Lose after River loss:
+
+  * go back to Gameplay page.
+  * advance to the next player.
+  * use the existing next-player turn flow where possible.
+
+Shared Page Requirement
+
+* Loot Chest page should be designed as a shared mini game win page.
+* Mini Game Lose page should be designed as a shared mini game loss page.
+* Do not make these pages River-only.
+* River-specific behaviour can be passed through result state.
+* The pages should be flexible enough for later mini games.
+
+Styling Requirement
+
+* The River Mini Game page should visually fit the fantasy style of the game.
+* Use the river background image.
+* Use existing global Button component where appropriate.
+* Buttons should follow the global button rules from EPIC-009 Feature-003.
+* The River Mini Game page does not need full final styling yet, but it should be usable and readable.
+
+Debug Menu Area Requirement
+
+* The debug menu should have a clear section for mini games.
+* Suggested heading:
+
+```txt id="vguc91"
+Mini Games
+```
+
+* The River Mini Game trigger should be inside that section.
+* Debug buttons are still exempt from global button styling unless earlier work already converted them.
+* Triggering a mini game from debug should preserve the current player as the mini game player.
+
+Expected Behaviour
+
+* Debug menu has a Mini Games section.
+* Debug menu has a River Mini Game trigger.
+* Clicking the trigger opens the River Mini Game page.
+* River Mini Game page uses `src/images/miniGames/river.png` as the background.
+* The player sees 3 rows of 3 clickable rocks.
+* Row 1 has 2 safe rocks.
+* Row 2 has 2 safe rocks.
+* Row 3 has 1 safe rock.
+* Safe rocks are randomised at the start of the mini game.
+* Clicking a safe rock advances to the next row.
+* Clicking an unsafe rock shows an unsafe animation.
+* After unsafe animation, the player goes to the Mini Game Lose page.
+* Clicking Return to Board on the lose page returns to the board and advances to the next player.
+* Choosing safe rocks across all 3 rows wins the mini game.
+* Winning sends the player to the Loot Chest page.
+* Clicking Continue on the Loot Chest page returns to the board.
+* After River Mini Game win, the same player remains active.
+* After River Mini Game win, a modal tells the player they may roll again.
+* Existing gameplay still works after returning from mini games.
+
+Out Of Scope
+
+* No actual loot generation.
+* No actual loot chest rewards.
+* No final styling of the Loot Chest page.
+* No final styling of the Mini Game Lose page.
+* No automatic river tile trigger unless already easy and safe to wire.
+* No mini game translation system.
+* No additional mini games.
+* No mini game potion effects.
+* No Bridge Builder potion logic.
+* No Good Decisions potion logic.
+* No mini game death token punishment unless already handled globally.
+* No changes to battle flow.
+* No changes to reward page.
+* No changes to board generation.
+* No changes to movement rules.
+
+Assumptions
+
+* The project already uses React Router.
+* Current player state is available globally or through context.
+* The debug menu already exists in gameplay.
+* `src/images/miniGames/river.png` exists.
+* The game can navigate back to the Gameplay page after a standalone mini game page.
+* Existing turn-advance logic can be reused for mini game losses.
+
+Stop Point
+
+* Stop once the debug menu can trigger the River Mini Game, the River Mini Game can be won or lost, wins route through a shared Loot Chest page and allow the same player to roll again, and losses route through a shared Mini Game Lose page and advance to the next player.
+
+Testing Checkpoints
+
+* Confirm debug menu has a Mini Games section.
+* Confirm debug menu has a River Mini Game trigger.
+* Confirm clicking the River Mini Game trigger opens the River Mini Game page.
+* Confirm the River Mini Game page uses `src/images/miniGames/river.png`.
+* Confirm the river background covers the screen.
+* Confirm the River Mini Game shows 3 rows.
+* Confirm each row has 3 rocks.
+* Confirm Row 1 has 2 safe rocks.
+* Confirm Row 2 has 2 safe rocks.
+* Confirm Row 3 has 1 safe rock.
+* Confirm safe rocks are randomised when the mini game starts.
+* Confirm safe rocks do not change during the same attempt.
+* Confirm only the current row is clickable.
+* Confirm clicking a safe rock on Row 1 advances to Row 2.
+* Confirm clicking a safe rock on Row 2 advances to Row 3.
+* Confirm clicking a safe rock on Row 3 wins the mini game.
+* Confirm clicking an unsafe rock triggers an unsafe animation.
+* Confirm the page does not navigate away before the unsafe animation is visible.
+* Confirm an unsafe choice sends the player to the Mini Game Lose page.
+* Confirm the Mini Game Lose page has a return button.
+* Confirm clicking Return to Board returns to Gameplay.
+* Confirm losing advances to the next player.
+* Confirm winning sends the player to the Loot Chest page.
+* Confirm the Loot Chest page has a Continue button.
+* Confirm clicking Continue returns to Gameplay.
+* Confirm winning does not advance to the next player.
+* Confirm after winning, the same player remains active.
+* Confirm after winning, a modal appears telling the player they may roll again.
+* Confirm after closing the modal, the same player can roll again.
+* Confirm existing board interactions still work after returning.
+* Confirm existing battle triggers still work after returning.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Rework River Mini Game layout, animations, translations, and rock images
+
+Status
+
+* done
+
+Implementation Notes
+
+* Replaced the old three-row placeholder output with one active row and explicit `idle`, `safe-selected`, `unsafe-selected`, `exiting`, `entering`, `won`, and `lost` phases that disable input and clean up every pending timer.
+* Added the requested 300ms safe feedback, 700ms downward/fade exit and top/fade entry animations, one-second unsafe result, and delayed final win message while preserving the shared Loot Chest and Mini Game Lose routes.
+* Added all ten existing `src/images/miniGames/rocks/` assets through a feature-local data file; each row receives three independently randomized, non-repeating image choices that remain stable for the attempt and stay separate from safe/unsafe assignment.
+* Added exact English/Japanese River instructions and results to the existing translation module with the established invalid-language English fallback.
+* Removed the River title, current-player text, row border, visible button backgrounds, and `Rock` labels; reused `getPieceImageSource` to show the current player's existing colour/gender character image below the bottom-aligned image row.
+* Reused the existing River page, background, game context, routes, translation fallback, and piece-image mapping; no shared turn, reward, board, battle, Loot Chest, or lose-page behavior changed.
+
+Related Feature
+
+* Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+
+Goal
+
+* Rework the River Mini Game presentation and flow.
+* Show only one row of rocks at a time.
+* Animate rows out and in when progressing.
+* Replace placeholder rocks with rock image assets.
+* Add English and Japanese instructions.
+* Replace the title/current-player text with the current player’s character image.
+* Keep the existing River Mini Game win/loss rules.
+
+Scope
+
+* Update the River Mini Game page layout.
+* Show only the current active row.
+* Add row transition animations.
+* Remove rock backgrounds, row border, and placeholder rock text.
+* Replace rocks with image assets.
+* Randomly select rock images per row.
+* Add bilingual instruction text.
+* Add player character image display.
+* Preserve existing safe/unsafe rock logic.
+* Preserve win routing to Loot Chest.
+* Preserve loss routing to Mini Game Lose page.
+* Preserve River win behaviour where the same player may roll again.
+
+One Row Display Requirement
+
+* Only one row of rocks should be visible at a time.
+* Do not show all three rows at once.
+* At the start of the mini game, show only Row 1.
+* After the player clicks a safe rock in Row 1, transition to Row 2.
+* After the player clicks a safe rock in Row 2, transition to Row 3.
+* After the player clicks a safe rock in Row 3, the player wins.
+* Previous rows should not remain visible after moving on.
+* Future rows should not be visible before they are reached.
+
+Row Transition Animation Requirement
+
+* When the player clicks a safe rock and moves to the next row, animate the current row out.
+* The current row should:
+
+  * move toward the bottom of the screen.
+  * fade out.
+* If there is another row to show, the next row should:
+
+  * fade in.
+  * move in from the top of the screen.
+* The transition should feel like the player is progressing across the river.
+* Do not instantly swap rows without animation.
+* Suggested animation timing:
+
+```txt id="qq9z13"
+600ms to 1000ms
+```
+
+* Exact timing can vary if it feels better.
+* During row transition animation, rocks should not be clickable.
+
+Final Safe Rock Behaviour
+
+* If the player clicks a safe rock in Row 3:
+
+  * play the safe/progress animation.
+  * show the win text.
+  * then continue the existing win flow to the Loot Chest page.
+* The player should still eventually reach the shared Loot Chest page from Feature-003.
+* The River Mini Game win should still allow the same player to roll again after returning to the board.
+
+Unsafe Rock Behaviour
+
+* If the player clicks an unsafe rock:
+
+  * play the unsafe animation.
+  * show the loss text.
+  * then continue the existing loss flow to the shared Mini Game Lose page.
+* The game should end immediately after an unsafe rock, regardless of the row.
+* The Mini Game Lose page should still return to the board and advance to the next player.
+
+Remove Current Placeholder Styling
+
+* Remove the visible background from the rock elements.
+* Remove the blue border around the row itself.
+* Remove the word:
+
+```txt id="6x75tq"
+Rock
+```
+
+from the rock elements.
+
+* Rocks should be represented by images only.
+* The row container should not have a visible blue border.
+* The rock image itself should be the main visual element.
+
+Remove Page Title And Current Player Text
+
+* Remove the title:
+
+```txt id="8706uz"
+River Mini Game
+```
+
+* Remove the text that says who is currently playing.
+* Replace these with the current player’s character image.
+* The player character image should be displayed below the row of rocks.
+* The player image should use the selected player gender and colour.
+* Preserve the same player image asset logic used elsewhere in the game.
+* The player image should not block rock clicks.
+
+Player Image Requirement
+
+* The current player’s character image should appear below the visible row of rocks.
+* It replaces the old title/current-player text.
+* The image should clearly show which character is attempting the river crossing.
+* Preserve aspect ratio.
+* Keep it visually aligned with the river crossing layout.
+* It should not overlap the instruction text or rocks.
+
+Instruction Text Requirement
+
+* Instruction text should remain visible and readable.
+* The instruction text can keep its background so it is visible against the river image.
+* The instruction area should support English and Japanese.
+* The displayed language should be based on the current player’s selected language.
+* Use the same player-turn-based language approach from EPIC-008.
+* If language is missing or invalid, fall back to English.
+
+Always-Present Main Instruction
+
+* Above the row-specific instruction, always show a bold sentence.
+* English:
+
+```txt id="h73mux"
+Get over the 3 rows of rocks to make it to the other side.
+```
+
+* Japanese:
+
+```txt id="29nhfn"
+3列の岩を越えて、反対岸にたどり着いてください。
+```
+
+* This sentence should always be visible during the River Mini Game.
+* It should be bold.
+* It should sit above the row-specific instruction text.
+
+Row-Specific Instruction Text
+
+* If Row 1 is present, show:
+
+```txt id="1e6r93"
+Choose a safe rock in the first row.
+```
+
+* Japanese:
+
+```txt id="wq3uzn"
+1列目から安全な岩を選んでください。
+```
+
+* If Row 2 is present, show:
+
+```txt id="cluyhz"
+Choose a safe rock in the second row.
+```
+
+* Japanese:
+
+```txt id="q7c8nc"
+2列目から安全な岩を選んでください。
+```
+
+* If Row 3 is present, show:
+
+```txt id="xg53cs"
+Choose a safe rock to make it to the other side.
+```
+
+* Japanese:
+
+```txt id="lqbusc"
+反対岸にたどり着くため、安全な岩を選んでください。
+```
+
+Loss Text Requirement
+
+* If the player chooses an unsafe rock and loses, show:
+
+```txt id="fzpxck"
+You fell in the river and had to swim to the riverbank.
+```
+
+* Japanese:
+
+```txt id="ek11tc"
+川に落ちてしまい、岸まで泳がなければなりませんでした。
+```
+
+* Show this text before navigating to the Mini Game Lose page.
+* Keep it readable against the river background.
+
+Win Text Requirement
+
+* If the player makes it to the other side, show:
+
+```txt id="gonqwv"
+You made it to the other side! Take your reward and roll again.
+```
+
+* Japanese:
+
+```txt id="tx55ts"
+反対岸にたどり着きました！報酬を受け取り、もう一度サイコロを振ってください。
+```
+
+* Show this text before navigating to the Loot Chest page.
+* Keep it readable against the river background.
+
+Rock Image Asset Requirement
+
+* Replace the current placeholder rock elements with rock images.
+* Rock images are in:
+
+```txt id="ij3dhn"
+src/images/mineGames/rocks/
+```
+
+* The filenames are:
+
+```txt id="c0112o"
+rock-1.png
+rock-2.png
+rock-3.png
+rock-4.png
+rock-5.png
+rock-6.png
+rock-7.png
+rock-8.png
+rock-9.png
+rock-10.png
+```
+
+* Important: verify the folder name in the actual project before importing.
+* The previous mini game background uses `src/images/miniGames/river.png`.
+* If the actual rocks folder is `src/images/miniGames/rocks/`, use that existing folder rather than creating an incorrectly named duplicate folder.
+* Do not silently use a path with incorrect casing or spelling.
+
+Rock Randomisation Requirement
+
+* For each row, randomly select 3 rock images from the available rock image array.
+* Do not repeat the same rock image within the same row.
+* The same rock image may appear again in a different row.
+* Rock image selection should happen when the River Mini Game starts.
+* Rock images should stay fixed for that mini game attempt.
+* They should not change after each click.
+* They should not change on re-render.
+* They should only regenerate when a new River Mini Game starts.
+
+Suggested rock image array:
+
+```js id="us0yoj"
+const rockImages = [
+  rock1,
+  rock2,
+  rock3,
+  rock4,
+  rock5,
+  rock6,
+  rock7,
+  rock8,
+  rock9,
+  rock10
+];
+```
+
+Rock Alignment Requirement
+
+* The bottom of all rock images in a row should align.
+* Some rock images may be taller than others.
+* Taller rocks should extend upward.
+* The bottom edge should remain at the same height for all rocks.
+* Suggested CSS direction:
+
+```css id="em0dap"
+.river-rock-row {
+  display: flex;
+  align-items: flex-end;
+}
+```
+
+* Each rock image should preserve its aspect ratio.
+* Do not stretch rocks in a way that makes them look distorted unless absolutely necessary.
+
+Rock Click Requirement
+
+* Rocks should remain clickable.
+* Only the visible current row should be clickable.
+* During transition animations, rocks should temporarily not be clickable.
+* After the game reaches a win or loss state, rocks should no longer be clickable.
+* Rock click areas should match the visible images as closely as practical.
+
+Rock Hover Requirement
+
+* Keep a hover effect on rocks.
+* The hover effect should make it clear the rocks are clickable.
+* Acceptable hover effects:
+
+  * slight scale.
+  * glow.
+  * brightness increase.
+  * subtle lift.
+* Hover should not move the row layout out of alignment.
+* Hover should not break bottom alignment.
+
+Safe Rock Animation Requirement
+
+* Keep or add a safe-rock animation when a safe rock is selected.
+* The animation should make it clear the choice was safe.
+* After the safe selection, run the row transition animation.
+* Acceptable safe animation ideas:
+
+  * green glow.
+  * pulse.
+  * small sparkle.
+  * slight bounce.
+* Do not reveal unclicked safe/unsafe rocks unnecessarily.
+
+Unsafe Rock Animation Requirement
+
+* Keep or add an unsafe-rock animation when an unsafe rock is selected.
+* The animation should make it clear the choice was unsafe.
+* Acceptable unsafe animation ideas:
+
+  * shake.
+  * sink.
+  * splash.
+  * red flash.
+  * water ripple.
+* After the unsafe animation and loss text, navigate to the Mini Game Lose page.
+* Do not navigate away before the unsafe animation is visible.
+
+Safe Rock Logic Requirement
+
+* Preserve the existing safe rock rules:
+
+  * Row 1 has 2 safe rocks and 1 unsafe rock.
+  * Row 2 has 2 safe rocks and 1 unsafe rock.
+  * Row 3 has 1 safe rock and 2 unsafe rocks.
+* Safe rock locations should still be randomised at mini game start.
+* Safe rock locations should stay fixed for the attempt.
+* Rock image selection and safe/unsafe selection are separate:
+
+  * a rock image does not imply safe or unsafe.
+  * the same rock image can be safe in one row and unsafe in another attempt.
+
+Layout Requirement
+
+* Use the river background image from Feature-003.
+* The visible layout should include:
+
+  * bold always-present instruction.
+  * row-specific instruction or result text.
+  * one row of 3 rocks.
+  * current player character image below the row.
+* Remove the old title/current-player text.
+* Remove the row border.
+* Remove placeholder rock labels.
+* Keep all text readable.
+
+Suggested Layout Direction
+
+```txt id="f4d89e"
+Instruction panel
+  Bold main instruction
+  Row-specific instruction / win text / loss text
+
+Current row of 3 rock images
+
+Current player character image
+```
+
+Transition State Requirement
+
+* Track whether the row is:
+
+  * idle.
+  * safe selected.
+  * unsafe selected.
+  * exiting.
+  * entering.
+  * won.
+  * lost.
+* Prevent double-clicks during animations.
+* Prevent accidental multiple navigations.
+* Cleanly move from:
+
+  * Row 1 to Row 2.
+  * Row 2 to Row 3.
+  * Row 3 to win state.
+  * unsafe click to loss state.
+
+Routing Requirement
+
+* Preserve existing River Mini Game routing from Feature-003.
+* Win still routes to the shared Loot Chest page.
+* Loss still routes to the shared Mini Game Lose page.
+* The Loot Chest page and Mini Game Lose page remain shared pages.
+* Do not make them River-only.
+
+Expected Behaviour
+
+* River Mini Game shows only one row of rocks at a time.
+* Row 1 appears first.
+* Clicking a safe rock in Row 1 animates Row 1 downward and fades it out, then Row 2 fades in from the top.
+* Clicking a safe rock in Row 2 animates Row 2 downward and fades it out, then Row 3 fades in from the top.
+* Clicking a safe rock in Row 3 wins the mini game.
+* Clicking an unsafe rock loses immediately after the unsafe animation.
+* The row border is removed.
+* Rock backgrounds are removed.
+* The word `Rock` is removed.
+* Rocks use images from the rock image folder.
+* No rock image repeats within the same row.
+* Rock images can repeat across different rows.
+* Rock image bottoms align even if image heights differ.
+* Rocks still have hover effects.
+* Safe and unsafe animations still work.
+* The `River Mini Game` title is removed.
+* Current-player text is removed.
+* The current player’s character image appears below the row.
+* Instructions display in English for English players.
+* Instructions display in Japanese for Japanese players.
+* Win and loss text display in English or Japanese based on the current player’s language.
+* Existing Loot Chest and Mini Game Lose flows still work.
+
+Out Of Scope
+
+* No new mini games.
+* No actual loot generation.
+* No final Loot Chest styling.
+* No final Mini Game Lose styling.
+* No Bridge Builder potion logic.
+* No Good Decisions potion logic.
+* No automatic river tile trigger unless already implemented.
+* No changes to board generation.
+* No changes to turn logic beyond preserving Feature-003 River win/loss behaviour.
+* No changes to battle logic.
+* No changes to reward logic outside the existing Loot Chest placeholder flow.
+* No unrelated mini game redesign.
+
+Assumptions
+
+* The River Mini Game page already exists from Feature-003.
+* The current player’s selected language is available on the River Mini Game page.
+* The current player’s character image can be resolved from existing player colour/gender data.
+* The river background image already exists.
+* The rock images already exist and are numbered `rock-1.png` through `rock-10.png`.
+* The path may need to be verified because the provided folder name is `mineGames`, while previous mini game assets used `miniGames`.
+
+Stop Point
+
+* Stop once the River Mini Game shows one animated row at a time, uses rock image assets, shows bilingual instructions and results, displays the current player image below the rocks, and preserves the existing win/loss routing.
+
+Testing Checkpoints
+
+* Confirm only one row of rocks is visible at a time.
+* Confirm Row 1 is visible at the start.
+* Confirm Row 2 is hidden at the start.
+* Confirm Row 3 is hidden at the start.
+* Confirm safe Row 1 selection transitions to Row 2.
+* Confirm safe Row 2 selection transitions to Row 3.
+* Confirm safe Row 3 selection wins the mini game.
+* Confirm the outgoing row moves toward the bottom of the screen.
+* Confirm the outgoing row fades out.
+* Confirm the incoming row fades in from the top.
+* Confirm rocks are not clickable during transitions.
+* Confirm unsafe selection triggers an unsafe animation.
+* Confirm unsafe selection shows loss text.
+* Confirm unsafe selection routes to Mini Game Lose page after the animation.
+* Confirm winning shows win text.
+* Confirm winning routes to Loot Chest page.
+* Confirm returning from Loot Chest still lets the same player roll again.
+* Confirm losing still advances to the next player when returning to board.
+* Confirm the row border has been removed.
+* Confirm rock backgrounds have been removed.
+* Confirm the word `Rock` is not displayed.
+* Confirm rocks use image assets.
+* Confirm each row has 3 rock images.
+* Confirm no rock image repeats within the same row.
+* Confirm rock images can repeat across different rows.
+* Confirm rock image bottoms align.
+* Confirm taller rocks extend upward.
+* Confirm rock hover effect works.
+* Confirm safe rock animation works.
+* Confirm unsafe rock animation works.
+* Confirm `River Mini Game` title is removed.
+* Confirm current-player text is removed.
+* Confirm the current player character image appears below the row.
+* Confirm English players see English instructions.
+* Confirm Japanese players see Japanese instructions.
+* Confirm Row 1 English text is correct.
+* Confirm Row 1 Japanese text is correct.
+* Confirm Row 2 English text is correct.
+* Confirm Row 2 Japanese text is correct.
+* Confirm Row 3 English text is correct.
+* Confirm Row 3 Japanese text is correct.
+* Confirm main bold instruction appears in English for English players.
+* Confirm main bold instruction appears in Japanese for Japanese players.
+* Confirm loss text appears in English for English players.
+* Confirm loss text appears in Japanese for Japanese players.
+* Confirm win text appears in English for English players.
+* Confirm win text appears in Japanese for Japanese players.
+* Confirm the correct rock image folder path is used.
+* Confirm there are no missing image import errors.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Add debug flag to reveal safe rocks in River Mini Game
+
+Status
+
+* done
+
+Implementation Notes
+
+* Added the enabled `SHOW_SAFE_RIVER_ROCKS` constant in a feature-local debug file with an explicit temporary-helper comment and single switch-off point.
+* River defaults its `showSafeRiverRocks` prop to that flag, allowing the disabled state to be verified without changing the production-enabled value.
+* Added a `SAFE` marker only inside safe rock buttons in the currently rendered row; Row 1 and Row 2 show two markers and Row 3 shows one according to the unchanged generated rock data.
+* Positioned the marker relative to its rock with `pointer-events: none`, so it follows existing row/safe animations without changing click areas, transition state, randomization, counts, or win/loss routing.
+* Reused the existing one-row River rendering and `rock.isSafe` data; no Debug menu, shared state, translations, rock images, Loot Chest, lose page, or turn behavior changed.
+
+Related Feature
+
+* Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+* Feature-004: Rework River Mini Game layout, animations, translations, and rock images
+
+Goal
+
+* Add a temporary debug flag for testing the River Mini Game.
+* When the flag is enabled, safe rocks should be visually shown to the developer.
+* This is only to make testing easier while the River Mini Game is being built.
+* The actual game logic should remain unchanged.
+
+Scope
+
+* Add a clearly named debug/test flag.
+* Use the flag to visually mark safe rocks.
+* Keep the safe rock randomisation logic unchanged.
+* Keep all win/loss logic unchanged.
+* Keep all row transition animations unchanged.
+* Make the debug flag easy to remove or disable later.
+
+Debug Flag Requirement
+
+* Add a debug flag for revealing safe rocks.
+* Suggested name:
+
+```js id="snh4q2"
+const SHOW_SAFE_RIVER_ROCKS = true;
+```
+
+* Exact location can vary.
+* It can live:
+
+  * near the River Mini Game component.
+  * in a mini game debug constants file.
+  * in an existing debug config file if one exists.
+* The name should make it obvious that this is only for showing safe River Mini Game rocks.
+* For now, the flag should be enabled so the safe rocks are visible during testing.
+
+Safe Rock Visual Requirement
+
+* When `SHOW_SAFE_RIVER_ROCKS` is enabled, every safe rock in the current visible row should have a clear visual marker.
+* The marker should make safe rocks obvious.
+* Acceptable visual markers:
+
+  * a small green flag above the rock.
+  * a green glow around the rock.
+  * a green tick/check icon.
+  * a small `SAFE` debug label.
+* Prefer a visual flag or glow rather than changing the rock image itself.
+* The rock should still look like the same rock.
+* The marker should not affect the rock’s click area in a problematic way.
+
+Suggested Visual Direction
+
+```jsx id="h8azgm"
+{SHOW_SAFE_RIVER_ROCKS && rock.isSafe && (
+  <div className="river-rock-safe-debug-flag">SAFE</div>
+)}
+```
+
+* Exact implementation can vary.
+* If using an icon or FontAwesome is already available, a small flag/check icon is also acceptable.
+* The important requirement is that safe rocks are clearly visible while testing.
+
+No Logic Change Requirement
+
+* The debug flag must not change the mini game rules.
+* Row 1 should still have 2 safe rocks.
+* Row 2 should still have 2 safe rocks.
+* Row 3 should still have 1 safe rock.
+* Safe rocks should still be randomised at the start of the mini game.
+* Safe rocks should still remain fixed for the attempt.
+* Clicking a safe rock should still progress the mini game.
+* Clicking an unsafe rock should still lose the mini game.
+* The debug marker should only reveal information visually.
+
+One-Row Display Requirement
+
+* The debug marker should only appear on the currently visible row.
+* Hidden future rows should not be visible.
+* Hidden future rows do not need to show safe indicators.
+* The debug marker should work correctly as rows transition:
+
+  * Row 1 safe rocks visible while Row 1 is active.
+  * Row 2 safe rocks visible while Row 2 is active.
+  * Row 3 safe rock visible while Row 3 is active.
+
+Animation Requirement
+
+* The debug safe marker should not break row animations.
+* If a safe row transitions out, the safe marker should move/fade with that row.
+* If a new row transitions in, its safe marker should appear with that row.
+* The marker should not cause layout jumps.
+* The marker should not interrupt safe/unsafe rock animations.
+
+Styling Requirement
+
+* The safe marker should be clearly visible against the river background.
+* It should be obvious during testing.
+* It does not need final game styling because it is a temporary debug feature.
+* Keep it visually separate from normal gameplay effects.
+* Avoid making it look like a permanent player-facing feature.
+
+Production Safety Requirement
+
+* Make the flag easy to switch off.
+* When the flag is disabled:
+
+  * no safe markers should appear.
+  * the River Mini Game should look normal.
+  * safe rocks should not be revealed.
+* Do not hardcode permanent safe indicators into the rocks.
+* Add a comment making it clear this is a temporary testing helper.
+
+Suggested Comment
+
+```js id="v1ipyd"
+// Temporary debug helper for testing River Mini Game safe rock generation.
+// Set to false or remove before final player-facing release.
+```
+
+Expected Behaviour
+
+* When the debug flag is enabled, safe rocks are visibly marked.
+* Safe rocks are easy to identify for testing.
+* Unsafe rocks are not marked.
+* The marker updates correctly as the visible row changes.
+* The River Mini Game rules remain unchanged.
+* Win/loss behaviour remains unchanged.
+* Row animations remain unchanged.
+* When the flag is disabled, no safe rock markers are shown.
+
+Out Of Scope
+
+* No changes to safe rock counts.
+* No changes to safe rock randomisation.
+* No changes to rock image selection.
+* No changes to River Mini Game win/loss flow.
+* No changes to Loot Chest page.
+* No changes to Mini Game Lose page.
+* No permanent player-facing safe-rock reveal mechanic.
+* No potion logic.
+* No Bridge Builder logic.
+* No Good Decisions logic.
+* No mini game translation changes.
+* No unrelated River Mini Game redesign.
+
+Assumptions
+
+* The River Mini Game already stores whether each rock is safe.
+* The current visible row can access each rock’s safe/unsafe state.
+* The debug flag is temporary and intended for development testing.
+* Safe rock indicators should be visible for now.
+
+Stop Point
+
+* Stop once a debug flag can reveal safe rocks in the River Mini Game, the marker appears only when enabled, and all existing River Mini Game rules and animations still work.
+
+Testing Checkpoints
+
+* Confirm the debug flag exists.
+* Confirm the debug flag is clearly named.
+* Confirm the debug flag is enabled for testing.
+* Confirm safe rocks are visibly marked when the flag is enabled.
+* Confirm unsafe rocks are not marked.
+* Confirm Row 1 shows 2 safe markers.
+* Confirm Row 2 shows 2 safe markers.
+* Confirm Row 3 shows 1 safe marker.
+* Confirm safe markers follow the currently visible row.
+* Confirm hidden rows are not shown.
+* Confirm safe markers do not break row transition animations.
+* Confirm safe markers do not break safe rock animations.
+* Confirm safe markers do not break unsafe rock animations.
+* Confirm clicking a marked safe rock progresses correctly.
+* Confirm clicking an unmarked unsafe rock loses correctly.
+* Confirm the River Mini Game still routes to Loot Chest on win.
+* Confirm the River Mini Game still routes to Mini Game Lose page on loss.
+* Confirm disabling the flag hides all safe markers.
+* Confirm disabling the flag leaves the River Mini Game looking normal.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Refine River Mini Game result flow, rock sizing, player spacing, and return modal translation
+
+Status
+
+* done
+
+Implementation Notes
+
+* River win and loss phases now remain on their result message until the player clicks a localized Continue button; the active rock row is removed during those result phases, while safe and unsafe animations retain their existing timing before the button appears.
+* Continue records the unchanged mini-game result and routes wins to the shared Loot Chest page or losses to the shared Mini Game Lose page; same-player win and next-player loss return behavior remains in the existing context flow.
+* River rocks now use the required fixed 130px width with automatic image height and preserved bottom alignment, hover feedback, and selection animations; the player image retains its existing size with a 40px top margin.
+* River translations now include English/Japanese Continue and return-to-board notice text with the existing English fallback, and Gameplay derives the win notice from the active player's language instead of displaying the stored English message.
+* Default modals now separate body and action regions with flex layout so centred actions sit at the bottom; the dice variant remains outside the shared action wrapper and keeps its previous layout.
+
+Related Feature
+
+* Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+* Feature-004: Rework River Mini Game layout, animations, translations, and rock images
+* Feature-005: Add debug flag to reveal safe rocks in River Mini Game
+
+Goal
+
+* Refine the River Mini Game win and fail flow.
+* Stop the mini game from automatically navigating away immediately after a win or loss.
+* Let the player read the result message before continuing.
+* Add Continue buttons for both win and fail states.
+* Make rocks smaller and fixed width.
+* Add spacing above the player image.
+* Add English/Japanese support to the return-to-board roll-again modal.
+* Ensure modal buttons sit at the bottom of modals consistently.
+
+Scope
+
+* Update River Mini Game result-state behaviour.
+* Add Continue button after win.
+* Add Continue button after fail.
+* Replace the rock row with the Continue button during result states.
+* Update rock image sizing.
+* Update `river-mini-game-player` spacing.
+* Update the post-win return-to-board modal translation.
+* Update modal button layout so buttons sit at the bottom of the modal.
+* Preserve existing River Mini Game rules and routing.
+
+Win Result Flow Requirement
+
+* The River Mini Game should not automatically navigate to the Loot Chest page immediately when the player wins.
+* When the player successfully crosses all 3 rows:
+
+  * show the win message.
+  * hide or replace the rocks array.
+  * show a Continue button in place of the rocks array.
+* The player should be able to read the win message before moving on.
+* Clicking Continue should navigate to the shared Loot Chest page.
+
+Win message should remain:
+
+```txt id="pam74j"
+You made it to the other side! Take your reward and roll again.
+```
+
+Japanese:
+
+```txt id="mp5sva"
+反対岸にたどり着きました！報酬を受け取り、もう一度サイコロを振ってください。
+```
+
+Fail Result Flow Requirement
+
+* The River Mini Game should not automatically navigate to the Mini Game Lose page immediately when the player fails.
+* When the player clicks an unsafe rock:
+
+  * play the unsafe animation.
+  * show the fail message.
+  * hide or replace the rocks array.
+  * show a Continue button in place of the rocks array.
+* The player should be able to read the fail message before moving on.
+* Clicking Continue should navigate to the shared Mini Game Lose page.
+
+Fail message should remain:
+
+```txt id="zsq9ip"
+You fell in the river and had to swim to the riverbank.
+```
+
+Japanese:
+
+```txt id="xmd49p"
+川に落ちてしまい、岸まで泳がなければなりませんでした。
+```
+
+Continue Button Placement Requirement
+
+* In both win and fail states, the Continue button should appear where the rocks array normally appears.
+* The rocks should no longer be visible in the result state.
+* The Continue button should visually replace the active row of rocks.
+* The instruction/result message area should remain visible above it.
+* The player image should remain below as currently designed unless it causes layout issues.
+
+Suggested state direction:
+
+```jsx id="c08gwh"
+{gameState === "playing" && (
+  <RiverRockRow />
+)}
+
+{gameState === "won" && (
+  <Button variant="primary" onClick={goToLootChest}>
+    Continue
+  </Button>
+)}
+
+{gameState === "lost" && (
+  <Button variant="primary" onClick={goToMiniGameLose}>
+    Continue
+  </Button>
+)}
+```
+
+* Exact implementation can vary.
+* The key requirement is that Continue replaces the rocks array during win/loss result states.
+
+Continue Button Text Requirement
+
+* Continue button text should be:
+
+```txt id="26bwfc"
+Continue
+```
+
+* Japanese translation can be added if the mini game buttons are already being translated:
+
+```txt id="s2xuw3"
+続ける
+```
+
+* If the River Mini Game page is already using current-player language, use translated button text.
+* If button translation infrastructure is not yet in place, keep English for now and avoid breaking the flow.
+
+Rock Size Requirement
+
+* River rock images should be smaller.
+* Each rock should have a fixed width of:
+
+```txt id="pdvfeo"
+130px
+```
+
+* Rock height should be automatic from the image aspect ratio.
+* Suggested CSS:
+
+```css id="omuvv0"
+.river-rock-image {
+  width: 130px;
+  height: auto;
+}
+```
+
+* Preserve bottom alignment from Feature-004.
+* Taller rocks should still extend upward.
+* Rock hover effects should still work.
+* Safe/unsafe animations should still work.
+
+Player Spacing Requirement
+
+* Add margin above the current player image.
+* Apply this to:
+
+```txt id="bxwd4s"
+river-mini-game-player
+```
+
+* Required style:
+
+```css id="yrf3xj"
+.river-mini-game-player {
+  margin-top: 40px;
+}
+```
+
+* Preserve existing player image size and positioning unless already changed elsewhere.
+* Do not let the player image overlap the rocks, Continue button, or instruction panel.
+
+Return-To-Board Roll-Again Modal Translation Requirement
+
+* After the player wins the River Mini Game, goes through the Loot Chest page, and returns to the board, the roll-again modal should support English and Japanese.
+* English text:
+
+```txt id="m72jce"
+You crossed the river! You may roll again.
+```
+
+* Japanese text:
+
+```txt id="q0ns2h"
+川を渡り切りました！もう一度サイコロを振ることができます。
+```
+
+* The modal language should be based on the current player’s selected language.
+* If language is missing or invalid, fall back to English.
+* The same player should still remain active after winning.
+* The same player should still be able to roll again after closing the modal.
+
+Return Modal Button Requirement
+
+* The OK button in the roll-again modal should be at the bottom of the modal.
+* It should not float directly underneath the text.
+* This should align with the modal button layout rule below.
+* The OK button should remain horizontally centred.
+
+Global Modal Button Layout Requirement
+
+* Modal buttons should sit at the bottom of the modal.
+* This should apply to all normal modal buttons, not just the River win return modal.
+* Buttons should remain horizontally centred, preserving EPIC-009 Feature-007.
+* Modal content should occupy the main body area.
+* Modal actions should sit in a bottom action area.
+* Suggested layout:
+
+```css id="i92otw"
+.modal-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body {
+  flex: 1;
+}
+
+.modal-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+```
+
+* Exact class names can vary.
+* The important requirements are:
+
+  * modal buttons are at the bottom.
+  * modal buttons are horizontally centred.
+  * modal buttons are not floating directly under short text.
+  * dice roll modal remains excluded if it uses separate styling.
+
+Dice Roll Modal Exclusion Requirement
+
+* Preserve the previous dice roll modal exclusion.
+* Do not unintentionally change dice roll modal layout if it is meant to remain as-is.
+* This modal button bottom-alignment requirement applies to normal modals.
+
+Expected Behaviour
+
+* Winning the River Mini Game shows the win message and a Continue button.
+* The game does not automatically move to Loot Chest immediately after winning.
+* Clicking Continue after winning moves to the Loot Chest page.
+* Failing the River Mini Game shows the fail message and a Continue button.
+* The game does not automatically move to the Mini Game Lose page immediately after failing.
+* Clicking Continue after failing moves to the Mini Game Lose page.
+* Continue buttons appear in place of the rocks array.
+* Rocks are 130px wide with automatic height.
+* Rock bottom alignment remains correct.
+* `river-mini-game-player` has `margin-top: 40px`.
+* The post-win board modal displays English for English players.
+* The post-win board modal displays Japanese for Japanese players.
+* The post-win modal OK button is at the bottom of the modal.
+* All normal modal buttons sit at the bottom of their modals and remain horizontally centred.
+
+Out Of Scope
+
+* No actual loot generation.
+* No final Loot Chest page styling.
+* No final Mini Game Lose page styling.
+* No new mini games.
+* No changes to River Mini Game safe rock counts.
+* No changes to River Mini Game safe rock randomisation.
+* No changes to rock image randomisation.
+* No changes to debug safe rock flag.
+* No Bridge Builder potion logic.
+* No Good Decisions potion logic.
+* No changes to battle flow.
+* No changes to board generation.
+* No dice roll modal styling changes.
+
+Assumptions
+
+* River Mini Game already has win/loss state from Feature-003 and Feature-004.
+* Shared Loot Chest and Mini Game Lose pages already exist or are being created from Feature-003.
+* Current player language is available when showing the board return modal.
+* Global modal button layout can be adjusted through the shared modal component.
+
+Stop Point
+
+* Stop once River Mini Game win/loss states wait for a Continue button, rocks are resized, player spacing is updated, the roll-again modal supports English/Japanese, and normal modal buttons sit at the bottom of modals.
+
+Testing Checkpoints
+
+* Confirm winning the River Mini Game does not auto-navigate immediately.
+* Confirm the win message remains visible after winning.
+* Confirm the rocks array is replaced by a Continue button after winning.
+* Confirm clicking Continue after winning goes to the Loot Chest page.
+* Confirm failing the River Mini Game does not auto-navigate immediately.
+* Confirm the fail message remains visible after failing.
+* Confirm the rocks array is replaced by a Continue button after failing.
+* Confirm clicking Continue after failing goes to the Mini Game Lose page.
+* Confirm rocks are 130px wide.
+* Confirm rock height remains automatic.
+* Confirm rock bottom alignment still works.
+* Confirm rock hover effects still work.
+* Confirm safe rock animations still work.
+* Confirm unsafe rock animations still work.
+* Confirm `river-mini-game-player` has 40px top margin.
+* Confirm the player image does not overlap the Continue button.
+* Confirm English players see `You crossed the river! You may roll again.` after returning to the board from a win.
+* Confirm Japanese players see `川を渡り切りました！もう一度サイコロを振ることができます。` after returning to the board from a win.
+* Confirm the same player remains active after a River win.
+* Confirm the same player can roll again after closing the modal.
+* Confirm losing still advances to the next player after returning from the lose page.
+* Confirm the roll-again modal OK button is at the bottom of the modal.
+* Confirm all normal modal buttons are horizontally centred.
+* Confirm all normal modal buttons sit at the bottom of the modal.
+* Confirm dice roll modal remains unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-007: Add larger-text class to text-only modal paragraphs
+
+Status
+
+* done
+
+Implementation Notes
+
+* Classified every current shared modal body and limited `larger-text` to the three text-only Gameplay messages: spell cancel confirmation, spell save confirmation, and River return notice.
+* Added `larger-text` to the cancel and River paragraphs while preserving their existing `language-en` / `language-jp` class handling; the save paragraph already complied and remains unchanged.
+* Reused the existing `.larger-text { font-size: 2em; }` rule and shared modal bold/yellow text plus bottom-centred action layout, so no new style or modal abstraction was introduced.
+* Kept Settings, Debug, Spells Token Assignment, turn-change, battle-turn, battle-loss, reward, potion-choice, and dice content unchanged because those modals contain controls, images, lists, assignment UI, or other custom content.
+* Documented and tested the future rule that only a modal whose body is a simple text-focused message should add `larger-text`; complex modal bodies should not receive it by default.
+
+Goal
+
+* Improve readability for text-only modals.
+* Add the class `larger-text` to the `<p>` tag in modals that are primarily text-only.
+* Apply this rule to confirmation modals and the River Mini Game roll-again modal.
+* Preserve existing modal structure for modals that contain more complex content.
+
+Scope
+
+* Update text-only modal paragraph elements.
+* Add `larger-text` class where appropriate.
+* Apply to confirmation modals.
+* Apply to the River Mini Game return modal.
+* Leave non-text-only modals unchanged.
+* Preserve existing modal styling, layout, buttons, translations, and behaviour.
+
+Text-Only Modal Requirement
+
+* Any modal that is text-only should apply this class to its main `<p>` tag:
+
+```txt id="fjj6en"
+larger-text
+```
+
+* Example:
+
+```jsx id="usg7c9"
+<p className="larger-text">
+  Are you sure you want to commit your tokens to these spell slots?
+</p>
+```
+
+* If the `<p>` already has another class, add `larger-text` alongside it.
+* Do not replace existing language-specific classes.
+* Example:
+
+```jsx id="zy277o"
+<p className={`larger-text ${languageClass}`}>
+  {message}
+</p>
+```
+
+Confirmation Modal Requirement
+
+* Confirmation modals should use `larger-text` on their main text paragraph.
+* This includes modals such as:
+
+  * committing spell changes.
+  * cancelling spell changes.
+  * any Yes/No confirmation modal.
+  * any OK-only informational modal that is text-only.
+* The spell assignment confirmation text should use `larger-text`.
+* The spell assignment cancel confirmation text should use `larger-text`.
+
+River Return Modal Requirement
+
+* The modal shown after winning the River Mini Game and returning to the board should use `larger-text`.
+* This is the modal that says:
+
+```txt id="jjtlx8"
+You crossed the river! You may roll again.
+```
+
+* Japanese version:
+
+```txt id="p5zwg4"
+川を渡り切りました！もう一度サイコロを振ることができます。
+```
+
+* The `larger-text` class should be applied to the `<p>` tag containing this text.
+* Preserve the language-specific font fix from Bug-004.
+* The class should not remove English/Japanese font handling.
+
+Non-Text-Only Modal Exclusion Requirement
+
+* Modals that are not text-only should remain as they are.
+* Do not add `larger-text` to complex modals such as:
+
+  * Spells Token Assignment modal.
+  * reward assignment modal.
+  * potion capacity/discard modal if it contains lists or item choices.
+  * settings modal if it contains controls.
+  * dice roll modal.
+  * any modal with forms, grids, tables, item lists, token lists, potion lists, or custom interactive content.
+* The class should only be used for simple text-focused modal messages.
+
+Class Styling Requirement
+
+* Add or update CSS for `larger-text`.
+* It should make text-only modal paragraphs easier to read.
+* Suggested CSS direction:
+
+```css id="fum3gs"
+.larger-text {
+  font-size: 24px;
+  line-height: 1.4;
+}
+```
+
+* Exact size can vary if needed.
+* The text should still work for both English and Japanese.
+* The text should remain bold.
+* The text should remain yellow from the modal styling.
+* Do not make the text so large that it overflows normal modals.
+
+Modal Button Layout Requirement
+
+* Preserve the modal button layout from Feature-006.
+* Buttons should remain:
+
+  * at the bottom of the modal.
+  * horizontally centred.
+* Adding `larger-text` should not make buttons float directly under the text again.
+
+Language Font Requirement
+
+* Preserve language-aware fonts.
+* English text should still use:
+
+```txt id="qizznj"
+Unkempt
+```
+
+* Japanese text should still use:
+
+```txt id="bkguoe"
+Noto Serif Japanese
+```
+
+* If the text paragraph needs both `larger-text` and a language class, apply both classes.
+
+Expected Behaviour
+
+* Text-only confirmation modal paragraphs have the `larger-text` class.
+* Commit spell changes confirmation modal uses `larger-text`.
+* Cancel spell changes confirmation modal uses `larger-text`.
+* River roll-again modal uses `larger-text`.
+* The River roll-again modal still uses the correct English/Japanese font.
+* Non-text-only modals remain unchanged.
+* Modal buttons remain at the bottom and centred.
+* Modal text remains readable and does not overflow.
+
+Out Of Scope
+
+* No changes to modal background image.
+* No changes to modal padding.
+* No changes to modal minimum size.
+* No changes to modal button styling.
+* No changes to modal translations.
+* No changes to Token Assignment modal layout.
+* No changes to reward assignment modal layout.
+* No changes to potion modal behaviour.
+* No changes to dice roll modal.
+* No unrelated modal redesign.
+
+Future Modal Rule
+
+* From now on, when adding a new modal:
+
+  * if the modal is text-only, add `larger-text` to the main `<p>` tag.
+  * if the modal contains custom interactive content, lists, forms, grids, tokens, potions, or other non-text-only layout, do not add `larger-text` by default.
+* This rule should be followed for future features and bugs.
+
+Assumptions
+
+* Text-only modal messages are rendered in `<p>` tags.
+* Shared modal styling already makes modal text yellow and bold.
+* Existing modal classes can safely accept an additional `larger-text` class.
+* The dice roll modal remains excluded from normal modal styling.
+
+Stop Point
+
+* Stop once all current text-only modal paragraphs have the `larger-text` class, non-text-only modals are unchanged, and the future modal rule is documented for later work.
+
+Testing Checkpoints
+
+* Confirm commit spell changes confirmation modal uses `larger-text`.
+* Confirm cancel spell changes confirmation modal uses `larger-text`.
+* Confirm Yes/No text-only confirmation modals use `larger-text`.
+* Confirm OK-only text-only informational modals use `larger-text`.
+* Confirm River roll-again modal uses `larger-text`.
+* Confirm River roll-again modal still displays English text correctly.
+* Confirm River roll-again modal still displays Japanese text correctly.
+* Confirm English text still uses Unkempt.
+* Confirm Japanese text still uses Noto Serif Japanese.
+* Confirm modal text remains yellow.
+* Confirm modal text remains bold.
+* Confirm modal buttons remain at the bottom.
+* Confirm modal buttons remain horizontally centred.
+* Confirm Spells Token Assignment modal does not receive inappropriate `larger-text` styling.
+* Confirm reward assignment modal does not receive inappropriate `larger-text` styling.
+* Confirm settings modal does not receive inappropriate `larger-text` styling if it contains controls.
+* Confirm dice roll modal remains unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-008: Remove River Mini Game safe rock debug indicators
+
+Status
+
+* done
+
+Implementation Notes
+
+* Removed the temporary `SHOW_SAFE_RIVER_ROCKS` import, River prop/default, conditional `SAFE` marker markup, and debug-only marker CSS.
+* Deleted the feature-local `src/features/miniGames/riverDebug.js` module because it was used only by the temporary player-facing reveal.
+* Replaced marker-oriented regressions with hidden-choice checks that verify no status text or class appears before selection or while progressing through Rows 1-3.
+* Preserved the internal `rock.isSafe` data, random 2/2/1 safe counts, image randomization, safe/unsafe selection animations, localized instructions/results, click-paced Continue flow, and shared result destinations.
+
+Related Feature
+
+* Feature-005: Add debug flag to reveal safe rocks in River Mini Game
+
+Goal
+
+* Remove the temporary River Mini Game debugging that shows which rocks are safe.
+* The player should no longer be able to see which rocks are safe before choosing.
+* Return the River Mini Game to normal hidden-choice behaviour.
+
+Scope
+
+* Remove or disable the safe rock debug flag.
+* Remove visible safe rock markers.
+* Remove any debug-only styling for safe rocks.
+* Preserve the underlying safe/unsafe rock logic.
+* Preserve existing River Mini Game animations, translations, and flow.
+
+Required Change
+
+* Remove or disable the debug flag added for testing safe rocks.
+* This may be called something like:
+
+```js id="6qoq0g"
+SHOW_SAFE_RIVER_ROCKS
+```
+
+* Safe rocks should no longer display:
+
+  * flags.
+  * green markers.
+  * `SAFE` labels.
+  * debug outlines.
+  * debug glows.
+  * any other visual indicator that reveals the safe choice.
+
+Expected Behaviour
+
+* The River Mini Game still has 3 rows.
+* Only one row is shown at a time.
+* Row 1 still has 2 safe rocks.
+* Row 2 still has 2 safe rocks.
+* Row 3 still has 1 safe rock.
+* Safe rocks are still randomly selected at the start of the mini game.
+* Safe rocks still remain fixed during the attempt.
+* The player cannot tell which rocks are safe before clicking.
+* Clicking a safe rock still progresses the mini game.
+* Clicking an unsafe rock still fails the mini game.
+
+Implementation Requirement
+
+* Prefer fully removing debug UI if it is no longer needed.
+* If keeping the flag for future developer testing, set it to false by default.
+* Do not leave visible debug indicators in the player-facing River Mini Game.
+* Remove unused CSS classes if they are only used for safe rock debugging.
+* Remove unused imports if debug icons or assets were only used for this feature.
+
+Out Of Scope
+
+* No changes to safe rock counts.
+* No changes to safe rock randomisation.
+* No changes to rock image randomisation.
+* No changes to River Mini Game win/loss flow.
+* No changes to River Mini Game translations.
+* No changes to rock hover effects.
+* No changes to safe or unsafe click animations.
+* No changes to Loot Chest page.
+* No changes to Mini Game Lose page.
+* No unrelated mini game redesign.
+
+Assumptions
+
+* The safe rock debug markers were only added for temporary testing.
+* The River Mini Game is now ready to hide safe rocks again.
+* The safe/unsafe state still exists internally for game logic.
+
+Stop Point
+
+* Stop once safe rocks are no longer visually revealed during the River Mini Game, while all safe/unsafe gameplay logic still works correctly.
+
+Testing Checkpoints
+
+* Confirm no safe rock debug flag is enabled.
+* Confirm no `SAFE` text appears on rocks.
+* Confirm no green flag appears on safe rocks.
+* Confirm no debug glow appears on safe rocks.
+* Confirm safe rocks are visually indistinguishable from unsafe rocks before clicking.
+* Confirm Row 1 still has 2 safe rocks.
+* Confirm Row 2 still has 2 safe rocks.
+* Confirm Row 3 still has 1 safe rock.
+* Confirm clicking a safe rock still progresses to the next row.
+* Confirm clicking an unsafe rock still fails the mini game.
+* Confirm safe/unsafe animations still work.
+* Confirm win flow still goes to the Loot Chest page after pressing Continue.
+* Confirm fail flow still goes to the Mini Game Lose page after pressing Continue.
+* Confirm there are no unused import warnings.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

@@ -18,7 +18,9 @@ describe('Modal variants', () => {
     const dialog = screen.getByRole('dialog', { name: 'Normal modal' });
 
     expect(dialog).toHaveClass('modal-panel', 'modal-panel--default', 'custom-panel');
-    expect(screen.getByText('Normal content')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('modal-body')).getByText('Normal content')
+    ).toBeInTheDocument();
     expect(
       within(screen.getByTestId('modal-actions')).getByRole('button', {
         name: 'Confirm',
@@ -84,6 +86,11 @@ describe('Modal variants', () => {
     expect(stylesheet).toMatch(
       /\.modal-actions\s*{[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*gap:\s*16px;[^}]*flex-wrap:\s*wrap;/s
     );
+    expect(stylesheet).toMatch(
+      /\.modal-panel--default\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
+    );
+    expect(stylesheet).toMatch(/\.modal-body\s*{[^}]*flex:\s*1;/s);
+    expect(stylesheet).toMatch(/\.modal-actions\s*{[^}]*margin-top:\s*auto;/s);
   });
 
   test('marks only the gameplay dice result modal with the dice variant', () => {
@@ -92,10 +99,48 @@ describe('Modal variants', () => {
       'utf8'
     );
 
-    expect(gameplaySource.match(/<Modal[\s>]/g)).toHaveLength(4);
+    expect(gameplaySource.match(/<Modal[\s>]/g)).toHaveLength(5);
     expect(gameplaySource.match(/variant="dice"/g)).toHaveLength(1);
     expect(gameplaySource).toMatch(
       /<Modal\s+ariaLabel="Dice result"\s+isOpen={showDiceModal}\s+variant="dice"\s*>/s
+    );
+  });
+
+  test('uses larger text only for current text-only modal paragraphs', () => {
+    const gameplaySource = readFileSync(
+      `${__dirname}/../pages/GameplayPage.jsx`,
+      'utf8'
+    );
+    const appSource = readFileSync(`${__dirname}/../App.jsx`, 'utf8');
+    const battleSource = readFileSync(
+      `${__dirname}/../pages/BattlePage.jsx`,
+      'utf8'
+    );
+    const debugSource = readFileSync(
+      `${__dirname}/../features/debug/DebugModal.jsx`,
+      'utf8'
+    );
+    const spellsSource = readFileSync(
+      `${__dirname}/../features/spells/SpellsModal.jsx`,
+      'utf8'
+    );
+    const appStylesheet = readFileSync(`${__dirname}/../App.css`, 'utf8');
+
+    expect(gameplaySource.match(/larger-text/g)).toHaveLength(3);
+    expect(gameplaySource).toMatch(
+      /<p className=\{`larger-text \$\{languageClassName\}`\}>\{spellAssignmentTranslations\.cancelConfirmation\}<\/p>/
+    );
+    expect(gameplaySource).toMatch(
+      /<p className=\{`larger-text \$\{languageClassName\}`\}>\{spellAssignmentTranslations\.saveConfirmation\}<\/p>/
+    );
+    expect(gameplaySource).toMatch(
+      /<p className={`larger-text \${languageClassName}`}>\s*{miniGameReturnNotice\?\.type/s
+    );
+    [appSource, battleSource, debugSource, spellsSource].forEach((source) => {
+      expect(source).not.toContain('larger-text');
+    });
+    expect(appStylesheet).toMatch(
+      /\.larger-text\s*{[^}]*font-size:\s*2em;/s
     );
   });
 });

@@ -21,6 +21,17 @@
   gap: 8px;
 }
 
+.debug-mini-game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debug-mini-game-controls h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .debug-token-replacement-flow {
   display: flex;
   flex-direction: column;

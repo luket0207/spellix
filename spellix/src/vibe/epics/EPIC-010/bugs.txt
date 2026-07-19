@@ -1,0 +1,830 @@
+---
+
+Bug-001: Gameplay magical background needs more stars and continuous spell effects
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Add animated magical night sky background to gameplay layout
+
+Bug Summary
+
+* The gameplay background needs to feel more alive.
+* There should be more stars visible in the night sky.
+* Spell animations should trigger randomly and continuously across the whole background.
+* The effect should create variety across all areas of the gameplay layout rather than only occasional or localised effects.
+
+Repro Steps
+
+* Start a game.
+* View the gameplay layout background.
+* Watch the animated magical night sky.
+* Observe the number of stars.
+* Observe how often spell animations appear.
+* Observe whether spell animations appear across different areas of the screen.
+
+Expected Behaviour
+
+* The gameplay background should have noticeably more stars.
+* Stars should still twinkle randomly.
+* Spell animations should be triggered randomly all the time.
+* Spell animations should appear in random places across the full gameplay background.
+* There should be a variety of spell effects happening in different areas.
+* The background should feel active, magical, and alive.
+* Effects should remain decorative only.
+* Effects should not block clicks or interfere with gameplay.
+
+Actual Behaviour
+
+* There are not enough stars.
+* Spell animations do not appear often enough.
+* Spell animations do not feel like they are happening continuously across the whole background.
+
+Required Fix
+
+* Increase the number of stars in the magical night sky background.
+* Increase the frequency of spell animation spawning.
+* Ensure spell animations can spawn across all areas of the gameplay layout.
+* Add or preserve variety in spell effects.
+* Effects should trigger at random positions and random intervals.
+* Avoid clustering all effects in the same section of the screen.
+* Ensure effects continue to spawn while the player remains on the gameplay page.
+* Ensure timers or animation loops are cleaned up when leaving gameplay.
+
+Star Density Requirement
+
+* Increase the number of stars compared with the current implementation.
+* The sky should feel full but not cluttered.
+* Stars should still vary by:
+
+  * size.
+  * opacity.
+  * twinkle timing.
+  * animation delay.
+* Avoid making the stars so bright that they distract from the board or UI.
+* Stars should remain behind all gameplay content.
+
+Suggested Direction
+
+```txt id="5qp81k"
+Increase star count by at least 2x from the current implementation.
+```
+
+* Exact number can vary depending on performance and visual quality.
+* Prioritise a fuller, more magical night sky.
+
+Spell Animation Frequency Requirement
+
+* Spell animations should happen regularly and continuously.
+* There should usually be at least one spell effect active or recently active.
+* The player should not have to wait a long time before seeing another magical effect.
+* Effects should spawn at random intervals.
+* Avoid long empty periods where nothing happens.
+
+Suggested Direction
+
+```txt id="eyxm28"
+Spawn a new spell effect every 500ms to 1500ms.
+```
+
+* Exact timing can vary if it looks better.
+* The important requirement is that spell effects feel active and ongoing.
+
+Spell Animation Position Requirement
+
+* Spell animations should spawn in random places across the whole gameplay layout.
+* They should not be restricted to one small area.
+* Effects should be able to appear:
+
+  * near the top.
+  * near the bottom.
+  * near the left.
+  * near the right.
+  * around the centre.
+* Effects should not affect layout.
+* Effects should not create scroll bars.
+* Effects should remain behind board/UI elements.
+
+Effect Variety Requirement
+
+* Keep or add visual variety.
+* Possible spell effects include:
+
+  * glowing orbs.
+  * comet-like trails.
+  * swirls.
+  * small magical bursts.
+  * particle clusters.
+* Effects should use varied colours.
+* Suggested colours:
+
+  * blue.
+  * purple.
+  * green.
+  * yellow.
+  * pink.
+  * orange.
+* Effects should vary in:
+
+  * size.
+  * travel direction.
+  * speed.
+  * fade timing.
+  * colour.
+* Do not make all effects identical.
+
+Layering Requirement
+
+* Stars and spell effects should stay behind gameplay content.
+* They should not cover or obscure:
+
+  * the board.
+  * player pieces.
+  * Roll Dice button.
+  * Spells button.
+  * Potions area.
+  * settings cog.
+  * modals.
+* The magical background layer should continue to use:
+
+```css id="5o315n"
+pointer-events: none;
+```
+
+* It must not block gameplay interactions.
+
+Performance Requirement
+
+* More stars and more spell effects should not harm gameplay performance.
+* Avoid excessive DOM nodes.
+* Remove completed spell effect elements after their animation ends.
+* Use CSS animations, canvas, or the single selected third-party library consistently.
+* Do not introduce additional third-party animation libraries.
+* Avoid memory leaks from repeated timers.
+
+Randomness Requirement
+
+* Spell effects should appear random.
+* Star twinkle timings should feel random.
+* Effects should not repeat in an obvious fixed pattern.
+* Randomness does not need to be saved in game state.
+* The background can regenerate when gameplay loads.
+
+Expected Behaviour After Fix
+
+* The gameplay background has more stars than before.
+* Stars twinkle throughout the background.
+* Spell effects appear frequently.
+* Spell effects appear across all areas of the gameplay layout.
+* Different types or styles of spell effects appear.
+* The background feels more magical and active.
+* Gameplay remains fully usable.
+* Performance remains acceptable.
+
+Out Of Scope
+
+* No changes to gameplay mechanics.
+* No changes to board generation.
+* No changes to movement rules.
+* No changes to battle logic.
+* No changes to token assignment.
+* No changes to potion area logic.
+* No changes to modal styling.
+* No changes to Start screen background.
+* No changes to Game Setup background.
+* No new gameplay meaning attached to background effects.
+* No additional third-party libraries beyond the one allowed by Feature-001.
+
+Suspected Cause
+
+* The current star count is too low.
+* The spell effect spawn interval may be too slow.
+* Spell effects may be limited to a small number of positions or one part of the layout.
+* Completed effects may not be replaced quickly enough.
+
+Attempted Fixes
+
+* Feature-001 added the initial magical night sky background.
+* The current implementation needs increased density and more continuous activity.
+* Added failing regressions for doubled star density, continuous spawning, finite effect nodes, full-area variety, bounded DOM usage, and timer cleanup before changing the implementation.
+
+Final Fix
+
+* Increased the mount-time star field from 48 to 96 while preserving varied size, opacity, twinkle duration, delay, and the local decorative random generator.
+* Replaced nine permanently looping spell elements with three initial mixed effects and recursive random spawning every 500-1500 ms.
+* Each effect now uses a finite 2.4-4.2 second animation, is removed when complete, and is selected from the existing orb, comet, swirl, six-colour, size, movement, and rotation ranges.
+* Expanded spawn positions to 2-98% on both axes, capped the active spell DOM set at eight, and clear the spawn timeout plus every pending removal timeout when Gameplay unmounts.
+* Preserved `pointer-events: none`, background layering, reduced-motion styling, Gameplay-only integration, and isolation from gameplay `Math.random` values.
+
+Testing Required
+
+* Confirm the gameplay background has more stars than before.
+* Confirm stars still twinkle.
+* Confirm star twinkling remains varied.
+* Confirm spell effects spawn frequently.
+* Confirm spell effects appear continuously while on gameplay.
+* Confirm spell effects appear in random places.
+* Confirm spell effects appear near the top of the layout.
+* Confirm spell effects appear near the bottom of the layout.
+* Confirm spell effects appear near the left side of the layout.
+* Confirm spell effects appear near the right side of the layout.
+* Confirm spell effects appear around the centre.
+* Confirm there is visual variety in spell effects.
+* Confirm spell effects use varied colours.
+* Confirm effects fade in and out smoothly.
+* Confirm effects do not block board clicks.
+* Confirm effects do not block gameplay buttons.
+* Confirm effects remain behind gameplay content.
+* Confirm no extra scroll bars are created.
+* Confirm completed effects are cleaned up.
+* Confirm leaving gameplay cleans up timers or animation loops.
+* Confirm gameplay performance remains acceptable.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-002: Potions area should match committed spell slot display styling
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Add styled Potions area to gameplay UI
+
+Bug Summary
+
+* The new Potions area does not visually match the existing Spells display.
+* It should have similar styling to the `committed-spell-slot-display` element.
+* The Potions area should feel like part of the same UI group as the committed spell slots.
+* The current styling is too different and looks inconsistent.
+
+Repro Steps
+
+* Start a game.
+* Reach the gameplay screen.
+* Look at the existing committed spell slot display.
+* Look at the new Potions area.
+* Compare their styling.
+* Observe that the Potions area does not match the visual treatment of `committed-spell-slot-display`.
+
+Expected Behaviour
+
+* The Potions area should visually match the existing committed spell slot display styling.
+* It should use similar:
+
+  * background.
+  * border.
+  * border radius.
+  * spacing.
+  * padding.
+  * text colour.
+  * font treatment.
+  * layout feel.
+* The Potions area should look like it belongs directly underneath or near the Spells display.
+* It should not look like a separate unrelated UI component.
+
+Actual Behaviour
+
+* The Potions area styling does not match the spell display.
+* It does not visually align with the `committed-spell-slot-display` element.
+
+Required Fix
+
+* Update the Potions area styling to closely match `committed-spell-slot-display`.
+* Inspect the existing CSS for `committed-spell-slot-display`.
+* Reuse or mirror its styles where appropriate.
+* Do not invent a completely separate style for the Potions area.
+* The Potions area should look like the same component family as the committed spell slot display.
+
+Styling Requirement
+
+* The Potions area should use styling similar to:
+
+```txt id="o1ks8u"
+committed-spell-slot-display
+```
+
+* This should include similar:
+
+  * container background.
+  * border styling.
+  * border radius.
+  * internal padding.
+  * heading style.
+  * item spacing.
+  * text colour.
+  * overall width and alignment where appropriate.
+
+* If `committed-spell-slot-display` already has reusable CSS values, prefer sharing them rather than duplicating slightly different values.
+
+Suggested CSS Direction
+
+```css id="lmc36q"
+.potions-area {
+  /* mirror committed-spell-slot-display visual treatment */
+}
+
+.potions-area-header {
+  /* align with committed spell slot heading/header style */
+}
+
+.potions-list {
+  /* align with committed spell slot item layout */
+}
+```
+
+* Exact class names can vary.
+* The important requirement is visual consistency with `committed-spell-slot-display`.
+
+Structure Requirement
+
+* Potions should still be rendered using `div` elements.
+* Do not change the Potions list back to `ul` or `li`.
+* Preserve the requirement from Feature-002 that potion items are not list elements.
+
+Title Requirement
+
+* The title should still translate based on the current player’s selected language.
+* English:
+
+```txt id="xrfka9"
+Potions
+```
+
+* Japanese:
+
+```txt id="uw7b0i"
+ポーション
+```
+
+* The title styling should feel consistent with the committed spell slot display.
+
+Capacity Requirement
+
+* The capacity display should remain.
+* It should still display as:
+
+```txt id="khhu57"
+0/3
+1/3
+2/3
+3/3
+```
+
+* Do not add extra words around the capacity.
+* The capacity display should be styled to match the spell display rather than feeling like unrelated text.
+
+Potion Item Requirement
+
+* Potion items should still use the global `PotionIcon` component.
+* Potion names should still display in the current player’s language.
+* Potion tooltips should still display in the current player’s language.
+* Potion icons should sit neatly inside the Potions area.
+* The item layout should match the spacing and alignment style of committed spell slot content.
+
+Out Of Scope
+
+* No changes to potion capacity.
+* No changes to potion data.
+* No changes to potion translations.
+* No changes to potion reward generation.
+* No potion effect implementation.
+* No changes to the Spells table logic.
+* No changes to committed spell slot behaviour.
+* No unrelated gameplay UI redesign.
+
+Suspected Cause
+
+* Feature-002 likely introduced a new independent Potions area style instead of matching the existing `committed-spell-slot-display` style.
+* The Potions area may be using generic brown panel styling rather than the established spell display styling.
+
+Attempted Fixes
+
+* Feature-002 added the Potions area.
+* The current implementation needs visual alignment with the committed spell display.
+* Added a failing source regression that compares Potions against the established committed display container, heading, and slot-column declarations before changing styles.
+
+Final Fix
+
+* Replaced the independent dark Potions treatment with the committed display's parchment gradient, `#4a3520` border, 10px radius, inset/drop shadows, dark text, 8px gap, 10px padding, and 300px width.
+* Matched the Potions heading to the committed display title's 18px bold text and `0.04em` letter spacing while preserving the capacity beside it.
+* Styled each existing div-based potion slot with the committed slot column's padding, 6px gap, `#715231` border, 8px radius, and layered parchment background.
+* Preserved the compact Potions height, div-only structure, no-scroll layout, `0/3`-`3/3` capacity, global `PotionIcon`, localization, current-player updates, and all potion/gameplay behavior.
+
+Testing Required
+
+* Confirm the Potions area visually matches `committed-spell-slot-display`.
+* Confirm the Potions area background matches or closely mirrors the committed spell display.
+* Confirm the Potions area border matches or closely mirrors the committed spell display.
+* Confirm the Potions area border radius matches or closely mirrors the committed spell display.
+* Confirm the Potions area padding and spacing feel consistent with the committed spell display.
+* Confirm the Potions title aligns visually with the spell display styling.
+* Confirm the capacity text `0/3`, `1/3`, `2/3`, or `3/3` remains visible.
+* Confirm potion items are still rendered with `div` elements.
+* Confirm no `ul` or `li` is used for potion items.
+* Confirm potion icons still use `PotionIcon`.
+* Confirm potion names still translate correctly.
+* Confirm potion tooltips still translate correctly.
+* Confirm the Potions area updates when the current player changes.
+* Confirm gameplay layout is not broken by the styling change.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-003: Potion elements should remove rarity/type text and use fixed matching slot sizes
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Add styled Potions area to gameplay UI
+
+Related Bug
+
+* Bug-002: Potions area should match committed spell slot display styling
+
+Bug Summary
+
+* Potion elements inside the Potions area need cleaner styling.
+* The paragraph that displays rarity and Battle/Board information should be removed.
+* Each potion element should have a fixed width of 86px.
+* All potion elements inside the potion slots should match each other’s height.
+* The Potions area should remain visually consistent with the committed spell slot display.
+
+Repro Steps
+
+* Start a game.
+* Reach the gameplay screen.
+* View the Potions area.
+* Look at potion elements inside the potion slots.
+* Observe the text showing rarity and Battle/Board information.
+* Compare potion element widths and heights.
+
+Expected Behaviour
+
+* Potion elements should not show rarity text.
+* Potion elements should not show Battle/Board type text.
+* The `p` tag containing rarity and Battle/Board information should be removed entirely.
+* Each potion element should be:
+
+```txt id="xq6yxh"
+86px wide
+```
+
+* Potion elements inside potion slots should all match each other’s height.
+* Potion elements should look consistent even when potion names have different lengths.
+* Potion icons, names, and tooltips should still work.
+* Potion names should remain translated according to the current player’s language.
+* Potion tooltips should remain translated according to the current player’s language.
+
+Actual Behaviour
+
+* Potion elements currently display a `p` tag containing rarity and Battle/Board information.
+* Potion elements may not have a consistent fixed width.
+* Potion elements may not match each other’s height inside potion slots.
+
+Required Fix
+
+* Remove the `p` tag that displays potion rarity and Battle/Board information.
+* Do not replace it with another visible rarity/type label.
+* Keep rarity and Battle/Board data in the potion data object for logic and filtering.
+* Set each potion element width to 86px.
+* Ensure all potion elements within the potion slots have matching height.
+* Preserve the PotionIcon display.
+* Preserve potion name display.
+* Preserve potion tooltip behaviour.
+* Preserve potion colour and glow styling.
+
+Potion Metadata Display Requirement
+
+* Remove visible metadata text such as:
+
+  * Common.
+  * Rare.
+  * Battle.
+  * Board.
+  * Both.
+  * Common / Board.
+  * Rare / Battle.
+* This information should not appear in the gameplay Potions area.
+* Do not remove this data from the underlying potion data if it is still needed elsewhere.
+* Only remove the visible rendered `p` tag.
+
+Potion Element Width Requirement
+
+* Each potion element should have a fixed width of:
+
+```txt id="mlx5p9"
+86px
+```
+
+* Suggested CSS direction:
+
+```css id="o0yn01"
+.potion-slot,
+.potion-display,
+.potion-item {
+  width: 86px;
+}
+```
+
+* Exact class names can vary.
+* Use the class that represents the individual potion element inside the Potions area.
+* Avoid applying this width globally if it breaks potion display in other areas such as rewards.
+* If using a global PotionIcon wrapper, support a context-specific class or prop.
+
+Potion Element Height Matching Requirement
+
+* All potion elements inside the potion slots should match each other’s height.
+* Potion names with different lengths should not make one potion slot taller than the others.
+* Use a consistent slot height or flex alignment.
+* Suggested CSS direction:
+
+```css id="c48f53"
+.potions-list {
+  display: flex;
+  align-items: stretch;
+}
+
+.potion-slot {
+  width: 86px;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that potion elements visually match height inside the Potions area.
+
+Name Wrapping Requirement
+
+* Potion names should remain readable within the 86px width.
+* Long potion names may wrap if needed.
+* Name wrapping should not make one potion element taller than the others.
+* If needed, use a fixed name area height.
+* Do not hide names completely unless a later feature requests it.
+
+Tooltip Requirement
+
+* Potion tooltips should still work after removing the metadata paragraph.
+* Tooltips should still use the current player’s language.
+* Tooltips should remain readable and stay in view where practical.
+* Removing the metadata paragraph should not remove the tooltip description.
+
+Styling Consistency Requirement
+
+* Potion elements should still match the Potions area styling from Bug-002.
+* The Potions area should still look similar to `committed-spell-slot-display`.
+* Potion elements should not look stretched or uneven.
+* Potion elements should align neatly inside the potion slots.
+
+Out Of Scope
+
+* No changes to potion capacity.
+* No changes to potion data.
+* No changes to potion rarity rules.
+* No changes to Battle/Board availability logic.
+* No changes to potion reward generation.
+* No potion effect implementation.
+* No changes to potion translations.
+* No changes to the Spells display.
+* No unrelated gameplay UI redesign.
+
+Suspected Cause
+
+* The Potion element is likely rendering all potion metadata by default.
+* The rarity and Battle/Board paragraph may have been useful during earlier debugging or reward display work, but it is too noisy for the gameplay Potions area.
+* Potion heights may differ because text content length is changing the natural height of each element.
+
+Attempted Fixes
+
+* Feature-002 added the Potions area.
+* Bug-002 aligned the Potions area with the committed spell display.
+* This bug focuses specifically on the individual potion elements.
+* Added failing component and Gameplay regressions for absent metadata, removal of the metadata `p` tag, fixed 86px slots, and stretch-based equal heights before changing implementation.
+
+Final Fix
+
+* Removed only the gameplay `PotionList` paragraph that rendered `${potion.rarity} | ${potion.availability}`; the underlying rarity and availability fields remain unchanged for rewards, filtering, and game logic.
+* Set each feature-local `.potion-slot` to an exact 86px width, 86px minimum width, and `0 0 86px` flex basis without changing the global `PotionIcon` component or other potion displays.
+* Changed `.potions-list` to `align-items: stretch`, so all slots in a row match the tallest wrapped potion name while retaining readable wrapping and the existing icon alignment.
+* Preserved the committed-display parchment styling, div-only structure, 0-3 capacity, no-scroll layout, current-player updates, English/Japanese names and tooltips, colours, glow, and all potion behavior.
+
+Testing Required
+
+* Confirm the rarity/type `p` tag is removed from potion elements in the Potions area.
+* Confirm `Common` is not displayed on potion elements.
+* Confirm `Rare` is not displayed on potion elements.
+* Confirm `Battle` is not displayed on potion elements.
+* Confirm `Board` is not displayed on potion elements.
+* Confirm `Both` is not displayed on potion elements.
+* Confirm each potion element is 86px wide.
+* Confirm all potion elements inside potion slots match each other’s height.
+* Confirm long potion names do not break the layout.
+* Confirm potion names remain readable.
+* Confirm potion names still translate correctly.
+* Confirm potion tooltips still work.
+* Confirm potion tooltips still translate correctly.
+* Confirm potion colours and glow styling still work.
+* Confirm the Potions area still displays `0/3`, `1/3`, `2/3`, or `3/3`.
+* Confirm the Potions area still visually matches `committed-spell-slot-display`.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: River roll-again modal text should use correct language fonts
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Refine River Mini Game result flow, rock sizing, player spacing, and return modal translation
+
+Bug Summary
+
+* The modal text that says `You crossed the river! You may roll again.` is not respecting the correct fonts for each language.
+* English text should use the English fantasy font.
+* Japanese text should use the Japanese font.
+* The modal already supports English and Japanese text, but the typography is not being applied correctly.
+
+Repro Steps
+
+* Start a game with an English player.
+* Trigger and win the River Mini Game.
+* Continue through the Loot Chest page.
+* Return to the board.
+* Observe the modal text:
+
+```txt id="t64w8v"
+You crossed the river! You may roll again.
+```
+
+* Repeat with a Japanese player.
+* Observe the Japanese modal text:
+
+```txt id="n9u9gk"
+川を渡り切りました！もう一度サイコロを振ることができます。
+```
+
+* Check whether each language uses the correct font.
+
+Expected Behaviour
+
+* English modal text should use:
+
+```txt id="jrm0kr"
+Unkempt
+```
+
+* Japanese modal text should use:
+
+```txt id="hcsorr"
+Noto Serif Japanese
+```
+
+* The font should be selected based on the current player’s chosen language.
+* The Japanese modal should not use the English font.
+* The English modal should not use the Japanese font unless it is a fallback.
+* The modal text should remain bold and yellow as required by the modal styling features.
+* The OK button should remain at the bottom of the modal.
+
+Actual Behaviour
+
+* The River roll-again modal text does not respect the correct font for the active language.
+
+Required Fix
+
+* Update the River roll-again modal text styling so it uses the correct font based on the current player’s selected language.
+* Use the same language-aware font handling used elsewhere in the app.
+* The modal body text should receive a language-specific class or style.
+* Do not hardcode only one font for this modal.
+* Ensure the font is applied to the actual text element, not only the modal container if it is being overridden elsewhere.
+
+Suggested Implementation Direction
+
+```jsx id="fl06vm"
+const modalLanguageClass = currentLanguage === "jp"
+  ? "text-japanese"
+  : "text-english";
+```
+
+```jsx id="pqz0hy"
+<p className={modalLanguageClass}>
+  {riverRollAgainMessage}
+</p>
+```
+
+Suggested CSS direction:
+
+```css id="lg0z7k"
+.text-english {
+  font-family: "Unkempt", cursive;
+}
+
+.text-japanese {
+  font-family: "Noto Serif JP", "Noto Serif Japanese", serif;
+}
+```
+
+* Exact class names can vary.
+* Use the existing project font class names if they already exist.
+* Do not introduce duplicate font systems if one already exists.
+
+Modal Text Requirement
+
+* The English modal message should remain:
+
+```txt id="c8ksv4"
+You crossed the river! You may roll again.
+```
+
+* The Japanese modal message should remain:
+
+```txt id="iv4rug"
+川を渡り切りました！もう一度サイコロを振ることができます。
+```
+
+* Text colour should remain:
+
+```txt id="igtlgh"
+#F5FA00
+```
+
+* Text should remain bold.
+* The text should remain readable against the modal background.
+
+Font Inheritance Requirement
+
+* Check whether the shared modal styles are overriding language-specific fonts.
+* If the shared modal applies a default font, allow the River roll-again message to override it.
+* If modal body text inherits incorrectly from the page, explicitly apply the language font to the message.
+* Do not break other modal text styling.
+* Do not break Japanese font handling in other translated modals.
+
+Button Layout Requirement
+
+* Keep the OK button at the bottom of the modal.
+* Keep the OK button horizontally centred.
+* Do not let this font fix undo the modal button layout from Feature-006.
+
+Out Of Scope
+
+* No changes to the River Mini Game flow.
+* No changes to the Loot Chest page.
+* No changes to the Mini Game Lose page.
+* No changes to win/loss logic.
+* No changes to the modal message wording.
+* No changes to modal background image.
+* No changes to modal padding.
+* No changes to button styling.
+* No changes to dice roll modal.
+* No unrelated typography redesign.
+
+Suspected Cause
+
+* The modal may be using a global modal font that overrides language-specific text.
+* The River roll-again message may not be wrapped in the same language-aware text element as other translated UI.
+* The Japanese message may be displayed correctly but still inheriting the English `Unkempt` font.
+
+Attempted Fixes
+
+* Feature-006 added the English/Japanese text for this modal.
+* The text content is translated, but the language-specific font styling still needs fixing.
+* Confirmed the shared `.language-en` and `.language-jp` font classes already provide Unkempt and Noto Serif JP, while the River roll-again message element currently receives no language class.
+* Added focused App integration regressions for both message classes and the existing global font declarations before changing the message element.
+
+Final Fix
+
+* Applied the existing `languageClassName` directly to the River roll-again modal message element in Gameplay.
+* English return text now receives `language-en` and uses the established Unkempt font; Japanese return text receives `language-jp` and uses the established Noto Serif JP font.
+* Reused the global language classes without adding or changing font CSS, preserving the exact translated messages, bold yellow modal styling, bottom-centred OK action, shared modal layout, and roll-again behavior.
+
+Testing Required
+
+* Confirm English players see `You crossed the river! You may roll again.`
+* Confirm Japanese players see `川を渡り切りました！もう一度サイコロを振ることができます。`
+* Confirm the English message uses Unkempt.
+* Confirm the Japanese message uses Noto Serif Japanese / Noto Serif JP.
+* Confirm the text remains `#F5FA00`.
+* Confirm the text remains bold.
+* Confirm the modal background still uses the fantasy modal background.
+* Confirm the OK button remains at the bottom of the modal.
+* Confirm the OK button remains horizontally centred.
+* Confirm closing the modal still allows the same player to roll again.
+* Confirm other translated modal text is not broken.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

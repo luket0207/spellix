@@ -13,6 +13,8 @@
 }
 
 .modal-panel--default {
+  display: flex;
+  flex-direction: column;
   background-image: url('../images/misc/modalBackground.png');
   background-position: center;
   background-repeat: no-repeat;
@@ -33,7 +35,12 @@
   max-width: 600px;
 }
 
+.modal-body {
+  flex: 1;
+}
+
 .modal-actions {
+  margin-top: auto;
   display: flex;
   align-items: center;
   justify-content: center;

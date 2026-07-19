@@ -1,0 +1,520 @@
+---
+
+Feature-001: Add animated magical night sky background to gameplay layout
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a game and inspect the area behind the board and gameplay sidebar.
+   Expected: Gameplay has a dark magical night-sky gradient covering the full layout, while the board, sidebar, text, and controls remain above it and readable.
+2. Watch the background for at least 20 seconds.
+   Expected: Small stars twinkle at varied positions, sizes, opacity levels, durations, and delays; the pattern does not flash uniformly.
+3. Continue watching the background for colourful effects.
+   Expected: Subtle glowing orbs, comet-like trails, and swirls appear at varied positions and times, move smoothly, fade away, and do not permanently clutter the screen.
+4. Roll dice, select board destinations, open Spells and Settings, use potion UI, and interact with each modal.
+   Expected: The decorative layer blocks no clicks, remains behind gameplay and modals, and does not change dice, movement, spell, potion, turn, or modal behavior.
+5. Navigate away from Gameplay to Start, Game Setup, Battle, and Reward pages.
+   Expected: The magical night sky appears only on Gameplay and creates no extra scroll bars or lingering animation elements on other pages.
+6. Enable reduced-motion at operating-system or browser level and reload Gameplay.
+   Expected: Stars become static and spell effects are hidden, avoiding continuous motion while gameplay remains fully usable.
+7. Resize the browser around the board and inspect the console.
+   Expected: The background continues covering the gameplay viewport without changing layout size, and no animation, rendering, or interaction errors appear.
+
+Automated Tests Completed
+
+* Tests were added first and failed because the dedicated component and Gameplay integration did not exist.
+* `src/components/gameplay/MagicalNightSky/MagicalNightSky.test.jsx` passes all four tests for 48 varied stars, nine mixed orb/comet/swirl effects, stable descriptors across rerenders, CSS animation contracts, pointer transparency, and reduced-motion handling.
+* A failing isolation test showed the first implementation consumed 369 global `Math.random` values; the final component uses a local seeded generator, and the regression now confirms decorative generation does not alter gameplay randomness.
+* The new `src/pages/GameplayPage.test.jsx` integration assertion passes and confirms the aria-hidden sky renders with the existing board and gameplay panel.
+* Source inspection confirms `MagicalNightSky` is imported only by `GameplayPage`; existing Start, Game Setup, Battle, Reward, and modal components were not changed.
+* The broader GameplayPage run passed 8 of 14 tests, including the new integration plus existing language, potion, movement, and spell flows.
+* All changed JavaScript and JSX files passed the repository-installed ESLint binary.
+* `npm run build` completed successfully, and `git diff --check` reported no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six existing GameplayPage assertions remain stale outside this feature: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM and CSS source contracts cannot visually measure animation smoothness, brightness, layering appearance, viewport coverage, real pointer hit-testing, or runtime frame performance.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for visual intensity, animation variety and smoothness, actual layering, pointer interaction, responsive coverage, reduced-motion behavior, route isolation, performance, and console output.
+
+---
+
+Feature-002: Add styled Potions area to gameplay UI
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Gameplay with an English current player who has no potions.
+   Expected: A compact dark-brown Potions area appears directly below the Spells table with yellow text, a visible `Potions` title, `0/3`, intentional empty space, and no scrollbar.
+2. Give the current player one, two, and three potions in turn.
+   Expected: The area shows `1/3`, `2/3`, and `3/3`; each potion fits in the panel without breaking the layout or creating a scrollbar.
+3. Inspect each rendered potion and focus or hover it.
+   Expected: The shared flask icon, potion colour, glow, localized name, and localized tooltip remain unchanged and readable.
+4. Advance from an English player to a Japanese player with a different potion collection.
+   Expected: The title changes to `ポーション`, names and tooltips change to Japanese, and the capacity and items update to the new current player's collection.
+5. Gain, discard, replace, or otherwise remove a potion through existing game flows.
+   Expected: The displayed slots and `current/3` capacity update with the stored collection, while reward and potion behavior remains unchanged.
+6. Inspect the Gameplay sidebar, board, buttons, settings, player information, and modal overlays at the supported viewport size.
+   Expected: The Potions area stays near Spells and overlaps none of those elements; no console errors occur.
+
+Automated Tests Completed
+
+* Tests were added first and six new assertions failed because the panel classes, capacity display, div slots, and stylesheet did not yet exist.
+* `src/features/potions/PotionList.test.jsx` passes all nine tests for persistent empty rendering, exact `0/3` through `3/3` capacities, gain/removal rerenders, div-only markup, global `PotionIcon` usage, English and Japanese icon content, title font class, fantasy colours, and no-scroll CSS.
+* The full `src/pages/GameplayPage.test.jsx` run passes both potion integration tests, confirming the empty `0/3` state and turn-based collection, language, icon, tooltip, and capacity updates.
+* Existing potion capacity tests continue to define the shared maximum as three; `PotionList` imports that existing constant rather than changing capacity behavior.
+* The repository-installed ESLint binary passes all Feature-002 JavaScript and JSX files.
+* `npm run build` completes successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six pre-existing GameplayPage assertions remain stale outside this feature: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM and source contracts cannot visually confirm real-browser spacing, readability, overlap, or scrollbar behavior at every supported viewport.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for the fantasy styling, 0-3 potion fit, hover/focus tooltips, sidebar overlap, live reward/discard flows, and console output.
+
+---
+
+Bug-001: Gameplay magical background needs more stars and continuous spell effects
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Gameplay and inspect the full night-sky background behind the board and sidebar.
+   Expected: The sky is noticeably fuller than before, with many small stars distributed across the entire layout while gameplay content remains readable.
+2. Watch the background continuously for at least 20 seconds.
+   Expected: A new spell effect appears every roughly 0.5-1.5 seconds, completed effects disappear, and there is no long period without recent magical activity.
+3. Compare effects appearing near the top, bottom, left, right, and centre.
+   Expected: Effects use varied random positions across the full background rather than repeatedly clustering in one area.
+4. Observe the effect shapes, colours, sizes, movement, and timing.
+   Expected: Orbs, comets, and swirls appear in varied blue, purple, green, yellow, pink, and orange treatments with different movement and fade timing.
+5. Roll dice, select board destinations, open each modal, and interact with Spells, Potions, and Settings while effects spawn.
+   Expected: The sky stays behind all content, blocks no click or drag interaction, creates no scrollbar, and does not alter gameplay randomness or state.
+6. Leave Gameplay while effects are active, wait several seconds, and inspect the console and performance tools if available.
+   Expected: The sky unmounts cleanly with no timer-driven updates, memory leak warnings, or console errors after navigation.
+7. Enable reduced motion and reload Gameplay.
+   Expected: Stars remain static and spell effects remain hidden, while Gameplay stays fully usable.
+
+Automated Tests Completed
+
+* The original four sky tests passed during reproduction, confirming the reported implementation still rendered only 48 stars and nine permanently looping mount-time effects.
+* Three new regressions then failed for the expected reasons: star count was still 48, the active effect set was nine static nodes, and spell CSS used infinite iterations.
+* `src/components/gameplay/MagicalNightSky/MagicalNightSky.test.jsx` now passes all five tests for 96 varied stars, an initial orb/comet/swirl mix, continuous 500-1500 ms spawning, broad edge-to-edge positions, colour/type variety, finite animations, completed-node removal, an eight-node active cap, timer cleanup on unmount, stable star descriptors, local RNG isolation, pointer transparency, and reduced-motion CSS.
+* The full `src/pages/GameplayPage.test.jsx` run remains at its established 8 of 14 passing baseline, including the magical-sky Gameplay integration plus existing language, potion, movement, and spell flows.
+* The repository-installed ESLint binary passes the changed sky component and tests.
+* `npm run build` completes successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six pre-existing GameplayPage assertions remain stale outside this bug: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM cannot measure real animation frame performance, visual density, perceived randomness, actual pointer hit-testing, or browser memory usage over a long session.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm visual density, continuous effect cadence, full-area distribution, smooth fading, interaction layering, reduced motion, long-session performance, navigation cleanup, and console output.
+
+---
+
+Bug-002: Potions area should match committed spell slot display styling
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Gameplay with a player who has committed Spells and compare the Spells and Potions panels in the sidebar.
+   Expected: Both panels use the same parchment gradient, brown border, rounded corners, inset/drop shadow, dark text, width, padding, and overall component-family treatment.
+2. Compare the `Spells` and `Potions` headings.
+   Expected: Both headings use matching 18px bold text, letter spacing, dark colour, and aligned internal spacing; the numeric potion capacity remains clearly visible beside its title.
+3. Inspect a player with one, two, and three potions.
+   Expected: Each potion sits inside a bordered parchment slot matching committed spell columns, all slots remain aligned, and no scrollbar appears.
+4. Inspect a player with no potions.
+   Expected: The styled Potions panel remains visible with `0/3` and intentional empty space beneath the header.
+5. Advance between English and Japanese players with different potion collections.
+   Expected: The localized title, names, tooltips, icons, colours, glow, and `current/3` capacity continue updating without any style or layout break.
+6. Inspect the board, sidebar controls, player information, Settings, and modal overlays.
+   Expected: The matched Potions panel stays directly below Spells, overlaps nothing, creates no extra scrollbar, and produces no console errors.
+
+Automated Tests Completed
+
+* The existing source inspection reproduced the mismatch: Potions used a dark `#3a2013` background, yellow text, a different border, and an 8px radius while committed Spells used its established parchment treatment.
+* A new exact-style regression failed first on the former 10px Potions gap and would also reject the independent background, border, radius, text, heading, shadow, and unframed slot styles.
+* `src/features/potions/PotionList.test.jsx` now passes all nine tests, including exact committed-display container, heading, and slot-column CSS plus existing 0-3 capacity, gain/removal, div-only markup, no-scroll, English/Japanese, global icon, tooltip, colour, and glow behavior.
+* The full `src/pages/GameplayPage.test.jsx` run remains at its established 8 of 14 passing baseline; both potion integration tests pass for empty state and current-player turn updates.
+* The repository-installed ESLint binary passes the PotionList component and tests.
+* `npm run build` completes successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six pre-existing GameplayPage assertions remain stale outside this bug: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM and CSS source contracts cannot visually compare rendered panels, measure real spacing or overlap, or confirm scrollbar behavior at every supported viewport.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for the direct Spells/Potions visual comparison, 0-3 potion fit, localization, tooltips, sidebar overlap, scrollbar behavior, and console output.
+
+---
+
+Bug-003: Potion elements should remove rarity/type text and use fixed matching slot sizes
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Gameplay with a current player who owns potions of different rarities and Board/Battle availability.
+   Expected: Each gameplay potion shows only its flask and localized name; no `Common`, `Rare`, `Battle`, `Board`, `Both`, separator, or metadata paragraph appears.
+2. Inspect players with one, two, and three potions, including potions with short and long names.
+   Expected: Every potion slot is exactly 86px wide, all slots in the row stretch to the same height, long names wrap readably, and the layout remains aligned.
+3. Inspect a full three-potion row.
+   Expected: All three fixed slots fit inside the Potions panel with consistent 8px gaps and no horizontal or vertical scrollbar.
+4. Advance between English and Japanese players with different potion collections.
+   Expected: Names and tooltips continue using the current player's language, and differing name lengths do not create uneven slot heights.
+5. Hover or focus each potion icon.
+   Expected: The localized tooltip, potion colour, and glow remain unchanged even though visible rarity/type metadata is gone.
+6. Gain, remove, discard, or replace potions through existing flows.
+   Expected: Capacity still updates through `0/3`, `1/3`, `2/3`, and `3/3`; reward, rarity, availability, and potion data behavior remain unchanged.
+
+Automated Tests Completed
+
+* Two new regressions failed before implementation because gameplay still rendered both metadata paragraphs and the component source still contained the metadata `p` tag; the CSS also retained flexible widths and top alignment.
+* `src/features/potions/PotionList.test.jsx` passes all nine tests for absent rarity/type metadata, preserved names/icons/tooltips/colours/glow, exact 86px width/min-width/flex basis, stretch-based equal heights, 0-3 capacity, current collection updates, div-only markup, no scrolling, localization, and committed-display styling.
+* The full `src/pages/GameplayPage.test.jsx` run remains at its established 8 of 14 passing baseline; both potion integration tests pass and now confirm metadata stays absent across English/Japanese turn changes.
+* Source inspection confirms `rarity` and `availability` remain in `src/data/potions.js`; no reward, filtering, or potion data file changed.
+* The repository-installed ESLint binary passes the PotionList component and affected tests.
+* `npm run build` completes successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six pre-existing GameplayPage assertions remain stale outside this bug: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM and CSS source contracts cannot measure actual equal rendered heights, long-name wrapping, or scrollbar behavior across every supported browser and viewport.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for equal slot heights, long English/Japanese name wrapping, full-row fit, tooltip behavior, visual alignment, scrollbar behavior, and console output.
+
+---
+
+Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Gameplay, open Settings, open Debug, and inspect the Mini Games section.
+   Expected: `Start River Mini Game` is available for the current player and opens the standalone River Mini Game page without changing the active player.
+2. Inspect the River Mini Game at the start of several new attempts.
+   Expected: The supplied river image covers the viewport without tiling; each attempt shows three rows of three hidden-status rocks, with only Row 1 clickable and safe positions varying between attempts.
+3. Choose safe rocks through the three rows.
+   Expected: Row 1 and Row 2 each contain two safe choices, Row 3 contains one, previous/future rows stay disabled, instructions advance, and the third safe choice opens Loot Chest.
+4. Click an unsafe rock in any active row.
+   Expected: The instruction immediately reports the unsafe choice, the selected rock animates for one second, all rocks become disabled, and only then does the Mini Game Failed page open.
+5. Win, click Continue on Loot Chest, and close the board modal.
+   Expected: Gameplay returns with the same player active, the modal says `You crossed the river! You may roll again.`, and Roll Dice is available after closing it.
+6. Lose, then click Return to Board.
+   Expected: Gameplay returns with the next player active and no River win notice.
+7. After both return paths, use board controls, Settings, Spells, Potions, and an existing battle trigger.
+   Expected: Existing gameplay remains usable, overlays do not conflict, and no console errors occur.
+
+Automated Tests Completed
+
+* The five new focused suites failed before implementation on missing River modules/pages and missing mini-game context methods.
+* `src/features/miniGames/riverMiniGame.test.js` verifies three rows of three rocks, exact safe counts of 2/2/1, and random-source-dependent safe positions.
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` verifies current-player display, three row groups, active-row-only interaction, instruction progression, win routing, the delayed unsafe route, animation state, River background CSS, and unsafe timer cleanup on unmount.
+* `src/features/miniGames/miniGameState.test.jsx` verifies stored type/result/player/return behavior, same-player River wins, the roll-again notice and dismissal, and next-player loss returns.
+* `src/pages/MiniGames/MiniGameResultPages.test.jsx` verifies both shared page buttons resolve mini-game state and return to Gameplay.
+* `src/AppMiniGames.test.jsx` verifies the Debug Mini Games trigger, River route/current player, Gameplay win modal, dismissal, and enabled Roll Dice control.
+* The focused suite passes 5 suites and 13 tests. The expanded run with existing DebugModal, GameSetupContext, and gameSetup regressions passes 8 suites and 36 tests.
+* The full `src/pages/GameplayPage.test.jsx` run remains at its established 8 of 14 passing baseline, with exactly the same six unrelated stale assertions.
+* The repository-installed ESLint binary passes every Feature-003 implementation and test file.
+* `npm run build` compiles successfully, including the River image import and all three routes; `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* `src/App.test.jsx` remains blocked before test execution by the repository's existing `source-map-support` `generatedLine` crash; the dedicated App mini-game integration suite passes.
+* Six pre-existing GameplayPage assertions remain stale outside this feature: three expect the former shorter starting-warning sentence, one expects old `Dice result: 4` copy, one expects the former current-player alignment, and one expects the former 100px Spells player image.
+* JSDOM cannot visually confirm the real background crop, rock animation smoothness, overlap, or responsiveness in supported browsers.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for the river background crop, safe-position variation across fresh attempts, rock animation timing, complete win/loss navigation, current-player continuity, next-player handoff, board/modal interaction, responsive fit, and console output.
+
+---
+
+Feature-004: Rework River Mini Game layout, animations, translations, and rock images
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start the River Mini Game as an English player and inspect the initial page.
+   Expected: The old title and current-player text are absent; the bold main instruction, English Row 1 instruction, one row of three rock images, and the current player's colour/gender character image appear in that order.
+2. Compare the three visible rocks and restart the River Mini Game several times.
+   Expected: Each row uses three different images from `src/images/miniGames/rocks/`, images remain fixed during an attempt, different rows may reuse images, bottoms align, and taller rocks extend upward without distortion.
+3. Hover each idle rock, then select a safe Row 1 rock.
+   Expected: Hover provides a small scale/brightness cue without moving layout; the selected rock receives safe feedback, all rocks disable, Row 1 moves downward and fades out, and Row 2 enters from above before becoming clickable.
+4. Select a safe Row 2 rock and then a safe Row 3 rock.
+   Expected: Row 2 transitions to Row 3 in the same sequence; the final safe rock animates, the English win message remains visible briefly, and then Loot Chest opens.
+5. Select an unsafe rock on any active row.
+   Expected: The selected image shakes/sinks, the English loss message is visible for one second, no further rock can be clicked, and then Mini Game Failed opens.
+6. Repeat the safe and unsafe flows as a Japanese player.
+   Expected: The main instruction, each row instruction, win message, and loss message use the specified Japanese text and Japanese font class.
+7. Repeat with a missing or invalid player language.
+   Expected: All River instructions and results fall back to English.
+8. Continue from Loot Chest and return from Mini Game Failed.
+   Expected: Existing shared behavior is preserved: a win keeps the same player and roll-again notice, while a loss advances to the next player.
+
+Automated Tests Completed
+
+* Regressions were added before implementation and exposed the old three-row placeholder layout, missing image data/translation helper, instant safe progression, absent transition states, and immediate win navigation; one unsupported Jest matcher was corrected before implementation.
+* `src/features/miniGames/riverMiniGame.test.js` verifies the unchanged 2/2/1 safe counts, random safe positions, three unique images per row, valid image sources, and permitted image reuse across rows.
+* `src/i18n/translations.test.js` verifies every exact English/Japanese River main, row, win, and loss string plus invalid-language English fallback.
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` verifies one-row-only rendering, image-only rocks, removed title/current-player text, player image placement, correct asset paths, bottom alignment and hover CSS, safe/exiting/entering phases, disabled transition clicks, delayed win/loss routing, Japanese display, fallback, and timer cleanup.
+* `src/AppMiniGames.test.jsx` now verifies the debug route through the Feature-004 Row 1 instruction and current-player image contract instead of the intentionally removed title/text.
+* The final combined River, translation, App integration, shared result page, mini-game state, DebugModal, and GameSetupContext run passes 8 suites and 41 tests.
+* The repository-installed ESLint binary passes all Feature-004 implementation and test files.
+* `npm run build` compiles successfully with the actual `miniGames/rocks/rock-1.png` through `rock-10.png` imports, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; the dedicated App mini-game integration suite passes.
+* JSDOM and source contracts cannot judge real animation smoothness, perceived progression, rock transparency/click-area fit, image alignment across intrinsic dimensions, or responsive overlap.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for image appearance, bottom alignment, hover behavior, safe/unsafe feedback, sequential exit/entry smoothness, bilingual readability, character placement, responsive fit, complete shared return flows, and console output.
+
+---
+
+Feature-005: Add debug flag to reveal safe rocks in River Mini Game
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Confirm `SHOW_SAFE_RIVER_ROCKS` is set to `true`, then start the River Mini Game.
+   Expected: Row 1 shows a clearly visible `SAFE` marker above each of its two safe rocks, while its unsafe rock has no marker.
+2. Click a marked safe rock and progress through all three rows.
+   Expected: Markers move and fade with the outgoing row; Row 2 shows two safe markers and Row 3 shows one, with no hidden future rows or markers displayed.
+3. Hover and click marked safe rocks during normal play.
+   Expected: The marker causes no layout jump, does not intercept the click, and the existing safe feedback and row transitions run unchanged.
+4. Click an unmarked unsafe rock.
+   Expected: The existing unsafe animation and loss text run, then Mini Game Failed opens; the marker does not change the result.
+5. Temporarily set `SHOW_SAFE_RIVER_ROCKS` to `false` and reload the River Mini Game.
+   Expected: No `SAFE` markers appear, rock images and layout look otherwise unchanged, and safe/unsafe clicks retain their existing behavior.
+6. Restore the flag to `true` after the disabled check.
+   Expected: Safe markers return and no console errors occur.
+
+Automated Tests Completed
+
+* Three focused regressions failed before implementation because no enabled markers, debug constant file, or row-specific marker updates existed; the six existing River behavior tests remained green.
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` passes all nine tests, including two marked/one unmarked Row 1 rocks, disabled-flag hiding, unchanged safe clicks when hidden, 2/2/1 marker updates through transitions, non-interactive marker CSS, safe/unsafe animations, win/loss routes, translations, and cleanup.
+* The final combined River logic, translations, River page, App integration, shared result pages, mini-game state, DebugModal, and GameSetupContext run passes 8 suites and 44 tests.
+* Source inspection verifies the temporary comment and enabled `SHOW_SAFE_RIVER_ROCKS` constant are isolated in `src/features/miniGames/riverDebug.js`.
+* The repository-installed ESLint binary passes the debug constant, River component, and River tests.
+* `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; the dedicated App mini-game integration suite passes.
+* JSDOM cannot visually judge marker contrast, exact image overlap, movement with CSS animations, or real pointer hit-testing.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for marker visibility, marker/rock alignment, transition movement, hover and click interaction, the temporary disabled-flag appearance, responsive behavior, and console output.
+
+---
+
+Feature-006: Refine River Mini Game result flow, rock sizing, player spacing, and return modal translation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Cross all three River rows and wait on the final result state without clicking anything.
+   Expected: The final safe animation completes, the win message remains visible, the rocks are replaced by a localized Continue button, and the page does not navigate automatically.
+2. Click Continue after winning.
+   Expected: The win result is recorded and the shared Loot Chest page opens.
+3. Start another attempt, click an unsafe rock, and wait without clicking anything.
+   Expected: The unsafe animation and fail message play first; after the animation, the rocks are replaced by Continue and the page remains on the result state.
+4. Click Continue after failing.
+   Expected: The loss result is recorded and the shared Mini Game Lose page opens.
+5. Inspect the River rocks, their hover/selection effects, and the player image on desktop and a narrow viewport.
+   Expected: Each rock remains bottom-aligned at a fixed 130px width with automatic height, animations still work, and the player has 40px top margin without overlapping the row or Continue button.
+6. Complete a win as an English player, continue through Loot Chest, and return to Gameplay.
+   Expected: The same player remains active, the modal says `You crossed the river! You may roll again.`, and Roll Dice is enabled after the centred bottom OK button closes the modal.
+7. Repeat the win flow as a Japanese player, then repeat with a missing or invalid language.
+   Expected: Japanese shows `川を渡り切りました！もう一度サイコロを振ることができます。`; missing or invalid language falls back to English.
+8. Open each normal modal and the dice result modal.
+   Expected: Normal modal content fills the body with centred actions at the bottom, while the isolated dice modal layout remains unchanged.
+9. Complete a River loss and return from the lose page.
+   Expected: The next player becomes active, no roll-again notice appears, and existing board controls remain usable without console errors.
+
+Automated Tests Completed
+
+* Focused regressions failed before implementation for timer-driven win/loss navigation, visible result-state rocks, missing Continue and return-notice translations, old rock/player CSS values, and absent shared modal body/bottom-action layout.
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` verifies safe and unsafe animation timing, persistent win/loss states, row replacement, localized Continue controls, click-driven destinations, unchanged safe-marker behavior, exact 130px automatic-height rocks, bottom alignment, hover effects, 40px player margin, and timer cleanup.
+* `src/i18n/translations.test.js` verifies exact English/Japanese Continue, result, instruction, and board-return strings plus English fallback for invalid language.
+* `src/AppMiniGames.test.jsx` verifies English and Japanese board-return notices, dismissal, the same active player, and enabled Roll Dice behavior.
+* `src/components/Modal.test.jsx` verifies normal modal body/action regions, flex-based bottom actions, horizontal centring, multiple actions, and the unchanged isolated dice variant.
+* The expanded River, translation, App integration, shared result page, mini-game state, DebugModal, GameSetupContext, and Modal run passes 9 suites and 50 tests.
+* The repository-installed ESLint binary passes every changed JavaScript implementation and test file.
+* `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; the dedicated App mini-game integration suite passes.
+* The full `src/pages/GameplayPage.test.jsx` retains six known unrelated stale assertions documented by earlier Epic-010 work; the focused Gameplay return-modal integration passes.
+* JSDOM and source contracts cannot measure real image overlap, animation smoothness, modal action position, or responsive fit in a browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for complete click-paced win/loss flows, animation smoothness, rock/player/Continue spacing, responsive fit, bilingual readability, all normal modal action positions, the unchanged dice modal, return-to-board turn continuity, and console output.
+
+---
+
+Bug-004: River roll-again modal text should use correct language fonts
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Win the River Mini Game as an English player, continue through Loot Chest, and return to Gameplay.
+   Expected: The modal displays `You crossed the river! You may roll again.` using the English Unkempt font.
+2. Close the English return modal.
+   Expected: The centred OK button remains at the bottom of the modal, the same player remains active, and Roll Dice is enabled.
+3. Repeat the River win and return flow as a Japanese player.
+   Expected: The Japanese return message uses Noto Serif JP rather than Unkempt.
+4. Inspect both return messages against the fantasy modal background.
+   Expected: The text remains bold, `#F5FA00`, readable, and unchanged in wording; the background and modal spacing remain unchanged.
+5. Open other translated normal modals and the dice result modal.
+   Expected: Their existing language fonts and layouts are unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* The focused App integration reproduction failed before implementation because both the English and Japanese River return message elements had no language class; the existing global Unkempt and Noto Serif JP declarations already passed.
+* `src/AppMiniGames.test.jsx` now verifies the exact English message has `language-en`, the exact Japanese message has `language-jp`, and those established classes map to Unkempt and Noto Serif JP respectively.
+* The surrounding App integration, shared Modal, translations, and mini-game state run passes 4 suites and 19 tests, including modal dismissal, bottom/centred actions, same-player wins, and enabled roll-again behavior.
+* The repository-installed ESLint binary passes `src/pages/GameplayPage.jsx` and `src/AppMiniGames.test.jsx`.
+* `npm run build` compiles successfully.
+
+Automated Tests Still Needed
+
+* JSDOM can verify applied class names and CSS declarations but cannot confirm that the remotely imported font files load or visually render in a browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm Unkempt and Noto Serif JP rendering, inherited bold/yellow modal text, the bottom OK button position, unchanged translated modals, roll-again interaction, and console output.
+
+---
+
+Feature-007: Add larger-text class to text-only modal paragraphs
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Spells for a player with unsaved changes and select Cancel.
+   Expected: The Yes/No cancel confirmation displays its main message with larger text and the current language font.
+2. Open Spells with valid changes and select Save.
+   Expected: The Yes/No save confirmation retains larger text and the current language font.
+3. Win the River Mini Game as an English player, continue through Loot Chest, and return to Gameplay.
+   Expected: `You crossed the river! You may roll again.` uses larger text plus the English Unkempt font.
+4. Repeat the River return flow as a Japanese player.
+   Expected: The Japanese message uses larger text plus Noto Serif JP, without losing its translation or language class.
+5. Inspect each text-only modal's message and actions.
+   Expected: Text remains bold and yellow without overflow; Yes/No or OK actions remain centred at the bottom of the modal.
+6. Open Settings, Debug, Spells Token Assignment, turn-change, battle-turn, battle-loss, and dice result modals.
+   Expected: Their complex body content, controls, images, lists, token assignment, and dice layout do not receive `larger-text` or otherwise change.
+
+Automated Tests Completed
+
+* Regressions failed before implementation because Gameplay contained only the already-compliant save confirmation; cancel confirmation and both English/Japanese River return messages lacked `larger-text`.
+* `src/components/Modal.test.jsx` passes all six tests, including exactly three approved `larger-text` uses, the existing `2em` class rule, no use in current settings/battle/debug/spell-assignment sources, bottom-centred normal actions, and the isolated dice variant.
+* `src/AppMiniGames.test.jsx` passes all four tests and verifies the English and Japanese River return messages each retain their language class while adding `larger-text`, modal dismissal, and enabled Roll Dice behavior.
+* The focused App and shared Modal run passes 2 suites and 10 tests.
+* The save-confirmation behavior and new class assertion pass within `src/pages/GameplayPage.test.jsx`'s established 8-of-14 baseline.
+* The surrounding DebugModal suite passes all tests and the SpellsModal source exclusion passes; no complex modal implementation file was changed.
+* The repository-installed ESLint binary passes all Feature-007 implementation and test files with no warnings.
+* `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Six pre-existing `src/pages/GameplayPage.test.jsx` assertions remain stale outside this feature: three expect the former shorter starting warning, one expects old dice-result copy, one expects former current-player alignment, and one expects the former 100px Spells player image.
+* Two pre-existing `src/features/spells/SpellsModal.test.jsx` assertions expect the former shorter English/Japanese starting-warning copy; the remaining tests pass and the Feature-007 source exclusion is verified separately.
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; dedicated App mini-game integration passes.
+* JSDOM and source contracts cannot visually measure paragraph size, line wrapping, overflow, actual font rendering, or action position in a browser.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for English/Japanese text size and wrapping, bold/yellow inheritance, bottom action placement, River return interaction, complex-modal exclusions, responsive overflow, and console output.
+
+---
+
+Feature-008: Remove River Mini Game safe rock debug indicators
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start several new River Mini Game attempts and inspect Row 1 before selecting a rock.
+   Expected: Three normal rock images appear with no `SAFE` labels, green markers, debug outlines, or other status clues.
+2. Select a known safe rock and progress through Row 2 and Row 3.
+   Expected: Safe status remains hidden before each choice; the selected safe rock still receives its normal feedback and each row transition still completes.
+3. Complete all three rows safely and wait on the result state.
+   Expected: The win message and Continue button appear without any debug indicator, and Continue still opens Loot Chest.
+4. Start another attempt and select an unsafe rock.
+   Expected: No status is revealed before the click; the unsafe animation and fail message still run, and Continue still opens Mini Game Lose.
+5. Restart the River Mini Game several times.
+   Expected: Safe choices and rock images can vary between attempts but remain fixed during each attempt; Row 1 and Row 2 retain two safe rocks and Row 3 retains one.
+6. Inspect the browser console while playing both paths.
+   Expected: There are no missing-module, unused-import, render, timer, or navigation errors.
+
+Automated Tests Completed
+
+* Four hidden-choice regressions failed before implementation because the enabled flag module, `SAFE` spans, marker CSS, and visible 2/2/1 row markers still existed; five existing River flow tests remained green.
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` passes all nine tests for no pre-selection status classes or text, hidden status across all rows, removed debug import/module/UI/CSS, safe progression, unsafe failure, safe/unsafe animations, localized result controls, win/loss destinations, and timer cleanup.
+* `src/features/miniGames/riverMiniGame.test.js` continues to verify unchanged three-row generation, exact 2/2/1 safe counts, randomized safe positions, fixed row data, and rock image selection.
+* The expanded River, translation, App integration, shared result page, mini-game state, DebugModal, GameSetupContext, and Modal run passes 9 suites and 52 tests.
+* Production-source inspection finds no remaining `SHOW_SAFE_RIVER_ROCKS`, `riverDebug`, `river-rock-safe-debug-flag`, or rendered `SAFE` marker references, and confirms `src/features/miniGames/riverDebug.js` no longer exists.
+* The repository-installed ESLint binary passes the River component and tests with no warnings.
+* `npm run build` compiles successfully after the debug module deletion, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; the dedicated App mini-game integration suite passes.
+* JSDOM and source contracts cannot visually compare every rock image for accidental clues or judge real animation smoothness and responsive overlap.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm safe and unsafe rocks are visually indistinguishable before selection across randomized attempts, both animation/result paths remain smooth, responsive layout is unchanged, and the console stays clean.

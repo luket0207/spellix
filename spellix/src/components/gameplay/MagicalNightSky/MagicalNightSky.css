@@ -1,0 +1,167 @@
+.magical-night-sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.magical-night-sky-star,
+.magical-night-sky-spell {
+  position: absolute;
+  left: var(--sky-left);
+  top: var(--sky-top);
+  will-change: opacity, transform;
+}
+
+.magical-night-sky-star {
+  width: var(--sky-size);
+  height: var(--sky-size);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+  opacity: var(--sky-opacity);
+  animation: magical-night-sky-twinkle var(--sky-duration) ease-in-out var(--sky-delay) infinite;
+}
+
+.magical-night-sky-spell {
+  opacity: 0;
+  color: var(--sky-colour);
+  animation-duration: var(--sky-duration);
+  animation-delay: var(--sky-delay);
+  animation-iteration-count: 1;
+  animation-timing-function: ease-in-out;
+}
+
+.magical-night-sky-spell--orb {
+  width: var(--sky-size);
+  height: var(--sky-size);
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, currentColor 35%, transparent 72%);
+  filter: drop-shadow(0 0 7px currentColor);
+  animation-name: magical-night-sky-orb;
+}
+
+.magical-night-sky-spell--comet {
+  width: calc(var(--sky-size) * 4);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent 0%, currentColor 72%, #ffffff 100%);
+  filter: drop-shadow(0 0 5px currentColor);
+  transform-origin: right center;
+  animation-name: magical-night-sky-comet;
+}
+
+.magical-night-sky-spell--comet::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 9px currentColor;
+  transform: translateY(-50%);
+}
+
+.magical-night-sky-spell--swirl {
+  width: calc(var(--sky-size) * 1.7);
+  height: calc(var(--sky-size) * 1.7);
+  border: 2px solid currentColor;
+  border-left-color: transparent;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 5px currentColor);
+  animation-name: magical-night-sky-swirl;
+}
+
+.magical-night-sky-spell--swirl::after {
+  content: '';
+  position: absolute;
+  inset: 24%;
+  border: 1px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+@keyframes magical-night-sky-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.75);
+  }
+
+  50% {
+    opacity: var(--sky-opacity);
+    transform: scale(1.2);
+  }
+}
+
+@keyframes magical-night-sky-orb {
+  0%,
+  12%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+
+  30% {
+    opacity: 0.55;
+  }
+
+  72% {
+    opacity: 0.35;
+    transform: translate(calc(-50% + var(--sky-travel-x)), calc(-50% + var(--sky-travel-y))) scale(1);
+  }
+}
+
+@keyframes magical-night-sky-comet {
+  0%,
+  18%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--sky-rotation)) scaleX(0.4);
+  }
+
+  32% {
+    opacity: 0.55;
+  }
+
+  66% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sky-travel-x)), calc(-50% + var(--sky-travel-y))) rotate(var(--sky-rotation)) scaleX(1);
+  }
+}
+
+@keyframes magical-night-sky-swirl {
+  0%,
+  22%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.45);
+  }
+
+  40% {
+    opacity: 0.42;
+  }
+
+  72% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sky-travel-x)), calc(-50% + var(--sky-travel-y))) rotate(300deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magical-night-sky-star,
+  .magical-night-sky-spell {
+    animation: none;
+  }
+
+  .magical-night-sky-star {
+    opacity: 0.45;
+  }
+
+  .magical-night-sky-spell {
+    display: none;
+  }
+}

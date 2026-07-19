@@ -1,0 +1,188 @@
+.river-mini-game-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background-image: linear-gradient(rgba(8, 24, 33, 0.3), rgba(8, 24, 33, 0.3)),
+    url('../../images/miniGames/river.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.river-mini-game-layout {
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  color: #2d1f12;
+  text-align: center;
+}
+
+.river-mini-game-instructions {
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  border: 2px solid #4a3520;
+  border-radius: 10px;
+  background: rgba(244, 226, 184, 0.92);
+}
+
+.river-mini-game-main-instruction {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.river-mini-game-row-instruction {
+  min-height: 24px;
+  margin: 0;
+}
+
+.river-row {
+  width: 100%;
+  min-height: 190px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.river-row--exiting {
+  animation: river-row-exit 700ms ease-in forwards;
+}
+
+.river-row--entering {
+  animation: river-row-enter 700ms ease-out;
+}
+
+.river-rock {
+  position: relative;
+  width: 130px;
+  flex: 0 0 130px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform-origin: bottom center;
+}
+
+.river-rock:hover {
+  transform: scale(1.06);
+  filter: brightness(1.12);
+}
+
+.river-rock:disabled {
+  cursor: default;
+}
+
+.river-rock:disabled:hover {
+  transform: none;
+  filter: none;
+}
+
+.river-rock-image {
+  width: 130px;
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+
+.river-rock--safe {
+  animation: safe-rock 300ms ease-out;
+}
+
+.river-rock--unsafe {
+  animation: unsafe-rock 1s ease-in forwards;
+}
+
+.river-mini-game-player {
+  margin-top: 40px;
+  width: auto;
+  height: 150px;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.river-result-actions {
+  width: 100%;
+  min-height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes river-row-exit {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(160px);
+    opacity: 0;
+  }
+}
+
+@keyframes river-row-enter {
+  from {
+    transform: translateY(-160px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes safe-rock {
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px #4fce68);
+  }
+}
+
+@keyframes unsafe-rock {
+  0% {
+    transform: translateY(0);
+  }
+
+  20%,
+  60% {
+    transform: translate(-6px, 5px);
+  }
+
+  40%,
+  80% {
+    transform: translate(6px, 12px);
+  }
+
+  100% {
+    transform: translateY(50px) scale(0.8);
+    opacity: 0.25;
+  }
+}
+
+@media (max-width: 600px) {
+  .river-mini-game-page {
+    padding: 12px;
+  }
+
+  .river-mini-game-instructions {
+    padding: 12px;
+  }
+
+  .river-row,
+  .river-result-actions {
+    min-height: 130px;
+  }
+
+  .river-mini-game-player {
+    height: 120px;
+  }
+}

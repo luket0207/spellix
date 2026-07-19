@@ -18,6 +18,7 @@ function DebugModal({
   onGiveToken,
   onPendingPotionReplacementChange,
   onStartBattle,
+  onStartRiverMiniGame,
   onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
   onReplacePendingPotion,
@@ -116,6 +117,13 @@ function DebugModal({
             onClick={onStartSelectedEnemyBattle}
           >
             Start Selected Enemy Battle
+          </button>
+        </div>
+
+        <div className="debug-mini-game-controls">
+          <h2>Mini Games</h2>
+          <button type="button" disabled={!currentPlayer} onClick={onStartRiverMiniGame}>
+            Start River Mini Game
           </button>
         </div>
 

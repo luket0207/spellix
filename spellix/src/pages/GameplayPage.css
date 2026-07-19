@@ -1,12 +1,23 @@
 .gameplay-layout {
   display: grid;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   grid-template-columns: 940px 360px;
   gap: 20px;
   height: 100vh;
   align-items: center;
   justify-content: center;
   margin: auto;
-  background-color: #090909;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(48, 40, 104, 0.72), transparent 48%),
+    linear-gradient(180deg, #050617 0%, #10102a 60%, #050617 100%);
+}
+
+.gameplay-layout > .board-panel,
+.gameplay-layout > .gameplay-sidebar {
+  position: relative;
+  z-index: 1;
 }
 
 .gameplay-sidebar {

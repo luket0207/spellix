@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
+import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
 import BoardGrid from '../features/gameBoard/BoardGrid';
@@ -25,6 +26,7 @@ import {
   getGameplayLanguage,
   getGameplayTranslations,
   getNextTurnMessage,
+  getRiverMiniGameTranslations,
   getSpellAssignmentTranslations,
 } from '../i18n/translations';
 import './GameplayPage.css';
@@ -33,9 +35,11 @@ function GameplayPage() {
   const {
     advanceTurn,
     currentPlayer,
+    dismissMiniGameReturnNotice,
     gameSetup,
     initializeBoard,
     initializeTurnOrder,
+    miniGameReturnNotice,
     setPlayerPosition,
     updatePlayerSpells,
   } = useGameSetup();
@@ -51,6 +55,7 @@ function GameplayPage() {
   const [showTurnModal, setShowTurnModal] = useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const riverMiniGameTranslations = getRiverMiniGameTranslations(currentLanguage);
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
@@ -261,6 +266,7 @@ function GameplayPage() {
 
   return (
     <main className="gameplay-layout">
+      <MagicalNightSky />
       {gameSetup.board ? (
         <BoardGrid
           board={gameSetup.board}
@@ -372,7 +378,7 @@ function GameplayPage() {
         ariaLabel="Cancel spells confirmation"
         isOpen={showSpellCancelConfirmation}
       >
-        <p className={languageClassName}>{spellAssignmentTranslations.cancelConfirmation}</p>
+        <p className={`larger-text ${languageClassName}`}>{spellAssignmentTranslations.cancelConfirmation}</p>
       </Modal>
 
       <Modal
@@ -442,6 +448,22 @@ function GameplayPage() {
           </div>
         </Modal>
       ) : null}
+
+      <Modal
+        actions={
+          <Button type="button" variant="secondary" onClick={dismissMiniGameReturnNotice}>
+            OK
+          </Button>
+        }
+        ariaLabel="Mini game result"
+        isOpen={Boolean(miniGameReturnNotice)}
+      >
+        <p className={`larger-text ${languageClassName}`}>
+          {miniGameReturnNotice?.type === 'river'
+            ? riverMiniGameTranslations.returnNotice
+            : miniGameReturnNotice?.message}
+        </p>
+      </Modal>
     </main>
   );
 }

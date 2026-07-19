@@ -1,0 +1,18 @@
+.mini-game-result-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.mini-game-result-panel {
+  width: min(420px, 100%);
+  padding: 24px;
+  border: 2px solid #4a3520;
+  border-radius: 10px;
+  background: #f4e2b8;
+  color: #2d1f12;
+  text-align: center;
+}

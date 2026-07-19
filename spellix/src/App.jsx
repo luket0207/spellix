@@ -21,6 +21,9 @@ import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
 import RewardPage from './pages/RewardPage';
 import StartPage from './pages/StartPage';
+import LootChestPage from './pages/MiniGames/LootChestPage';
+import MiniGameLosePage from './pages/MiniGames/MiniGameLosePage';
+import RiverMiniGame from './pages/MiniGames/RiverMiniGame';
 
 function App() {
   const navigate = useNavigate();
@@ -33,6 +36,7 @@ function App() {
     resolvePendingPotionGrant,
     setPlayerAnywhereMode,
     startBattle,
+    startMiniGame,
     updatePlayerSpells,
   } = useGameSetup();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -267,6 +271,19 @@ function App() {
     navigate('/battle');
   };
 
+  const handleStartRiverMiniGame = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug mini games are only available during gameplay turns.');
+      return;
+    }
+
+    startMiniGame('river', currentPlayer.id);
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/mini-game/river');
+  };
+
   return (
     <>
       <button
@@ -284,6 +301,9 @@ function App() {
         <Route path="/gameplay" element={<GameplayPage />} />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/reward" element={<RewardPage />} />
+        <Route path="/mini-game/river" element={<RiverMiniGame />} />
+        <Route path="/mini-game/loot-chest" element={<LootChestPage />} />
+        <Route path="/mini-game/lose" element={<MiniGameLosePage />} />
       </Routes>
 
       <Modal
@@ -322,6 +342,7 @@ function App() {
         onGiveToken={handleGiveDebugToken}
         onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
         onStartBattle={handleStartBattle}
+        onStartRiverMiniGame={handleStartRiverMiniGame}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
         onPendingTokenReplacementChange={setSelectedReplacementTokenId}
         onReplacePendingPotion={handleReplacePendingPotion}
