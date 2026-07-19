@@ -86,6 +86,7 @@ export function createInitialGameSetup() {
     activeBattle: null,
     miniGameResult: null,
     miniGameReturnNotice: null,
+    pendingNextTurnModal: false,
     pendingPotionGrant: null,
     playerCount: MIN_PLAYER_COUNT,
     players: createPlayers(MIN_PLAYER_COUNT),

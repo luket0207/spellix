@@ -2470,3 +2470,768 @@ Testing Checkpoints
 * Confirm there are no unused import warnings.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-009: Add uncommitted token notification to Spells button
+
+Status
+
+* done
+
+Goal
+
+* Add a small notification indicator to the Spells button on the gameplay page.
+* The indicator should appear when the current player has tokens in their token bag.
+* This tells the player they have uncommitted tokens available.
+* The indicator should disappear when the current player’s token bag is empty.
+
+Scope
+
+* Update the gameplay page Spells button.
+* Add a small `!` icon in the top-right corner of the button.
+* Show the icon only when the current player has one or more tokens in their token bag.
+* Preserve the existing Spells button behaviour.
+* Preserve the existing token bag logic.
+
+Spells Button Target
+
+* This applies to the Spells button on the gameplay page.
+* This is the button below the Roll Dice button.
+* It opens the Spells / Token Assignment modal.
+* Do not apply this notification to other Spells labels or headings.
+
+Notification Display Requirement
+
+* If the current player has tokens in their token bag, show a simple notification icon.
+* The icon should be:
+
+```txt id="ypjmda"
+!
+```
+
+* It should appear in the top-right of the Spells button.
+* It should overlap the edge of the button slightly.
+* It should feel like a notification badge.
+* It should remain visible until the current player’s token bag is empty.
+
+Notification Hidden Requirement
+
+* If the current player’s token bag is empty, do not show the notification icon.
+* The Spells button should look normal when there are no uncommitted tokens.
+
+Current Player Requirement
+
+* The notification should be based on the current player only.
+* If Player 1 has tokens but Player 2 does not:
+
+  * show the icon on Player 1’s turn.
+  * hide the icon on Player 2’s turn.
+* If the active player changes, update the icon immediately based on the new current player’s token bag.
+
+Token Bag Requirement
+
+* The icon should appear if the current player has at least one token in their token bag.
+* Suggested condition:
+
+```js id="m4okhc"
+const showSpellsNotification = currentPlayer.tokenBag.length > 0;
+```
+
+* Exact property names can vary.
+* Do not count committed tokens inside spell slots.
+* Do not count starting tokens that are already committed.
+* Only uncommitted tokens in the token bag should trigger the notification.
+
+Styling Requirement
+
+* The notification should be small but clearly visible.
+* It should sit at the top-right corner of the button.
+* It should overlap the button edge.
+* Suggested CSS direction:
+
+```css id="wno6rp"
+.spells-button-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.spells-button-notification {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  pointer-events: none;
+}
+```
+
+* Exact class names and colours can vary to match the current fantasy button styling.
+* The badge should not block clicks on the Spells button.
+* The badge should remain readable on top of the button.
+
+Behaviour Requirement
+
+* Clicking the Spells button should still open the Spells modal.
+* The notification should not change button behaviour.
+* The notification should update after:
+
+  * gaining a token into the token bag.
+  * assigning a token from the token bag into a spell slot.
+  * discarding or removing a token from the token bag.
+  * changing to another player’s turn.
+
+Expected Behaviour
+
+* Current player has 0 tokens in token bag: no `!` icon.
+* Current player has 1 or more tokens in token bag: `!` icon appears.
+* The `!` icon appears in the top-right of the Spells button.
+* The icon overlaps the button edge slightly.
+* The icon disappears once the token bag is empty.
+* The Spells button still opens the modal normally.
+* The notification updates correctly when turns change.
+
+Out Of Scope
+
+* No changes to token bag capacity.
+* No changes to token assignment rules.
+* No changes to token reward logic.
+* No changes to Spells modal layout.
+* No changes to button component styling except supporting the badge wrapper if needed.
+* No sound effects.
+* No animation required for the badge.
+* No translation required for the `!` icon.
+
+Assumptions
+
+* The gameplay page has access to the current player.
+* The current player has token bag data available.
+* The Spells button already exists below the Roll Dice button.
+* The global Button component can be wrapped in a positioned container if needed.
+
+Stop Point
+
+* Stop once the Spells button shows a top-right overlapping `!` notification whenever the current player has uncommitted tokens in their token bag, and hides it when the token bag is empty.
+
+Testing Checkpoints
+
+* Confirm no notification appears when the current player’s token bag is empty.
+* Confirm the `!` notification appears when the current player has one token in their token bag.
+* Confirm the `!` notification appears when the current player has multiple tokens in their token bag.
+* Confirm committed spell slot tokens do not trigger the notification.
+* Confirm the notification disappears when the token bag becomes empty.
+* Confirm the notification updates when changing from a player with tokens to a player without tokens.
+* Confirm the notification updates when changing from a player without tokens to a player with tokens.
+* Confirm the icon appears in the top-right of the Spells button.
+* Confirm the icon overlaps the edge of the button.
+* Confirm the icon does not block button clicks.
+* Confirm clicking the Spells button still opens the Spells modal.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Gameplay derives one notification directly from the active player's non-empty `tokenBag`; committed spell-slot tokens are not inspected or counted.
+* Only the existing gameplay Spells button is wrapped, preserving its full width, language class, disabled state, and modal-opening behavior.
+* The `!` badge uses scoped Gameplay CSS for the requested top-right overlap and `pointer-events: none`; no shared Button styles or token rules changed.
+* Focused notification tests, App integration, ESLint, the production build, and whitespace checks pass; manual visual browser verification remains documented in `testing.txt`.
+
+---
+
+Feature-010: Add Cave Mini Game with debug trigger, reward tracking, retreat flow, and roll-again reward
+
+Status
+
+* done
+
+Goal
+
+* Add the next mini game: Cave Game.
+* Add a debug menu trigger for the Cave Game.
+* Create a standalone Cave Mini Game page.
+* Let the player choose whether to go deeper or retreat.
+* Calculate step-based random outcomes when the player goes deeper.
+* Track rewards found during the cave instance.
+* If the player encounters an ogre, they lose all cave rewards and go to the shared Mini Game Lose page.
+* If the player retreats, show a reward summary and return to the board.
+* For now, only implement the roll-again reward effect.
+* Other reward granting is out of scope for now.
+
+Scope
+
+* Add Cave Game debug trigger.
+* Add Cave Mini Game route/page.
+* Add Cave Game background.
+* Add Cave Game text box and buttons.
+* Add English/Japanese button text.
+* Add English/Japanese cave instruction and result text.
+* Add step-based probability table.
+* Add reward-acquired tracking for token, loot, potion, and roll again.
+* Add logic that moves already-acquired reward chances into ogre chance.
+* Add retreat result state.
+* Add cave reward summary.
+* Add roll-again reward behaviour on retreat.
+* Reuse shared Mini Game Lose page for ogre loss.
+* Return to board with correct turn behaviour.
+
+Mini Game Debug Menu Requirement
+
+* Add a new debug button in the Mini Games debug menu area.
+* Suggested button text:
+
+```txt id="fyfgpd"
+Start Cave Mini Game
+```
+
+* Clicking this button should take the current player to the Cave Mini Game page.
+* The debug trigger should preserve the current player as the mini game player.
+* Debug menu styling is out of scope unless already handled elsewhere.
+
+Routing Requirement
+
+* Add a standalone route for the Cave Mini Game.
+* Suggested route:
+
+```txt id="ejfbwx"
+/mini-game/cave
+```
+
+* Exact route can vary if the project already has a mini game route convention.
+* The Cave Game should be its own page.
+* Do not implement it as a modal.
+* Do not break the existing River Mini Game routes.
+
+Background Requirement
+
+* The Cave Mini Game page should use this background image:
+
+```txt id="gj73he"
+src/images/miniGames/cave.png
+```
+
+* The background should cover the full screen.
+* The background should not tile.
+* Cave Game content should sit above the background.
+* Keep text readable against the background.
+
+Base Layout Requirement
+
+* The Cave Game should consist of:
+
+  * a text box.
+  * two buttons beneath the text box.
+* The two buttons should sit side by side.
+* The buttons are:
+
+  * Go Deeper.
+  * Retreat.
+* The text box should have a background so the text remains visible.
+* The buttons should use the global Button component.
+* The buttons should use the primary or secondary variant consistently with the rest of mini game UI.
+* Suggested:
+
+  * Go Deeper = primary.
+  * Retreat = secondary.
+
+Initial Text Requirement
+
+* The initial text in the text box should be:
+
+```txt id="im8soc"
+Explore deeper into the cave, but beware of ogres.
+```
+
+* Japanese:
+
+```txt id="tqkwca"
+洞窟のさらに奥を探索してください。ただし、オーガには気をつけてください。
+```
+
+* The displayed language should be based on the current player’s selected language.
+* If language is missing or invalid, fall back to English.
+
+Button Translation Requirement
+
+* Go Deeper button:
+
+  * English: `Go Deeper`
+  * Japanese: `さらに奥へ進む`
+* Retreat button:
+
+  * English: `Retreat`
+  * Japanese: `引き返す`
+* Use the current player’s selected language.
+* If language is missing or invalid, fall back to English.
+
+Core Cave Game Rules
+
+* The Cave Game is a risk/reward mini game.
+* The player can repeatedly choose to go deeper into the cave.
+* Each time the player clicks Go Deeper:
+
+  * increase or use the current step.
+  * calculate one outcome using the probability table.
+  * show the result in the text box.
+* The player can retreat at any time before encountering an ogre.
+* If the player retreats:
+
+  * they keep whatever rewards they found during the cave game.
+  * show retreat success text.
+  * show a summary of rewards found.
+  * show a Continue button.
+* If the player encounters an ogre:
+
+  * they lose anything gained during the cave game.
+  * show the ogre result text.
+  * then send them to the shared Mini Game Lose page.
+* If the player reaches Step 16 and clicks Go Deeper:
+
+  * ogre chance is 100%.
+  * they will encounter an ogre.
+
+Step Probability Table
+
+* Use this probability table for the Cave Game:
+
+```txt id="d2w9t0"
+Step | Nothing Chance | Token Chance | Loot Chance | Potion Chance | Roll Again Chance | Ogre Chance
+1 | 97.5 | 0 | 0.5 | 0 | 2 | 0
+2 | 96.5 | 0 | 0.5 | 0.5 | 2 | 0.5
+3 | 88.5 | 0 | 5 | 0.5 | 5 | 1
+4 | 84 | 0 | 5 | 1 | 5 | 5
+5 | 69 | 1 | 10 | 5 | 5 | 10
+6 | 64 | 1 | 10 | 5 | 5 | 15
+7 | 43 | 2 | 20 | 10 | 5 | 20
+8 | 41 | 2 | 20 | 10 | 2 | 25
+9 | 18 | 5 | 30 | 15 | 2 | 30
+10 | 8 | 5 | 30 | 15 | 2 | 40
+11 | 5 | 15 | 20 | 10 | 0 | 50
+12 | 3 | 15 | 10 | 12 | 0 | 60
+13 | 1 | 15 | 5 | 9 | 0 | 70
+14 | 0 | 15 | 0 | 5 | 0 | 80
+15 | 0 | 15 | 0 | 0 | 0 | 85
+16 | 0 | 0 | 0 | 0 | 0 | 100
+```
+
+* Percent values are percentages.
+* Each row should total 100 after accounting for reward chances moved into ogre chance.
+
+Reward Acquisition Limit Requirement
+
+* The following reward outcome types can each only be obtained once per Cave Game instance:
+
+  * token.
+  * loot.
+  * potion.
+  * roll again.
+* If the player has already obtained one of these reward types during this Cave Game instance:
+
+  * remove that reward type from the available outcome pool.
+  * add that step’s chance for that reward type into ogre chance.
+* This means the more reward types the player has already found, the more dangerous the cave becomes.
+* Nothing chance is not limited.
+* Ogre chance is not limited.
+
+Example Requirement
+
+* If on Step 6 the player finds loot:
+
+  * mark `loot` as obtained.
+* On Step 7:
+
+  * Step 7 base loot chance is 20.
+  * because loot has already been obtained, add 20 to ogre chance.
+  * Step 7 base ogre chance is 20.
+  * adjusted ogre chance becomes 40.
+* If on Step 7 the player then finds roll again:
+
+  * mark `rollAgain` as obtained.
+* On Step 8:
+
+  * Step 8 base loot chance is 20.
+  * Step 8 base roll again chance is 2.
+  * Step 8 base ogre chance is 25.
+  * adjusted ogre chance becomes 47.
+
+Outcome Calculation Requirement
+
+* On each Go Deeper click:
+
+  * calculate the outcome using the current step’s adjusted probabilities.
+  * account for already-obtained reward types.
+  * show the matching result text.
+  * if reward outcome is token, loot, potion, or roll again, mark it as obtained.
+  * if outcome is ogre, end the cave run as a loss.
+  * if outcome is nothing, continue normally.
+* The step should advance after each non-ogre Go Deeper result.
+* If the player continues beyond the final safe step, Step 16 should force ogre.
+
+Suggested acquired state:
+
+```js id="d6syoy"
+const acquiredRewards = {
+  token: false,
+  loot: false,
+  potion: false,
+  rollAgain: false
+};
+```
+
+Suggested adjusted probability direction:
+
+```js id="wswhdw"
+const adjusted = { ...baseStep };
+
+if (acquiredRewards.token) {
+  adjusted.ogre += adjusted.token;
+  adjusted.token = 0;
+}
+
+if (acquiredRewards.loot) {
+  adjusted.ogre += adjusted.loot;
+  adjusted.loot = 0;
+}
+
+if (acquiredRewards.potion) {
+  adjusted.ogre += adjusted.potion;
+  adjusted.potion = 0;
+}
+
+if (acquiredRewards.rollAgain) {
+  adjusted.ogre += adjusted.rollAgain;
+  adjusted.rollAgain = 0;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that previously acquired reward chances move into ogre chance.
+
+Outcome Text Requirement
+
+* Each time Go Deeper is clicked, the result should show in the text box.
+
+Outcome text:
+
+```txt id="ydypft"
+Nothing:
+English: There is nothing in this part of the cave
+Japanese: 洞窟のこの辺りには何もありません。
+
+Token:
+English: You found a token
+Japanese: トークンを見つけました。
+
+Loot:
+English: You found a loot chest
+Japanese: 戦利品の宝箱を見つけました。
+
+Potion:
+English: You found a potion
+Japanese: ポーションを見つけました。
+
+Roll Again:
+English: You found a potion to let you roll again this turn
+Japanese: このターン、もう一度サイコロを振れるポーションを見つけました。
+
+Ogre:
+English: You were chased out of the cave by an ogre, dropping all of your loot on the way out.
+Japanese: オーガに追い出され、逃げる途中ですべての戦利品を落としてしまいました。
+```
+
+* Use the current player’s selected language.
+* If language is missing or invalid, fall back to English.
+
+Retreat Requirement
+
+* The player can click Retreat at any time before an ogre result.
+* When the player clicks Retreat:
+
+  * show the retreat success text.
+  * show a summary of cave rewards found.
+  * replace Go Deeper and Retreat buttons with a Continue button.
+* Retreat success text:
+
+```txt id="fe2se5"
+You got out with all your loot.
+```
+
+* Japanese:
+
+```txt id="h8ij91"
+戦利品をすべて持って脱出しました。
+```
+
+* The player should be able to read the result before returning to the board.
+* Granting token, loot, and potion rewards is out of scope for now.
+* Roll-again reward behaviour is in scope.
+
+Cave Reward Summary Requirement
+
+* If the player retreats, show a summary of rewards found during that Cave Game instance.
+* The summary should support English and Japanese.
+* The summary should include any of:
+
+  * token found.
+  * loot chest found.
+  * potion found.
+  * roll-again potion found.
+* If no rewards were found, show that no rewards were gained.
+* Suggested English summary text:
+
+  * `Rewards found:`
+  * `Token`
+  * `Loot Chest`
+  * `Potion`
+  * `Roll Again Potion`
+  * `No rewards found.`
+* Suggested Japanese summary text:
+
+  * `見つけた報酬：`
+  * `トークン`
+  * `戦利品の宝箱`
+  * `ポーション`
+  * `もう一度振れるポーション`
+  * `報酬は見つかりませんでした。`
+* The summary should be shown before the Continue button.
+* The summary should not grant token, loot, or normal potion rewards yet.
+
+Continue Button Requirement
+
+* After retreating, show a Continue button.
+* English:
+
+```txt id="w4lleg"
+Continue
+```
+
+* Japanese:
+
+```txt id="mn1tak"
+続ける
+```
+
+* Clicking Continue after retreat should return to the board.
+* If the player found the roll-again reward:
+
+  * do not advance to the next player.
+  * keep the same player active.
+  * show the roll-again modal.
+* If the player did not find the roll-again reward:
+
+  * advance to the next player.
+  * show the next-turn modal according to the global turn-change invariant.
+
+Roll-Again Reward Requirement
+
+* The only Cave Game reward effect implemented now is roll again.
+* If the player retreats after finding the roll-again reward:
+
+  * they may roll again this turn.
+  * the active player should remain the same.
+  * return to the board.
+  * show a modal explaining the reward.
+* English modal text:
+
+```txt id="tgyent"
+You earned the potion to roll again this turn
+```
+
+* Japanese modal text:
+
+```txt id="qbqiz8"
+このターン、もう一度サイコロを振れるポーションを獲得しました。
+```
+
+* The modal should use the current player’s selected language.
+* The modal should be a text-only modal, so the `<p>` tag should use the `larger-text` class.
+* The modal OK button should sit at the bottom and be horizontally centred.
+* After closing the modal, the same player should be able to roll again.
+
+No Roll-Again Reward Turn Requirement
+
+* If the player retreats without finding the roll-again reward:
+
+  * return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+* Follow the global rule from EPIC-010 Bug-005:
+
+  * if the active player changes, the next-turn modal appears 100% of the time.
+
+Ogre Loss Requirement
+
+* If the player encounters an ogre:
+
+  * show the ogre text in the text box.
+  * the player loses anything they found during that Cave Game instance.
+  * show a Continue button or short delay before leaving if needed so the player can read the ogre text.
+  * navigate to the shared Mini Game Lose page.
+* The Mini Game Lose page should then return to the board and advance to the next player.
+* The next-turn modal must appear after that turn change.
+* Do not grant any cave rewards after an ogre encounter.
+* Roll-again reward is lost if the player encounters an ogre before retreating.
+
+Cave Game State Requirement
+
+* Track:
+
+  * current step.
+  * current message.
+  * whether token reward has been found.
+  * whether loot reward has been found.
+  * whether potion reward has been found.
+  * whether roll-again reward has been found.
+  * whether the player has retreated.
+  * whether the player encountered an ogre.
+  * whether the game is awaiting Continue.
+* Suggested states:
+
+  * `playing`
+  * `retreated`
+  * `ogre`
+* Prevent Go Deeper and Retreat from being clicked after the game reaches `retreated` or `ogre`.
+
+Reward Granting Out Of Scope
+
+* For now, do not actually grant:
+
+  * token reward.
+  * loot chest reward.
+  * normal potion reward.
+* These should only be shown in the summary if obtained.
+* Only the roll-again reward should have gameplay effect now.
+
+Language Requirement
+
+* All Cave Game text should use the current player’s selected language.
+* This includes:
+
+  * initial instruction text.
+  * Go Deeper button.
+  * Retreat button.
+  * outcome text.
+  * retreat success text.
+  * reward summary.
+  * Continue button.
+  * roll-again modal.
+* If language is missing or invalid, fall back to English.
+* Use existing English/Japanese font rules.
+
+Styling Requirement
+
+* The Cave Game should fit the existing fantasy/mini game style.
+* Text should remain readable against the cave background.
+* The text box should have a background.
+* Buttons should sit below the text box side by side during active play.
+* Result/retreat states can replace the two buttons with one Continue button.
+* Use global Button component.
+* Do not use list elements if a simple div layout is cleaner for the reward summary.
+
+Expected Behaviour
+
+* Debug menu has a Cave Mini Game trigger.
+* Clicking it opens the Cave Mini Game page.
+* Cave Game uses `src/images/miniGames/cave.png`.
+* The player sees a text box and Go Deeper / Retreat buttons.
+* Text and buttons use English or Japanese based on the current player.
+* Clicking Go Deeper calculates an outcome using the current step.
+* Result text appears in the text box after each Go Deeper click.
+* Token, loot, potion, and roll-again rewards can each only be found once.
+* Previously found reward chances are added to ogre chance.
+* Encountering an ogre loses all cave rewards and sends the player to Mini Game Lose page.
+* Clicking Retreat shows success text and reward summary.
+* Clicking Continue after retreat returns to the board.
+* If roll-again was found before retreating, the same player remains active and may roll again.
+* If roll-again was not found before retreating, the turn advances to the next player and the next-turn modal appears.
+* Token, loot, and normal potion rewards are only summarised for now and not actually granted.
+
+Out Of Scope
+
+* No actual token reward granting.
+* No actual loot chest reward granting.
+* No actual normal potion reward granting.
+* No final Cave Game advanced animations.
+* No Bridge Builder logic.
+* No Cave Runner potion logic.
+* No Good Decisions potion logic.
+* No automatic board cave trigger unless already simple and safe.
+* No new mini games.
+* No changes to River Mini Game.
+* No changes to battle logic.
+* No changes to board generation.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* Current player and selected language are available on mini game pages.
+* The shared Mini Game Lose page already exists from Feature-003.
+* The global Button component exists.
+* The global turn-change invariant from EPIC-010 Bug-005 will be respected by return-to-board flows.
+* `src/images/miniGames/cave.png` exists.
+
+Stop Point
+
+* Stop once the Cave Mini Game can be triggered from the debug menu, runs step-based Go Deeper outcomes, tracks one-time cave rewards, handles retreat with summary, handles ogre loss, and implements only the roll-again reward effect when returning to the board.
+
+Testing Checkpoints
+
+* Confirm debug menu has a Cave Mini Game trigger.
+* Confirm clicking the trigger opens the Cave Mini Game page.
+* Confirm Cave Game uses `src/images/miniGames/cave.png`.
+* Confirm the cave background covers the screen.
+* Confirm the initial English text appears for English players.
+* Confirm the initial Japanese text appears for Japanese players.
+* Confirm Go Deeper button appears in English for English players.
+* Confirm Go Deeper button appears in Japanese for Japanese players.
+* Confirm Retreat button appears in English for English players.
+* Confirm Retreat button appears in Japanese for Japanese players.
+* Confirm Go Deeper and Retreat buttons sit side by side.
+* Confirm clicking Go Deeper calculates a step outcome.
+* Confirm each outcome text can display in English.
+* Confirm each outcome text can display in Japanese.
+* Confirm step probability data matches the table.
+* Confirm token reward can only be obtained once per cave game.
+* Confirm loot reward can only be obtained once per cave game.
+* Confirm potion reward can only be obtained once per cave game.
+* Confirm roll-again reward can only be obtained once per cave game.
+* Confirm previously obtained reward chances are added to ogre chance.
+* Confirm Step 16 has 100% ogre chance.
+* Confirm encountering an ogre shows the ogre text.
+* Confirm encountering an ogre loses all cave rewards.
+* Confirm encountering an ogre routes to the Mini Game Lose page.
+* Confirm returning from Mini Game Lose advances to the next player.
+* Confirm the next-turn modal appears after the turn advances.
+* Confirm clicking Retreat shows the retreat success text.
+* Confirm retreat shows a reward summary.
+* Confirm summary displays found token if token was found.
+* Confirm summary displays found loot chest if loot was found.
+* Confirm summary displays found potion if potion was found.
+* Confirm summary displays found roll-again potion if roll again was found.
+* Confirm summary displays no rewards message if no rewards were found.
+* Confirm Continue appears after retreat.
+* Confirm clicking Continue after retreat without roll again returns to the board and advances the turn.
+* Confirm the next-turn modal appears after that turn change.
+* Confirm clicking Continue after retreat with roll again returns to the board without advancing the turn.
+* Confirm the roll-again reward modal appears.
+* Confirm the roll-again reward modal displays English for English players.
+* Confirm the roll-again reward modal displays Japanese for Japanese players.
+* Confirm the roll-again reward modal uses `larger-text`.
+* Confirm the roll-again reward modal button is at the bottom and centred.
+* Confirm the same player can roll again after closing the modal.
+* Confirm token, loot, and normal potion rewards are not actually granted yet.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added the standalone `/mini-game/cave` route and Debug trigger using the existing current-player mini-game start flow, shared Button component, shared Mini Game Lose page, and Gameplay result modal.
+* `caveMiniGame.js` stores the exact 16-step table and pure adjusted-probability/outcome helpers; acquired reward chances move to ogre chance and Step 16 remains 100-percent ogre.
+* The Cave page stores only the current run's step, message key, phase, and four acquired booleans locally; the shared context stores player ID, result, return behavior, and whether Cave roll again was earned so route changes preserve the return transaction.
+* Retreat without roll again advances through the centralized next-turn invariant; retreat with roll again preserves the current player and creates the localized larger-text Cave notice; ogre loss clears local rewards and uses the shared loss return.
+* Token, loot, and normal potion outcomes remain summary-only and never call inventory grant logic, as required.
+* English/Japanese/fallback translations, scoped Cave layout/background CSS, probability/page/context/App tests, River regressions, ESLint, production build, whitespace checks, and the Epic-010 completion gate are recorded as passed in `testing.txt`.

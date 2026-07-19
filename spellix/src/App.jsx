@@ -21,6 +21,7 @@ import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
 import RewardPage from './pages/RewardPage';
 import StartPage from './pages/StartPage';
+import CaveMiniGame from './pages/MiniGames/CaveMiniGame';
 import LootChestPage from './pages/MiniGames/LootChestPage';
 import MiniGameLosePage from './pages/MiniGames/MiniGameLosePage';
 import RiverMiniGame from './pages/MiniGames/RiverMiniGame';
@@ -31,6 +32,7 @@ function App() {
     currentPlayer,
     gameSetup,
     grantPotionToPlayer,
+    pendingNextTurnModal,
     pendingPotionGrant,
     resetGame,
     resolvePendingPotionGrant,
@@ -76,6 +78,10 @@ function App() {
   };
 
   const handleOpenSettings = () => {
+    if (pendingNextTurnModal) {
+      return;
+    }
+
     if (isDebugOpen && pendingPotionGrant) {
       setDebugMessage('Resolve the pending potion grant before closing debug tools.');
       return;
@@ -284,11 +290,25 @@ function App() {
     navigate('/mini-game/river');
   };
 
+  const handleStartCaveMiniGame = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug mini games are only available during gameplay turns.');
+      return;
+    }
+
+    startMiniGame('cave', currentPlayer.id);
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/mini-game/cave');
+  };
+
   return (
     <>
       <button
         aria-label="Open settings"
         className="app-settings-button"
+        disabled={pendingNextTurnModal}
         type="button"
         onClick={handleOpenSettings}
       >
@@ -301,6 +321,7 @@ function App() {
         <Route path="/gameplay" element={<GameplayPage />} />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/reward" element={<RewardPage />} />
+        <Route path="/mini-game/cave" element={<CaveMiniGame />} />
         <Route path="/mini-game/river" element={<RiverMiniGame />} />
         <Route path="/mini-game/loot-chest" element={<LootChestPage />} />
         <Route path="/mini-game/lose" element={<MiniGameLosePage />} />
@@ -341,6 +362,7 @@ function App() {
         onGivePotion={handleGiveDebugPotion}
         onGiveToken={handleGiveDebugToken}
         onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
+        onStartCaveMiniGame={handleStartCaveMiniGame}
         onStartBattle={handleStartBattle}
         onStartRiverMiniGame={handleStartRiverMiniGame}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}

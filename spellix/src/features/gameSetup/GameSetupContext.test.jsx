@@ -2,6 +2,43 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { GameSetupProvider, useGameSetup } from './GameSetupContext';
 import { createPlayers } from './gameSetup';
 
+function TurnAdvanceProbe() {
+  const {
+    advanceTurn,
+    currentPlayer,
+    dismissNextTurnModal,
+    pendingNextTurnModal,
+  } = useGameSetup();
+
+  return (
+    <div>
+      <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Next turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
+      <button type="button" onClick={advanceTurn}>Advance Turn</button>
+      <button type="button" onClick={dismissNextTurnModal}>Dismiss Next Turn</button>
+    </div>
+  );
+}
+
+test('queues one dismissible next-turn modal whenever advanceTurn changes players', () => {
+  render(
+    <GameSetupProvider initialGameSetup={createFreezeSetup()}>
+      <TurnAdvanceProbe />
+    </GameSetupProvider>
+  );
+
+  expect(screen.getByText('Current player: player-1')).toBeInTheDocument();
+  expect(screen.getByText('Next turn modal: clear')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /^advance turn$/i }));
+
+  expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Next turn modal: pending')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /dismiss next turn/i }));
+  expect(screen.getByText('Next turn modal: clear')).toBeInTheDocument();
+});
+
 function createFreezeSetup({ activeBattle = null } = {}) {
   const players = createPlayers(2);
 

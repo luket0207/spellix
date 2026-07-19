@@ -828,3 +828,207 @@ Testing Required
 * Confirm other translated modal text is not broken.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-005: Next-turn modal must always appear after any player turn change
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+* Feature-006: Refine River Mini Game result flow, rock sizing, player spacing, and return modal translation
+
+Bug Summary
+
+* The next-turn modal is not reliably appearing after turn changes.
+* This is not only an issue after the River Mini Game.
+* The next-turn modal must appear after every player-to-player turn change, no matter what caused the turn to change.
+* The modal should appear 100% of the time whenever the active player changes.
+* It should always be the first thing shown after the new player becomes active.
+
+Repro Steps
+
+* Start a game with at least 2 players.
+* Trigger any action that moves the turn from one player to another.
+* Examples include:
+
+  * normal movement ending a turn.
+  * losing a River Mini Game.
+  * any other mini game loss.
+  * any battle flow that advances the turn.
+  * any modal/action/debug flow that advances the turn.
+* Observe whether the current player changes.
+* Check whether the next-turn modal appears immediately.
+
+Expected Behaviour
+
+* Any time the active player changes, the next-turn modal should appear.
+* The next-turn modal should appear 100% of the time after a player-to-player turn change.
+* The next-turn modal should be the first thing shown after the turn changes.
+* The new player should not be able to roll, move, open spells, or take another action before seeing the modal.
+* The modal should use the new current player’s selected language.
+* The modal should show the correct new current player.
+
+Actual Behaviour
+
+* Some turn changes advance to the next player without showing the next-turn modal.
+* This can happen after the River Mini Game, but the issue is broader than that.
+* The next-turn modal is not guaranteed across all turn-change paths.
+
+Required Fix
+
+* Centralise turn-change behaviour.
+* Ensure every player-to-player turn change goes through the same turn-advance function or modal-triggering pathway.
+* Do not rely on individual screens or flows remembering to show the next-turn modal manually.
+* Any code path that changes the active player must also trigger the next-turn modal.
+* Avoid manually setting the next player directly without setting the next-turn modal state.
+* If there are existing direct calls to `setCurrentPlayer`, `setCurrentPlayerIndex`, or similar, review them and route them through the central turn-change handler where appropriate.
+
+Turn Change Invariant
+
+* This rule must always be true:
+
+```txt id="p0hx8p"
+If the active player changes, the next-turn modal appears first.
+```
+
+* This applies no matter what caused the turn change.
+* The next-turn modal should appear:
+
+  * after normal end-of-turn movement.
+  * after battle flows that advance to the next player.
+  * after mini game losses.
+  * after returning from shared Mini Game Lose page.
+  * after any future mini game result that advances the turn.
+  * after debug actions that intentionally advance the turn.
+  * after any potion, spell, event, or future mechanic that advances the turn.
+* The modal should not be optional.
+* The modal should not be skipped.
+
+Central Turn Advance Requirement
+
+* Create or use one central function for advancing from one player to the next.
+* Suggested direction:
+
+```js id="yf5y7y"
+function advanceToNextPlayer() {
+  const nextPlayer = getNextPlayer();
+  setCurrentPlayer(nextPlayer);
+  setPendingNextTurnModal(true);
+}
+```
+
+* Exact names can vary.
+* The important requirement is that active-player change and next-turn modal state are linked.
+* Any flow that advances the turn should call this central function.
+* Do not duplicate separate turn-change logic across gameplay, battle, mini game, or debug screens.
+
+Modal Priority Requirement
+
+* The next-turn modal should have priority immediately after a player-to-player turn change.
+* It should appear before:
+
+  * Roll Dice becomes usable.
+  * movement selection becomes usable.
+  * spells can be opened.
+  * potion actions can be taken.
+  * other non-critical modals are shown.
+* The player should not be able to accidentally take a turn without seeing the modal.
+
+Language Requirement
+
+* The next-turn modal should use the language of the new current player.
+* If the new current player uses English, show the English version.
+* If the new current player uses Japanese, show the Japanese version.
+* Preserve the existing EPIC-008 next-turn modal wording and colour translation behaviour.
+* If language is missing or invalid, fall back to English.
+
+Duplicate Modal Prevention Requirement
+
+* The next-turn modal should appear exactly once per player-to-player turn change.
+* Do not show duplicate next-turn modals for the same turn transition.
+* Closing the modal should clear the pending modal state.
+* Returning to the board should not retrigger the modal repeatedly unless another turn change occurs.
+
+Same-Player Turn Continuation Requirement
+
+* Do not show the next-turn modal when the active player does not change.
+* Example:
+
+  * River Mini Game win lets the same player roll again.
+  * This should show the River roll-again modal, not the next-turn modal.
+* The next-turn modal is only for player-to-player turn changes.
+* Same-player extra turns should use their own explicit modal/message if required.
+
+Review Existing Turn Change Sources
+
+* Review all current places where the active player can change.
+* These may include:
+
+  * normal board movement completion.
+  * end turn logic.
+  * battle result handling.
+  * mini game loss handling.
+  * shared Mini Game Lose page return.
+  * debug controls.
+  * future potion or spell turn effects if already present.
+* Any of these that changes the active player must trigger the next-turn modal.
+
+Out Of Scope
+
+* No changes to turn order.
+* No changes to player randomisation.
+* No changes to River Mini Game win flow.
+* No changes to same-player roll-again behaviour.
+* No changes to modal styling.
+* No changes to next-turn modal text unless required to preserve existing translations.
+* No changes to battle mechanics.
+* No changes to mini game rules.
+* No unrelated gameplay redesign.
+
+Suspected Cause
+
+* Some code paths may be changing the current player directly.
+* The next-turn modal may only be triggered by one specific end-turn path.
+* Returning from separate pages may restore gameplay with the new player already set, but without setting pending modal state.
+* Turn-change state and next-turn modal state are not currently enforced together.
+
+Attempted Fixes
+
+* Added provider and River return regressions that reproduced the issue: both ordinary `advanceTurn` and a River loss changed the active player while next-turn modal state remained clear.
+* Moved pending next-turn state into `GameSetupContext` so it persists across battle, reward, mini-game result, and Gameplay routes rather than relying on `GameplayPage` local state.
+* Routed ordinary advancement and mini-game return through one `transitionToPlayerTurn` helper that compares player IDs and queues the modal only for a real player-to-player change.
+* Replaced Gameplay's local turn-modal flag with the provider state, blocked Roll Dice, movement, Spells, forced spell setup, and the global Settings entry point while pending, and added one provider dismissal action.
+* Verified the existing battle Respawn and reward Continue paths already call centralized `advanceTurn`; added real-provider pending-state assertions for both.
+
+Final Fix
+
+* Every current player-to-player turn-ending path now atomically stores the new turn index with `pendingNextTurnModal: true` in the shared provider.
+* Gameplay renders and dismisses that shared state, so route-based returns cannot lose the modal and the new player's language, colour wording, and piece continue to drive its content.
+* River wins and other same-player/no-op transitions preserve clear next-turn state, while River losses, movement, battle Respawn, and reward Continue queue one dismissible modal.
+* Pending state now has priority over board controls, Spells including forced setup, and Settings without changing modal styling, turn order, battle mechanics, or mini-game rules.
+
+Testing Required
+
+* Confirm normal turn ending shows the next-turn modal.
+* Confirm movement ending a turn shows the next-turn modal.
+* Confirm losing the River Mini Game shows the next-turn modal after returning to the board.
+* Confirm any shared Mini Game Lose page return that advances the turn shows the next-turn modal.
+* Confirm battle flows that advance the turn show the next-turn modal.
+* Confirm debug actions that advance the turn show the next-turn modal.
+* Confirm the modal is the first thing shown after each player-to-player turn change.
+* Confirm the new player cannot roll before seeing the modal.
+* Confirm the new player cannot open spells before seeing the modal.
+* Confirm the modal uses the new current player’s language.
+* Confirm the modal displays the correct new current player.
+* Confirm the modal appears exactly once per turn change.
+* Confirm closing the modal clears it.
+* Confirm same-player extra turns do not show the next-turn modal.
+* Confirm River Mini Game wins still show the roll-again modal instead.
+* Confirm there are no duplicate modals.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

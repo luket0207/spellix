@@ -518,3 +518,183 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * A browser pass is still needed to confirm safe and unsafe rocks are visually indistinguishable before selection across randomized attempts, both animation/result paths remain smooth, responsive layout is unchanged, and the console stays clean.
+
+---
+
+Bug-005: Next-turn modal must always appear after any player turn change
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Complete normal board movement in a two-player game.
+   Expected: The active player changes and the next-turn modal immediately identifies the new player before Roll Dice, Spells, movement, Settings, or other non-critical actions are available.
+2. Dismiss the next-turn modal and continue interacting with Gameplay.
+   Expected: The modal closes once, the new player's controls become available, and the same modal does not reopen until another player-to-player turn change occurs.
+3. Lose the River Mini Game and select Return to Board on the shared Mini Game Lose page.
+   Expected: Gameplay opens with the next player active and their localized next-turn modal shown first; no mini-game result modal is shown.
+4. Win the River Mini Game and continue through Loot Chest.
+   Expected: The same player remains active, the River roll-again notice appears, and no next-turn modal is queued.
+5. Finish a battle through both the Respawn loss flow and the reward Continue flow.
+   Expected: Each flow advances to the next player with a pending next-turn modal before board interaction.
+6. Advance to a player who has not committed their initial spells.
+   Expected: The next-turn modal appears before forced Spells setup; dismissing it opens the required Spells modal.
+7. Repeat turn changes for English, Japanese, and invalid-language players.
+   Expected: The existing translated colour/turn wording and language font class use the new player's language, with invalid values falling back to English.
+
+Automated Tests Completed
+
+* The provider and River-loss regressions failed before implementation because the active player changed to `player-2` while next-turn modal state remained clear; nine surrounding tests still passed.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies centralized `advanceTurn` state, the correct new player, pending modal state, and one explicit dismissal.
+* `src/features/miniGames/miniGameState.test.jsx` verifies River losses queue the modal while River wins preserve the same player, roll-again notice, and clear next-turn state.
+* `src/AppMiniGames.test.jsx` verifies the shared Mini Game Lose return reaches Gameplay with the Japanese new player's localized modal, disabled Roll Dice, Spells, and Settings actions, one dismissal, and re-enabled controls; all five App mini-game integration tests pass.
+* `src/pages/GameplayPage.test.jsx` verifies a pending turn modal has priority over forced initial Spells setup; its focused regression passes.
+* Focused real-provider regressions in `src/pages/BattlePage.test.jsx` and `src/pages/RewardPage.test.jsx` verify battle Respawn and reward Continue each advance to `player-2` with next-turn modal state pending.
+* The final App mini-game, provider, mini-game state, and Reward run passes 4 suites and 33 tests; the two focused battle/reward regressions also pass.
+* The repository-installed ESLint binary passes every touched implementation and test file except the Battle test's existing direct-node-access violations; none of those violations are on the Bug-005 snapshot changes.
+* `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The expanded `src/pages/GameplayPage.test.jsx` run retains six pre-existing stale assertions: three old starting-warning copies, one old dice-result copy, one former current-player alignment, and one former 100px Spells player image; 14 tests pass, including Bug-005.
+* The full `src/pages/BattlePage.test.jsx` run retains three unrelated stale label/dice-copy assertions; the remaining Battle tests pass, including the focused Respawn pending-modal regression.
+* The full Battle test file also retains 30 pre-existing `testing-library/no-node-access` lint errors outside the Bug-005 lines.
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash is already documented; dedicated App integration passes.
+* Source review found no current debug control that directly advances a board turn; current battle, reward, movement, and mini-game turn-ending paths are covered through the centralized provider transition.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to confirm modal visual priority and focus, disabled interaction through overlays, English/Japanese rendering, repeated turn transitions without duplicates, battle/reward/mini-game routing, responsive behavior, and console output.
+
+---
+
+Feature-009: Add uncommitted token notification to Spells button
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start a committed player's turn with an empty token bag and inspect the gameplay Spells button.
+   Expected: The button appears normally with no `!` notification; tokens already committed inside spell slots do not trigger one.
+2. Add one token, then multiple tokens, to the current player's token bag.
+   Expected: One small `!` badge appears at the top-right of the Spells button and overlaps its edge slightly regardless of the bag count.
+3. Click the Spells button while the badge is visible.
+   Expected: The existing Spells / Token Assignment modal opens normally and the badge does not intercept the click.
+4. Commit the final bag token into a spell slot, save, and return to Gameplay.
+   Expected: The badge disappears because the current player's token bag is empty; committed spell-slot tokens are not counted.
+5. Gain another bag token, then discard or remove it.
+   Expected: The badge appears immediately when the token enters the bag and disappears immediately when the bag becomes empty.
+6. End a turn from a player with bag tokens to a player with an empty bag, then cycle back.
+   Expected: The badge hides for the empty-bag player and reappears for the player whose bag still contains tokens.
+7. Inspect other Spells headings and labels.
+   Expected: No notification is added outside the gameplay Spells button, and there are no console errors.
+
+Automated Tests Completed
+
+* All three initial focused regressions failed before implementation because the badge markup, current-player condition, wrapper, and positioning styles did not exist.
+* `src/pages/GameplayPage.test.jsx` passes four focused Feature-009 regressions covering empty, one-token, and multiple-token bags; committed-token exclusion; both turn directions; unchanged Spells modal opening; live commit/gain/removal updates; one badge only; and required absolute top-right click-through styles.
+* The full Gameplay run retains its established six unrelated stale assertions while 13 tests pass, including all four Feature-009 tests.
+* `src/AppMiniGames.test.jsx` passes all five integration tests, confirming the wrapped Spells button does not regress River routing, localized return notices, or pending next-turn interaction locks.
+* The repository-installed ESLint binary passes `src/pages/GameplayPage.jsx` and `src/pages/GameplayPage.test.jsx` with no warnings.
+* `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The six pre-existing `src/pages/GameplayPage.test.jsx` failures remain outside this feature: three old starting-warning copies, one old dice-result copy, one former current-player alignment, and one former 100px Spells player image.
+* JSDOM and CSS source checks cannot visually judge the badge's readability, overlap, or exact placement across browser zoom and responsive sizes.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed to visually confirm the top-right overlap, readability against the fantasy button, click behavior at the badge edge, live updates after real drag-and-save assignment and reward/debug token changes, responsive placement, and console output.
+
+---
+
+Feature-010: Add Cave Mini Game with debug trigger, reward tracking, retreat flow, and roll-again reward
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Open Settings, enter Debug, and select Start Cave Mini Game for an English player.
+   Expected: The standalone Cave page opens for that player with `cave.png` covering the screen, readable instruction text, and side-by-side Go Deeper and Retreat buttons.
+2. Repeat with a Japanese player and with a player whose language value is invalid.
+   Expected: Every instruction, outcome, summary, button, and return notice is Japanese for the Japanese player; invalid language falls back to English and the existing language font classes apply.
+3. Start fresh Cave runs and repeatedly select Go Deeper.
+   Expected: Each click uses the current numbered probability row, displays one translated outcome, advances after non-ogre outcomes, and Step 16 always produces an ogre.
+4. Obtain token, loot, potion, and roll-again outcomes in separate or repeated runs.
+   Expected: Each reward type can be found only once per run; on later steps its former chance moves into ogre chance while Nothing and other available chances remain unchanged.
+5. Retreat before finding any rewards.
+   Expected: The success text, `No rewards found.` summary, and Continue button replace the active controls; Continue returns to Gameplay, advances to the next player, and shows the next-turn modal first.
+6. Retreat after finding token, loot, and normal potion outcomes but no roll-again reward.
+   Expected: The summary lists each found reward once, but no token, loot chest, or potion is added to player inventory; Continue advances the turn and queues the next-turn modal.
+7. Retreat after finding the roll-again potion.
+   Expected: The summary includes Roll Again Potion; Continue keeps the same player, shows the localized larger-text roll-again modal, and allows Roll Dice after OK is selected.
+8. Find one or more rewards and then encounter an ogre.
+   Expected: The ogre message replaces the active controls, all Cave rewards are discarded, and Continue opens the shared Mini Game Lose page.
+9. Select Return to Board after the Cave ogre loss.
+   Expected: The next player becomes active with the next-turn modal pending; no Cave reward or roll-again notice is granted.
+10. Play existing River win and loss flows after Cave testing.
+    Expected: River routes, animations, shared result pages, same-player win notice, and next-player loss behavior remain unchanged, with no console errors.
+
+Automated Tests Completed
+
+* Initial Cave regressions could not load because the probability engine and page did not yet exist; the page harness also exposed and corrected one Jest mock-hoisting name before implementation.
+* `src/features/miniGames/caveMiniGame.test.js` verifies all exact 16 probability rows, 100-percent totals, deterministic cumulative outcomes, Step 16's forced ogre, and movement of acquired loot/roll-again chances into ogre chance using the documented Step 7 and Step 8 examples.
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` verifies English/Japanese/fallback text, required cave background and flex actions, all four one-time reward summary entries, no-reward retreat, roll/no-roll completion options, control replacement, ogre reward clearing, readable Continue state, shared loss navigation, and Gameplay return.
+* `src/features/miniGames/miniGameState.test.jsx` verifies Cave retreat without roll again advances with pending next-turn state, Cave roll again preserves the player with a return notice, and existing River state behavior remains unchanged.
+* `src/AppMiniGames.test.jsx` passes debug Cave routing, retreat-to-next-player modal priority, same-player roll-again return, ogre loss after acquiring roll again, Japanese Cave notice, and all existing River integrations.
+* `src/i18n/translations.test.js` verifies every required English and Japanese Cave message and English fallback; `src/features/debug/DebugModal.test.jsx` verifies the new current-player Cave trigger.
+* The final Cave, River, App, context, translation, debug, and shared result run passes 9 suites and 57 tests; the final focused Cave engine/page rerun passes 2 suites and 9 tests.
+* The repository-installed ESLint binary passes all Feature-010 implementation and test files with no warnings.
+* `npm run build` compiles successfully against the final code, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broad `src/App.test.jsx` suite was not rerun because its existing `source-map-support` startup crash remains outside this feature; dedicated App mini-game integration passes ten tests.
+* The full `src/pages/GameplayPage.test.jsx` suite retains six unrelated stale assertions documented under Feature-009 and Bug-005; Cave return behavior is covered in dedicated App/context tests.
+* Randomized tests prove probability boundaries deterministically but cannot statistically certify browser randomness over a large sample.
+
+Manual Testing Still Needed
+
+* A browser pass is still needed for cave background crop, readable text-box contrast, side-by-side button layout, Japanese rendering, repeated real random runs, all summary combinations, modal focus/position, responsive behavior, inventory non-granting, and console output.
+
+---
+
+EPIC-010 Completion Regression
+
+Test Status
+
+* passed
+
+Manual Regression Flow And Expected Results
+
+1. Start Gameplay and inspect the board/sidebar atmosphere.
+   Expected: The magical night sky remains decorative and non-interactive, with its established star/effect behavior and no board obstruction.
+2. Inspect Potions and Spells for players with empty and populated inventories, then change turns.
+   Expected: Potion capacity/display styling remains correct and the Spells `!` badge follows only the active player's uncommitted token bag.
+3. Play River through safe win and unsafe loss paths.
+   Expected: Safe rocks remain hidden before selection; win preserves the player with the localized roll-again notice and loss advances through the shared loss page with a next-turn modal.
+4. Play Cave through no-reward retreat, reward retreat, roll-again retreat, and ogre loss.
+   Expected: Probability/reward tracking, summaries, shared loss routing, same-player reward, and next-player transitions match Feature-010 without granting out-of-scope rewards.
+5. Exercise normal movement, battle Respawn, reward Continue, and mini-game loss turn changes.
+   Expected: Every player-to-player change shows exactly one localized next-turn modal before gameplay actions; same-player continuations use their own result notice.
+6. Open all text-only and complex modal examples used in Epic-010.
+   Expected: Approved text-only messages retain `larger-text`; Settings, Debug, spell assignment, battle, dice, and other complex modal content remains unchanged.
+
+Relevant Automated Regression Completed
+
+* The final mini-game completion run passes 9 suites and 57 tests across App integration, Cave and River pages/engines, mini-game state, shared result pages, translations, and DebugModal.
+* The remaining MagicalNightSky, PotionList, and shared Modal completion-gate run passes 3 suites and 20 tests.
+* Combined relevant Epic-010 completion coverage passes 12 suites and 77 tests, plus focused Gameplay Feature-009 and Bug-005 regressions already recorded above.
+* All implementation/test files touched by Features 009-010 and Bug-005 pass their scoped ESLint checks; the final production build succeeds and whitespace checks pass.
+
+Remaining Epic Gaps And Next Actions
+
+* Run the six-step manual regression above in a real desktop and mobile browser, including visual/randomness/focus checks and console inspection.
+* Resolve the pre-existing broad App startup crash and stale Gameplay/Battle assertions in separately requested bug work; they do not invalidate the dedicated Epic-010 coverage.

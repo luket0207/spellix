@@ -34,6 +34,24 @@ const potionPlayers = [
 ];
 
 describe('DebugModal', () => {
+  test('offers the Cave Mini Game trigger for the current player', () => {
+    const handleStartCaveMiniGame = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onStartCaveMiniGame={handleStartCaveMiniGame}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /start cave mini game/i }));
+
+    expect(handleStartCaveMiniGame).toHaveBeenCalledTimes(1);
+  });
+
   test('renders the debug token controls for a committed current player', () => {
     render(
       <DebugModal

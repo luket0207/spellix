@@ -1,6 +1,7 @@
 import {
   getBattleTitle,
   getBattleTurnMessage,
+  getCaveMiniGameTranslations,
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
@@ -13,6 +14,46 @@ import {
 } from './translations';
 
 describe('gameplay translations', () => {
+  test('returns complete Cave Mini Game translations with English fallback', () => {
+    const english = getCaveMiniGameTranslations('en');
+    const japanese = getCaveMiniGameTranslations('jp');
+
+    expect(english).toMatchObject({
+      continue: 'Continue',
+      goDeeper: 'Go Deeper',
+      retreat: 'Retreat',
+      rollAgainNotice: 'You earned the potion to roll again this turn',
+      messages: {
+        initial: 'Explore deeper into the cave, but beware of ogres.',
+        loot: 'You found a loot chest',
+        nothing: 'There is nothing in this part of the cave',
+        ogre: 'You were chased out of the cave by an ogre, dropping all of your loot on the way out.',
+        potion: 'You found a potion',
+        retreated: 'You got out with all your loot.',
+        rollAgain: 'You found a potion to let you roll again this turn',
+        token: 'You found a token',
+      },
+    });
+    expect(japanese.goDeeper).toBe('さらに奥へ進む');
+    expect(japanese.retreat).toBe('引き返す');
+    expect(japanese.continue).toBe('続ける');
+    expect(japanese.summary.title).toBe('見つけた報酬：');
+    expect(japanese.rollAgainNotice).toBe(
+      'このターン、もう一度サイコロを振れるポーションを獲得しました。'
+    );
+    expect(japanese.messages).toEqual({
+      initial: '洞窟のさらに奥を探索してください。ただし、オーガには気をつけてください。',
+      loot: '戦利品の宝箱を見つけました。',
+      nothing: '洞窟のこの辺りには何もありません。',
+      ogre: 'オーガに追い出され、逃げる途中ですべての戦利品を落としてしまいました。',
+      potion: 'ポーションを見つけました。',
+      retreated: '戦利品をすべて持って脱出しました。',
+      rollAgain: 'このターン、もう一度サイコロを振れるポーションを見つけました。',
+      token: 'トークンを見つけました。',
+    });
+    expect(getCaveMiniGameTranslations('invalid')).toBe(english);
+  });
+
   test('returns the exact English and Japanese gameplay labels', () => {
     expect(getGameplayTranslations('en')).toEqual({
       potions: 'Potions',

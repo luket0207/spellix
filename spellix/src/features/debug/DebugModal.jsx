@@ -28,6 +28,7 @@ function DebugModal({
   onSelectedPotionIdChange,
   onSelectedPotionPlayerIdChange,
   onSelectedTokenTypeChange,
+  onStartCaveMiniGame,
   pendingPotionGrant = null,
   players = [],
   selectedEnemyId = '',
@@ -122,6 +123,9 @@ function DebugModal({
 
         <div className="debug-mini-game-controls">
           <h2>Mini Games</h2>
+          <button type="button" disabled={!currentPlayer} onClick={onStartCaveMiniGame}>
+            Start Cave Mini Game
+          </button>
           <button type="button" disabled={!currentPlayer} onClick={onStartRiverMiniGame}>
             Start River Mini Game
           </button>

@@ -23,6 +23,7 @@ import {
   moveSpellTokenInDraft,
 } from '../features/spells/spellSetup';
 import {
+  getCaveMiniGameTranslations,
   getGameplayLanguage,
   getGameplayTranslations,
   getNextTurnMessage,
@@ -36,10 +37,12 @@ function GameplayPage() {
     advanceTurn,
     currentPlayer,
     dismissMiniGameReturnNotice,
+    dismissNextTurnModal,
     gameSetup,
     initializeBoard,
     initializeTurnOrder,
     miniGameReturnNotice,
+    pendingNextTurnModal,
     setPlayerPosition,
     updatePlayerSpells,
   } = useGameSetup();
@@ -52,13 +55,14 @@ function GameplayPage() {
   const [showSpellCancelConfirmation, setShowSpellCancelConfirmation] = useState(false);
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
-  const [showTurnModal, setShowTurnModal] = useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
   const riverMiniGameTranslations = getRiverMiniGameTranslations(currentLanguage);
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
+  const showSpellsNotification = Boolean(currentPlayer?.tokenBag?.length);
   const hasUnsavedSpellChanges = Boolean(
     currentPlayer &&
       hasDraftSpellChanges({
@@ -89,10 +93,10 @@ function GameplayPage() {
   }, [gameSetup.board, gameSetup.players.length, initializeBoard]);
 
   useEffect(() => {
-    if (currentPlayer && isForcedSpellSetup) {
+    if (currentPlayer && isForcedSpellSetup && !pendingNextTurnModal) {
       setShowSpellsModal(true);
     }
-  }, [currentPlayer, isForcedSpellSetup]);
+  }, [currentPlayer, isForcedSpellSetup, pendingNextTurnModal]);
 
   useEffect(() => {
     if (!showSpellsModal || !currentPlayer) {
@@ -112,7 +116,7 @@ function GameplayPage() {
       !currentPlayer.hasCommittedInitialSpells ||
       showDiceModal ||
       showSpellsModal ||
-      showTurnModal ||
+      pendingNextTurnModal ||
       currentDiceRoll !== null
     ) {
       return;
@@ -145,7 +149,13 @@ function GameplayPage() {
   };
 
   const handleSquareClick = (square) => {
-    if (!currentPlayer || showDiceModal || showSpellsModal || showTurnModal || currentDiceRoll === null) {
+    if (
+      !currentPlayer ||
+      showDiceModal ||
+      showSpellsModal ||
+      pendingNextTurnModal ||
+      currentDiceRoll === null
+    ) {
       return;
     }
 
@@ -159,9 +169,6 @@ function GameplayPage() {
       return;
     }
 
-    const nextTurnIndex = (gameSetup.currentTurnIndex + 1) % gameSetup.turnOrder.length;
-    const nextPlayerId = gameSetup.turnOrder[nextTurnIndex];
-    const nextPlayer = gameSetup.players.find((player) => player.id === nextPlayerId) ?? null;
     const hasLeftStartArea =
       currentPlayer.hasLeftStartArea ||
       (currentNodeId === 'start-area' && destinationNodeId !== 'start-area');
@@ -177,7 +184,6 @@ function GameplayPage() {
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
     advanceTurn();
-    setShowTurnModal(Boolean(nextPlayer?.hasCommittedInitialSpells));
   };
 
   const handleSpellTokenDrop = (tokenId, destinationId) => {
@@ -307,7 +313,7 @@ function GameplayPage() {
             !currentPlayer?.hasCommittedInitialSpells ||
             showDiceModal ||
             showSpellsModal ||
-            showTurnModal ||
+            pendingNextTurnModal ||
             currentDiceRoll !== null
           }
           onClick={handleRollDice}
@@ -315,14 +321,24 @@ function GameplayPage() {
           {gameplayTranslations.rollDice}
         </Button>
 
-        <Button
-          className={languageClassName}
-          disabled={!currentPlayer || showDiceModal || showSpellsModal || showTurnModal}
-          type="button"
-          onClick={() => setShowSpellsModal(true)}
-        >
-          {gameplayTranslations.spells}
-        </Button>
+        <div className="spells-button-wrapper">
+          <Button
+            className={languageClassName}
+            disabled={!currentPlayer || showDiceModal || showSpellsModal || pendingNextTurnModal}
+            type="button"
+            onClick={() => setShowSpellsModal(true)}
+          >
+            {gameplayTranslations.spells}
+          </Button>
+          {showSpellsNotification ? (
+            <span
+              aria-label="Uncommitted tokens available"
+              className="spells-button-notification"
+            >
+              !
+            </span>
+          ) : null}
+        </div>
 
         {currentPlayer?.hasCommittedInitialSpells ? (
           <CommittedSpellSlots
@@ -427,13 +443,13 @@ function GameplayPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setShowTurnModal(false)}
+              onClick={dismissNextTurnModal}
             >
               OK
             </Button>
           }
           ariaLabel="Turn change"
-          isOpen={showTurnModal}
+          isOpen={pendingNextTurnModal}
         >
           <div className="turn-change-modal-content">
           <h1 className={languageClassName}>
@@ -461,7 +477,9 @@ function GameplayPage() {
         <p className={`larger-text ${languageClassName}`}>
           {miniGameReturnNotice?.type === 'river'
             ? riverMiniGameTranslations.returnNotice
-            : miniGameReturnNotice?.message}
+            : miniGameReturnNotice?.type === 'cave'
+              ? caveMiniGameTranslations.rollAgainNotice
+              : miniGameReturnNotice?.message}
         </p>
       </Modal>
     </main>

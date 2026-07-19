@@ -1,7 +1,8 @@
+import { readFileSync } from 'fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../data/potions';
 import { createPlayers } from '../features/gameSetup/gameSetup';
-import { GameSetupProvider } from '../features/gameSetup/GameSetupContext';
+import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
 
 const mockGetAnywhereModeHighlightedNodeIds = jest.fn();
@@ -118,6 +119,50 @@ function renderGameplayPage() {
   );
 }
 
+function getSpellsNotification() {
+  return screen.queryByLabelText(/uncommitted tokens available/i);
+}
+
+function TokenBagStateControls() {
+  const { currentPlayer, updatePlayerSpells } = useGameSetup();
+
+  const updateCurrentPlayer = ({ spellSlots = currentPlayer.spellSlots, tokenBag }) => {
+    updatePlayerSpells(currentPlayer.id, {
+      hasCommittedInitialSpells: currentPlayer.hasCommittedInitialSpells,
+      spellSlots,
+      tokenBag,
+    });
+  };
+
+  const commitFirstBagToken = () => {
+    const [token, ...remainingTokenBag] = currentPlayer.tokenBag;
+    const nextSpellSlots = currentPlayer.spellSlots.map((slot, index) =>
+      index === 0
+        ? { ...slot, tokens: [...slot.tokens, { ...token, committed: true }] }
+        : slot
+    );
+
+    updateCurrentPlayer({ spellSlots: nextSpellSlots, tokenBag: remainingTokenBag });
+  };
+
+  return (
+    <>
+      <button type="button" onClick={commitFirstBagToken}>Commit bag token</button>
+      <button
+        type="button"
+        onClick={() => updateCurrentPlayer({
+          tokenBag: [{ committed: false, id: 'gained-token', type: 'blue' }],
+        })}
+      >
+        Gain bag token
+      </button>
+      <button type="button" onClick={() => updateCurrentPlayer({ tokenBag: [] })}>
+        Remove bag tokens
+      </button>
+    </>
+  );
+}
+
 test('renders the decorative magical night sky only as gameplay background content', () => {
   renderGameplayPage();
 
@@ -127,6 +172,130 @@ test('renders the decorative magical night sky only as gameplay background conte
 });
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
+  test('shows the Spells notification only for current-player token bag tokens', () => {
+    const emptyBagSetup = createCommittedGameplaySetup();
+
+    const { unmount: unmountEmptyBag } = render(
+      <GameSetupProvider initialGameSetup={emptyBagSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(getSpellsNotification()).not.toBeInTheDocument();
+    unmountEmptyBag();
+
+    const oneTokenSetup = createCommittedGameplaySetup();
+    oneTokenSetup.players[0].tokenBag = [{ committed: false, id: 'bag-token-1', type: 'red' }];
+
+    const { unmount: unmountOneTokenBag } = render(
+      <GameSetupProvider initialGameSetup={oneTokenSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(screen.getByLabelText(/uncommitted tokens available/i)).toHaveTextContent('!');
+    unmountOneTokenBag();
+
+    const multipleTokenSetup = createCommittedGameplaySetup();
+    multipleTokenSetup.players[0].tokenBag = [
+      { committed: false, id: 'bag-token-1', type: 'red' },
+      { committed: false, id: 'bag-token-2', type: 'blue' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={multipleTokenSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(screen.getAllByLabelText(/uncommitted tokens available/i)).toHaveLength(1);
+  });
+
+  test('updates the Spells notification with the active player and preserves button behavior', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'player-1-bag-token', type: 'red' },
+    ];
+    initialGameSetup.players[1].tokenBag = [];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(getSpellsNotification()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^spells$/i }));
+    expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(getSpellsNotification()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(getSpellsNotification()).toBeInTheDocument();
+  });
+
+  test('updates the Spells notification when bag tokens are committed, gained, or removed', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'uncommitted-token', type: 'red' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <TokenBagStateControls />
+      </GameSetupProvider>
+    );
+
+    expect(getSpellsNotification()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /commit bag token/i }));
+    expect(getSpellsNotification()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /gain bag token/i }));
+    expect(getSpellsNotification()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /remove bag tokens/i }));
+    expect(getSpellsNotification()).not.toBeInTheDocument();
+  });
+
+  test('positions a non-blocking notification over only the gameplay Spells button', () => {
+    const stylesheet = readFileSync(`${__dirname}/GameplayPage.css`, 'utf8');
+
+    expect(stylesheet).toMatch(/\.spells-button-wrapper\s*{[^}]*position:\s*relative;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*position:\s*absolute;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*top:\s*-8px;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*right:\s*-8px;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*pointer-events:\s*none;/s);
+
+    const initialGameSetup = createCommittedGameplaySetup();
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'bag-token-1', type: 'red' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(screen.getByLabelText(/uncommitted tokens available/i)).toHaveClass(
+      'spells-button-notification'
+    );
+    expect(screen.getAllByText('Spells')).toHaveLength(2);
+  });
+
   test.each([0, 1, 6])(
     'keeps forced setup Save disabled with %i starting tokens placed',
     (placedTokenCount) => {
@@ -172,6 +341,30 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(
       within(confirmationDialog).getByText(/commit your tokens to these spell slots/i)
     ).toHaveClass('larger-text', 'language-en');
+  });
+
+  test('shows a pending turn modal before forced spell setup for the new player', () => {
+    const initialGameSetup = createForcedGameplaySetup(0);
+
+    initialGameSetup.currentTurnIndex = 1;
+    initialGameSetup.pendingNextTurnModal = true;
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const turnDialog = screen.getByRole('dialog', { name: /turn change/i });
+
+    expect(screen.queryByRole('dialog', { name: /spells/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /spells/i })).toBeDisabled();
+
+    fireEvent.click(within(turnDialog).getByRole('button', { name: /^ok$/i }));
+
+    expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
   });
 
   test('switches the listed gameplay labels and font classes with each player turn', () => {

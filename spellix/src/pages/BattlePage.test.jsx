@@ -86,7 +86,14 @@ function createBattleSetup() {
 }
 
 function GameStateSnapshot() {
-  const { activeBattle, battleEnemy, battlePlayer, currentPlayer, gameSetup } = useGameSetup();
+  const {
+    activeBattle,
+    battleEnemy,
+    battlePlayer,
+    currentPlayer,
+    gameSetup,
+    pendingNextTurnModal,
+  } = useGameSetup();
   const playerOne = gameSetup.players[0];
   const playerOneSpellTokenIds = playerOne.spellSlots
     .flatMap(({ tokens }) => tokens)
@@ -96,6 +103,7 @@ function GameStateSnapshot() {
   return (
     <div>
       <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Next turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
       <p>{`Battle enemy health: ${battleEnemy?.currentHealth ?? 'none'}`}</p>
       <p>{`Battle player health: ${battlePlayer?.currentHealth ?? 'none'}`}</p>
       <p>{`Battle actor: ${activeBattle?.currentBattleActor ?? 'none'}`}</p>
@@ -315,6 +323,7 @@ describe('BattlePage flows', () => {
     fireEvent.click(screen.getByRole('button', { name: /respawn/i }));
 
     expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
+    expect(screen.getByText(/next turn modal: pending/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 0,29/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 health: 100/i)).toBeInTheDocument();

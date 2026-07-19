@@ -1,0 +1,51 @@
+.cave-mini-game-page {
+  min-height: 100vh;
+  align-items: center;
+  background-image: url('../../images/miniGames/cave.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.cave-mini-game-layout {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(680px, 100%);
+}
+
+.cave-mini-game-text-box {
+  background: rgba(244, 226, 184, 0.92);
+  border: 2px solid #4a3520;
+  box-sizing: border-box;
+  color: #2d1f12;
+  padding: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.cave-mini-game-text-box > p,
+.cave-reward-summary p {
+  margin: 0;
+}
+
+.cave-reward-summary {
+  margin-top: 16px;
+}
+
+.cave-mini-game-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .cave-mini-game-page {
+    padding: 12px;
+  }
+}

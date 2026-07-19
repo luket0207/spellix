@@ -85,13 +85,14 @@ function createNamedPotion(index) {
 }
 
 function RewardStateSnapshot() {
-  const { activeBattle, currentPlayer, gameSetup } = useGameSetup();
+  const { activeBattle, currentPlayer, gameSetup, pendingNextTurnModal } = useGameSetup();
 
   return (
     <div>
       <p>{`Selected choice: ${activeBattle?.selectedRewardChoiceId ?? 'none'}`}</p>
       <p>{`Reward destination: ${activeBattle?.rewardResolution?.destination ?? 'none'}`}</p>
       <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Next turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
       <p>{`Player 1 potions: ${gameSetup.players[0].potions.map(({ name }) => name).join(',') || 'empty'}`}</p>
       <p>{`Player 1 token bag: ${gameSetup.players[0].tokenBag.map(({ id }) => id).join(',') || 'empty'}`}</p>
       <p>{`Player 1 slot 3: ${gameSetup.players[0].spellSlots[2].tokens.map(({ committed, id }) => `${id}:${committed}`).join(',') || 'empty'}`}</p>
@@ -255,6 +256,7 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByText('Gameplay')).toBeInTheDocument();
     expect(screen.getByText('Selected choice: none')).toBeInTheDocument();
     expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+    expect(screen.getByText('Next turn modal: pending')).toBeInTheDocument();
     expect(screen.getByText('Player 1 potions: Roll Choice')).toBeInTheDocument();
     expect(screen.getByText('Player 1 token bag: empty')).toBeInTheDocument();
   });

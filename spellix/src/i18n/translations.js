@@ -51,6 +51,58 @@ const RIVER_MINI_GAME_TRANSLATIONS = {
   },
 };
 
+const CAVE_MINI_GAME_TRANSLATIONS = {
+  en: {
+    continue: 'Continue',
+    goDeeper: 'Go Deeper',
+    messages: {
+      initial: 'Explore deeper into the cave, but beware of ogres.',
+      loot: 'You found a loot chest',
+      nothing: 'There is nothing in this part of the cave',
+      ogre:
+        'You were chased out of the cave by an ogre, dropping all of your loot on the way out.',
+      potion: 'You found a potion',
+      retreated: 'You got out with all your loot.',
+      rollAgain: 'You found a potion to let you roll again this turn',
+      token: 'You found a token',
+    },
+    retreat: 'Retreat',
+    rollAgainNotice: 'You earned the potion to roll again this turn',
+    summary: {
+      loot: 'Loot Chest',
+      none: 'No rewards found.',
+      potion: 'Potion',
+      rollAgain: 'Roll Again Potion',
+      title: 'Rewards found:',
+      token: 'Token',
+    },
+  },
+  jp: {
+    continue: '続ける',
+    goDeeper: 'さらに奥へ進む',
+    messages: {
+      initial: '洞窟のさらに奥を探索してください。ただし、オーガには気をつけてください。',
+      loot: '戦利品の宝箱を見つけました。',
+      nothing: '洞窟のこの辺りには何もありません。',
+      ogre: 'オーガに追い出され、逃げる途中ですべての戦利品を落としてしまいました。',
+      potion: 'ポーションを見つけました。',
+      retreated: '戦利品をすべて持って脱出しました。',
+      rollAgain: 'このターン、もう一度サイコロを振れるポーションを見つけました。',
+      token: 'トークンを見つけました。',
+    },
+    retreat: '引き返す',
+    rollAgainNotice: 'このターン、もう一度サイコロを振れるポーションを獲得しました。',
+    summary: {
+      loot: '戦利品の宝箱',
+      none: '報酬は見つかりませんでした。',
+      potion: 'ポーション',
+      rollAgain: 'もう一度振れるポーション',
+      title: '見つけた報酬：',
+      token: 'トークン',
+    },
+  },
+};
+
 const SPELL_ASSIGNMENT_TRANSLATIONS = {
   en: {
     assignReward: 'Assign reward',
@@ -134,6 +186,10 @@ export function getRewardPageTranslations(language) {
 
 export function getRiverMiniGameTranslations(language) {
   return RIVER_MINI_GAME_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
+export function getCaveMiniGameTranslations(language) {
+  return CAVE_MINI_GAME_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
 export function getSpellAssignmentTranslations(language) {
