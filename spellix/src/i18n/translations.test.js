@@ -5,6 +5,7 @@ import {
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
+  getMiniGameFailureTranslations,
   getNextTurnMessage,
   getPlayerColourDisplayName,
   getRewardAddedMessage,
@@ -14,6 +15,19 @@ import {
 } from './translations';
 
 describe('gameplay translations', () => {
+  test('returns Mini Game Failed punishment translations with English fallback', () => {
+    const english = getMiniGameFailureTranslations('en');
+    const japanese = getMiniGameFailureTranslations('jp');
+
+    expect(english.continue).toBe('Continue');
+    expect(english.punishment(25)).toBe('You lost 25 health');
+    expect(english.respawn).toBe('Respawn');
+    expect(japanese.continue).toBe('続ける');
+    expect(japanese.punishment(25)).toBe('体力を25失いました。');
+    expect(japanese.respawn).toBe('リスポーン');
+    expect(getMiniGameFailureTranslations('invalid')).toBe(english);
+  });
+
   test('returns complete Cave Mini Game translations with English fallback', () => {
     const english = getCaveMiniGameTranslations('en');
     const japanese = getCaveMiniGameTranslations('jp');
@@ -21,33 +35,53 @@ describe('gameplay translations', () => {
     expect(english).toMatchObject({
       continue: 'Continue',
       goDeeper: 'Go Deeper',
+      openLoot: 'Open Loot',
       retreat: 'Retreat',
-      rollAgainNotice: 'You earned the potion to roll again this turn',
+      rollAgainNotice:
+        'Your roll again potion was used, it is your turn to roll again.',
       messages: {
         initial: 'Explore deeper into the cave, but beware of ogres.',
         loot: 'You found a loot chest',
         nothing: 'There is nothing in this part of the cave',
         ogre: 'You were chased out of the cave by an ogre, dropping all of your loot on the way out.',
         potion: 'You found a potion',
-        retreated: 'You got out with all your loot.',
+        retreated: 'You got out with your…',
         rollAgain: 'You found a potion to let you roll again this turn',
         token: 'You found a token',
+      },
+      summary: {
+        loot: 'Loot Chest',
+        none: 'No rewards found.',
+        potion: 'Potion',
+        rollAgain: 'Roll Again Potion',
+        title: 'Rewards found:',
+        token: 'Token',
       },
     });
     expect(japanese.goDeeper).toBe('さらに奥へ進む');
     expect(japanese.retreat).toBe('引き返す');
     expect(japanese.continue).toBe('続ける');
+    expect(japanese.openLoot).toBe('戦利品を開ける');
     expect(japanese.summary.title).toBe('見つけた報酬：');
+    expect(japanese.summary.loot).toBe('戦利品の宝箱');
+    expect(japanese.summary.rollAgain).toBe('もう一度サイコロを振れるポーション');
     expect(japanese.rollAgainNotice).toBe(
-      'このターン、もう一度サイコロを振れるポーションを獲得しました。'
+      'もう一度サイコロを振れるポーションが使用されました。もう一度サイコロを振る番です。'
     );
+    expect(english.rewardGrant.tokenBagFull).toBe('Token bag is full');
+    expect(english.rewardGrant.potionSlotsFull).toBe('Potion slots are full');
+    expect(english.rewardGrant.replaceToken('Damage')).toBe('Replace Damage');
+    expect(japanese.rewardGrant.tokenBagFull).toBe('トークンバッグがいっぱいです');
+    expect(japanese.rewardGrant.potionSlotsFull).toBe('ポーションスロットがいっぱいです');
+    expect(japanese.rewardGrant.discardNewToken).toBe('新しいトークンを破棄');
+    expect(japanese.rewardGrant.discardNewPotion).toBe('新しいポーションを破棄');
     expect(japanese.messages).toEqual({
       initial: '洞窟のさらに奥を探索してください。ただし、オーガには気をつけてください。',
       loot: '戦利品の宝箱を見つけました。',
       nothing: '洞窟のこの辺りには何もありません。',
       ogre: 'オーガに追い出され、逃げる途中ですべての戦利品を落としてしまいました。',
       potion: 'ポーションを見つけました。',
-      retreated: '戦利品をすべて持って脱出しました。',
+      retreated: '戦利品を持って脱出しました…',
       rollAgain: 'このターン、もう一度サイコロを振れるポーションを見つけました。',
       token: 'トークンを見つけました。',
     });

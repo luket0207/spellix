@@ -1,3 +1,6 @@
+import { REWARD_CATEGORIES } from '../rewards/battleRewards';
+import { generateRewardItem } from '../rewards/rewardItems';
+
 export const CAVE_STEP_PROBABILITIES = [
   { nothing: 97.5, token: 0, loot: 0.5, potion: 0, rollAgain: 2, ogre: 0 },
   { nothing: 96.5, token: 0, loot: 0.5, potion: 0.5, rollAgain: 2, ogre: 0.5 },
@@ -27,6 +30,33 @@ export function createCaveRewards() {
     potion: false,
     rollAgain: false,
   };
+}
+
+export function createCaveRewardState() {
+  return {
+    hasLootChest: false,
+    hasRollAgainPotion: false,
+    potion: null,
+    token: null,
+  };
+}
+
+export function generateCaveTokenReward(randomFn = Math.random) {
+  const category =
+    randomFn() < 0.1
+      ? REWARD_CATEGORIES.RARE_TOKEN
+      : REWARD_CATEGORIES.COMMON_TOKEN;
+
+  return generateRewardItem(category, randomFn)?.item ?? null;
+}
+
+export function generateCavePotionReward(randomFn = Math.random) {
+  const category =
+    randomFn() < 0.2
+      ? REWARD_CATEGORIES.RARE_POTION
+      : REWARD_CATEGORIES.COMMON_POTION;
+
+  return generateRewardItem(category, randomFn)?.item ?? null;
 }
 
 export function getAdjustedCaveProbabilities(step, acquiredRewards = createCaveRewards()) {

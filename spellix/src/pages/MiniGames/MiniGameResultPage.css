@@ -16,3 +16,73 @@
   color: #2d1f12;
   text-align: center;
 }
+
+.mini-game-failure-page {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(48, 40, 104, 0.72), transparent 48%),
+    linear-gradient(180deg, #050617 0%, #10102a 60%, #050617 100%);
+  box-sizing: border-box;
+  display: flex;
+  isolation: isolate;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 24px;
+  position: relative;
+}
+
+.mini-game-failure-panel {
+  background-image: url('../../images/misc/modalBackground.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  border: 0;
+  box-sizing: border-box;
+  color: #F5FA00;
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+  min-height: min(400px, calc(100vh - 48px));
+  padding: 50px;
+  position: relative;
+  text-align: center;
+  width: min(600px, calc(100vw - 48px));
+  z-index: 1;
+}
+
+.mini-game-failure-player {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  width: min(260px, 100%);
+}
+
+.mini-game-failure-player-image {
+  display: block;
+  height: 150px;
+  object-fit: contain;
+  width: auto;
+}
+
+.mini-game-failure-player .health-bar-text {
+  color: #F5FA00;
+}
+
+.mini-game-failure-punishment {
+  margin: 30px 0 0;
+}
+
+.mini-game-failure-actions {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+}
+
+@media (max-width: 520px) {
+  .mini-game-failure-panel {
+    padding: 40px 32px;
+  }
+}

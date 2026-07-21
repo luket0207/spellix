@@ -1032,3 +1032,598 @@ Testing Required
 * Confirm there are no duplicate modals.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Cave Mini Game player sprite facing direction is reversed
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-011: Refine Cave Mini Game movement, retreat timing, ogre chase animation, and reward display
+
+Bug Summary
+
+* The player’s character image is facing the wrong direction in the Cave Mini Game.
+* At the start of the Cave Mini Game, the character should be flipped so they appear to face into the cave.
+* When an ogre appears and chases the player, the character should be unflipped so they appear to run away from the ogre.
+* The current implementation has this facing direction the wrong way around.
+
+Repro Steps
+
+* Start the Cave Mini Game.
+* Look at the current player’s character image above the cave text box.
+* Observe which direction the character is facing.
+* Trigger an ogre outcome.
+* Observe the character direction during the chase animation.
+
+Expected Behaviour
+
+* At the start of the Cave Mini Game:
+
+  * the player character should be flipped.
+  * the character should visually face toward the direction they are moving deeper into the cave.
+* During normal Go Deeper movement:
+
+  * the player character should remain flipped in the same direction.
+* When an ogre appears:
+
+  * the player character should become unflipped.
+  * the player should appear to turn around and run away.
+* During the ogre chase:
+
+  * the ogre should appear to the right of the player.
+  * the player should face away from the ogre while being chased left.
+  * the ogre and player should move left and fade out as already specified.
+
+Actual Behaviour
+
+* The player character is facing the wrong way.
+* The flip behaviour is reversed between normal cave movement and the ogre chase.
+
+Required Fix
+
+* Reverse the current player sprite flip logic in the Cave Mini Game.
+* Apply the flipped state during normal cave exploration.
+* Remove the flipped state during the ogre chase.
+* Ensure the movement transform and flip transform do not overwrite each other.
+* If the component uses CSS transforms for both movement and flipping, use nested elements or CSS variables to prevent transform conflicts.
+
+Suggested Implementation Direction
+
+```jsx id="fb0w4c"
+<div
+  className="cave-player-position"
+  style={{ transform: `translateX(${progressX}px)` }}
+>
+  <img
+    className={`cave-player-image ${isOgreChase ? "is-unflipped" : "is-flipped"}`}
+    src={playerImage}
+    alt=""
+  />
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="m182ie"
+.cave-player-image.is-flipped {
+  transform: scaleX(-1);
+}
+
+.cave-player-image.is-unflipped {
+  transform: scaleX(1);
+}
+```
+
+* Exact class names can vary.
+* The important requirement is:
+
+  * flipped during normal cave movement.
+  * unflipped during ogre chase.
+
+Transform Safety Requirement
+
+* Do not combine movement translation and image flipping on the same element if it causes one transform to override the other.
+* Prefer:
+
+  * outer wrapper handles position/movement.
+  * inner image handles facing direction.
+* This avoids bugs where `translateX(...)` replaces `scaleX(...)`, or `scaleX(...)` replaces `translateX(...)`.
+
+Ogre Chase Requirement
+
+* When the ogre appears:
+
+  * the player image should unflip.
+  * the ogre should still appear to the right of the player.
+  * the chase animation should still move both images left.
+  * both should still fade out once they reach the left.
+* Do not break the existing ogre chase animation timing or routing.
+
+Expected Behaviour After Fix
+
+* The player character appears flipped at the start of the Cave Mini Game.
+* The player character stays flipped while going deeper.
+* The player character unflips when the ogre appears.
+* The player character appears to run away from the ogre during the chase.
+* The ogre chase animation still works.
+* The player and ogre still fade out before navigating to the Mini Game Lose page.
+
+Out Of Scope
+
+* No changes to Cave Game probability logic.
+* No changes to Cave Game rewards.
+* No changes to Go Deeper or Retreat button logic.
+* No changes to found rewards display.
+* No changes to ogre image asset.
+* No changes to Mini Game Lose page.
+* No changes to turn flow.
+* No unrelated Cave Game animation changes.
+
+Suspected Cause
+
+* The flip class is likely being applied only during the ogre chase, when it should be applied during normal cave movement instead.
+* The sprite’s default facing direction is opposite of what Feature-011 assumed.
+
+Attempted Fixes
+
+* Feature-011 added the initial player movement and ogre chase animation.
+* The facing direction now needs reversing.
+* Added a focused regression that reproduced the reversal at initial depth, during movement, and during the ogre chase.
+* Replaced the chase-only flip with explicit `is-flipped` exploration and `is-unflipped` chase classes on the nested player image.
+* Kept all progress and chase positioning on the existing outer wrapper so the facing transform cannot overwrite movement.
+
+Final Fix
+
+* Normal Cave exploration now applies `scaleX(-1)` to the inner player image, including depth zero and every Go Deeper movement.
+* Ogre chase switches the same inner image to `scaleX(1)` while the unchanged outer wrapper moves the player and ogre left and fades them out.
+* Probability, rewards, buttons, chase timing, shared loss navigation, and turn flow were not changed.
+
+Testing Required
+
+* Confirm the player character is flipped at the start of the Cave Mini Game.
+* Confirm the player character remains flipped while moving deeper.
+* Confirm clicking Go Deeper does not reset the facing direction incorrectly.
+* Confirm the player character unflips when an ogre appears.
+* Confirm the player appears to face away from the ogre during the chase.
+* Confirm the ogre appears to the right of the player.
+* Confirm the chase animation still moves both images left.
+* Confirm both images still fade out after reaching the left.
+* Confirm the page still routes to the Mini Game Lose page after the chase.
+* Confirm there are no transform conflicts between movement and flipping.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-007: Replace token and potion modal lists with div-based grid/flex layouts
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+
+Bug Summary
+
+* Token and potion replacement modals are currently using `ul` / `li` list markup in some places.
+* Example area:
+
+```txt id="pn44bb"
+Current token bag
+```
+
+* The game should not use `ul` or `li` elements for these UI lists.
+* Throughout the game, prefer `div` elements with CSS grid or flex layouts.
+* This applies to this modal issue and should also be treated as a general UI rule going forward.
+
+Repro Steps
+
+* Fill the current player’s token bag.
+* Trigger a Cave Game token reward.
+* Retreat successfully.
+* Open the modal that asks which token to replace or whether to discard the new token.
+* Inspect the element around the current token bag list.
+* Repeat the same flow for full potion slots.
+* Confirm whether token/potion choices are rendered using `ul` or `li`.
+
+Expected Behaviour
+
+* Token replacement options should be rendered using `div` elements.
+* Potion replacement options should be rendered using `div` elements.
+* No `ul` elements should be used for token/potion replacement choices.
+* No `li` elements should be used for token/potion replacement choices.
+* Layout should use CSS grid or flex.
+* The UI should remain visually neat and easy to use.
+* Existing token and potion replacement behaviour should remain unchanged.
+
+Actual Behaviour
+
+* Some token/potion replacement modal content is rendered using `ul` / `li`.
+
+Required Fix
+
+* Replace `ul` and `li` markup in token and potion replacement modals with `div` elements.
+* Update related CSS selectors so styling still applies.
+* Use grid or flex layout for item arrangement.
+* Ensure each token or potion remains selectable.
+* Ensure replacement and discard actions still work correctly.
+* Ensure accessibility labels are preserved or improved.
+* Do not break `aria` attributes such as:
+
+```txt id="pk4v6x"
+Current token bag
+```
+
+* Preserve screen-reader meaning through accessible labels on the new `div` containers.
+
+Suggested Structure
+
+```jsx id="o36svg"
+<div className="replacement-options" aria-label="Current token bag">
+  <div className="replacement-option">
+    <TokenIcon token={token} language={language} />
+  </div>
+
+  <div className="replacement-option">
+    <TokenIcon token={token} language={language} />
+  </div>
+</div>
+```
+
+Potion equivalent:
+
+```jsx id="m27vy2"
+<div className="replacement-options" aria-label="Current potion slots">
+  <div className="replacement-option">
+    <PotionIcon potion={potion} language={language} />
+  </div>
+
+  <div className="replacement-option">
+    <PotionIcon potion={potion} language={language} />
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="w846ee"
+.replacement-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+```
+
+Or:
+
+```css id="zz1ued"
+.replacement-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+}
+```
+
+* Exact class names can vary.
+* Use whichever layout best fits the modal.
+* The important requirement is no `ul` or `li`.
+
+Global UI Markup Rule
+
+* Going forward, avoid `ul` and `li` elements throughout the game UI.
+* Prefer:
+
+  * `div` containers.
+  * CSS grid.
+  * CSS flex.
+* This applies to:
+
+  * token lists.
+  * potion lists.
+  * reward lists.
+  * replacement options.
+  * found rewards displays.
+  * modal item choices.
+  * debug sections where practical.
+  * future game UI lists.
+* Do not introduce new `ul` / `li` markup unless there is a very specific reason and it is explicitly approved.
+
+Accessibility Requirement
+
+* Removing `ul` / `li` should not remove useful accessibility.
+* Keep meaningful labels on grouped content.
+* Use `aria-label` or visible headings where helpful.
+* Interactive item choices should still be keyboard-accessible if they were before.
+* Do not remove button semantics from clickable options.
+
+Modal Coverage Requirement
+
+* Apply this fix anywhere the full token bag / full potion slots replacement flow uses lists.
+* This includes:
+
+  * current token bag display.
+  * current potion slots display.
+  * choose token to remove modal.
+  * choose potion to remove modal.
+  * discard newly gained reward option if it is grouped with replacement options.
+* Also update any closely related reward choice displays if they were copied from the same list pattern.
+
+Out Of Scope
+
+* No changes to reward granting rules.
+* No changes to token bag capacity.
+* No changes to potion capacity.
+* No changes to token or potion data.
+* No changes to TokenIcon.
+* No changes to PotionIcon.
+* No changes to Cave Game probability logic.
+* No changes to roll-again reward behaviour.
+* No unrelated modal redesign.
+
+Suspected Cause
+
+* The replacement modals may have been implemented using semantic list markup by default.
+* This conflicts with the project’s preferred UI structure of div-based grid/flex layouts.
+
+Attempted Fixes
+
+* Reproduced the issue in `CaveRewardChoiceModal`: token and potion replacement choices share a `ul` container and render every option in an `li`.
+* Added focused regressions requiring accessible div-based token and potion groups, no `ul` or `li` descendants, and a shared grid/flex layout class before changing the implementation.
+
+Final Fix
+
+* Replaced the shared token/potion replacement `ul` and each option `li` with `div` elements in `CaveRewardChoiceModal`.
+* Kept the localized current-inventory label on the container and added `role="group"` so the div-based choices retain an accessible group name.
+* Added one shared wrapping flex layout for token and potion choices without changing the existing buttons, icon components, replacement identifiers, discard actions, reward rules, or inventory capacities.
+
+Testing Required
+
+* Confirm token replacement modal does not render a `ul`.
+* Confirm token replacement modal does not render any `li`.
+* Confirm potion replacement modal does not render a `ul`.
+* Confirm potion replacement modal does not render any `li`.
+* Confirm the current token bag area uses divs.
+* Confirm the current potion slots area uses divs.
+* Confirm replacement options are arranged with grid or flex.
+* Confirm selecting an existing token to remove still works.
+* Confirm selecting an existing potion to remove still works.
+* Confirm discarding the newly gained token still works.
+* Confirm discarding the newly gained potion still works.
+* Confirm aria labels or accessible group labels are preserved.
+* Confirm token icons still display correctly.
+* Confirm potion icons still display correctly.
+* Confirm English text still uses the correct font.
+* Confirm Japanese text still uses the correct font.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-007 Bug-001: Reward token assignment should use shared Spells modal-style drag-and-drop component
+
+Bug Summary
+
+* Cave Game token rewards are currently planned to be added directly into the player’s token bag.
+* However, the game already has a component that lets players assign newly gained tokens properly.
+* This component is already used when a player gains tokens from winning battles.
+* Cave Game token rewards should use that same token assignment component.
+* Potions can remain handled as currently planned.
+
+Expected Behaviour
+
+* When a player successfully keeps a token reward from the Cave Game, the game should open the existing token reward assignment component.
+* The player should be able to choose where the new token goes using the same flow as battle token rewards.
+* The player should be able to place the token into:
+
+  * a valid spell slot.
+  * the token bag.
+  * the discard area.
+* The Cave Game should not simply auto-add token rewards to the token bag.
+* Potion rewards should keep the existing Feature-014 behaviour:
+
+  * auto-add to potion slots if there is room.
+  * ask which potion to replace or whether to discard the new potion if full.
+
+Required Fix
+
+* Replace the Cave Game token auto-add behaviour with the existing token reward assignment flow.
+* Reuse the same component currently used for battle token rewards.
+* Do not create a separate Cave-only token assignment UI.
+* Pass the generated Cave token into the shared assignment component as the new reward token.
+* Preserve all existing token assignment rules:
+
+  * assign to spell slot.
+  * assign to token bag.
+  * discard reward token.
+  * handle full token bag.
+  * preserve committed token rules.
+  * preserve spell slot capacity rules.
+* Keep Cave Game potion reward handling unchanged.
+
+Token Reward Flow Requirement
+
+* If the player retreats from the Cave Game with a generated token reward:
+
+  * process that token through the existing token assignment component.
+* The token assignment should happen before the final return-to-board flow completes.
+* If the player also found a loot chest:
+
+  * token assignment should happen before routing to the Loot Chest page.
+* If the player also found a roll-again potion:
+
+  * preserve that roll-again state while the token assignment flow is open.
+  * after token assignment and any loot flow, the same player should remain active and receive the roll-again modal.
+* If the player does not have roll again:
+
+  * after token assignment and any loot flow, the turn should advance normally and show the next-turn modal.
+
+Suggested Flow Without Loot Chest
+
+```txt id="4pfrnl"
+Cave retreat
+Generated token reward exists
+Open shared token assignment component
+Player assigns or discards token
+Process potion reward if any
+Return to board
+Apply roll-again or next-player behaviour
+```
+
+Suggested Flow With Loot Chest
+
+```txt id="psuxym"
+Cave retreat
+Generated token reward exists
+Open shared token assignment component
+Player assigns or discards token
+Process potion reward if any
+Open Loot Chest page
+After loot flow completes, apply roll-again or next-player behaviour
+```
+
+Shared Component Requirement
+
+* Use the same token assignment component already used when gaining a token from battle rewards.
+* The Cave token reward should behave like a normal gained token reward.
+* Do not duplicate the component.
+* Do not duplicate drag-and-drop logic.
+* Do not create separate Cave token placement rules.
+* Any future fixes to the shared assignment component should automatically benefit Cave token rewards too.
+
+Reward State Requirement
+
+* Cave reward state should retain the generated token until token assignment is complete.
+* Do not lose the generated token during route changes, modals, or reward processing.
+* Once assignment is complete:
+
+  * apply the chosen token placement/discard result.
+  * clear the pending Cave token reward from the processing queue.
+* If the player encountered an ogre:
+
+  * do not open token assignment.
+  * the Cave token reward is lost.
+
+Potion Reward Requirement
+
+* Potion rewards should remain as described in Feature-014.
+* Do not send potion rewards through the token assignment component.
+* Potion rewards should:
+
+  * auto-add to potion slots if there is room.
+  * show a full potion slots replacement/discard modal if there is no room.
+* This bug only changes Cave token reward handling.
+
+Full Token Bag Requirement
+
+* Full token bag handling should now be delegated to the existing token assignment component.
+* Do not use the separate Cave token replacement modal if the shared assignment component already handles full token bag placement/discard.
+* The player should be able to discard the new token if they do not want it.
+* The player should be able to place the token into a valid spell slot if available.
+* The player should be able to place it in the token bag if space exists or if the component supports replacement.
+
+Translation Requirement
+
+* Reuse all existing token assignment translations.
+* Do not add new Cave-specific token assignment text unless absolutely necessary.
+* The shared component should continue to support:
+
+  * English.
+  * Japanese.
+  * correct language fonts.
+* Any text-only modal triggered by this flow should still use `larger-text` on its main `<p>` tag.
+
+No `ul` / `li` Requirement
+
+* Preserve the global UI rule from Bug-007.
+* Do not introduce `ul` or `li` elements in any new Cave token reward flow.
+* Use `div` elements with flex or grid layouts.
+
+Expected Behaviour After Fix
+
+* Cave Game token rewards open the existing token assignment component.
+* The player can assign the Cave token reward into a spell slot.
+* The player can assign the Cave token reward into the token bag.
+* The player can discard the Cave token reward.
+* Cave Game no longer automatically puts token rewards into the token bag.
+* Potion rewards still use the existing potion slot logic.
+* Loot chest routing still works after token assignment.
+* Roll-again state is preserved after token assignment.
+* Turn flow remains correct after all reward processing.
+
+Out Of Scope
+
+* No changes to Cave Game probability table.
+* No changes to token rarity odds.
+* No changes to potion rarity odds.
+* No changes to potion reward handling except preserving existing behaviour.
+* No changes to battle token reward assignment except reusing it.
+* No changes to token effects.
+* No changes to spell slot capacity.
+* No changes to actual loot chest reward generation.
+* No unrelated reward UI redesign.
+
+Suspected Cause
+
+* Feature-014 planned Cave token rewards as an inventory add/replacement flow.
+* The existing battle token reward assignment component is a better fit because it already handles new token placement.
+* Reusing it will reduce duplicated token reward logic.
+
+Attempted Fixes
+
+* Feature-014 added Cave reward granting rules.
+* This bug updates the token reward part of that flow before implementation is finalised.
+* Reproduced the current direct token-bag mutation in `createCaveRewardGrant` and the separate full-bag token modal in the real Cave/App flow.
+* Added failing regressions requiring a pending Cave token assignment, the existing reward-assignment contract, and assignment completion before potion, loot, roll-again, or turn return.
+
+Final Fix
+
+* Changed Cave token grants from direct bag insertion/full-bag replacement to a `pendingAssignment` transaction that preserves the generated token item without mutating inventory.
+* Reused the existing `RewardPage`, `SpellTokenAssignment`, reward drop helpers, and shared token mutation methods through a Cave-tagged reward assignment; no Cave-specific assignment component, route, drag logic, translation, or styling was added.
+* Shared assignment now records Cave token placement to a spell slot, token bag, full-bag replacement, or discard before clearing the pending transaction.
+* Returning from assignment restores the persisted Cave retreat summary, then keeps the existing potion replacement, Loot Chest, roll-again, and next-player flows in their required order.
+* Removed the Cave token replacement resolver from active use; the Cave choice modal now receives potion choices only, while ogre losses still create no assignment.
+
+Testing Required
+
+* Confirm Cave Game token reward no longer auto-adds directly to the token bag.
+* Confirm retreating with a Cave token reward opens the shared token assignment component.
+* Confirm the Cave token shown in assignment is the generated token.
+* Confirm the player can place the Cave token into a spell slot.
+* Confirm the player can place the Cave token into the token bag.
+* Confirm the player can discard the Cave token.
+* Confirm full token bag handling works through the shared assignment component.
+* Confirm Cave token assignment uses English for English players.
+* Confirm Cave token assignment uses Japanese for Japanese players.
+* Confirm correct fonts are applied.
+* Confirm no new `ul` or `li` elements are introduced.
+* Confirm potion rewards still auto-add to potion slots if there is room.
+* Confirm full potion slots still use the potion replacement/discard modal.
+* Confirm token assignment happens before routing to Loot Chest if loot chest was found.
+* Confirm roll-again state is preserved while token assignment is open.
+* Confirm retreat with roll again and no loot returns to the board with the same player.
+* Confirm retreat with loot and roll again preserves same-player behaviour through Loot Chest.
+* Confirm retreat without roll again advances to the next player after reward processing.
+* Confirm the next-turn modal appears after any player-to-player turn change.
+* Confirm ogre loss does not open token assignment.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

@@ -8,7 +8,17 @@
   box-sizing: border-box;
   display: flex;
   justify-content: center;
+  overflow: hidden;
   padding: 24px;
+}
+
+.cave-debug-rewards {
+  display: flex;
+  flex-direction: column;
+  left: 8px;
+  position: absolute;
+  top: 8px;
+  z-index: 20;
 }
 
 .cave-mini-game-layout {
@@ -17,6 +27,49 @@
   flex-direction: column;
   gap: 16px;
   width: min(680px, 100%);
+}
+
+.cave-progress-track {
+  align-self: flex-start;
+  height: 100px;
+  position: relative;
+  width: calc(100% - 80px);
+}
+
+.cave-player-position {
+  align-items: center;
+  bottom: 0;
+  display: flex;
+  left: var(--cave-progress);
+  margin-bottom: 20px;
+  position: absolute;
+  transition: left 500ms ease;
+  width: max-content;
+}
+
+.cave-player-image,
+.cave-ogre-image {
+  height: 100px;
+  object-fit: contain;
+  pointer-events: none;
+  width: 80px;
+}
+
+.cave-player-image.is-flipped {
+  transform: scaleX(-1);
+}
+
+.cave-player-image.is-unflipped {
+  transform: scaleX(1);
+}
+
+.cave-ogre-image {
+  margin-left: 8px;
+}
+
+.cave-player-position.is-chasing {
+  animation: cave-ogre-chase 1500ms ease-in forwards;
+  transition: none;
 }
 
 .cave-mini-game-text-box {
@@ -30,7 +83,7 @@
 }
 
 .cave-mini-game-text-box > p,
-.cave-reward-summary p {
+.cave-reward-list-title {
   margin: 0;
 }
 
@@ -44,8 +97,59 @@
   justify-content: center;
 }
 
+.cave-found-rewards {
+  background: rgba(244, 226, 184, 0.92);
+  border: 2px solid #4a3520;
+  box-sizing: border-box;
+  color: #2d1f12;
+  padding: 12px;
+  text-align: center;
+  width: 100%;
+}
+
+.cave-reward-list-title {
+  font-weight: 700;
+}
+
+.cave-reward-list-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.cave-reward-replacement-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+@keyframes cave-ogre-chase {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    left: -168px;
+    opacity: 0;
+  }
+}
+
 @media (max-width: 600px) {
   .cave-mini-game-page {
     padding: 12px;
+  }
+
+  .cave-progress-track {
+    height: 80px;
+    width: calc(100% - 64px);
+  }
+
+  .cave-player-image,
+  .cave-ogre-image {
+    height: 80px;
+    width: 64px;
   }
 }

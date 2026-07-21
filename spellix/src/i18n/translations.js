@@ -55,6 +55,7 @@ const CAVE_MINI_GAME_TRANSLATIONS = {
   en: {
     continue: 'Continue',
     goDeeper: 'Go Deeper',
+    openLoot: 'Open Loot',
     messages: {
       initial: 'Explore deeper into the cave, but beware of ogres.',
       loot: 'You found a loot chest',
@@ -62,12 +63,27 @@ const CAVE_MINI_GAME_TRANSLATIONS = {
       ogre:
         'You were chased out of the cave by an ogre, dropping all of your loot on the way out.',
       potion: 'You found a potion',
-      retreated: 'You got out with all your loot.',
+      retreated: 'You got out with your…',
       rollAgain: 'You found a potion to let you roll again this turn',
       token: 'You found a token',
     },
     retreat: 'Retreat',
-    rollAgainNotice: 'You earned the potion to roll again this turn',
+    rewardGrant: {
+      choosePotion: 'Choose a potion to replace, or discard the new potion.',
+      chooseToken: 'Choose a token to replace, or discard the new token.',
+      currentPotions: 'Current potions',
+      currentTokens: 'Current token bag',
+      discardNewPotion: 'Discard new potion',
+      discardNewToken: 'Discard new token',
+      newPotion: 'New potion',
+      newToken: 'New token',
+      potionSlotsFull: 'Potion slots are full',
+      replacePotion: (name) => `Replace ${name}`,
+      replaceToken: (name) => `Replace ${name}`,
+      tokenBagFull: 'Token bag is full',
+    },
+    rollAgainNotice:
+      'Your roll again potion was used, it is your turn to roll again.',
     summary: {
       loot: 'Loot Chest',
       none: 'No rewards found.',
@@ -80,26 +96,55 @@ const CAVE_MINI_GAME_TRANSLATIONS = {
   jp: {
     continue: '続ける',
     goDeeper: 'さらに奥へ進む',
+    openLoot: '戦利品を開ける',
     messages: {
       initial: '洞窟のさらに奥を探索してください。ただし、オーガには気をつけてください。',
       loot: '戦利品の宝箱を見つけました。',
       nothing: '洞窟のこの辺りには何もありません。',
       ogre: 'オーガに追い出され、逃げる途中ですべての戦利品を落としてしまいました。',
       potion: 'ポーションを見つけました。',
-      retreated: '戦利品をすべて持って脱出しました。',
+      retreated: '戦利品を持って脱出しました…',
       rollAgain: 'このターン、もう一度サイコロを振れるポーションを見つけました。',
       token: 'トークンを見つけました。',
     },
     retreat: '引き返す',
-    rollAgainNotice: 'このターン、もう一度サイコロを振れるポーションを獲得しました。',
+    rewardGrant: {
+      choosePotion: '交換するポーションを選ぶか、新しいポーションを破棄してください。',
+      chooseToken: '交換するトークンを選ぶか、新しいトークンを破棄してください。',
+      currentPotions: '現在のポーション',
+      currentTokens: '現在のトークンバッグ',
+      discardNewPotion: '新しいポーションを破棄',
+      discardNewToken: '新しいトークンを破棄',
+      newPotion: '新しいポーション',
+      newToken: '新しいトークン',
+      potionSlotsFull: 'ポーションスロットがいっぱいです',
+      replacePotion: (name) => `${name}を交換`,
+      replaceToken: (name) => `${name}を交換`,
+      tokenBagFull: 'トークンバッグがいっぱいです',
+    },
+    rollAgainNotice:
+      'もう一度サイコロを振れるポーションが使用されました。もう一度サイコロを振る番です。',
     summary: {
       loot: '戦利品の宝箱',
       none: '報酬は見つかりませんでした。',
       potion: 'ポーション',
-      rollAgain: 'もう一度振れるポーション',
+      rollAgain: 'もう一度サイコロを振れるポーション',
       title: '見つけた報酬：',
       token: 'トークン',
     },
+  },
+};
+
+const MINI_GAME_FAILURE_TRANSLATIONS = {
+  en: {
+    continue: 'Continue',
+    punishment: (healthLost) => `You lost ${healthLost} health`,
+    respawn: 'Respawn',
+  },
+  jp: {
+    continue: '続ける',
+    punishment: (healthLost) => `体力を${healthLost}失いました。`,
+    respawn: 'リスポーン',
   },
 };
 
@@ -190,6 +235,10 @@ export function getRiverMiniGameTranslations(language) {
 
 export function getCaveMiniGameTranslations(language) {
   return CAVE_MINI_GAME_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
+export function getMiniGameFailureTranslations(language) {
+  return MINI_GAME_FAILURE_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
 export function getSpellAssignmentTranslations(language) {

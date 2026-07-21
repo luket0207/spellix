@@ -51,6 +51,7 @@ function RewardPage() {
   const rewardPageTranslations = getRewardPageTranslations(currentLanguage);
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
+  const isCaveRewardAssignment = activeBattle?.source === 'cave';
 
   useEffect(() => {
     if (!isRewardPageReady) {
@@ -72,6 +73,12 @@ function RewardPage() {
 
   const handleContinue = () => {
     clearActiveBattle();
+
+    if (isCaveRewardAssignment) {
+      navigate('/mini-game/cave', { replace: true });
+      return;
+    }
+
     advanceTurn();
     navigate('/gameplay');
   };

@@ -1,6 +1,9 @@
 import {
   CAVE_STEP_PROBABILITIES,
+  createCaveRewardState,
   createCaveRewards,
+  generateCavePotionReward,
+  generateCaveTokenReward,
   getAdjustedCaveProbabilities,
   selectCaveOutcome,
 } from './caveMiniGame';
@@ -92,4 +95,37 @@ test('forces an ogre at step sixteen and removes all previously acquired rewards
     ogre: 100,
   });
   expect(selectCaveOutcome(16, allRewards, () => 0)).toBe('ogre');
+});
+
+test('creates an empty actual Cave reward state', () => {
+  expect(createCaveRewardState()).toEqual({
+    hasLootChest: false,
+    hasRollAgainPotion: false,
+    potion: null,
+    token: null,
+  });
+});
+
+test('generates exact token objects with 10 percent rare and 90 percent common odds', () => {
+  const rareRolls = [0.0999, 0];
+  const commonRolls = [0.1, 0];
+  const rareToken = generateCaveTokenReward(() => rareRolls.shift());
+  const commonToken = generateCaveTokenReward(() => commonRolls.shift());
+
+  expect(rareToken).toMatchObject({ rarity: 'Rare', type: expect.any(String) });
+  expect(commonToken).toMatchObject({ rarity: 'Common', type: expect.any(String) });
+  expect(rareToken).toHaveProperty('name.en');
+  expect(commonToken).toHaveProperty('name.jp');
+});
+
+test('generates exact potion objects with 20 percent rare and 80 percent common odds', () => {
+  const rareRolls = [0.1999, 0];
+  const commonRolls = [0.2, 0];
+  const rarePotion = generateCavePotionReward(() => rareRolls.shift());
+  const commonPotion = generateCavePotionReward(() => commonRolls.shift());
+
+  expect(rarePotion).toMatchObject({ id: expect.any(String), rarity: 'Rare' });
+  expect(commonPotion).toMatchObject({ id: expect.any(String), rarity: 'Common' });
+  expect(rarePotion).toHaveProperty('japaneseName');
+  expect(commonPotion).toHaveProperty('name');
 });

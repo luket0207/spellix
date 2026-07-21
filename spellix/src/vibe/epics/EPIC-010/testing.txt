@@ -698,3 +698,321 @@ Remaining Epic Gaps And Next Actions
 
 * Run the six-step manual regression above in a real desktop and mobile browser, including visual/randomness/focus checks and console inspection.
 * Resolve the pre-existing broad App startup crash and stale Gameplay/Battle assertions in separately requested bug work; they do not invalidate the dedicated Epic-010 coverage.
+
+---
+
+Feature-011: Refine Cave Mini Game movement, retreat timing, ogre chase animation, and reward display
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Cave from Debug and inspect the first decision screen.
+   Expected: The current player's colour/gender character appears at the left above the text box, Go Deeper is available, and Retreat is hidden.
+2. Select Go Deeper once and try both controls during the movement.
+   Expected: The character moves one of 16 positions to the right over 0.5 seconds, Go Deeper cannot calculate twice, both controls remain disabled during movement, and Retreat becomes usable after movement finishes.
+3. Continue selecting Go Deeper through later depths.
+   Expected: Each resolved decision advances exactly one position, the player approaches the right edge at depth 16 without a visible depth 17, and the existing probability row for each depth remains in use.
+4. Find each available reward during one or more runs.
+   Expected: A simple Found rewards area appears below the buttons after the first reward, updates with Token, Loot Chest, Potion, and Roll Again Potion at most once each, and uses the current player's English or Japanese labels with English fallback.
+5. Retreat after movement with and without rewards, including a roll-again reward.
+   Expected: The live display is replaced by the existing final summary and Continue flow; no-roll retreat advances to the next-player modal while roll-again retreat preserves the current player and shows its localized notice.
+6. Encounter an ogre after finding a reward.
+   Expected: The reward display clears, the player flips, `AO.png` appears to the player's right, both images chase left and fade for 1.5 seconds, and controls remain disabled.
+7. Observe the route during and after the chase, then return to the board.
+   Expected: The Cave page remains visible until the full chase finishes, then opens the shared Mini Game Lose page; Return to Board advances to the next player and shows the next-turn modal without granting Cave rewards.
+8. Repeat the flow at desktop and mobile sizes and inspect the browser console.
+   Expected: The progress images stay above and clear of the text box, the final position remains within its width, labels stay readable, and no console errors appear.
+
+Automated Tests Completed
+
+* Before implementation, the focused Cave page regression had 6 expected failures and 1 existing pass because first-step hiding, player progress, movement locks, live rewards, and ogre chase behavior were not present.
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` passes 7 tests covering depth zero, hidden first-step Retreat, current-player image resolution, exact 500ms interaction lock, double-click prevention, all 16 engine steps without a seventeenth position, live unique rewards, English/Japanese/fallback labels, preserved retreat summaries, and the delayed 1500ms ogre chase/loss route.
+* The focused Cave and shared mini-game regression run passes 5 suites and 27 tests across the Cave page/engine, App routing, context return state, and shared result pages.
+* The final Cave page rerun passes 1 suite and 7 tests after lint cleanup.
+* The installed ESLint binary passes the Cave component, Cave tests, and updated App mini-game integration tests with no warnings or errors.
+* `npm run build` compiles the final implementation successfully.
+
+Automated Tests Still Needed
+
+* JSDOM verifies classes, timing state, image sources, depth values, and navigation order but cannot visually prove sprite direction, smoothness, exact edge alignment, fade quality, or readability against the real cave image.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser flow above to confirm real animation smoothness, right-facing normal sprite interpretation, chase clarity, responsive alignment, Japanese rendering, and console output.
+
+---
+
+Bug-006: Cave Mini Game player sprite facing direction is reversed
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start the Cave Mini Game and inspect the current-player sprite before selecting anything.
+   Expected: The inner player image is horizontally flipped so the character faces deeper into the cave, while the progress wrapper remains at depth zero.
+2. Select Go Deeper and watch the entire 500ms movement.
+   Expected: The player stays flipped before, during, and after movement; horizontal progress remains smooth because movement belongs to the outer wrapper and facing belongs to the nested image.
+3. Trigger an ogre encounter.
+   Expected: The player becomes unflipped, `AO.png` remains to the player's right, and both images continue moving left and fading for the existing 1500ms chase.
+4. Wait for the chase and return from the shared Mini Game Lose page.
+   Expected: Navigation does not happen before the chase finishes, then the existing loss route advances to the next player and shows the next-turn modal without console errors.
+
+Automated Tests Completed
+
+* Before the fix, the focused Cave regression reproduced Bug-006 with 3 failures: the initial and moving sprite lacked the required flipped class, while the chase still used the reversed `is-chased` flip.
+* After the fix, `src/pages/MiniGames/CaveMiniGame.test.jsx` passes 7 tests, including flipped initial/moving states, explicit unflipped chase state, separate outer movement and inner facing elements, ogre placement, fade timing, and delayed loss navigation.
+* The combined Cave/App regression passes 2 suites and 17 tests, confirming the shared loss page, reward discard, next-player transition, and other Cave flows remain intact.
+* The installed ESLint binary passes the Cave component and test with no warnings or errors.
+* `npm run build` compiles successfully with the fixed sprite classes.
+
+Automated Tests Still Needed
+
+* DOM and CSS assertions prove the transform states and separation but cannot visually determine whether every character artwork reads as facing the intended direction.
+
+Manual Testing Still Needed
+
+* Run the four-step browser regression with representative male and female character sprites to visually confirm exploration and chase directions and inspect console output.
+
+---
+
+Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Cave and continue until a token is found, then inspect the live reward list before retreating.
+   Expected: One exact token object is generated immediately from centralized token data, with a 90% Common/10% Rare rarity choice, and its localized token name remains fixed for the run.
+2. Start or continue a Cave run until a normal potion is found.
+   Expected: One exact potion object is generated immediately from centralized potion data, with an 80% Common/20% Rare rarity choice, and its localized potion name remains fixed for the run.
+3. Find repeated reward outcomes in a long run.
+   Expected: Token, potion, loot chest, and roll-again potion each appear at most once; acquired chances still move to ogre chance and generated token/potion objects are not regenerated.
+4. Retreat without finding a loot chest, first without and then with roll again.
+   Expected: `You got out with your…`, the exact found reward list, and Continue appear; Continue advances to the next-turn modal without roll again, or preserves the same player and shows the roll-again modal when found.
+5. Find a loot chest without roll again, retreat, and select Open Loot.
+   Expected: The existing shared Loot Chest page opens without calculating loot in Cave; Continue from that page returns to Gameplay, advances the turn, and shows the next-turn modal.
+6. Find both a loot chest and roll-again potion, retreat, open loot, and continue.
+   Expected: Cave source, player, actual rewards, and same-player return behavior survive through the shared Loot Chest page; Gameplay returns to the same player with the roll-again modal and no next-turn modal.
+7. Find a token or potion and then encounter an ogre.
+   Expected: All local generated rewards are cleared, the existing chase and Mini Game Lose route play unchanged, and returning advances to the next player without a Cave roll-again notice or granted reward.
+8. Repeat the retreat and loot flows for Japanese and an invalid language value.
+   Expected: Exit copy, exact reward names, Roll Again Potion, Loot Chest, Continue/Open Loot, and the roll-again modal use Japanese for Japanese players; invalid language falls back to English and language font classes remain correct.
+9. Inspect player token bags and potion collections before and after Cave outcomes.
+   Expected: This feature preserves actual generated reward data for the Cave transaction but does not directly grant token/potion inventory or calculate loot chest contents, as allowed by scope.
+10. Repeat representative flows on desktop and mobile while checking the console.
+    Expected: The reward list remains readable within the existing Cave layout and no console errors occur.
+
+Automated Tests Completed
+
+* Before implementation, the focused Feature-012 run had 12 expected failures and 28 existing passes across missing generators/state, exact item display, metadata, copy, and Open Loot routes.
+* `src/features/miniGames/caveMiniGame.test.js` verifies the empty actual-reward state and exact 10% Rare token and 20% Rare potion boundaries while selecting complete objects through the centralized reward item helper; all existing 16-step probability tests remain green.
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` verifies immediate fixed token/potion generation, duplicate prevention, localized exact item names, no-reward handling, full retreat metadata, Continue versus Open Loot, Japanese Open Loot/font class, and reward clearing on ogre.
+* `src/features/miniGames/miniGameState.test.jsx` verifies Cave reward metadata is stored in `miniGameResult`, same-player/next-player return behavior remains centralized, and the new exact roll-again notice is created only for a successful roll-again retreat.
+* `src/AppMiniGames.test.jsx` verifies loot-only retreat advances after the shared Loot Chest page, loot plus roll again preserves the same player through that page, direct retreat behavior remains correct, the text-only modal retains `larger-text` and language classes, and ogre loss grants no notice.
+* `src/i18n/translations.test.js` verifies all new exact English/Japanese Cave exit, Open Loot, reward label, and roll-again modal text plus English fallback.
+* The focused Feature-012 run passes 5 suites and 40 tests; the reused reward generator, battle reward, and shared mini-game result regression run passes 3 suites and 40 tests, for 8 suites and 80 tests total.
+* The installed ESLint binary passes all Feature-012 implementation and test files with no warnings or errors.
+* `npm run build` compiles successfully, source audit finds no Cave inventory-grant/loot-calculation call, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Deterministic boundary tests prove rarity selection and eligible centralized objects but do not statistically certify browser randomness over a large sample.
+* Inventory granting and loot chest calculation need separate feature coverage when those explicitly out-of-scope flows are implemented.
+
+Manual Testing Still Needed
+
+* Run the ten-step browser flow above to inspect real randomized item variety, Japanese fonts, reward-list readability, modal positioning/focus, responsive behavior, unchanged inventories, and console output.
+
+---
+
+Feature-013: Build Mini Game Failed screen with punishment health loss and respawn handling
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Lose either River or Cave and wait for the shared failure route.
+   Expected: The full page uses the existing animated magical night sky and a centred wooden modal-style panel; it does not repeat that the mini game was lost.
+2. Inspect the panel before one second has elapsed.
+   Expected: The failing player's character and pre-damage health bar appear at the top centre, the weighted punishment text appears 30px below, and no Continue or Respawn action is usable.
+3. Repeat failures enough to exercise the punishment values.
+   Expected: Each visit selects exactly one value from 10, 15, 20, 25, 30, 35, 40, 45, or 50 using weights 20, 18, 16, 12, 10, 9, 7, 5, and 3 respectively; rerenders do not change that visit's value.
+4. Wait one second when the player has more health than the selected loss.
+   Expected: Shared player health is reduced once, the existing health bar animates to the clamped result, and Continue appears only after the update.
+5. Select Continue.
+   Expected: Gameplay opens on the next player with the existing next-turn modal shown first and board actions locked until it is dismissed.
+6. Repeat with current health equal to or below the selected loss and at least one removable committed token.
+   Expected: Health stops at zero, one token is removed through the existing mini-game death penalty, the removal result is shown, and Respawn appears instead of Continue.
+7. Select Respawn.
+   Expected: The failing player returns to the first Start Area position at full health without the removed token; Gameplay opens on the next player with the next-turn modal pending.
+8. Repeat survivor and death flows for an English player, a Japanese player, and an invalid language value.
+   Expected: Punishment, Continue, Respawn, and death-result text use English or Japanese with English fallback; the panel uses `language-en`/Unkempt or `language-jp`/Noto Serif Japanese.
+9. Check the failure panel on desktop and mobile while watching the health transition and browser console.
+   Expected: The wooden background remains fitted, bold `#F5FA00` text and centred controls remain readable, the player/health area fits, the sky stays behind the panel, and no console errors appear.
+
+Automated Tests Completed
+
+* Before implementation, the focused run failed because the weighted selector did not exist and the placeholder page lacked the sky, player/health display, timing, translations, actions, and wooden panel contract.
+* `src/features/miniGames/miniGamePunishment.test.js` verifies the exact nine-value table, total weighted boundaries, and every transition from random values 0 through 0.99999.
+* `src/pages/MiniGames/MiniGameResultPages.test.jsx` verifies one-time generation, pre-damage health, the full one-second lock, clamping, animated HealthBar state change, Continue/Respawn branching, English/Japanese content, player image, reused sky, Start Area respawn call, and requested panel CSS contracts.
+* `src/features/miniGames/miniGameState.test.jsx` verifies atomic health mutation, one-token EPIC-007 mini-game death punishment, duplicate-application prevention, persisted removal, full-health Start Area respawn, next-player advancement, and pending next-turn state with the real provider.
+* `src/AppMiniGames.test.jsx` verifies Cave and River losses enter the new delayed punishment flow and still return through the existing next-turn modal invariant.
+* Translation and death-result tests verify exact English/Japanese punishment and action text, English fallback, localized token-removal results, and unchanged default battle death-result copy.
+* The final combined Feature-013 regression passes 8 suites and 63 tests across punishment logic, failure/result pages, provider mini-game state, App routing, translations, death results, HealthBar, and MagicalNightSky.
+* The repository-installed ESLint binary passes all Feature-013 implementation and test files with no warnings or errors; `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* Deterministic boundary tests prove the specified weighted mapping but cannot statistically certify browser randomness over a large sample.
+* JSDOM verifies timer state and HealthBar width values but cannot visually certify the real 300ms bar transition, wooden image crop, star animation, or responsive font rendering.
+
+Manual Testing Still Needed
+
+* Run the nine-step browser flow above for real animation quality, panel readability, Japanese font rendering, representative random visits, responsive layout, and console inspection.
+
+---
+
+Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+
+Test Status
+
+* passed
+
+Manual Test Steps And Expected Results
+
+1. Start Cave and inspect the top-left debug controls before moving.
+   Expected: Plain Token, Potion, Loot Chest, and Roll Again Potion debug buttons are absolutely positioned over the page without moving the Cave layout.
+2. Select each debug reward once in one Cave run.
+   Expected: The matching exact reward appears in Found rewards, each selected button disables, different reward buttons remain available until used, and token/potion use the normal Cave generators.
+3. Start another run and find each reward naturally.
+   Expected: The matching debug button disables as soon as its reward is found, and neither natural nor debug input can add that reward type twice.
+4. Retreat with generated token and potion rewards while the token bag and potion collection have room.
+   Expected: The exact token is added uncommitted to the token bag and the exact potion is added to potion slots; capacities remain at no more than five and three.
+5. Retreat with a token when the token bag already contains five items.
+   Expected: A localized shared wooden modal displays the new Token icon, all existing bag Token icons, replacement actions, and a discard-new-token action; Continue/Open Loot remains disabled until one choice is applied.
+6. Exercise both full-token choices in separate runs.
+   Expected: Replacing keeps exactly five bag tokens and preserves the generated token data, while discarding leaves the original bag unchanged; the new token is never silently lost.
+7. Retreat with a potion when all three potion slots are occupied, then exercise each choice in separate runs.
+   Expected: The modal uses PotionIcon for the new and existing potions; replacement keeps exactly three potions with the new potion in the chosen slot, while discard leaves all three originals unchanged.
+8. Retreat with token, potion, loot chest, and roll again while both inventories are full.
+   Expected: Token choice appears first, potion choice second, Loot Chest cannot open before both resolve, then the existing Loot Chest page opens and Continue returns to the same player with the roll-again notice.
+9. Repeat a successful no-loot retreat without roll again and an ogre loss after finding rewards.
+   Expected: A resolved retreat returns through the existing next-player modal; ogre loss clears local Cave rewards and grants no token, potion, loot, or roll-again result.
+10. Repeat full-capacity choices for English, Japanese, and invalid player languages.
+    Expected: Titles, instructions, item names, replace/discard actions, and fonts use English or Japanese with English fallback; icon/list choice modals do not use `larger-text`.
+11. Repeat representative flows at desktop and mobile sizes while checking the console.
+    Expected: Debug controls stay top-left, modal choices remain usable, icons/tooltips remain readable, and no console errors appear.
+
+Automated Tests Completed
+
+* Before implementation, the focused run failed because the Cave transaction helper, choice modal, and four debug reward controls did not exist.
+* `src/features/miniGames/caveRewardGrant.test.js` verifies automatic exact token/potion grants, five-token and three-potion limits, token-first pending order, token/potion replacement, both discard-new choices, status completion, and unchanged inventory on discard.
+* `src/pages/MiniGames/CaveRewardChoiceModal.test.jsx` verifies Token and PotionIcon reuse, new/current reward display, English/Japanese labels and font classes, replacement/discard callbacks, and absence of `larger-text` on both choice modals.
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` verifies all four debug buttons, one-use disabling from debug and natural rewards, same generator reuse, all-reward summaries/retreat metadata, and the requested absolute top-left CSS contract without changing movement or ogre behavior.
+* `src/features/miniGames/miniGameState.test.jsx` verifies automatic provider grants, persisted exact Cave metadata, blocked premature return, ordered full-capacity decisions, replacement state, inventory capacities, and unchanged same-player/next-player return behavior.
+* `src/AppMiniGames.test.jsx` verifies the real full-token/full-potion modal sequence blocks Open Loot, resolves token before potion, preserves Loot Chest routing, and keeps roll again through the shared Loot Chest page.
+* Translation tests verify the new English/Japanese full-capacity copy and functions with existing English fallback; reused token-bag, potion-capacity, battle reward, Cave engine, and reward context/page suites remain green.
+* The final combined Feature-014 run passes 11 suites and 86 tests. The repository-installed ESLint binary passes every Feature-014 implementation/test file, `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* JSDOM verifies position declarations, modal order, disabled states, inventory values, routing, and language classes but cannot visually certify icon tooltip placement or top-left overlap at every viewport.
+* Deterministic Cave generator tests prove eligible exact rewards and probability boundaries but cannot statistically certify long-run browser randomness.
+
+Manual Testing Still Needed
+
+* Run the eleven-step browser flow above for real pointer/keyboard interaction, modal readability, Japanese font rendering, responsive debug placement, tooltip behavior, representative random rewards, and console inspection.
+
+---
+
+Bug-007: Replace token and potion modal lists with div-based grid/flex layouts
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Fill a player's token bag, earn a Cave token reward, and retreat.
+   Expected: The full-token modal shows the current bag in a labeled div-based flex group with no `ul` or `li` elements.
+2. Select each existing token replacement option and repeat using Discard new token.
+   Expected: Every button remains keyboard-accessible, replacement receives the selected token ID, discard keeps the existing bag, and Token icons/names remain unchanged.
+3. Fill all potion slots, earn a Cave potion reward, and retreat.
+   Expected: The full-potion modal shows the current slots in the same labeled div-based flex group with no `ul` or `li` elements.
+4. Select each existing potion replacement option and repeat using Discard new potion.
+   Expected: Replacement receives the selected potion index, discard keeps the existing slots, and PotionIcon content remains unchanged.
+5. Repeat the token and potion flows for English and Japanese players while checking the console.
+   Expected: Group labels, actions, item names, and language font classes remain localized, and no console errors occur.
+
+Automated Tests Completed
+
+* Before the fix, both focused modal tests failed because the rendered token and potion choices exposed `list`/`listitem` roles and no labeled div-based `group`.
+* `src/pages/MiniGames/CaveRewardChoiceModal.test.jsx` passes 2 tests covering div containers, localized accessible group names, no `ul`/`li` JSX or rendered list roles, shared flex CSS, icons, language classes, replacement callbacks, and discard callbacks.
+* The Cave reward/provider/App regression passes 5 suites and 34 tests, confirming full-capacity choices, inventory mutation, routing, and turn handling remain unchanged.
+* The repository-installed ESLint binary passes the changed component and test with no warnings or errors.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* JSDOM and source assertions verify markup, accessibility roles, CSS declarations, and callbacks but cannot visually certify wrapping at every viewport size.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to inspect real keyboard focus, flex wrapping, icon/tooltips, Japanese rendering, and console output.
+
+---
+
+Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Find or debug-add a Cave token, retreat, and inspect inventory before assigning it.
+   Expected: The token is not auto-added to the bag; the existing shared reward assignment page opens with the exact generated token.
+2. Drag the Cave token to an available spell slot and confirm.
+   Expected: The shared assignment UI commits the token to that slot, shows the existing completion copy, and Continue restores the Cave retreat summary.
+3. Repeat by assigning the token to a non-full token bag and by dragging it to discard.
+   Expected: Bag assignment adds one uncommitted token; discard leaves bag and spell slots unchanged; both clear the pending Cave token transaction only after confirmation.
+4. Repeat with a full token bag and select an existing bag token through the shared replacement flow.
+   Expected: The existing assignment component handles replacement, the bag remains at five tokens, and no Cave “Token bag is full” replacement modal appears.
+5. Retreat with both a token and a full-capacity potion reward.
+   Expected: Token assignment opens first; after it completes, the existing Cave potion replacement/discard modal opens and potion behavior remains unchanged.
+6. Retreat with token, potion, Loot Chest, and Roll Again Potion rewards.
+   Expected: The order is token assignment, any pending potion choice, restored Cave summary, Loot Chest, then same-player Gameplay with the roll-again notice.
+7. Retreat with a token but without Loot Chest or roll again.
+   Expected: Assignment completes before the Cave Continue action returns to Gameplay, advances to the next player, and shows the locked next-turn modal.
+8. Repeat token assignment for English and Japanese players.
+   Expected: The existing assignment labels, item names, status, confirmation, completion copy, and language font classes remain localized without Cave-specific wording.
+9. Find a token and then encounter an ogre.
+   Expected: The token is lost, no reward assignment opens, and the existing failure/next-player flow remains unchanged.
+10. Inspect the assignment and Cave flows on desktop/mobile with keyboard and pointer input while checking the console.
+    Expected: The existing drag/drop controls remain usable, no new `ul`/`li` markup was introduced, and no console errors occur.
+
+Automated Tests Completed
+
+* Before the fix, focused regressions produced two expected failures: `createCaveRewardGrant` inserted `player-1-red-1` directly into the bag, and the real App opened the separate full-token modal instead of shared assignment.
+* `src/features/miniGames/caveRewardGrant.test.js` verifies pending token assignment, exact reward preservation, no direct bag mutation, Cave-tagged shared reward state, token-first ordering, and unchanged automatic/full-capacity potion behavior.
+* `src/features/miniGames/miniGameState.test.jsx` verifies shared bag assignment, full-bag replacement, discard, pending-return blocking, Cave grant status, potion ordering, inventory capacity, and final roll-again state.
+* `src/AppMiniGames.test.jsx` verifies the real shared spell-slot assignment route, removal of the Cave full-token modal, restored retreat summary, full-potion choice, Loot Chest ordering, same-player roll again, and no-roll next-player modal.
+* Cave page tests verify token retreats route to `/reward`; existing RewardPage, SpellTokenAssignment, reward state, reward drop helper, and Cave choice modal suites confirm battle behavior, translations, drag/drop contracts, and potion-only choice behavior remain intact.
+* The final Bug-008 regression passes 9 suites and 81 tests. The repository-installed ESLint binary passes every changed implementation/test file, `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The App integration uses a deterministic test adapter to trigger the shared drop callback; the existing SpellTokenAssignment suite separately proves the real drag/drop zones and states, but JSDOM cannot reproduce full pointer geometry.
+
+Manual Testing Still Needed
+
+* Run the ten-step browser regression above for real drag/drop, full-bag selection, responsive layout, Japanese rendering, tooltip/focus behavior, randomized reward identity, and console inspection.

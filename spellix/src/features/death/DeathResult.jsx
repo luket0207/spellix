@@ -5,16 +5,26 @@ function formatTokenType(tokenType) {
     .join(' ');
 }
 
-function DeathResult({ removedTokens = [] }) {
+function DeathResult({ language = 'en', removedTokens = [] }) {
+  const isJapanese = language === 'jp';
+
   if (removedTokens.length === 0) {
-    return <p>No tokens were removed because only starting tokens remained.</p>;
+    return (
+      <p>
+        {isJapanese
+          ? '初期トークンしか残っていないため、トークンは取り除かれませんでした。'
+          : 'No tokens were removed because only starting tokens remained.'}
+      </p>
+    );
   }
 
   return (
-    <ul aria-label="Removed tokens">
+    <ul aria-label={isJapanese ? '取り除かれたトークン' : 'Removed tokens'}>
       {removedTokens.map(({ columnNumber, token }, index) => (
         <li key={`${token.id}-${index}`}>
-          {`A ${formatTokenType(token.type)} token was removed from column ${columnNumber}.`}
+          {isJapanese
+            ? `${formatTokenType(token.type)}トークンが列${columnNumber}から取り除かれました。`
+            : `A ${formatTokenType(token.type)} token was removed from column ${columnNumber}.`}
         </li>
       ))}
     </ul>

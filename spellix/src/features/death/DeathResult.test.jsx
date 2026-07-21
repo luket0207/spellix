@@ -26,4 +26,18 @@ describe('DeathResult', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: /removed tokens/i })).not.toBeInTheDocument();
   });
+
+  test('supports Japanese mini game death results', () => {
+    render(
+      <DeathResult
+        language="jp"
+        removedTokens={[
+          { columnNumber: 3, token: { id: 'black-1', type: 'black' } },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Blackトークンが列3から取り除かれました。')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: '取り除かれたトークン' })).toBeInTheDocument();
+  });
 });
