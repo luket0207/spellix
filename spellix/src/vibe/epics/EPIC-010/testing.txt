@@ -1016,3 +1016,39 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * Run the ten-step browser regression above for real drag/drop, full-bag selection, responsive layout, Japanese rendering, tooltip/focus behavior, randomized reward identity, and console inspection.
+
+---
+
+Bug-009: Cave token assignment should use cave background
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Find or debug-add a Cave token and retreat.
+   Expected: The existing shared token assignment opens over `src/images/miniGames/cave.png`, not a battle, gameplay, or fallback background.
+2. Inspect the assignment screen at desktop and mobile sizes.
+   Expected: The cave image covers the full screen, stays centered, does not tile, remains behind the existing panel, and assignment content stays readable.
+3. Assign the token to a spell slot, token bag, and discard in separate runs.
+   Expected: Existing drag/drop, confirmation, completion, and Cave return behavior are unchanged.
+4. Complete a normal battle token reward assignment.
+   Expected: The selected battle environment remains the background and does not use the cave image.
+5. Open the normal Gameplay Spells modal and check the console during both flows.
+   Expected: Gameplay modal behavior/background is unchanged and no console errors occur.
+
+Automated Tests Completed
+
+* Before the fix, the new focused test failed because a Cave-sourced assignment rendered the synthetic fields battle background; the other 17 RewardPage tests passed.
+* `src/pages/RewardPage.test.jsx` passes 18 tests, including exact Cave image selection, shared assignment rendering, unchanged forest battle background, invalid-environment fields fallback, language behavior, and all token/potion reward actions.
+* `src/AppMiniGames.test.jsx` passes 14 tests, confirming Cave assignment still continues through potion, loot, roll-again, loss, and next-player flows.
+* The combined regression passes 2 suites and 32 tests. Scoped ESLint passes, `npm run build` compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* JSDOM verifies the selected image and existing CSS declarations but cannot visually certify real browser cropping or readability at every viewport.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above for real image cover/crop, assignment readability, drag/drop interaction, responsive behavior, and console inspection.

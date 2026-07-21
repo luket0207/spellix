@@ -6,6 +6,7 @@ import { TOKEN_DEFINITIONS } from '../data/tokens';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../features/gameSetup/gameSetup';
+import caveBackground from '../images/miniGames/cave.png';
 import RewardPage from './RewardPage';
 
 jest.mock('../features/spells/SpellTokenAssignment', () => {
@@ -189,6 +190,21 @@ describe('RewardPage choice flow', () => {
       'potion-icon--blue'
     );
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
+  });
+
+  test('uses the Cave background only for Cave-sourced token assignment', () => {
+    renderRewardPage([], (setup) => {
+      setup.activeBattle.source = 'cave';
+      setup.activeBattle.selectedRewardChoiceId = 'reward-choice-1';
+    });
+
+    expect(screen.getByLabelText(/reward token assignment/i)).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveStyle({
+      backgroundImage: `url(${caveBackground})`,
+    });
+    expect(screen.getByRole('main')).not.toHaveStyle({
+      backgroundImage: `url(${getBattleBackgroundSource('forest')})`,
+    });
   });
 
   test('shows Japanese token reward names and tooltips for a Japanese battle player', () => {

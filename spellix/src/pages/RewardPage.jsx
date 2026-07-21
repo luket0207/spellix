@@ -25,6 +25,7 @@ import {
   getRewardPageTranslations,
   getSpellAssignmentTranslations,
 } from '../i18n/translations';
+import caveBackground from '../images/miniGames/cave.png';
 import './RewardPage.css';
 
 function RewardPage() {
@@ -67,8 +68,11 @@ function RewardPage() {
   const selectedReward = rewardChoices.find(
     ({ id }) => id === activeBattle.selectedRewardChoiceId
   );
+  const rewardBackground = isCaveRewardAssignment
+    ? caveBackground
+    : getBattleBackgroundSource(activeBattle.environment);
   const rewardPageStyle = {
-    backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})`,
+    backgroundImage: `url(${rewardBackground})`,
   };
 
   const handleContinue = () => {

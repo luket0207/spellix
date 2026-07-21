@@ -1627,3 +1627,344 @@ Testing Required
 * Confirm ogre loss does not open token assignment.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-009: Cave token assignment should use cave background
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-010: Add Cave Mini Game with debug trigger, reward tracking, retreat flow, and roll-again reward
+* Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Bug Summary
+
+* When the player gains a token from the Cave Game and is taken to the token assignment component, the background should remain the cave background.
+* The token assignment flow should visually feel like it belongs to the Cave Game reward sequence.
+* It should not show the normal gameplay background, battle background, reward background, or a blank/default background.
+
+Expected Behaviour
+
+* If the token assignment component is opened because of a Cave Game token reward:
+
+  * use the Cave Game background.
+  * keep the token assignment UI/modal on top of that background.
+  * preserve the existing token assignment functionality.
+* Cave reward token assignment should use:
+
+```txt id="wvhgen"
+src/images/miniGames/cave.png
+```
+
+* This should only affect token assignment when the source is the Cave Game.
+
+Actual Behaviour
+
+* The token assignment component does not use the cave background when opened after the Cave Game.
+
+Required Fix
+
+* Pass source/background context into the shared token assignment flow.
+* When the token assignment source is Cave Game, render the page/background using the cave background image.
+* Do not hard-code the cave background for all token assignment flows.
+* Battle token rewards should keep their existing battle/reward background behaviour.
+* Normal Spells modal usage from the gameplay page should keep its existing gameplay/modal behaviour.
+
+Suggested Source Metadata
+
+```js id="yk1ltk"
+{
+  source: "cave",
+  backgroundImage: "src/images/miniGames/cave.png"
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the shared assignment component can visually adapt based on where the reward came from.
+
+Background Requirement
+
+* Cave token assignment background image:
+
+```txt id="n9jbgy"
+src/images/miniGames/cave.png
+```
+
+* The image should:
+
+  * cover the screen.
+  * not tile.
+  * remain behind the token assignment UI.
+  * preserve readability of the token assignment modal/content.
+* The token assignment modal itself should remain usable and readable.
+
+Shared Component Requirement
+
+* Continue using the existing token assignment component from battle rewards.
+* Do not create a separate Cave-only token assignment component.
+* The shared component should support receiving background/source context.
+* Cave-specific visual background should not duplicate token assignment logic.
+
+Flow Requirement
+
+* Cave Game retreat with token reward should proceed like this:
+
+```txt id="6n3nve"
+Cave Game retreat
+Token reward exists
+Open shared token assignment component
+Use cave background behind assignment UI
+Player assigns or discards token
+Continue normal Cave reward flow
+```
+
+* After token assignment is complete:
+
+  * process potion reward if present.
+  * route to Loot Chest page if loot chest was found.
+  * otherwise return to the board.
+  * preserve roll-again or next-turn behaviour as already specified.
+
+Scope Restriction
+
+* This bug only changes the background used during Cave-sourced token assignment.
+* Do not change the token assignment rules.
+* Do not change token drag-and-drop behaviour.
+* Do not change token rarity generation.
+* Do not change potion handling.
+* Do not change loot chest routing.
+* Do not change roll-again behaviour.
+
+Expected Behaviour After Fix
+
+* Gaining a token from the Cave Game opens the existing token assignment flow.
+* The assignment screen uses the cave background.
+* The player can still place the token into a spell slot.
+* The player can still place the token into the token bag.
+* The player can still discard the token.
+* After assignment, the Cave reward flow continues correctly.
+* Other token assignment sources are visually unchanged.
+
+Out Of Scope
+
+* No new Cave-only token assignment UI.
+* No changes to normal Spells modal background.
+* No changes to battle reward token assignment background unless it is currently broken.
+* No changes to Cave Game probability logic.
+* No changes to generated token rarity logic.
+* No changes to potion reward handling.
+* No changes to Loot Chest page.
+* No unrelated reward screen redesign.
+
+Suspected Cause
+
+* The shared token assignment component may be defaulting to gameplay or reward page background.
+* The Cave Game source may not be passing background context into the assignment flow.
+* The assignment component may not yet support source-specific backgrounds.
+
+Attempted Fixes
+
+* Bug-008 changed Cave token rewards to use the existing token assignment component.
+* This bug adds the Cave-specific visual background requirement for that flow.
+* Reproduced that Cave reward assignment already carries `source: 'cave'` but `RewardPage` ignores it and resolves the synthetic `fields` environment through the battle background helper.
+* Added a failing RewardPage regression requiring Cave-sourced assignment to use `src/images/miniGames/cave.png` while preserving the existing battle background assertion.
+
+Final Fix
+
+* Reused the existing `source: 'cave'` assignment metadata to select the imported `src/images/miniGames/cave.png` asset in `RewardPage`.
+* Preserved `getBattleBackgroundSource` for every non-Cave reward, so battle environments and invalid-environment fallback remain unchanged.
+* Reused the existing `.reward-page` background positioning, no-repeat, cover, full-width, and full-height rules; no assignment component, route, flow logic, or new styling was added.
+
+Testing Required
+
+* Confirm retreating from Cave Game with a token reward opens the token assignment component.
+* Confirm the token assignment screen uses `src/images/miniGames/cave.png` as the background.
+* Confirm the cave background covers the screen.
+* Confirm the cave background does not tile.
+* Confirm the token assignment UI remains readable.
+* Confirm the token can still be assigned to a spell slot.
+* Confirm the token can still be assigned to the token bag.
+* Confirm the token can still be discarded.
+* Confirm completing token assignment continues the Cave reward flow.
+* Confirm potion reward handling still works after token assignment.
+* Confirm loot chest routing still works after token assignment.
+* Confirm roll-again state is preserved after token assignment.
+* Confirm battle token reward assignment does not incorrectly use the cave background.
+* Confirm normal gameplay Spells modal does not incorrectly use the cave background.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-009: Cave token assignment should use cave background
+
+Status
+
+* not started
+
+Related Feature
+
+* Feature-010: Add Cave Mini Game with debug trigger, reward tracking, retreat flow, and roll-again reward
+* Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Bug Summary
+
+* When the player gains a token from the Cave Game and is taken to the token assignment component, the background should remain the cave background.
+* The token assignment flow should visually feel like it belongs to the Cave Game reward sequence.
+* It should not show the normal gameplay background, battle background, reward background, or a blank/default background.
+
+Expected Behaviour
+
+* If the token assignment component is opened because of a Cave Game token reward:
+
+  * use the Cave Game background.
+  * keep the token assignment UI/modal on top of that background.
+  * preserve the existing token assignment functionality.
+* Cave reward token assignment should use:
+
+```txt id="wvhgen"
+src/images/miniGames/cave.png
+```
+
+* This should only affect token assignment when the source is the Cave Game.
+
+Actual Behaviour
+
+* The token assignment component does not use the cave background when opened after the Cave Game.
+
+Required Fix
+
+* Pass source/background context into the shared token assignment flow.
+* When the token assignment source is Cave Game, render the page/background using the cave background image.
+* Do not hard-code the cave background for all token assignment flows.
+* Battle token rewards should keep their existing battle/reward background behaviour.
+* Normal Spells modal usage from the gameplay page should keep its existing gameplay/modal behaviour.
+
+Suggested Source Metadata
+
+```js id="yk1ltk"
+{
+  source: "cave",
+  backgroundImage: "src/images/miniGames/cave.png"
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the shared assignment component can visually adapt based on where the reward came from.
+
+Background Requirement
+
+* Cave token assignment background image:
+
+```txt id="n9jbgy"
+src/images/miniGames/cave.png
+```
+
+* The image should:
+
+  * cover the screen.
+  * not tile.
+  * remain behind the token assignment UI.
+  * preserve readability of the token assignment modal/content.
+* The token assignment modal itself should remain usable and readable.
+
+Shared Component Requirement
+
+* Continue using the existing token assignment component from battle rewards.
+* Do not create a separate Cave-only token assignment component.
+* The shared component should support receiving background/source context.
+* Cave-specific visual background should not duplicate token assignment logic.
+
+Flow Requirement
+
+* Cave Game retreat with token reward should proceed like this:
+
+```txt id="6n3nve"
+Cave Game retreat
+Token reward exists
+Open shared token assignment component
+Use cave background behind assignment UI
+Player assigns or discards token
+Continue normal Cave reward flow
+```
+
+* After token assignment is complete:
+
+  * process potion reward if present.
+  * route to Loot Chest page if loot chest was found.
+  * otherwise return to the board.
+  * preserve roll-again or next-turn behaviour as already specified.
+
+Scope Restriction
+
+* This bug only changes the background used during Cave-sourced token assignment.
+* Do not change the token assignment rules.
+* Do not change token drag-and-drop behaviour.
+* Do not change token rarity generation.
+* Do not change potion handling.
+* Do not change loot chest routing.
+* Do not change roll-again behaviour.
+
+Expected Behaviour After Fix
+
+* Gaining a token from the Cave Game opens the existing token assignment flow.
+* The assignment screen uses the cave background.
+* The player can still place the token into a spell slot.
+* The player can still place the token into the token bag.
+* The player can still discard the token.
+* After assignment, the Cave reward flow continues correctly.
+* Other token assignment sources are visually unchanged.
+
+Out Of Scope
+
+* No new Cave-only token assignment UI.
+* No changes to normal Spells modal background.
+* No changes to battle reward token assignment background unless it is currently broken.
+* No changes to Cave Game probability logic.
+* No changes to generated token rarity logic.
+* No changes to potion reward handling.
+* No changes to Loot Chest page.
+* No unrelated reward screen redesign.
+
+Suspected Cause
+
+* The shared token assignment component may be defaulting to gameplay or reward page background.
+* The Cave Game source may not be passing background context into the assignment flow.
+* The assignment component may not yet support source-specific backgrounds.
+
+Attempted Fixes
+
+* Bug-008 changed Cave token rewards to use the existing token assignment component.
+* This bug adds the Cave-specific visual background requirement for that flow.
+
+Final Fix
+
+* Not fixed yet.
+
+Testing Required
+
+* Confirm retreating from Cave Game with a token reward opens the token assignment component.
+* Confirm the token assignment screen uses `src/images/miniGames/cave.png` as the background.
+* Confirm the cave background covers the screen.
+* Confirm the cave background does not tile.
+* Confirm the token assignment UI remains readable.
+* Confirm the token can still be assigned to a spell slot.
+* Confirm the token can still be assigned to the token bag.
+* Confirm the token can still be discarded.
+* Confirm completing token assignment continues the Cave reward flow.
+* Confirm potion reward handling still works after token assignment.
+* Confirm loot chest routing still works after token assignment.
+* Confirm roll-again state is preserved after token assignment.
+* Confirm battle token reward assignment does not incorrectly use the cave background.
+* Confirm normal gameplay Spells modal does not incorrectly use the cave background.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
