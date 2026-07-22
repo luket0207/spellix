@@ -2,6 +2,7 @@ import {
   applyColumnMerge,
   applyLightGreenHealthBonus,
   findNextColumnMerge,
+  getAdjacentEffectiveSpellColumnGroups,
   getEffectiveSpellColumnGroups,
   getEffectiveSpellColumnIndex,
   getOverCapacityColumnNumbers,
@@ -152,6 +153,26 @@ describe('non-battle spell effects', () => {
     });
   });
 
+  test.each([
+    [[1, 2], ['3']],
+    [[2, 3], ['1', '4']],
+    [[3, 4], ['2', '5']],
+    [[4, 5], ['3', '6']],
+    [[5, 6], ['4']],
+  ])('resolves neighbours around merged effective column %j', (columns, expectedLabels) => {
+    const spellSlots = createSpellSlots();
+    const groups = getEffectiveSpellColumnGroups(spellSlots, [
+      { activeColumn: columns[0], columns, removedColumn: columns[1] },
+    ]);
+    const mergedGroupIndex = groups.findIndex((group) => group.isMerged);
+
+    expect(
+      getAdjacentEffectiveSpellColumnGroups(groups, mergedGroupIndex).map(
+        ({ label }) => label
+      )
+    ).toEqual(expectedLabels);
+  });
+
   test('calculates committed Grey capacity across effective merged neighbours', () => {
     const spellSlots = createSpellSlots();
     const mergedColumns = [
@@ -179,6 +200,18 @@ describe('non-battle spell effects', () => {
 
     expect(getSpellColumnCapacity(spellSlots, 0, mergedColumns)).toBe(6);
     expect(getSpellColumnCapacity(spellSlots, 3, mergedColumns)).toBe(6);
+  });
+
+  test('stacks Grey from both effective neighbours into a merged group', () => {
+    const spellSlots = createSpellSlots();
+    const mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+    spellSlots[0].tokens = [createToken('grey-1', 'grey')];
+    spellSlots[3].tokens = [createToken('grey-4', 'grey')];
+
+    expect(getSpellColumnCapacity(spellSlots, 1, mergedColumns)).toBe(7);
+    expect(getSpellColumnCapacity(spellSlots, 2, mergedColumns)).toBe(7);
   });
 
   test('selects the losing merge column by total tokens, rare tokens, then random tie-break', () => {
@@ -239,5 +272,24 @@ describe('non-battle spell effects', () => {
     expect(getEffectiveSpellColumnIndex([merge], 2)).toBe(1);
     expect(getEffectiveSpellColumnIndex([merge], 3)).toBe(1);
     expect(getEffectiveSpellColumnIndex([merge], 6)).toBe(5);
+  });
+
+  test.each([
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+  ])('resolves both rolls in merged pair %i+%i to either retained side', (first, second) => {
+    [first, second].forEach((activeColumn) => {
+      const merge = {
+        activeColumn,
+        columns: [first, second],
+        removedColumn: activeColumn === first ? second : first,
+      };
+
+      expect(getEffectiveSpellColumnIndex([merge], first)).toBe(activeColumn - 1);
+      expect(getEffectiveSpellColumnIndex([merge], second)).toBe(activeColumn - 1);
+    });
   });
 });

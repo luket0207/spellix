@@ -527,5 +527,93 @@ Automated Test Limitations
 
 Separate Follow-Up
 
-* Bug-009 separately tracks shared effective adjacency for Purple buffs, committed-display calculations, and battle calculations. Its status remains `not started`.
+* Bug-009 separately tracks shared effective adjacency for Purple buffs, committed-display calculations, and battle calculations. It is now fixed and documented in the regression section below.
 * Run the nine-step browser regression above for real drag/drop geometry, reward/provider interaction, rendered width stability, and console output.
+
+---
+
+Bug-009: Merged columns must be treated as adjacent to neighbouring effective columns
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Create each possible merge in turn: `1+2`, `2+3`, `3+4`, `4+5`, and `5+6`.
+   Expected: Each merged group is adjacent only to the effective group immediately before and after it; the internal joined edge is not treated as adjacency.
+2. Merge columns 2 and 3, then commit one Grey token in column 1 and one in column 4.
+   Expected: Merged `2+3` receives +2 capacity, once per actual Grey token.
+3. Put one committed Grey token in retained merged `2+3`.
+   Expected: Columns 1 and 4 each receive +1 capacity; columns 5 and 6 receive none.
+4. Inspect normal and reward Spell Token Assignment after the Grey scenarios.
+   Expected: The merged item shows and enforces the same effective capacity, with no separate removed-column destination.
+5. Put Purple tokens in merged `2+3`, roll either 2 or 3, and advance the battle turn.
+   Expected: Purple targets columns 1 and 4 for either source roll, once per effective neighbour.
+6. Put Purple tokens in column 4 while `2+3` is merged, then roll 4.
+   Expected: The pending buff targets merged `2+3` once at its active slot and column 5 once; the committed display marks one `2+3` item.
+7. Repeat Purple generation around each edge and middle merged pair.
+   Expected: Buff creation follows the same effective-neighbour ordering as Grey capacity and does not double-count a merged target.
+8. Inspect the browser console throughout the regression.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the bug with 11 intended failures and 35 passing tests: all five merged layouts lacked a shared neighbour resolver, and Purple generation used raw physical neighbours for merged sources and targets.
+* The focused regression passes 3 suites and 59 tests across effective spell helpers, battle calculations, and committed spell display.
+* The complete Feature-004 regression passes 9 suites and 126 tests across spell effects, setup, normal and reward assignment, committed display, merge confirmation, battle, provider integration, and translations.
+* Coverage verifies every possible merged-pair neighbour list, either source number resolving to one effective Purple source, canonical merged Purple targets, Grey stacking from both sides, Grey inside a merged group, one committed-display buff marker, and provider-level pending Purple state.
+* `npm run build` compiles successfully after Create React App/ESLint checks, and `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies effective groups, capacities, battle state, and DOM classes but cannot visually judge real drag geometry, rendered merged spans, or browser console output.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above for real assignment interaction, rendered effective capacities and buff markers, all merge layouts, and console inspection.
+* Bug-010 now fixes applying a stored buff when either original number of its merged target is rolled; see the regression section below.
+
+---
+
+Bug-010: Battle buffs applied to merged columns must trigger from either merged column number
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Merge columns 2 and 3 with a Red token in the retained spell slot.
+   Expected: Rolling either 2 or 3 resolves the same retained Red token once.
+2. Generate a Purple buff on merged `2+3` from an adjacent column and advance until the buff is active.
+   Expected: The committed spell display marks one `2+3` item as buffed.
+3. Roll 2 and resolve the Red damage.
+   Expected: The Purple amount is added once to the merged column's Red damage.
+4. Repeat the setup, roll 3, and resolve the Red damage.
+   Expected: The same Purple amount is added once; the non-canonical roll does not lose the buff.
+5. Repeat for `1+2`, `3+4`, `4+5`, and `5+6`, including merges that retain either original side.
+   Expected: Both numbers in every merged pair resolve the same canonical stored buff once.
+6. Apply Purple to a non-merged Red or Blue column.
+   Expected: Existing non-merged Purple damage and guard behavior remains unchanged.
+7. Inspect the browser console during the battle flow.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* Red-first provider execution reproduced the bug with 1 intended failure and 11 passing tests: roll 2 consumed the canonical `2+3` buff while roll 3 missed it.
+* The focused regression passes 4 suites and 76 tests across effective spell indexing, battle calculations, provider state, and committed display.
+* The complete Feature-004 regression passes 9 suites and 133 tests across spell effects, setup, normal and reward assignment, committed display, merge confirmation, battle, provider integration, and translations.
+* Coverage verifies both `2+3` roll aliases apply one stored Purple buff, every merged pair resolves both numbers to either retained side, non-merged Purple behavior remains intact, and the merged display uses the same canonical buff state.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies battle state, damage, effective indices, and visual classes but cannot inspect rendered browser visuals or console output.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above for real turn progression, every merge pattern, rendered buff state, and console inspection.
+* Bug-011 remains a separate `not started` entry and was not evaluated or updated in this Bug-010 pass.

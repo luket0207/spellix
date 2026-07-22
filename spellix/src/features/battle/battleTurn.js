@@ -1,4 +1,8 @@
-import { getEffectiveSpellColumnIndex } from '../spells/nonBattleSpellEffects';
+import {
+  getAdjacentEffectiveSpellColumnGroups,
+  getEffectiveSpellColumnGroups,
+  getEffectiveSpellColumnIndex,
+} from '../spells/nonBattleSpellEffects';
 
 const RED_DAMAGE_PER_TOKEN = 10;
 const BLUE_GUARD_PER_TOKEN = 5;
@@ -25,21 +29,24 @@ function countTokens(tokens, type) {
   return tokens.filter((token) => token.type === type).length;
 }
 
-export function createAdjacentPurpleBuffs(diceResult, amount) {
+export function createAdjacentPurpleBuffs(diceResult, amount, actor = {}) {
   const buffs = [0, 0, 0, 0, 0, 0];
-  const rolledColumnIndex = diceResult - 1;
 
   if (amount <= 0) {
     return buffs;
   }
 
-  if (rolledColumnIndex > 0) {
-    buffs[rolledColumnIndex - 1] = amount;
-  }
+  const spellSlots = actor.spellSlots ?? buffs.map(() => ({}));
+  const groups = getEffectiveSpellColumnGroups(spellSlots, actor.mergedColumns);
+  const rolledGroupIndex = groups.findIndex(({ columns }) =>
+    columns.includes(diceResult)
+  );
 
-  if (rolledColumnIndex < buffs.length - 1) {
-    buffs[rolledColumnIndex + 1] = amount;
-  }
+  getAdjacentEffectiveSpellColumnGroups(groups, rolledGroupIndex).forEach(
+    ({ slotIndex }) => {
+      buffs[slotIndex] = amount;
+    }
+  );
 
   return buffs;
 }

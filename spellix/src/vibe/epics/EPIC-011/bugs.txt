@@ -1507,7 +1507,7 @@ Bug-009: Merged columns must be treated as adjacent to neighbouring effective co
 
 Status
 
-* not started
+* fixed
 
 Related Feature
 
@@ -1752,10 +1752,15 @@ Attempted Fixes
 
 * Bug-008 required the Spell Token Assignment component to display merged columns as one droppable area.
 * This bug specifically fixes the remaining adjacency logic so merged columns behave as neighbours correctly.
+* Red-first tests reproduced the remaining issue across all five merged pairs: the shared neighbour helper was absent and Purple buffs still used raw numeric neighbours.
+* Added one shared effective-neighbour resolver and reused it for committed Grey capacity and Purple buff generation.
+* Battle Purple generation now receives the acting character's spell layout, resolves the rolled effective group, and stores one buff at each adjacent group's active slot.
+* Existing assignment capacity and committed display paths continue to consume the same effective group/canonical slot data without additional UI or styling changes.
 
 Final Fix
 
-* Not fixed yet.
+* Fixed. Merged columns now use ordered effective-group adjacency for Grey capacity and Purple buff generation, including all edge and middle merge patterns without double-counting.
+* Bug-010 separately tracks applying a stored merged-column battle buff when either original number is rolled; that later-trigger behavior was not changed by this fix.
 
 Testing Required
 
@@ -1774,5 +1779,462 @@ Testing Required
 * Confirm Spell Token Assignment displays the correct effective capacities.
 * Confirm committed spells displays the same effective capacities.
 * Confirm battle calculations that rely on adjacency use the same result.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-010: Battle buffs applied to merged columns must trigger from either merged column number
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+* Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+* Bug-009: Merged columns must be treated as adjacent to neighbouring effective columns
+
+Bug Summary
+
+* Adjacent-column buff behaviour is still not fully working inside battles.
+* Visually, a merged column can appear to receive a buff correctly.
+* However, the buff is not always applied when one of the merged column’s original numbers is rolled.
+* Example:
+
+  * columns 2 and 3 are merged into `2+3`.
+  * column 4 has a buff token.
+  * in battle, column 4 is rolled.
+  * column 4 correctly buffs merged column `2+3` visually.
+  * on the next turn, number 2 is rolled.
+  * the buff is not applied correctly.
+* If a merged column is buffed, the buff must apply when either of its original column numbers is rolled.
+
+Expected Behaviour
+
+* If merged column `2+3` is buffed:
+
+  * rolling 2 should apply the buff.
+  * rolling 3 should apply the buff.
+* The buff belongs to the effective merged column, not only to one raw column number.
+* The battle should resolve the rolled number into its effective column before checking for active buffs.
+
+Example
+
+```txt id="x0o8af"
+Merged column: 2+3
+Buff source: column 4
+Column 4 is rolled and buffs 2+3.
+
+Next battle roll: 2
+Expected: buff applies.
+
+Next battle roll: 3
+Expected: buff applies.
+```
+
+Required Fix
+
+* Store and resolve battle buffs using effective merged-column identity.
+* Do not store a buff only against one raw column number if that number is part of a merged group.
+* When a buff target is a merged column, the target should represent the whole merged group.
+* When a battle roll happens, resolve the rolled number to its effective column group before applying buffs.
+
+Effective Buff Target Requirement
+
+* A buff target should be able to represent:
+
+  * a single column, such as `4`.
+  * a merged group, such as `2+3`.
+* The identity should be stable and unambiguous.
+* Suggested target key examples:
+
+```txt id="5lajjy"
+column-4
+merged-2-3
+```
+
+or:
+
+```js id="klui31"
+{
+  columns: [2, 3],
+  key: "2+3"
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that merged-column buffs are not stored against only `2` or only `3`.
+
+Battle Roll Resolution Requirement
+
+* Before applying column effects, battle logic should resolve the rolled number into the effective spell column.
+
+Suggested helper:
+
+```js id="4kcacg"
+function getEffectiveColumnForRoll(player, rolledNumber) {
+  return player.effectiveColumns.find((effectiveColumn) =>
+    effectiveColumn.columns.includes(rolledNumber)
+  );
+}
+```
+
+* If the rolled number is `2` and columns 2+3 are merged, this should return the merged `2+3` effective column.
+* If the rolled number is `3` and columns 2+3 are merged, this should return the same merged `2+3` effective column.
+* Buff checks should then use this effective column, not the raw rolled number.
+
+Buff Application Requirement
+
+* When checking whether a buff applies:
+
+  * resolve the rolled number to the effective column.
+  * compare the effective column key against active buff targets.
+* If the active buff target is `2+3`, both rolls `2` and `3` should match.
+* Do not require the rolled number to exactly equal a single stored column number.
+
+Suggested direction:
+
+```js id="edke1l"
+const rolledEffectiveColumn = getEffectiveColumnForRoll(player, rolledNumber);
+
+const activeBuff = activeBuffs.find((buff) =>
+  buff.targetKey === rolledEffectiveColumn.key
+);
+```
+
+* Exact implementation can vary.
+* The important requirement is that buffs target and apply to effective columns.
+
+Visual Buff Requirement
+
+* The visual buff indicator should continue to show on the merged column.
+* The visual state and gameplay state must point to the same effective target.
+* Do not allow the UI to show `2+3` as buffed while battle calculations only store the buff against column `2` or column `3`.
+
+Do Not Double Apply
+
+* If a merged column is buffed, the buff should apply once when either number is rolled.
+* Example:
+
+  * `2+3` has one active buff.
+  * roll 2 = apply one buff.
+  * roll 3 = apply one buff.
+* Do not apply the buff twice because the merged column contains two original numbers.
+* Do not apply separate duplicate buffs unless multiple actual buff tokens caused them.
+
+Adjacent Buff Source Requirement
+
+* The source of the buff should still follow effective adjacency rules from Bug-009.
+* Example:
+
+  * `2+3` is adjacent to column 4.
+  * column 4 can buff `2+3`.
+* Once the buff is created, the target should be stored as the merged effective column.
+* The later rolled number should not matter as long as it belongs to that effective column.
+
+Expected Behaviour After Fix
+
+* Column 4 can buff merged `2+3`.
+* Merged `2+3` visually shows the buff.
+* Rolling 2 applies the buff.
+* Rolling 3 applies the buff.
+* The buff is applied once per valid trigger.
+* The buff is not lost because only one raw column number was rolled.
+* The same logic works for all merged pairs:
+
+  * `1+2`
+  * `2+3`
+  * `3+4`
+  * `4+5`
+  * `5+6`
+
+Out Of Scope
+
+* No changes to buff strength.
+* No changes to how Purple tokens generate buffs.
+* No changes to Grey token capacity behaviour.
+* No changes to merge confirmation.
+* No changes to White token consumption.
+* No changes to battle dice rolling.
+* No unrelated battle modal redesign.
+
+Suspected Cause
+
+* The visual buff logic is likely using effective merged columns correctly.
+* The battle damage/effect calculation is likely still checking raw column numbers.
+* The buff may be stored against one original column number rather than the merged effective-column key.
+* This causes one of the two merged numbers to fail when rolled later.
+
+Attempted Fixes
+
+* Bug-009 fixed adjacency recognition for merged columns.
+* This bug fixes the remaining battle-specific buff resolution after the merged column has already been buffed.
+* Red-first provider testing confirmed the canonical roll for merged `2+3` received the stored Purple buff while the other original roll resolved the merged spell tokens but missed that buff.
+* Reused the existing effective spell-column index already used by merged spell tokens, charge, and Freeze instead of introducing a second buff-target model.
+* Purple consumption now reads the active buff from the resolved effective column index rather than the raw dice-result index.
+
+Final Fix
+
+* Fixed. Either original roll in a merged pair now reads the same canonical Purple buff once while non-merged columns keep their existing behavior.
+* All five merged pairs and either possible retained side resolve both original rolls to one effective index in automated coverage.
+
+Testing Required
+
+* Merge columns 2 and 3.
+* Add a buff token to column 4.
+* Roll 4 and confirm merged `2+3` is visually buffed.
+* Roll 2 and confirm the buff is applied.
+* Roll 3 and confirm the buff is applied.
+* Confirm the buff does not apply twice from a single roll.
+* Confirm the buff is not lost when rolling only one side of the merged column.
+* Confirm the same behaviour works for merged `1+2`.
+* Confirm the same behaviour works for merged `3+4`.
+* Confirm the same behaviour works for merged `4+5`.
+* Confirm the same behaviour works for merged `5+6`.
+* Confirm a buff from a merged column applies to its effective neighbours correctly.
+* Confirm visual buff state and battle calculation state match.
+* Confirm non-merged columns still receive and apply buffs normally.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-011: Buffed merged columns must apply buffs to both original roll numbers regardless of buff direction
+
+Status
+
+* not started
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+* Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+* Bug-009: Merged columns must be treated as adjacent to neighbouring effective columns
+* Bug-010: Battle buffs applied to merged columns must trigger from either merged column number
+
+Bug Summary
+
+* The fix for Bug-010 appears to have moved the issue from one side of the merged column to the other.
+* Previously, when columns `2+3` were merged and column 4 buffed the merged column:
+
+  * rolling 3 applied the buff.
+  * rolling 2 did not apply the buff.
+* Now the opposite can happen:
+
+  * rolling 2 applies the buff.
+  * rolling 3 does not apply the buff.
+* This means the battle buff logic is still tied to one original column number instead of the whole merged effective column.
+
+Expected Behaviour
+
+* If a merged column receives a buff, both original numbers inside that merged column should trigger the buff.
+* It should not matter which direction the buff came from.
+* It should not matter whether the buff came from the left neighbour or the right neighbour.
+
+Example 1
+
+```txt id="4b4sfa"
+Columns 2 and 3 are merged into 2+3.
+Column 4 buffs 2+3.
+
+Next turn:
+Roll 2 = buff applies.
+Roll 3 = buff applies.
+```
+
+Example 2
+
+```txt id="sfq95u"
+Columns 2 and 3 are merged into 2+3.
+Column 1 buffs 2+3.
+
+Next turn:
+Roll 2 = buff applies.
+Roll 3 = buff applies.
+```
+
+Core Requirement
+
+* A buffed merged column must be treated as one effective buff target.
+* Every original column number inside that merged target must resolve to the same buffed effective column.
+* If `2+3` is buffed:
+
+  * roll 2 should resolve to `2+3`.
+  * roll 3 should resolve to `2+3`.
+  * both should find the same active buff.
+* The buff source direction must not affect which number inside the merged column can use the buff.
+
+Required Fix
+
+* Normalise both buff creation and buff consumption through the same effective-column identity.
+* Do not store the buff against:
+
+  * only the left original column.
+  * only the right original column.
+  * the raw dice roll number.
+  * the side from which the buff was applied.
+* Store the buff against the canonical effective merged-column key.
+
+Suggested canonical key examples:
+
+```txt id="ipyikc"
+merged-2-3
+```
+
+or:
+
+```txt id="egzkka"
+2+3
+```
+
+* The exact key format can vary.
+* The important requirement is that both raw numbers in the merge produce the same key.
+
+Shared Resolution Requirement
+
+* Use the same helper when:
+
+  * creating the buff target.
+  * rendering the visual buff indicator.
+  * checking whether a roll receives the buff.
+  * clearing or consuming the buff.
+
+Suggested helper:
+
+```js id="vw88bf"
+function getEffectiveColumnKeyForNumber(player, columnNumber) {
+  const merge = player.mergedColumns.find((mergedColumn) =>
+    mergedColumn.columns.includes(columnNumber)
+  );
+
+  if (merge) {
+    return merge.columns.join("+");
+  }
+
+  return String(columnNumber);
+}
+```
+
+* Example output:
+
+  * column 2 in merged `2+3` returns `"2+3"`.
+  * column 3 in merged `2+3` returns `"2+3"`.
+  * column 4 returns `"4"`.
+
+Buff Creation Requirement
+
+* When an adjacent buff targets a merged column, store the target as the merged effective-column key.
+* Example:
+
+  * column 4 buffs merged `2+3`.
+  * active buff target should be stored as `2+3`, not `2` or `3`.
+* Example:
+
+  * column 1 buffs merged `2+3`.
+  * active buff target should still be stored as `2+3`, not `2` or `3`.
+
+Buff Consumption Requirement
+
+* When a dice roll happens:
+
+  * resolve the rolled number into its effective-column key.
+  * check active buffs against that key.
+* Example:
+
+  * active buff target is `2+3`.
+  * roll 2 resolves to `2+3`.
+  * roll 3 resolves to `2+3`.
+  * both rolls match the same buff.
+
+Visual Buff Requirement
+
+* The visual buff indicator should use the same effective-column key.
+* If the UI shows merged `2+3` as buffed, then battle calculations must also treat `2+3` as buffed.
+* Avoid having separate visual and gameplay buff targets.
+* Do not allow the UI to show the full merged column as buffed while only one raw number actually receives the buff.
+
+Direction Independence Requirement
+
+* Buff direction must not change the result.
+* If a merged column is buffed from the left, both numbers inside it should receive the buff.
+* If a merged column is buffed from the right, both numbers inside it should receive the buff.
+* The source column should only determine which effective target receives the buff.
+* After the target is chosen, the buff belongs to the whole effective target.
+
+Do Not Double Apply
+
+* A merged column should receive the buff once per valid buff effect.
+* If `2+3` has one active buff:
+
+  * rolling 2 applies the buff once.
+  * rolling 3 applies the buff once.
+* Do not apply the buff twice because the merged column contains two original numbers.
+* Do not create duplicate active buffs unless multiple actual buff tokens caused them.
+
+Expected Behaviour After Fix
+
+* If column 4 buffs merged `2+3`, rolling 2 applies the buff.
+* If column 4 buffs merged `2+3`, rolling 3 applies the buff.
+* If column 1 buffs merged `2+3`, rolling 2 applies the buff.
+* If column 1 buffs merged `2+3`, rolling 3 applies the buff.
+* The same behaviour works for every merged pair:
+
+  * `1+2`
+  * `2+3`
+  * `3+4`
+  * `4+5`
+  * `5+6`
+* Visual buff indicators and battle calculations agree.
+* Non-merged columns still receive and apply buffs normally.
+
+Out Of Scope
+
+* No changes to buff strength.
+* No changes to how buff tokens choose adjacent targets.
+* No changes to Grey token capacity behaviour.
+* No changes to White token merge rules.
+* No changes to merge confirmation.
+* No changes to battle dice rolling.
+* No unrelated battle UI redesign.
+
+Suspected Cause
+
+* Buff targets are likely being stored or checked using one raw original column number.
+* The implementation may now be favouring the first number in the merged pair instead of the second.
+* The correct fix is not to swap which raw number is used.
+* The correct fix is to stop using a single raw number as the target for merged columns.
+
+Attempted Fixes
+
+* Bug-010 attempted to make buffs applied to merged columns trigger from either merged number.
+* The current behaviour suggests the implementation still has asymmetric merged-column resolution.
+* This bug clarifies that the solution must be direction-independent and key-based at the effective-column level.
+
+Final Fix
+
+* Not fixed yet.
+
+Testing Required
+
+* Merge columns 2 and 3.
+* Put a buff token in column 4.
+* Roll 4 and confirm merged `2+3` is visually buffed.
+* Roll 2 next and confirm the buff applies.
+* Repeat with roll 3 next and confirm the buff applies.
+* Put a buff token in column 1.
+* Roll 1 and confirm merged `2+3` is visually buffed.
+* Roll 2 next and confirm the buff applies.
+* Repeat with roll 3 next and confirm the buff applies.
+* Confirm the buff source direction does not matter.
+* Confirm visual buff state and battle calculation state use the same effective-column key.
+* Confirm the buff applies only once when rolling one number inside a merged column.
+* Confirm the same behaviour works for merged `1+2`.
+* Confirm the same behaviour works for merged `3+4`.
+* Confirm the same behaviour works for merged `4+5`.
+* Confirm the same behaviour works for merged `5+6`.
+* Confirm non-merged buff behaviour still works.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.

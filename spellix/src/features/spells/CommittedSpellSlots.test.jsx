@@ -154,6 +154,27 @@ describe('CommittedSpellSlots', () => {
     expect(container.querySelector('.committed-spell-slot-column--purple-buffed')).toBeNull();
   });
 
+  test('marks a Purple-buffed merged column once from its active slot', () => {
+    const spellSlots = createSpellSlots();
+    const mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+    const { container } = render(
+      <CommittedSpellSlotList
+        mergedColumns={mergedColumns}
+        purpleBuffs={[0, 5, 0, 0, 0, 0]}
+        spellSlots={spellSlots}
+      />
+    );
+
+    const markedColumns = container.querySelectorAll(
+      '.committed-spell-slot-column--purple-buffed'
+    );
+
+    expect(markedColumns).toHaveLength(1);
+    expect(markedColumns[0]).toHaveTextContent('2+3');
+  });
+
   test('optionally marks all Yellow-charged columns and supports a Purple overlap', () => {
     const spellSlots = createSpellSlots();
     const { container, rerender } = render(

@@ -231,6 +231,34 @@ test.each(['light-green', 'black', 'white', 'grey'])(
   }
 );
 
+test.each([
+  [[1, 2], [0, 0, 5, 0, 0, 0]],
+  [[2, 3], [5, 0, 0, 5, 0, 0]],
+  [[3, 4], [0, 5, 0, 0, 5, 0]],
+  [[4, 5], [0, 0, 5, 0, 0, 5]],
+  [[5, 6], [0, 0, 0, 5, 0, 0]],
+])(
+  'creates Purple buffs from either number in merged effective column %j',
+  (columns, expectedBuffs) => {
+    const currentActor = createActor();
+    currentActor.mergedColumns = [
+      { activeColumn: columns[0], columns, removedColumn: columns[1] },
+    ];
+
+    expect(createAdjacentPurpleBuffs(columns[0], 5, currentActor)).toEqual(expectedBuffs);
+    expect(createAdjacentPurpleBuffs(columns[1], 5, currentActor)).toEqual(expectedBuffs);
+  }
+);
+
+test('targets a neighbouring merged effective column once at its active slot', () => {
+  const currentActor = createActor();
+  currentActor.mergedColumns = [
+    { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+  ];
+
+  expect(createAdjacentPurpleBuffs(4, 5, currentActor)).toEqual([0, 5, 0, 0, 5, 0]);
+});
+
 test('applies Light Blue freeze only when the rolled column has a remaining use', () => {
   const currentActor = createActor({
     spellSlots: createSpellSlots(

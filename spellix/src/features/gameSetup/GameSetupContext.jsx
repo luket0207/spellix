@@ -1027,7 +1027,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         diceResult,
         freezeAvailable: (freezeUses[effectiveActorColumnIndex] ?? 0) > 0,
         opponent: isPlayerActor ? enemyBattleState : playerBattleState,
-        purpleBuff: purpleBuffs[diceResult - 1] ?? 0,
+        purpleBuff: purpleBuffs[effectiveActorColumnIndex] ?? 0,
         yellowCharged: Boolean(activeBattle[chargedKey]),
       });
       const nextPlayerState = isPlayerActor ? result.nextCurrentActor : result.nextOpponent;
@@ -1058,7 +1058,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           pendingEffects: result.effects,
           playerGuard: nextPlayerState.guard,
           [nextChargedKey]: result.chargeApplied,
-          [nextPurpleBuffsKey]: createAdjacentPurpleBuffs(diceResult, result.purpleBuffGranted),
+          [nextPurpleBuffsKey]: createAdjacentPurpleBuffs(
+            diceResult,
+            result.purpleBuffGranted,
+            currentActor
+          ),
         },
       };
     });

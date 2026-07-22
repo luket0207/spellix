@@ -95,6 +95,14 @@ export function getEffectiveSpellColumnGroups(spellSlots = [], mergedColumns = [
   });
 }
 
+export function getAdjacentEffectiveSpellColumnGroups(groups = [], groupIndex) {
+  if (!groups[groupIndex]) {
+    return [];
+  }
+
+  return [groups[groupIndex - 1], groups[groupIndex + 1]].filter(Boolean);
+}
+
 function getEffectiveGroupCapacity(groups, groupIndex) {
   const group = groups[groupIndex];
 
@@ -102,16 +110,16 @@ function getEffectiveGroupCapacity(groups, groupIndex) {
     return 0;
   }
 
-  const greyFromLeft = countCommittedTokensByType(
-    groups[groupIndex - 1]?.slot?.tokens,
-    'grey'
-  );
-  const greyFromRight = countCommittedTokensByType(
-    groups[groupIndex + 1]?.slot?.tokens,
-    'grey'
+  const adjacentGreyCount = getAdjacentEffectiveSpellColumnGroups(
+    groups,
+    groupIndex
+  ).reduce(
+    (total, adjacentGroup) =>
+      total + countCommittedTokensByType(adjacentGroup.slot?.tokens, 'grey'),
+    0
   );
 
-  return (group.slot.maxTokens ?? 5) + greyFromLeft + greyFromRight;
+  return (group.slot.maxTokens ?? 5) + adjacentGreyCount;
 }
 
 export function getEffectiveSpellColumnCapacities(

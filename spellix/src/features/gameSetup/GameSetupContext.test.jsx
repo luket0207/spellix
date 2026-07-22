@@ -198,6 +198,9 @@ function PurpleResolutionProbe() {
       <button type="button" onClick={() => applyBattleDiceResult(2)}>
         Apply slot 2
       </button>
+      <button type="button" onClick={() => applyBattleDiceResult(3)}>
+        Apply slot 3
+      </button>
       <button type="button" onClick={advanceBattleTurn}>
         Advance battle
       </button>
@@ -399,7 +402,7 @@ test('consumes one Light Blue use per successful freeze without mutating spell t
   expect(screen.getByText(/light blue spell tokens: 2/i)).toBeInTheDocument();
 });
 
-test('stores stacked Purple on adjacent columns until the caster next resolves a turn', () => {
+test('stores stacked Purple on effective adjacent columns until the caster next resolves a turn', () => {
   const initialGameSetup = createFreezeSetup({
     activeBattle: {
       currentBattleActor: 'player',
@@ -436,6 +439,9 @@ test('stores stacked Purple on adjacent columns until the caster next resolves a
             : [],
     })
   );
+  initialGameSetup.players[0].mergedColumns = [
+    { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+  ];
 
   render(
     <GameSetupProvider initialGameSetup={initialGameSetup}>
@@ -448,18 +454,74 @@ test('stores stacked Purple on adjacent columns until the caster next resolves a
   expect(screen.getByText(/enemy health: 120/i)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /advance battle/i }));
-  expect(screen.getByText(/player purple buffs: 10,0,10,0,0,0/i)).toBeInTheDocument();
+  expect(screen.getByText(/player purple buffs: 10,0,0,10,0,0/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /advance battle/i }));
   fireEvent.click(screen.getByRole('button', { name: /apply slot 1/i }));
 
   expect(screen.getByText(/enemy health: 120/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /apply red effect/i }));
   expect(screen.getByText(/enemy health: 100/i)).toBeInTheDocument();
-  expect(screen.getByText(/player purple buffs: 10,0,10,0,0,0/i)).toBeInTheDocument();
+  expect(screen.getByText(/player purple buffs: 10,0,0,10,0,0/i)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /advance battle/i }));
   expect(screen.getByText(/player purple buffs: 0,0,0,0,0,0/i)).toBeInTheDocument();
 });
+
+test.each([
+  [2, 115],
+  [3, 105],
+])(
+  'applies one Purple buff when merged column 2+3 is rolled as %i',
+  (diceResult, expectedEnemyHealth) => {
+    const initialGameSetup = createFreezeSetup({
+      activeBattle: {
+        currentBattleActor: 'player',
+        enemyCurrentHealth: 120,
+        enemyFreezeUses: [0, 0, 0, 0, 0, 0],
+        enemyFrozen: false,
+        enemyGuard: 0,
+        enemyId: 'hellcrown-reaper',
+        enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
+        isResolvingTurn: false,
+        level: 4,
+        outcome: null,
+        pendingEffects: [],
+        phase: 'active',
+        playerFreezeUses: [0, 0, 0, 0, 0, 0],
+        playerFrozen: false,
+        playerGuard: 0,
+        playerId: 'player-1',
+        playerPurpleBuffs: [0, 5, 0, 0, 0, 0],
+      },
+    });
+
+    initialGameSetup.players[0].spellSlots = initialGameSetup.players[0].spellSlots.map(
+      (slot, index) => ({
+        ...slot,
+        tokens:
+          index === 1
+            ? [{ committed: true, id: 'red-merged', type: 'red' }]
+            : [],
+      })
+    );
+    initialGameSetup.players[0].mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <PurpleResolutionProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: `Apply slot ${diceResult}` }));
+    fireEvent.click(screen.getByRole('button', { name: /apply red effect/i }));
+
+    expect(
+      screen.getByText(`Enemy health: ${expectedEnemyHealth}`)
+    ).toBeInTheDocument();
+  }
+);
 
 test('expires a pending Purple buff when a frozen caster loses its next turn', () => {
   const initialGameSetup = createFreezeSetup({
