@@ -4863,3 +4863,445 @@ Testing Checkpoints
 * Confirm next-turn modal appears after player-to-player turn changes.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+
+Status
+
+* done
+
+Implementation Notes
+
+* Reused `MagicalNightSky` and the gameplay night-sky gradient for every selected token reward, while leaving reward-choice and potion backgrounds unchanged.
+* Reused the existing wooden `modal-panel--default` styling without rendering `Modal` or its dark overlay, and applied the active player's existing language font class to the assignment panel.
+* Reworked reward mode in the shared `SpellTokenAssignment` so the reward token starts in a glowing fixed-size box directly below the title, the box remains visible and disabled after placement, and translated placement instructions/status remain stable.
+* Consolidated spell-slot, token-bag, full-bag replacement, and discard confirmation into one always-visible global `Button` that stays disabled until a valid placement is staged.
+* Added translated `Trash` / `ゴミ箱` copy and aligned its heading/drop zone with Token Bag while preserving the existing shared drag/drop and reward mutation logic.
+* Added no routes, dependencies, reward rules, capacity changes, assignment abstractions, or `ul`/`li` markup.
+
+Related Feature
+
+* EPIC-007 Bug-001: Reward token assignment should use shared Spells modal-style drag-and-drop component
+* EPIC-010 Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* EPIC-010 Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* EPIC-010 Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+* EPIC-010 Bug-009: Cave token assignment should use cave background
+
+Important Override
+
+* This feature supersedes Bug-009.
+* The Spell Token Assignment component should no longer use the cave background for Cave Game token rewards.
+* Instead, all instances of the Spell Token Assignment component should use the animated night sky and stars background from the Gameplay page.
+* This applies to:
+
+  * Cave Game token rewards.
+  * Battle reward token assignment.
+  * any other reward-token assignment flow that uses this component.
+
+Goal
+
+* Make the Spell Token Assignment component look more generic.
+* Make it easier to reuse in different reward situations.
+* Move the assignment content into a modal-style panel.
+* Use the animated gameplay night sky background behind it.
+* Improve the new reward token area so the player clearly understands what must be moved.
+* Keep the layout stable when the reward token is moved.
+* Improve the confirm button, trash section, and visual hierarchy.
+
+Scope
+
+* Update all instances of the Spell Token Assignment component.
+* Use the animated night sky gameplay background.
+* Put the component content inside a modal-style container.
+* Do not show a dark overlay over the background.
+* Apply normal modal text rules.
+* Redesign the new reward token area.
+* Add new English/Japanese instruction text.
+* Keep the new reward token box visible after the token is moved.
+* Disable the confirm button until the token has been placed correctly.
+* Improve the trash icon and trash section title.
+* Preserve all existing assignment functionality.
+
+Background Requirement
+
+* The page background behind the assignment modal should be the animated night sky and stars background used by the Gameplay page.
+* This should include:
+
+  * the night sky.
+  * stars.
+  * magical background effects, if already part of the shared gameplay background.
+* Reuse the existing background component where possible.
+* Do not duplicate the background animation logic if it can be shared.
+* Do not use:
+
+  * cave background.
+  * battle background.
+  * reward page background.
+  * blank/default background.
+
+Modal Container Requirement
+
+* The Spell Token Assignment content should sit inside a modal-style container.
+* The modal should use the wooden modal background image already used for normal modals.
+* There should be no dark overlay behind the modal.
+* The night sky background should remain visible around the modal.
+* The modal content should follow normal modal text rules:
+
+  * yellow text.
+  * bold text.
+  * correct English/Japanese font.
+  * buttons at the bottom or clearly centred where relevant.
+* Use existing modal styling patterns where practical.
+* Do not make this a blocking overlay with a dimmed backdrop.
+
+Text Styling Requirement
+
+* All normal text inside the assignment modal should use:
+
+```txt id="wrkza8"
+#F5FA00
+```
+
+* Text should be bold.
+* English text should use:
+
+```txt id="x4x6g9"
+Unkempt
+```
+
+* Japanese text should use:
+
+```txt id="lcwtv7"
+Noto Serif Japanese
+```
+
+* If the CSS uses `Noto Serif JP`, use the existing project font-family naming.
+* Use the current player’s selected language.
+* If language is missing or invalid, fall back to English.
+
+Title Requirement
+
+* Keep or use the existing title:
+
+```txt id="wqhexg"
+Assign Reward
+```
+
+* Japanese should use the existing translation:
+
+```txt id="qu9b2b"
+報酬を割り当てる
+```
+
+* The title should appear at the top of the modal.
+* The new reward token box should appear underneath this title.
+
+New Reward Token Area Requirement
+
+* Remove the visible text:
+
+```txt id="fhwr9q"
+New Reward Token
+```
+
+* The new reward token should be shown in its own container/box under the `Assign Reward` title.
+* The box should visually communicate that the player must move the token.
+* While the token is still inside the box, the box should have a glowing animation.
+* The glowing animation should stop once the token has been moved out.
+
+Instruction Text Requirement
+
+* Under the new reward token container, add this sentence:
+
+```txt id="cp766j"
+Place the token into your spells, token bag or discard it to continue
+```
+
+* Japanese:
+
+```txt id="l86pgv"
+続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。
+```
+
+* This sentence replaces the old `New Reward Token` label.
+* The sentence should use the correct language and font.
+* It should remain visible while the player is assigning the reward token.
+* It should help the player understand that the token must be placed before they can continue.
+
+New Reward Token Box Active State
+
+* While the new reward token has not been moved:
+
+  * show the reward token inside the new reward token box.
+  * apply a glowing animation to the box.
+  * keep the box fully visible.
+  * keep the confirm button disabled.
+* The token should be draggable from this box into:
+
+  * spell slots.
+  * token bag.
+  * trash/discard area.
+
+New Reward Token Box Disabled State
+
+* When the token is taken out of the new reward token box:
+
+  * keep the box visible.
+  * disable the box.
+  * make the box slightly transparent.
+  * stop the glow animation.
+  * do not collapse or remove the box.
+* The page layout should not jump when the token is moved.
+* The box should keep a stable height and width.
+* The text showing where the token has moved should still be present.
+* The player should be able to clearly see that the reward token has already been moved.
+
+Suggested CSS Direction
+
+```css id="o801hr"
+.new-reward-token-box {
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-reward-token-box.needs-placement {
+  animation: rewardTokenGlow 1.5s ease-in-out infinite;
+}
+
+.new-reward-token-box.is-empty {
+  opacity: 0.45;
+  pointer-events: none;
+}
+```
+
+* Exact class names can vary.
+* The important requirements are:
+
+  * glow while token is inside.
+  * disabled and slightly transparent after token is moved.
+  * stable layout height.
+
+Moved Token Status Requirement
+
+* Keep the existing status text that shows where the token has moved.
+* This should still appear after the token is placed.
+* Examples:
+
+  * placed in token bag.
+  * placed in spell slot.
+  * placed in discard/trash.
+* Use existing English/Japanese translations for those status messages.
+* Ensure this text uses modal text colour and correct language font.
+
+Confirm Button Requirement
+
+* The Confirm button should always be visible.
+* It should be disabled until the token has been placed in an appropriate place.
+* It should become enabled once the reward token is placed into:
+
+  * a valid spell slot.
+  * the token bag.
+  * trash/discard.
+* The Confirm button should have:
+
+```css id="j4t9sc"
+margin-top: 30px;
+```
+
+* The Confirm button should use the global Button component.
+* The Confirm button should use existing English/Japanese text:
+
+  * `Confirm`
+  * `確定`
+
+Confirm Button Behaviour
+
+* Clicking Confirm before the token has been placed should not be possible.
+* Once enabled, clicking Confirm should commit the selected placement.
+* Existing reward assignment logic should remain unchanged.
+* Confirm should not become enabled if the token is still in the new reward token box.
+
+Trash Section Requirement
+
+* The trash/discard section should have a title above it.
+* The title should be:
+
+```txt id="p6svyh"
+Trash
+```
+
+* Japanese:
+
+```txt id="g74233"
+ゴミ箱
+```
+
+* This title should match the style and size of the Token Bag title.
+* Remove the current mismatched `Discard` label if it appears in a different size.
+* The trash section should visually align with the Token Bag section.
+
+Trash Icon Requirement
+
+* The trash icon should be centred inside its container.
+* It should be slightly larger than it is now.
+* It should use the same yellow colour as the text:
+
+```txt id="r8th5g"
+#F5FA00
+```
+
+* It should remain clearly visible against the modal background.
+* It should still act as the drop target for discarding the token.
+
+Suggested Trash CSS Direction
+
+```css id="o4menv"
+.trash-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trash-drop-zone svg {
+  color: #F5FA00;
+  font-size: 2rem;
+}
+```
+
+* Exact class names can vary.
+* Preserve existing drag/drop behaviour.
+
+Generic Component Requirement
+
+* The component should not visually depend on where the token reward came from.
+* It should work the same for:
+
+  * battle rewards.
+  * Cave Game rewards.
+  * future mini game rewards.
+  * future reward sources.
+* Source-specific reward logic can still be passed in through props or route state.
+* Visual layout should remain generic.
+
+Cave Game Requirement
+
+* Cave Game token rewards should continue to use this shared component.
+* Because of this feature, Cave Game token assignment should now use the generic night sky background.
+* Do not use the cave background for this assignment flow.
+
+Battle Reward Requirement
+
+* Battle token rewards should also use this redesigned assignment component.
+* The assignment screen should use the same generic night sky background.
+* Do not preserve battle-specific background styling for this component unless a later feature explicitly asks for that.
+
+No `ul` / `li` Requirement
+
+* Preserve the global UI rule from Bug-007.
+* Do not use `ul` or `li` elements in this component.
+* Use `div` elements with CSS grid or flex layouts.
+* This applies to:
+
+  * spell slot displays.
+  * token bag contents.
+  * trash section.
+  * reward token box.
+  * any placement/status lists.
+
+Expected Behaviour
+
+* All Spell Token Assignment instances use the animated night sky gameplay background.
+* Assignment content appears inside a wooden modal-style container.
+* There is no dark overlay over the background.
+* Text inside the modal is yellow, bold, and uses the correct language font.
+* `Assign Reward` appears as the title.
+* The reward token appears in its own box under the title.
+* `New Reward Token` text is removed.
+* The new instruction sentence appears under the reward token box.
+* The reward token box glows while the token is still inside it.
+* When the token is moved, the box remains visible, disabled, and slightly transparent.
+* The page layout does not jump when the token is moved.
+* The placement status text still shows where the token has moved.
+* Confirm is always visible.
+* Confirm is disabled until the token is placed correctly.
+* Confirm has 30px margin-top.
+* Trash icon is centred.
+* Trash icon is slightly larger.
+* Trash icon is yellow.
+* Trash section title says `Trash` / `ゴミ箱`.
+* Trash title matches the Token Bag title styling.
+* Existing drag/drop assignment behaviour still works.
+
+Out Of Scope
+
+* No changes to token reward generation.
+* No changes to token rarity.
+* No changes to Cave Game probability logic.
+* No changes to potion reward handling.
+* No changes to loot chest reward generation.
+* No changes to battle reward probabilities.
+* No changes to spell slot capacity rules.
+* No changes to token bag capacity rules.
+* No changes to committed token rules.
+* No unrelated modal redesign.
+* No dice roll modal changes.
+
+Assumptions
+
+* The Spell Token Assignment component is already shared between battle rewards and Cave Game token rewards.
+* The animated night sky background can be reused outside the Gameplay page.
+* Existing modal background and modal text styles are available.
+* Existing translations for Assign Reward and Confirm are available.
+* Existing placement status translations are available.
+
+Stop Point
+
+* Stop once the Spell Token Assignment component has a generic night-sky-backed modal design, a redesigned glowing reward token box, stable disabled empty state, always-visible disabled/enabled Confirm button, and improved Trash section, with all text translated and correct fonts applied.
+
+Testing Checkpoints
+
+* Confirm Cave Game token assignment uses the animated night sky background.
+* Confirm battle reward token assignment uses the animated night sky background.
+* Confirm no dark overlay appears behind the assignment modal.
+* Confirm assignment content is inside a wooden modal-style container.
+* Confirm modal text is yellow.
+* Confirm modal text is bold.
+* Confirm English text uses Unkempt.
+* Confirm Japanese text uses Noto Serif Japanese.
+* Confirm title displays `Assign Reward` in English.
+* Confirm title displays `報酬を割り当てる` in Japanese.
+* Confirm `New Reward Token` text no longer appears.
+* Confirm reward token appears in its own box under the title.
+* Confirm the reward token box glows before the token is moved.
+* Confirm the instruction text appears in English.
+* Confirm the instruction text appears in Japanese.
+* Confirm the reward token can be dragged from the box.
+* Confirm the reward token box remains visible after token is moved.
+* Confirm the reward token box becomes disabled after token is moved.
+* Confirm the reward token box becomes slightly transparent after token is moved.
+* Confirm the page layout does not jump after token is moved.
+* Confirm placement status text remains visible after token is moved.
+* Confirm Confirm button is visible before token placement.
+* Confirm Confirm button is disabled before token placement.
+* Confirm Confirm button becomes enabled after valid token placement.
+* Confirm Confirm button has 30px margin-top.
+* Confirm Confirm commits token placement correctly.
+* Confirm Trash title appears in English.
+* Confirm Trash title appears in Japanese.
+* Confirm Trash title styling matches Token Bag title styling.
+* Confirm old mismatched Discard label is removed.
+* Confirm trash icon is centred.
+* Confirm trash icon is slightly larger.
+* Confirm trash icon is `#F5FA00`.
+* Confirm token can still be discarded through the trash area.
+* Confirm token can still be placed into token bag.
+* Confirm token can still be placed into valid spell slot.
+* Confirm no `ul` or `li` elements are used in this component.
+* Confirm Cave Game reward flow continues correctly after assignment.
+* Confirm battle reward flow continues correctly after assignment.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

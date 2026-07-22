@@ -1052,3 +1052,131 @@ Automated Tests Still Needed
 Manual Testing Still Needed
 
 * Run the five-step browser regression above for real image cover/crop, assignment readability, drag/drop interaction, responsive behavior, and console inspection.
+
+---
+
+Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open an unresolved battle token reward and an unresolved Cave token reward.
+   Expected: Both show the animated gameplay night sky around the same wooden assignment panel; no battle image, Cave image, blank background, or dark modal overlay appears.
+2. Repeat with English and Japanese players.
+   Expected: The title, instruction, placement status, Token Bag, Trash, and Confirm text use the selected language and the existing Unkempt or Noto Serif JP font class.
+3. Inspect the reward token before moving it.
+   Expected: It appears in a glowing fixed-size box below `Assign Reward`; the old visible `New Reward Token` label is absent and Confirm is visible but disabled.
+4. Drag the reward token separately to a valid spell slot, a non-full token bag, and Trash.
+   Expected: The source box remains in place, becomes slightly transparent and disabled, its glow stops, the translated destination status appears, and Confirm becomes enabled without a layout jump.
+5. Use a full token bag, drop the reward on the bag, and select an existing bag token.
+   Expected: Confirm stays disabled until a replacement is selected, then enables and commits the existing replacement flow without changing capacity rules.
+6. Confirm each spell-slot, bag, replacement, and discard placement.
+   Expected: Existing reward mutations and completion/Continue behavior remain unchanged for battle and Cave sources.
+7. Open the normal Gameplay Spells modal.
+   Expected: It retains normal-mode controls and does not show the reward box, instruction, Trash section, or reward Confirm behavior.
+8. Inspect desktop/mobile layouts, keyboard/pointer drag behavior, reduced-motion behavior, and the console.
+   Expected: The panel remains usable, the background does not block input, reduced motion stops the new glow, no `ul`/`li` appears in assignment markup, and no console errors occur.
+
+Automated Tests Completed
+
+* A red-first focused run failed on the old Cave/battle backgrounds, visible reward label, absent stable box/instruction/Trash title, conditional Confirm controls, and missing translations before implementation.
+* `src/features/spells/SpellTokenAssignment.test.jsx`, `src/pages/RewardPage.test.jsx`, and `src/i18n/translations.test.js` pass 3 suites and 44 tests covering both reward sources, no overlay, wooden panel reuse, stable box states, bilingual copy, all placement paths, replacement flow, Confirm state, normal-mode isolation, and fallback language.
+* The surrounding Cave, reward-state, reward-drop, Spells, translation, and night-sky run passes 10 suites and 92 tests, including `AppMiniGames`, Cave routing/grants, reward state, animation cleanup, and existing assignment mutations.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The broader run has two unrelated existing failures in `SpellsModal.test.jsx`: its English and Japanese starting-warning expectations use shorter copy than the unchanged translations currently render.
+* The project has no `npm run lint` script, so that preferred command was unavailable; the successful production build completed Create React App's compile checks.
+* JSDOM cannot prove real pointer geometry, animation appearance, modal background cropping, or responsive readability.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above for real drag/drop geometry, animation/glow appearance, responsive panel fit, Japanese rendering, reduced motion, and console inspection.
+
+---
+
+Bug-010: Cave token assignment should advance turn unless Roll Again Potion was also gained, and assignment result modal button styling is wrong
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Retreat from Cave with a token but no Roll Again Potion, assign or discard it, and press the assignment result Continue button.
+   Expected: Gameplay opens immediately, the active player advances, and the locked next-turn modal appears without another Cave summary Continue step.
+2. Repeat with a token and Roll Again Potion but no Loot Chest.
+   Expected: Gameplay opens immediately with the same player active and the localized Roll Again Potion modal; its main paragraph uses `larger-text`.
+3. Repeat with a token and Loot Chest but no Roll Again Potion.
+   Expected: Continue opens Loot Chest directly; completing Loot Chest returns to Gameplay, advances the player, and shows the next-turn modal.
+4. Repeat with token, Loot Chest, and Roll Again Potion.
+   Expected: Token assignment and Loot Chest complete in order, then Gameplay keeps the same player and shows the Roll Again Potion modal.
+5. Repeat with a token and a pending full-capacity potion reward.
+   Expected: Continue returns to Cave only to resolve the existing potion replacement/discard modal; after resolution, Loot/turn return follows the same Roll Again rule.
+6. Inspect the assignment result in English and Japanese.
+   Expected: Result text and Continue use the selected language/font; Continue uses the global Button, sits in the centred bottom action area, and does not stretch full width.
+7. Repeat assignment to a spell slot, token bag, full-bag replacement, and Trash.
+   Expected: Every existing assignment mutation still resolves once and follows the corrected return flow.
+8. Check the browser console and assignment-result markup during the above flows.
+   Expected: No console errors occur and this fix introduces no `ul` or `li` elements.
+
+Automated Tests Completed
+
+* Before the fix, five focused regressions failed because both Cave token return cases remained on the retreat summary, result actions had no footer, Japanese still rendered English `Continue`, and Reward translations had no Continue key.
+* `src/AppMiniGames.test.jsx`, `src/pages/RewardPage.test.jsx`, and `src/i18n/translations.test.js` pass 3 suites and 47 tests covering direct next-player return, same-player Roll Again, direct Loot routing, pending reward behavior, localized result copy, and footer/button CSS contracts.
+* The surrounding Cave, mini-game state, cave grant, reward state/drop, shared assignment, night-sky, and translation regressions pass 10 suites and 100 tests.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The project has no `npm run lint` script, so that preferred command is unavailable; the production build completed Create React App compile checks.
+* JSDOM cannot visually prove real modal footer position, button width, font rendering, or pointer drag geometry.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above for real drag/drop, modal positioning, Japanese fonts, Loot transitions, pending potion choices, and console inspection.
+
+---
+
+Bug-011: Reward token status should appear inside empty new reward token box
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open a reward token assignment before moving the new token.
+   Expected: The token is inside the fixed-size glowing reward box, the box is enabled, no placement status is shown, and Confirm remains disabled.
+2. Move the reward token to a spell slot.
+   Expected: The source box remains at the same height, becomes disabled and slightly transparent without glowing, and the localized spell-slot status is centred inside it while Confirm enables.
+3. Repeat by moving the token to a non-full token bag and to Trash.
+   Expected: The corresponding localized token-bag or discard status appears inside the same empty box, and existing placement and Confirm behavior is unchanged.
+4. Repeat with a full token bag and select an existing token for replacement.
+   Expected: The token-bag status remains inside the empty box and the existing replacement and capacity rules are unchanged.
+5. Repeat the placement scenarios with English and Japanese players.
+   Expected: Status text remains readable, yellow, bold, and uses the assignment panel's Unkempt or Noto Serif JP language font.
+6. Inspect the assignment while moving the token at desktop and mobile sizes.
+   Expected: The reward box does not move or collapse, the surrounding layout does not jump, and no new `ul` or `li` elements appear.
+7. Complete each assignment and inspect the browser console.
+   Expected: Existing reward mutations and return flows complete once with no console errors.
+
+Automated Tests Completed
+
+* The red-first focused run failed 6 tests because placement statuses were outside the empty reward box and whole-box opacity would fade child text.
+* `src/features/spells/SpellTokenAssignment.test.jsx` passes 16 tests covering the initial token/glow state, status placement for spell slot, token bag, replacement, and discard, Japanese copy, normal-mode isolation, and the readable transparent-box CSS contract.
+* `src/features/spells/SpellTokenAssignment.test.jsx`, `src/pages/RewardPage.test.jsx`, and `src/AppMiniGames.test.jsx` pass 3 suites and 52 tests, confirming assignment, Confirm, reward mutation, and return behavior remains unchanged.
+* `npm run build` compiles successfully.
+
+Automated Tests Still Needed
+
+* The project has no `npm run lint` script, so that preferred command is unavailable; the production build completed Create React App compile checks.
+* JSDOM cannot visually prove real drag geometry, box transparency, font rendering, responsive layout stability, or glow appearance.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above for real pointer drag/drop, visual readability, responsive stability, language fonts, glow state, and console inspection.

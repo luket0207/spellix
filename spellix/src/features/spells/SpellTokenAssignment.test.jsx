@@ -200,7 +200,7 @@ describe('SpellTokenAssignment', () => {
     expect(onTokenBagTokenClick).not.toHaveBeenCalled();
   });
 
-  test('renders the new token and trash drop area only in reward assignment mode', () => {
+  test('renders the glowing reward token box, instruction, and Trash area only in reward mode', () => {
     render(
       <SpellTokenAssignment
         mode="rewardAssignment"
@@ -213,9 +213,19 @@ describe('SpellTokenAssignment', () => {
     );
 
     expect(screen.getByLabelText(/reward token assignment/i)).toBeInTheDocument();
-    expect(screen.getByText(/new reward token/i)).toBeInTheDocument();
+    const rewardTokenBox = screen.getByLabelText(/reward token box/i);
+
+    expect(screen.queryByText(/^new reward token$/i)).not.toBeInTheDocument();
+    expect(rewardTokenBox).toHaveClass('new-reward-token-box', 'needs-placement');
+    expect(rewardTokenBox).not.toHaveClass('is-empty');
+    expect(
+      screen.getByText(
+        'Place the token into your spells, token bag or discard it to continue'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new reward red token/i })).toBeEnabled();
     expect(screen.getByText('Damage')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trash', level: 2 })).toBeInTheDocument();
     expect(screen.getByLabelText(/discard token drop zone/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /trash can/i })).toBeInTheDocument();
   });
@@ -239,8 +249,14 @@ describe('SpellTokenAssignment', () => {
       })
     ).toBeInTheDocument();
     expect(within(screen.getByLabelText(/spell slot 3/i)).queryByText('Damage')).not.toBeInTheDocument();
-    expect(screen.getByText(/placed in spell slot 3/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/reward token box/i)).getByText(
+        /placed in spell slot 3/i
+      )
+    ).toHaveClass('reward-token-status');
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
+    expect(screen.getByLabelText(/reward token box/i)).toHaveClass('is-empty');
+    expect(screen.getByLabelText(/reward token box/i)).not.toHaveClass('needs-placement');
   });
 
   test('shows a staged reward token inside the token bag', () => {
@@ -261,7 +277,9 @@ describe('SpellTokenAssignment', () => {
         name: /new reward red token/i,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText(/placed in token bag/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/reward token box/i)).getByText(/placed in token bag/i)
+    ).toHaveClass('reward-token-status');
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
 
@@ -283,7 +301,11 @@ describe('SpellTokenAssignment', () => {
         name: /new reward red token/i,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText(/placed in discard area/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/reward token box/i)).getByText(
+        /placed in discard area/i
+      )
+    ).toHaveClass('reward-token-status');
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
 
@@ -314,7 +336,9 @@ describe('SpellTokenAssignment', () => {
     expect(
       within(tokenBag).getByRole('button', { name: /moveable blue token/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/placed in token bag/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/reward token box/i)).getByText(/placed in token bag/i)
+    ).toHaveClass('reward-token-status');
     expect(within(tokenBag).getAllByRole('button')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
@@ -386,11 +410,32 @@ describe('SpellTokenAssignment', () => {
     expect(within(assignment).getAllByText('ここにトークンをドロップ')).toHaveLength(5);
     expect(within(assignment).getByText('トークンバッグ')).toBeInTheDocument();
     expect(within(assignment).getByText('使用可能なトークンがありません')).toBeInTheDocument();
-    expect(within(assignment).getByText('新しい報酬トークン')).toBeInTheDocument();
-    expect(within(assignment).getByText('破棄エリアに配置')).toBeInTheDocument();
-    expect(within(assignment).getByText('破棄')).toBeInTheDocument();
+    expect(within(assignment).queryByText('新しい報酬トークン')).not.toBeInTheDocument();
+    expect(
+      within(assignment).getByText(
+        '続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/reward token box/i)).getByText('破棄エリアに配置')
+    ).toHaveClass('reward-token-status');
+    expect(within(assignment).getByRole('heading', { name: 'ゴミ箱' })).toBeInTheDocument();
     expect(within(screen.getByLabelText(/discard token drop zone/i)).getByText('ダメージ')).toBeInTheDocument();
     expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'ダメージ+10');
     expect(within(screen.getByLabelText(/spell slot 1/i)).queryByText('ガード')).not.toBeInTheDocument();
+  });
+
+  test('keeps empty-box transparency separate from readable centred status text', () => {
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+    const emptyBoxRule = stylesheet.match(
+      /\.new-reward-token-box\.is-empty\s*{([^}]*)}/s
+    )?.[1];
+
+    expect(emptyBoxRule).toMatch(/background:\s*rgba\(58, 32, 19, 0\.45\);/);
+    expect(emptyBoxRule).toMatch(/border-color:\s*rgba\(245, 250, 0, 0\.45\);/);
+    expect(emptyBoxRule).not.toMatch(/(?:^|\s)opacity:/);
+    expect(stylesheet).toMatch(
+      /\.reward-token-status\s*{[^}]*color:\s*#F5FA00;[^}]*font-weight:\s*700;[^}]*text-align:\s*center;/s
+    );
   });
 });

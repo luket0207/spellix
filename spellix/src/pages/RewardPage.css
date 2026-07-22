@@ -10,12 +10,60 @@
   width: 100%;
 }
 
+.reward-page--assignment {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(48, 40, 104, 0.72), transparent 48%),
+    linear-gradient(180deg, #050617 0%, #10102a 60%, #050617 100%);
+  isolation: isolate;
+  overflow: hidden;
+  padding: 16px;
+  position: relative;
+}
+
 .reward-panel {
   background-color: rgba(255, 255, 255, 0.5);
   box-sizing: border-box;
   max-width: calc(100% - 32px);
-  padding: 16px;
+  padding: 50px;
   text-align: center;
+}
+
+.reward-panel--assignment {
+  background-color: transparent;
+  color: #F5FA00;
+  font-weight: 700;
+  position: relative;
+  width: max-content;
+  z-index: 1;
+}
+
+.reward-panel--assignment > h1 {
+  margin-top: 0;
+}
+
+.reward-assignment-confirm {
+  margin: 30px auto 0px;
+  width: 150px;
+}
+
+.assignment-result-modal {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.assignment-result-modal-content {
+  flex: 1;
+}
+
+.assignment-result-modal-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.assignment-result-modal-actions button {
+  width: auto;
 }
 
 .reward-options {

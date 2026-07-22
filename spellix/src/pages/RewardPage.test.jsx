@@ -6,7 +6,6 @@ import { TOKEN_DEFINITIONS } from '../data/tokens';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../features/gameSetup/gameSetup';
-import caveBackground from '../images/miniGames/cave.png';
 import RewardPage from './RewardPage';
 
 jest.mock('../features/spells/SpellTokenAssignment', () => {
@@ -192,20 +191,30 @@ describe('RewardPage choice flow', () => {
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
   });
 
-  test('uses the Cave background only for Cave-sourced token assignment', () => {
-    renderRewardPage([], (setup) => {
-      setup.activeBattle.source = 'cave';
-      setup.activeBattle.selectedRewardChoiceId = 'reward-choice-1';
-    });
+  test.each(['battle', 'cave'])(
+    'uses the generic night sky and wooden modal panel for %s token assignment',
+    (source) => {
+      renderRewardPage([], (setup) => {
+        if (source === 'cave') {
+          setup.activeBattle.source = 'cave';
+        }
+        setup.activeBattle.selectedRewardChoiceId = 'reward-choice-1';
+      });
 
-    expect(screen.getByLabelText(/reward token assignment/i)).toBeInTheDocument();
-    expect(screen.getByRole('main')).toHaveStyle({
-      backgroundImage: `url(${caveBackground})`,
-    });
-    expect(screen.getByRole('main')).not.toHaveStyle({
-      backgroundImage: `url(${getBattleBackgroundSource('forest')})`,
-    });
-  });
+      expect(screen.getByLabelText(/reward token assignment/i)).toBeInTheDocument();
+      expect(screen.getByTestId('magical-night-sky')).toBeInTheDocument();
+      expect(screen.getByRole('main')).toHaveClass('reward-page--assignment');
+      expect(screen.getByRole('main')).not.toHaveStyle({
+        backgroundImage: `url(${getBattleBackgroundSource('forest')})`,
+      });
+      expect(screen.getByLabelText('Reward assignment')).toHaveClass(
+        'modal-panel',
+        'modal-panel--default',
+        'reward-panel--assignment'
+      );
+      expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    }
+  );
 
   test('shows Japanese token reward names and tooltips for a Japanese battle player', () => {
     renderRewardPage([], (setup) => {
@@ -250,6 +259,31 @@ describe('RewardPage choice flow', () => {
     expect(stylesheet).toMatch(/\.reward-options\s*{[^}]*display:\s*flex;/s);
     expect(stylesheet).toMatch(/\.reward-options\s*{[^}]*flex-wrap:\s*wrap;/s);
     expect(stylesheet).not.toMatch(/\.reward-panel\s*{[^}]*opacity:/s);
+  });
+
+  test('uses a bottom-centred standard button for the assignment result', () => {
+    renderRewardPage([], (setup) => {
+      setup.activeBattle.selectedRewardChoiceId = 'reward-choice-1';
+      setup.activeBattle.rewardResolution = {
+        choiceId: 'reward-choice-1',
+        destination: 'discarded',
+      };
+    });
+
+    const actions = screen.getByLabelText('Assignment result actions');
+    const continueButton = within(actions).getByRole('button', { name: 'Continue' });
+    const stylesheet = readFileSync(`${__dirname}/RewardPage.css`, 'utf8');
+
+    expect(continueButton).toHaveClass('fantasy-button', 'language-en');
+    expect(stylesheet).toMatch(
+      /\.assignment-result-modal\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.assignment-result-modal-actions\s*{[^}]*margin-top:\s*auto;[^}]*justify-content:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.assignment-result-modal-actions\s+button\s*{[^}]*width:\s*auto;/s
+    );
   });
 
   test('adds a selected potion from mixed choices, then continues with only that reward', () => {
@@ -364,6 +398,7 @@ describe('RewardPage choice flow', () => {
       })
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new reward red token/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /add to token bag/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Selected destination: Token Bag')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /confirm token bag/i })).not.toBeInTheDocument();
@@ -499,7 +534,7 @@ describe('RewardPage choice flow', () => {
 
     expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
     expect(screen.queryByText(/selected token to replace/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^confirm$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /new reward red token/i })).toBeEnabled();
     expect(screen.getByText('Reward destination: none')).toBeInTheDocument();
     expect(screen.getByText(originalBagText)).toBeInTheDocument();
@@ -563,6 +598,7 @@ describe('RewardPage choice flow', () => {
       fireEvent.click(screen.getByRole('button', { name: dropButton }));
 
       expect(screen.getByText(status)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
       expect(screen.queryByText(/Selected destination:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Selected reward:/)).not.toBeInTheDocument();
 
@@ -583,14 +619,20 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByRole('heading', { name: '報酬を割り当てる' })).toHaveClass(
       'language-jp'
     );
-    expect(screen.getByText('新しい報酬トークン')).toBeInTheDocument();
+    expect(screen.queryByText('新しい報酬トークン')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText('トークンバッグ')).toBeInTheDocument();
-    expect(screen.getByText('破棄')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ゴミ箱' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /simulate reward spell slot drop/i }));
 
     expect(screen.getByText('呪文スロット3に配置')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '確定' }));
     expect(screen.getByText('報酬を呪文スロット3に追加しました')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '続ける' })).toHaveClass('language-jp');
   });
 });

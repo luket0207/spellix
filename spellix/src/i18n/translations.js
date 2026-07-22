@@ -17,10 +17,12 @@ const REWARD_PAGE_TRANSLATIONS = {
   en: {
     choose: 'Choose',
     chooseOneReward: 'Choose one reward',
+    continue: 'Continue',
   },
   jp: {
     choose: '選ぶ',
     chooseOneReward: '報酬を1つ選んでください',
+    continue: '続ける',
   },
 };
 
@@ -150,7 +152,7 @@ const MINI_GAME_FAILURE_TRANSLATIONS = {
 
 const SPELL_ASSIGNMENT_TRANSLATIONS = {
   en: {
-    assignReward: 'Assign reward',
+    assignReward: 'Assign Reward',
     cancel: 'Cancel',
     cancelConfirmation:
       'Are you sure you want to cancel? All changes to your spell slots will be lost',
@@ -161,6 +163,8 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     newRewardToken: 'New Reward Token',
     no: 'No',
     noAvailableTokens: 'No available tokens',
+    rewardPlacementInstruction:
+      'Place the token into your spells, token bag or discard it to continue',
     placedInDiscardArea: 'Placed in discard area',
     placedInSpellSlot: (slotNumber) => `Placed in spell slot ${slotNumber}`,
     placedInTokenBag: 'Placed in token bag',
@@ -176,6 +180,7 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
       'Drag and drop tokens from your token bag into spell slots to assign them. Once you have committed your tokens, they cannot be moved again.',
     tokenBag: 'Token Bag',
     tokenBagLocation: 'token bag',
+    trash: 'Trash',
     yes: 'Yes',
   },
   jp: {
@@ -189,6 +194,8 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     newRewardToken: '新しい報酬トークン',
     no: 'いいえ',
     noAvailableTokens: '使用可能なトークンがありません',
+    rewardPlacementInstruction:
+      '続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。',
     placedInDiscardArea: '破棄エリアに配置',
     placedInSpellSlot: (slotNumber) => `呪文スロット${slotNumber}に配置`,
     placedInTokenBag: 'トークンバッグに配置',
@@ -204,6 +211,7 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
       'トークンバッグからスペルスロットにトークンをドラッグ＆ドロップして割り当ててください。一度トークンの配置を確定すると、その後は移動できません。',
     tokenBag: 'トークンバッグ',
     tokenBagLocation: 'トークンバッグ',
+    trash: 'ゴミ箱',
     yes: 'はい',
   },
 };

@@ -142,16 +142,19 @@ describe('gameplay translations', () => {
     const japanese = getSpellAssignmentTranslations('jp');
 
     expect(english).toMatchObject({
-      assignReward: 'Assign reward',
+      assignReward: 'Assign Reward',
       cancel: 'Cancel',
       confirm: 'Confirm',
       discard: 'Discard',
       dropTokensHere: 'Drop tokens here',
       newRewardToken: 'New Reward Token',
       noAvailableTokens: 'No available tokens',
+      rewardPlacementInstruction:
+        'Place the token into your spells, token bag or discard it to continue',
       save: 'Save',
       spells: 'Spells',
       tokenBag: 'Token Bag',
+      trash: 'Trash',
     });
     expect(japanese).toMatchObject({
       assignReward: '報酬を割り当てる',
@@ -161,12 +164,21 @@ describe('gameplay translations', () => {
       dropTokensHere: 'ここにトークンをドロップ',
       newRewardToken: '新しい報酬トークン',
       noAvailableTokens: '使用可能なトークンがありません',
+      rewardPlacementInstruction:
+        '続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。',
       save: '保存',
       spells: '呪文',
       tokenBag: 'トークンバッグ',
+      trash: 'ゴミ箱',
     });
     expect(japanese.placedInSpellSlot(3)).toBe('呪文スロット3に配置');
     expect(getSpellAssignmentTranslations('invalid')).toBe(english);
+  });
+
+  test('returns localized Reward page Continue copy', () => {
+    expect(getRewardPageTranslations('en').continue).toBe('Continue');
+    expect(getRewardPageTranslations('jp').continue).toBe('続ける');
+    expect(getRewardPageTranslations('invalid').continue).toBe('Continue');
   });
 
   test('formats next-turn and reward completion messages in the player language', () => {
@@ -189,10 +201,12 @@ describe('gameplay translations', () => {
     expect(getRewardPageTranslations('en')).toEqual({
       choose: 'Choose',
       chooseOneReward: 'Choose one reward',
+      continue: 'Continue',
     });
     expect(getRewardPageTranslations('jp')).toEqual({
       choose: '選ぶ',
       chooseOneReward: '報酬を1つ選んでください',
+      continue: '続ける',
     });
     expect(getRewardPageTranslations('invalid')).toBe(getRewardPageTranslations('en'));
   });

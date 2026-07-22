@@ -1968,3 +1968,429 @@ Testing Required
 * Confirm normal gameplay Spells modal does not incorrectly use the cave background.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-010: Cave token assignment should advance turn unless Roll Again Potion was also gained, and assignment result modal button styling is wrong
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+* Bug-005: Next-turn modal must always appear after any player turn change
+* Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Bug Summary
+
+* After assigning a Cave Game token reward in the token assignment menu, the game did not move on to the next player’s turn.
+* This is incorrect unless the player also gained a Roll Again Potion during that same Cave Game.
+* The only Cave Game token assignment case where the same player should keep the turn is when the Cave Game rewards include a Roll Again Potion.
+* There is also a styling bug in the assigned reward result modal:
+
+  * the Continue button below the result does not follow modal button styling.
+  * it should be at the bottom of the modal.
+  * it should not be full width.
+
+Expected Behaviour
+
+* If the player retreats from the Cave Game with a token reward but without a Roll Again Potion:
+
+  * open the token assignment component.
+  * allow the player to assign or discard the token.
+  * show the assignment result modal if that flow already exists.
+  * after Continue, return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+
+* If the player retreats from the Cave Game with both a token reward and a Roll Again Potion:
+
+  * open the token assignment component.
+  * allow the player to assign or discard the token.
+  * show the assignment result modal if that flow already exists.
+  * after Continue, return to the board.
+  * keep the same player active.
+  * show the Roll Again Potion modal.
+  * allow the same player to roll again.
+
+Actual Behaviour
+
+* After assigning the Cave Game token reward, the game keeps the same player active even when no Roll Again Potion was gained.
+* The Continue button in the assignment result modal is incorrectly styled and positioned.
+
+Required Turn Flow Fix
+
+* After Cave Game token assignment completes, check whether the Cave Game reward state includes a Roll Again Potion.
+* Do not treat token assignment itself as a reason to keep the same player’s turn.
+* The same player should only keep the turn if:
+
+```txt id="j18owk"
+hasRollAgainPotion === true
+```
+
+* If `hasRollAgainPotion` is false, the turn must advance to the next player.
+* The next-turn modal must appear first after the player-to-player turn change.
+
+Suggested Flow
+
+```txt id="oixayz"
+Cave Game retreat
+Token reward exists
+Open shared token assignment component
+Player assigns or discards token
+Show assignment result modal
+Player clicks Continue
+If hasRollAgainPotion:
+  return to board
+  keep same player
+  show Roll Again Potion modal
+Else:
+  return to board
+  advance to next player
+  show next-turn modal
+```
+
+Roll Again Potion Exception Requirement
+
+* The only exception is when the Cave Game also awarded a Roll Again Potion.
+* In that case:
+
+  * do not advance to the next player.
+  * keep the same player active.
+  * show the Roll Again Potion modal.
+* Modal text should remain:
+
+```txt id="ucowhd"
+Your roll again potion was used, it is your turn to roll again.
+```
+
+* Japanese:
+
+```txt id="y2v0yx"
+もう一度サイコロを振れるポーションが使用されました。もう一度サイコロを振る番です。
+```
+
+* This modal is text-only, so the main `<p>` tag must use `larger-text`.
+
+No Roll Again Potion Requirement
+
+* If the player did not gain a Roll Again Potion:
+
+  * the active player must change after reward assignment is complete.
+  * the next-turn modal must appear.
+  * the next player should not be able to act before seeing the modal.
+
+Loot Chest Interaction Requirement
+
+* If the Cave Game reward list also contains a Loot Chest:
+
+  * token assignment should still happen first.
+  * then route to the Loot Chest page.
+  * after the Loot Chest flow completes, apply the same rule:
+
+    * if Roll Again Potion was gained, keep the same player and show the Roll Again Potion modal.
+    * if no Roll Again Potion was gained, advance to the next player and show the next-turn modal.
+* Do not lose the Roll Again Potion state while routing through token assignment or Loot Chest.
+
+Assignment Result Modal Button Styling Fix
+
+* The Continue button in the assignment result modal should follow standard modal button styling.
+* It should be:
+
+  * at the bottom of the modal.
+  * horizontally centred.
+  * normal modal button width.
+  * not full width.
+* It should use the global Button component.
+* It should use the same modal button layout rules as other normal modals.
+
+Required Button Layout
+
+```txt id="vobss0"
+Modal content
+
+Result text
+
+Modal footer / bottom area:
+  Continue button centred
+```
+
+* The button should not sit directly under the text in a way that ignores modal layout.
+* The button should not stretch across the modal.
+
+Suggested CSS Direction
+
+```css id="mrdi76"
+.assignment-result-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.assignment-result-modal-content {
+  flex: 1;
+}
+
+.assignment-result-modal-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.assignment-result-modal-actions button {
+  width: auto;
+}
+```
+
+* Exact class names can vary.
+* The important requirements are:
+
+  * bottom aligned.
+  * centred.
+  * not full width.
+
+Translation Requirement
+
+* Reuse existing translations for:
+
+  * Continue / 続ける
+  * token placement result text.
+  * Roll Again Potion modal text.
+  * next-turn modal text.
+* Apply correct fonts:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* The assignment result modal button text should respect the current player’s language.
+
+No `ul` / `li` Requirement
+
+* Preserve the global UI rule.
+* Do not introduce `ul` or `li` elements while fixing the assignment result modal or turn flow.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to Cave Game probability table.
+* No changes to token reward generation.
+* No changes to potion reward generation.
+* No changes to token assignment drag-and-drop behaviour.
+* No changes to spell slot capacity.
+* No changes to token bag capacity.
+* No changes to Loot Chest reward calculation.
+* No unrelated modal redesign.
+
+Suspected Cause
+
+* The token assignment completion flow may be treating Cave reward assignment as a same-player continuation by default.
+* The `hasRollAgainPotion` / return behaviour metadata may not be checked after assignment.
+* The assignment result modal may be using local button styles instead of the shared modal footer/button layout.
+
+Attempted Fixes
+
+* Reproduced token-only and token-plus-Roll-Again assignments returning to the Cave retreat summary after the assignment result Continue button, requiring a second Continue before the existing return metadata was applied.
+* Added red-first App regressions requiring token-only assignment to advance directly with the next-turn modal, token-plus-Roll-Again to return directly with the same-player notice, and token-plus-Loot-Chest to route directly through Loot Chest before advancing.
+* Added RewardPage and translation regressions for a localized global Continue button inside a bottom-centred, auto-width assignment-result action row.
+
+Final Fix
+
+* Reused `getPendingCaveReward`, `miniGameResult`, and `returnFromMiniGame` in the existing Cave-sourced RewardPage Continue handler instead of changing turn calculations or reward state.
+* After token assignment, a pending full-capacity potion choice still returns to Cave for the existing replacement/discard modal; otherwise Loot Chest routes directly to its page, and a reward flow with neither now calls `returnFromMiniGame` and returns directly to Gameplay.
+* Existing `returnBehaviour` and `rollAgain` metadata now determine the immediate result: no Roll Again advances to the next player with the next-turn modal, while Roll Again keeps the same player and shows the existing localized `larger-text` notice.
+* Added localized RewardPage Continue copy and moved the existing global Button into a flex result-modal footer with bottom auto margin, centred alignment, and auto width.
+* No token/potion generation, assignment drag/drop, capacities, Loot reward calculation, routes, or unrelated modal behavior changed; no new `ul` or `li` markup was introduced.
+
+Testing Required
+
+* Confirm retreating from Cave Game with token only opens token assignment.
+* Confirm assigning the token and pressing Continue returns to the board.
+* Confirm token-only Cave reward advances to the next player.
+* Confirm the next-turn modal appears first after token-only Cave reward assignment.
+* Confirm retreating from Cave Game with token and Roll Again Potion opens token assignment.
+* Confirm assigning the token and pressing Continue returns to the board.
+* Confirm token plus Roll Again Potion keeps the same player active.
+* Confirm the Roll Again Potion modal appears.
+* Confirm the same player can roll again after closing the modal.
+* Confirm token assignment itself does not keep the same player active unless Roll Again Potion exists.
+* Confirm token plus Loot Chest without Roll Again Potion eventually advances to the next player after Loot Chest flow.
+* Confirm token plus Loot Chest plus Roll Again Potion eventually keeps the same player active after Loot Chest flow.
+* Confirm Roll Again Potion state is not lost through token assignment.
+* Confirm Roll Again Potion state is not lost through Loot Chest routing.
+* Confirm assignment result modal Continue button is at the bottom of the modal.
+* Confirm assignment result modal Continue button is horizontally centred.
+* Confirm assignment result modal Continue button is not full width.
+* Confirm assignment result modal Continue button uses the global Button component.
+* Confirm Continue text displays in English for English players.
+* Confirm Continue text displays in Japanese for Japanese players.
+* Confirm correct fonts are applied.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-011: Reward token status should appear inside empty new reward token box
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+
+Bug Summary
+
+* In the Spell Token Assignment component, the `reward-token-status` element is not positioned correctly after the reward token has been moved.
+* When the `new-reward-token-box` becomes empty, the status text showing where the token was moved should appear inside that same box.
+* This keeps the layout stable and makes the empty box meaningful.
+
+Expected Behaviour
+
+* Before the reward token is moved:
+
+  * the token appears inside the `new-reward-token-box`.
+  * the box glows.
+  * the Confirm button is disabled.
+
+* After the reward token is moved:
+
+  * the `new-reward-token-box` remains visible.
+  * the box becomes disabled and slightly transparent.
+  * the box no longer glows.
+  * the `reward-token-status` element appears inside the empty `new-reward-token-box`.
+  * the status tells the player where the token has been placed.
+
+Actual Behaviour
+
+* The `reward-token-status` element is not inside the empty `new-reward-token-box`.
+
+Required Fix
+
+* Move or render `reward-token-status` inside `new-reward-token-box` when the reward token has been moved out.
+* Do not remove the empty reward token box.
+* Do not allow the page layout to jump after the token is moved.
+* Preserve the disabled/slightly transparent state of the empty box.
+* Preserve the existing placement status text and translations.
+
+Suggested Structure
+
+```jsx id="7un33s"
+<div
+  className={`new-reward-token-box ${
+    rewardTokenPlacement ? "is-empty" : "needs-placement"
+  }`}
+>
+  {!rewardTokenPlacement && (
+    <TokenIcon token={rewardToken} language={language} />
+  )}
+
+  {rewardTokenPlacement && (
+    <div className="reward-token-status">
+      {rewardTokenStatusText}
+    </div>
+  )}
+</div>
+```
+
+* Exact class names can vary.
+* The important requirement is that `reward-token-status` is visually and structurally inside `new-reward-token-box` when the token has been moved.
+
+Styling Requirement
+
+* The status text should be centred inside the empty box.
+* The empty box should retain a stable height.
+* The status text should use modal text rules:
+
+  * yellow text.
+  * bold text.
+  * correct language font.
+* The empty box should remain slightly transparent.
+* The status text should remain readable even with the transparent box state.
+
+Suggested CSS Direction
+
+```css id="gtyai4"
+.new-reward-token-box.is-empty {
+  opacity: 0.45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.reward-token-status {
+  text-align: center;
+  color: #F5FA00;
+  font-weight: bold;
+}
+```
+
+* If the reduced opacity makes the status text too hard to read, apply opacity to the box background/border rather than the status text itself.
+* The status text must remain readable.
+
+Translation Requirement
+
+* Reuse the existing reward placement status translations.
+* Examples:
+
+  * placed in token bag.
+  * placed in spell slot.
+  * placed in discard/trash.
+* English should use Unkempt.
+* Japanese should use Noto Serif Japanese / Noto Serif JP.
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not introduce `ul` or `li` elements.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to token assignment rules.
+* No changes to drag-and-drop behaviour.
+* No changes to Confirm button behaviour.
+* No changes to spell slot capacity.
+* No changes to token bag capacity.
+* No changes to trash/drop behaviour.
+* No changes to reward token generation.
+* No unrelated layout redesign.
+
+Suspected Cause
+
+* Feature-015 required the empty reward token box to remain visible and the placement status text to remain present.
+* The status may currently be rendered below or outside the reward token box instead of inside it.
+
+Attempted Fixes
+
+* Added red-first component regressions for spell-slot, token-bag, full-bag replacement, discard, and Japanese placement states. The focused run failed 6 tests because the status remained outside the empty box and the box-level opacity faded all child content.
+
+Final Fix
+
+* Rendered the existing localized `reward-token-status` inside `new-reward-token-box` after the reward token is placed, while leaving the pre-placement token and all assignment logic unchanged.
+* Preserved the stable disabled empty box and stopped its glow through the existing state classes.
+* Replaced whole-element opacity with transparent background and border colours so the box remains slightly transparent while the centred yellow bold status stays readable and inherits the assignment panel's English or Japanese font.
+
+Testing Required
+
+* Confirm the reward token appears inside `new-reward-token-box` before being moved.
+* Confirm the box glows before the reward token is moved.
+* Confirm moving the token empties the box.
+* Confirm the box remains visible after the token is moved.
+* Confirm the box becomes disabled after the token is moved.
+* Confirm the box becomes slightly transparent after the token is moved.
+* Confirm `reward-token-status` appears inside the empty `new-reward-token-box`.
+* Confirm the status text is centred inside the box.
+* Confirm the status text is readable.
+* Confirm the status text uses English font for English players.
+* Confirm the status text uses Japanese font for Japanese players.
+* Confirm placement status translations still work.
+* Confirm the page layout does not jump when the token is moved.
+* Confirm Confirm button behaviour is unchanged.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

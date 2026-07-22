@@ -342,7 +342,80 @@ test('Cave token assignment completes before a no-roll next-player return', () =
   fireEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
   fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
 
-  expect(screen.getByText(getCaveMiniGameTranslations('en').messages.retreated)).toBeInTheDocument();
+  expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  expect(
+    screen.queryByText(getCaveMiniGameTranslations('en').messages.retreated)
+  ).not.toBeInTheDocument();
+});
+
+test('Cave token assignment preserves a Roll Again Potion for the same player', () => {
+  jest.useFakeTimers();
+  jest.spyOn(Math, 'random').mockReturnValue(0.5);
+  renderApp(
+    '/mini-game/cave',
+    createGameplayReadySetup({
+      miniGameResult: {
+        playerId: 'player-1',
+        result: null,
+        returnBehaviour: null,
+        type: 'cave',
+      },
+    })
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /debug: add token/i }));
+  fireEvent.click(screen.getByRole('button', { name: /debug: add roll again potion/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^go deeper$/i }));
+  act(() => {
+    jest.advanceTimersByTime(500);
+  });
+  fireEvent.click(screen.getByRole('button', { name: /^retreat$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /simulate reward spell slot drop/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+
+  expect(screen.getByText(getCaveMiniGameTranslations('en').rollAgainNotice)).toHaveClass(
+    'larger-text',
+    'language-en'
+  );
+  expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(getCaveMiniGameTranslations('en').messages.retreated)
+  ).not.toBeInTheDocument();
+});
+
+test('Cave token assignment routes directly through Loot Chest before advancing', () => {
+  jest.useFakeTimers();
+  jest.spyOn(Math, 'random').mockReturnValue(0.5);
+  renderApp(
+    '/mini-game/cave',
+    createGameplayReadySetup({
+      miniGameResult: {
+        playerId: 'player-1',
+        result: null,
+        returnBehaviour: null,
+        type: 'cave',
+      },
+    })
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /debug: add token/i }));
+  fireEvent.click(screen.getByRole('button', { name: /debug: add loot chest/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^go deeper$/i }));
+  act(() => {
+    jest.advanceTimersByTime(500);
+  });
+  fireEvent.click(screen.getByRole('button', { name: /^retreat$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /simulate reward spell slot drop/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+
+  expect(screen.getByRole('heading', { name: /^loot chest$/i })).toBeInTheDocument();
+  expect(
+    screen.queryByText(getCaveMiniGameTranslations('en').messages.retreated)
+  ).not.toBeInTheDocument();
+
   fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
 
   expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();

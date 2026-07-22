@@ -138,6 +138,21 @@ function SpellTokenAssignment({
     : isRewardTokenStagedInBag && !isRewardTokenStagedForDiscard && rewardToken
       ? [...tokenBag, rewardToken]
       : tokenBag;
+  const isRewardTokenPlaced = Boolean(
+    isRewardTokenStagedForDiscard ||
+      hasStagedRewardTokenBagReplacement ||
+      isRewardTokenStagedInBag ||
+      stagedRewardDestinationId
+  );
+  const rewardPlacementStatus = isRewardTokenStagedForDiscard
+    ? translations.placedInDiscardArea
+    : hasStagedRewardTokenBagReplacement || isRewardTokenStagedInBag
+      ? translations.placedInTokenBag
+      : stagedRewardDestinationId
+        ? translations.placedInSpellSlot(
+            spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
+          )
+        : '';
 
   return (
     <DndContext
@@ -149,8 +164,36 @@ function SpellTokenAssignment({
     >
       <div
         aria-label={isRewardAssignment ? 'Reward token assignment' : 'Spell token assignment'}
-        className={`spell-token-assignment language-${currentLanguage}`}
+        className={`spell-token-assignment${
+          isRewardAssignment ? ' spell-token-assignment--reward' : ''
+        } language-${currentLanguage}`}
       >
+        {isRewardAssignment && rewardToken ? (
+          <section className="reward-token-section">
+            <div
+              aria-disabled={isRewardTokenPlaced}
+              aria-label="Reward token box"
+              className={`new-reward-token-box ${
+                isRewardTokenPlaced ? 'is-empty' : 'needs-placement'
+              }`}
+            >
+              {!isRewardTokenPlaced ? (
+                <DraggableSpellToken
+                  ariaLabel={`New reward ${rewardToken.type} token`}
+                  language={currentLanguage}
+                  showName
+                  token={rewardToken}
+                />
+              ) : null}
+              {isRewardTokenPlaced && rewardPlacementStatus ? (
+                <p className="reward-token-status">{rewardPlacementStatus}</p>
+              ) : null}
+            </div>
+            <p className="reward-token-instruction">
+              {translations.rewardPlacementInstruction}
+            </p>
+          </section>
+        ) : null}
         <section className="spell-slot-section">
           <div className="spell-slot-scroll">
             <div aria-label="Spell slots" className="spell-slot-list">
@@ -224,39 +267,19 @@ function SpellTokenAssignment({
             )}
           </TokenDropZone>
         </section>
-        {isRewardAssignment && rewardToken ? (
-          <section>
-            <p>{translations.newRewardToken}</p>
-            {isRewardTokenStagedForDiscard ? (
-              <span>{translations.placedInDiscardArea}</span>
-            ) : hasStagedRewardTokenBagReplacement ? (
-              <span>{translations.placedInTokenBag}</span>
-            ) : isRewardTokenStagedInBag ? (
-              <span>{translations.placedInTokenBag}</span>
-            ) : stagedRewardDestinationId ? (
-              <span>
-                {translations.placedInSpellSlot(
-                  spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
-                )}
-              </span>
-            ) : (
-              <DraggableSpellToken
-                ariaLabel={`New reward ${rewardToken.type} token`}
-                language={currentLanguage}
-                showName
-                token={rewardToken}
-              />
-            )}
-          </section>
-        ) : null}
         {isRewardAssignment ? (
-          <section>
-            <p>{translations.discard}</p>
+          <section className="spell-trash-section">
+            <h2>{translations.trash}</h2>
             <TokenDropZone
               id={REWARD_TOKEN_DISCARD_DROP_ZONE_ID}
               label="Discard token drop zone"
             >
-              <FontAwesomeIcon aria-label="Trash can" icon={faTrashCan} role="img" />
+              <FontAwesomeIcon
+                aria-label="Trash can"
+                className="spell-trash-icon"
+                icon={faTrashCan}
+                role="img"
+              />
               {isRewardTokenStagedForDiscard && rewardToken ? (
                 <DraggableSpellToken
                   ariaLabel={`New reward ${rewardToken.type} token`}
