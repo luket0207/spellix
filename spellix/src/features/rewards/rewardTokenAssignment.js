@@ -3,9 +3,11 @@ import {
   REWARD_TOKEN_DISCARD_DROP_ZONE_ID,
   TOKEN_BAG_DROP_ZONE_ID,
 } from '../spells/spellSetup';
+import { getSpellColumnCapacity } from '../spells/nonBattleSpellEffects';
 
 export function getRewardSpellSlotDropId({
   destinationId,
+  mergedColumns = [],
   rewardTokenId,
   spellSlots = [],
   tokenId,
@@ -15,10 +17,14 @@ export function getRewardSpellSlotDropId({
   }
 
   const destinationSlot = spellSlots.find(({ id }) => id === destinationId);
+  const destinationSlotIndex = spellSlots.findIndex(({ id }) => id === destinationId);
+  const destinationColumn = destinationSlotIndex + 1;
 
   if (
     !destinationSlot ||
-    destinationSlot.tokens.length >= destinationSlot.maxTokens
+    mergedColumns.some(({ removedColumn }) => removedColumn === destinationColumn) ||
+    destinationSlot.tokens.length >=
+      getSpellColumnCapacity(spellSlots, destinationSlotIndex, mergedColumns)
   ) {
     return '';
   }

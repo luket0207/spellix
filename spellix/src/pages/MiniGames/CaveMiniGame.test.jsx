@@ -173,7 +173,7 @@ test('uses no visible seventeenth depth and forces the sixteenth decision throug
   expect(selectCaveOutcome).toHaveBeenCalledTimes(16);
 });
 
-test('generates each reward once and routes token retreats to shared assignment before loot', () => {
+test('generates each reward once and opens Loot before pending token assignment', () => {
   const translations = getCaveMiniGameTranslations('en');
   selectCaveOutcome
     .mockReturnValueOnce('token')
@@ -217,10 +217,13 @@ test('generates each reward once and routes token retreats to shared assignment 
     rollAgain: true,
   });
   expect(returnFromMiniGame).not.toHaveBeenCalled();
-  expect(mockNavigate).toHaveBeenCalledWith('/reward');
+  expect(mockNavigate).not.toHaveBeenCalledWith('/reward');
+
+  fireEvent.click(screen.getByRole('button', { name: translations.openLoot }));
+  expect(mockNavigate).toHaveBeenCalledWith('/mini-game/loot-chest');
 });
 
-test('debug reward controls add every reward once without changing Cave layout flow', () => {
+test('debug reward controls preserve Loot-first Cave routing', () => {
   const translations = getCaveMiniGameTranslations('en');
   selectCaveOutcome.mockReturnValue('nothing');
 
@@ -263,7 +266,10 @@ test('debug reward controls add every reward once without changing Cave layout f
     },
     rollAgain: true,
   });
-  expect(mockNavigate).toHaveBeenCalledWith('/reward');
+  expect(mockNavigate).not.toHaveBeenCalledWith('/reward');
+
+  fireEvent.click(screen.getByRole('button', { name: translations.openLoot }));
+  expect(mockNavigate).toHaveBeenCalledWith('/mini-game/loot-chest');
 });
 
 test('routes a non-loot token reward to shared assignment before Gameplay', () => {

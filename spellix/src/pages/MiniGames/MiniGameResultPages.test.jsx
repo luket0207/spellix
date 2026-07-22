@@ -3,7 +3,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { readFileSync } from 'fs';
 import { useGameSetup } from '../../features/gameSetup/GameSetupContext';
 import { getFirstStartAreaPosition } from '../../features/gameBoard/board';
-import LootChestPage from './LootChestPage';
 import MiniGameLosePage from './MiniGameLosePage';
 
 jest.mock('../../features/gameSetup/GameSetupContext', () => ({
@@ -63,16 +62,6 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
-});
-
-test('Loot Chest Continue resolves the result and returns to Gameplay', () => {
-  renderResultPage('/mini-game/loot-chest', <LootChestPage />);
-
-  expect(screen.getByRole('heading', { name: /loot chest/i })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-
-  expect(returnFromMiniGame).toHaveBeenCalledTimes(1);
-  expect(screen.getByText(/gameplay destination/i)).toBeInTheDocument();
 });
 
 test('Mini Game Failed applies one generated punishment after one second and continues if alive', () => {
@@ -149,6 +138,62 @@ test('Mini Game Failed clamps health to zero and respawns with Japanese text', (
   );
   expect(returnFromMiniGame).toHaveBeenCalledTimes(1);
   expect(screen.getByText(/gameplay destination/i)).toBeInTheDocument();
+});
+
+test('Mini Game Failed keeps the failed player image while the live turn advances', () => {
+  const nextPlayer = {
+    ...failingPlayer,
+    colour: 'blue',
+    id: 'player-2',
+    pieceImage: 'f-blue.png',
+  };
+  let context = {
+    applyMiniGameFailurePunishment,
+    currentPlayer: failingPlayer,
+    gameSetup: {
+      board: null,
+      players: [failingPlayer, nextPlayer],
+    },
+    miniGameResult: {
+      playerId: failingPlayer.id,
+      result: 'loss',
+      returnBehaviour: 'nextPlayerTurn',
+      type: 'river',
+    },
+    returnFromMiniGame,
+    setPlayerPosition,
+  };
+
+  useGameSetup.mockImplementation(() => context);
+
+  const getResultPage = () => (
+    <MemoryRouter initialEntries={['/mini-game/lose']}>
+      <Routes>
+        <Route
+          path="/mini-game/lose"
+          element={<MiniGameLosePage randomFn={() => 0.6} />}
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+  const { rerender } = render(getResultPage());
+
+  expect(screen.getByRole('img', { name: /current player character/i })).toHaveAttribute(
+    'src',
+    'm-red.png'
+  );
+
+  context = {
+    ...context,
+    currentPlayer: nextPlayer,
+    miniGameResult: null,
+  };
+  rerender(getResultPage());
+
+  expect(screen.getByRole('img', { name: /current player character/i })).toHaveAttribute(
+    'src',
+    'm-red.png'
+  );
 });
 
 test('Mini Game Failed CSS keeps the wooden panel lo-fi and the requested text/layout rules', () => {

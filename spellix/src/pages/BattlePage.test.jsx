@@ -193,6 +193,20 @@ describe('BattlePage flows', () => {
     expect(titleRule).toMatch(/text-align:\s*center/);
   });
 
+  test('centres the Battle turn and loss modal content with current modal classes', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+
+    expect(stylesheet).toMatch(
+      /\.battle-turn-modal-content\s*{[^}]*align-items:\s*center;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*text-align:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.battle-turn-modal-image\s*{[^}]*display:\s*block;[^}]*margin:\s*0 auto;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.battle-loss-message\s*{[^}]*text-align:\s*center;/s
+    );
+  });
+
   test('uses the battling player language for the title, dice button, and both battle actors', () => {
     const japanesePlayerSetup = createBattleSetup();
     const enemy = getEnemyById('hellcrown-reaper');
@@ -206,7 +220,13 @@ describe('BattlePage flows', () => {
       'language-jp'
     );
     expect(screen.getByRole('button', { name: 'サイコロを振る' })).toHaveClass('language-jp');
-    expect(screen.getByText('赤のターン')).toHaveClass('language-jp');
+    expect(screen.getByText('赤のターン')).toHaveClass('larger-text', 'language-jp');
+    expect(screen.getByLabelText('Battle turn actor')).toHaveClass(
+      'battle-turn-modal-image'
+    );
+    expect(screen.getByTestId('modal-body').firstElementChild).toHaveClass(
+      'battle-turn-modal-content'
+    );
     expect(screen.getByRole('img', { name: `Battle enemy ${enemy.japaneseName}` })).toBeInTheDocument();
 
     unmount();
@@ -309,6 +329,14 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByText(/resolving turn: false/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
+    expect(screen.getByText('The player has lost.')).toHaveClass(
+      'battle-loss-message',
+      'larger-text',
+      'language-en'
+    );
+    expect(
+      within(screen.getByRole('dialog', { name: /battle lost/i })).queryByRole('list')
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText('A Red token was removed from column 1.')).toHaveLength(2);
     expect(screen.getByText('A Blue token was removed from column 2.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
@@ -341,10 +369,10 @@ describe('BattlePage flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^win$/i }));
 
-    expect(screen.getAllByRole('button', { name: /^choose /i })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^choose$/i })).toHaveLength(3);
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: /^choose /i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^choose$/i })[0]);
 
     expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
     expect(screen.getByText(/current player: player-1/i)).toBeInTheDocument();
@@ -368,6 +396,26 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /remove 5 health/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^lose$/i })).toBeDisabled();
+  });
+
+  test('uses Japanese font classes and copy in the Battle loss modal', () => {
+    const japaneseSetup = createBattleSetup();
+    japaneseSetup.players[0].language = 'jp';
+    renderBattleFlow(['/battle'], japaneseSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^lose$/i }));
+
+    expect(screen.getByText('プレイヤーは敗北しました。')).toHaveClass(
+      'battle-loss-message',
+      'larger-text',
+      'language-jp'
+    );
+    expect(screen.getByRole('button', { name: 'リスポーン' })).toHaveClass(
+      'language-jp'
+    );
   });
 
   test('reports no removals and keeps protected starting tokens after respawn', () => {
@@ -1209,13 +1257,13 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.getAllByRole('button', { name: /^choose /i })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^choose$/i })).toHaveLength(1);
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /roll dice/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^choose /i }));
+    fireEvent.click(screen.getByRole('button', { name: /^choose$/i }));
 
     expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
     expect(screen.getByText(/current player: player-1/i)).toBeInTheDocument();
@@ -1270,7 +1318,9 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
     expect(
-      within(screen.getByRole('dialog', { name: /battle lost/i })).getAllByRole('listitem')
+      within(screen.getByRole('dialog', { name: /battle lost/i })).getAllByTestId(
+        'death-result-token-row'
+      )
     ).toHaveLength(1);
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();

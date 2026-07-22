@@ -1,11 +1,12 @@
 import { readFileSync } from 'fs';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import { POTION_DEFINITIONS } from '../data/potions';
+import { getPotionName, POTION_DEFINITIONS } from '../data/potions';
 import { TOKEN_DEFINITIONS } from '../data/tokens';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../features/gameSetup/gameSetup';
+import { getCaveMiniGameTranslations } from '../i18n/translations';
 import RewardPage from './RewardPage';
 
 jest.mock('../features/spells/SpellTokenAssignment', () => {
@@ -160,7 +161,10 @@ describe('RewardPage choice flow', () => {
   test('shows component-based rewards in a centred div layout over the battle background', () => {
     renderRewardPage();
 
-    expect(screen.getByRole('heading', { name: /choose one reward/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Choose your reward' })).toHaveClass(
+      'larger-text',
+      'language-en'
+    );
     expect(screen.queryByText('Common Token')).not.toBeInTheDocument();
     expect(screen.queryByText('Red')).not.toBeInTheDocument();
     expect(screen.queryByText('Rare Potion')).not.toBeInTheDocument();
@@ -175,7 +179,11 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByRole('main')).toHaveStyle({
       backgroundImage: `url(${getBattleBackgroundSource('forest')})`,
     });
-    expect(screen.getByLabelText('Reward choices')).toHaveClass('reward-panel');
+    expect(screen.getByRole('dialog', { name: 'Reward choices' })).toHaveClass(
+      'modal-panel',
+      'modal-panel--default',
+      'battle-reward-panel'
+    );
     expect(rewardOptions).toHaveClass('reward-options');
     expect(within(rewardOptions).queryByRole('list')).not.toBeInTheDocument();
     expect(within(rewardOptions).getAllByLabelText(/reward option/i)).toHaveLength(2);
@@ -184,7 +192,12 @@ describe('RewardPage choice flow', () => {
     expect(tokenRewardIcon).toHaveAccessibleDescription(
       TOKEN_DEFINITIONS.red.description.en
     );
-    expect(screen.getByText('Damage')).toBeInTheDocument();
+    expect(screen.getByText('Damage')).toHaveClass('battle-reward-name', 'language-en');
+    expect(tokenRewardIcon.parentElement.parentElement).toHaveClass(
+      'battle-reward-icon-row'
+    );
+    expect(tokenRewardIcon.parentElement.querySelector('.token-display-name')).toBeNull();
+    expect(screen.getAllByTestId('battle-reward-button-row')).toHaveLength(2);
     expect(screen.getByRole('group', { name: /roll choice potion/i })).toHaveClass(
       'potion-icon--blue'
     );
@@ -221,7 +234,8 @@ describe('RewardPage choice flow', () => {
       setup.players[0].language = 'jp';
     });
 
-    expect(screen.getByRole('heading', { name: '報酬を1つ選んでください' })).toHaveClass(
+    expect(screen.getByRole('heading', { name: '報酬を選んでください。' })).toHaveClass(
+      'larger-text',
       'language-jp'
     );
     expect(screen.getAllByRole('button', { name: '選ぶ' })).toHaveLength(2);
@@ -244,21 +258,26 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByRole('main')).toHaveStyle({
       backgroundImage: `url(${getBattleBackgroundSource('fields')})`,
     });
-    expect(screen.getByRole('heading', { name: 'Choose one reward' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Choose your reward' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Choose' })).toHaveLength(2);
   });
 
-  test('uses the required horizontal, centred, semi-transparent reward styles', () => {
+  test('uses the required horizontal, centred, stable wooden reward modal styles', () => {
     const stylesheet = readFileSync(`${__dirname}/RewardPage.css`, 'utf8');
 
     expect(stylesheet).toMatch(/\.reward-page\s*{[^}]*align-items:\s*center;/s);
     expect(stylesheet).toMatch(/\.reward-page\s*{[^}]*justify-content:\s*center;/s);
     expect(stylesheet).toMatch(/\.reward-page\s*{[^}]*background-size:\s*cover;/s);
-    expect(stylesheet).toMatch(/\.reward-panel\s*{[^}]*background-color:\s*rgba\(255, 255, 255, 0\.5\);/s);
-    expect(stylesheet).toMatch(/\.reward-panel\s*{[^}]*text-align:\s*center;/s);
-    expect(stylesheet).toMatch(/\.reward-options\s*{[^}]*display:\s*flex;/s);
-    expect(stylesheet).toMatch(/\.reward-options\s*{[^}]*flex-wrap:\s*wrap;/s);
-    expect(stylesheet).not.toMatch(/\.reward-panel\s*{[^}]*opacity:/s);
+    expect(stylesheet).toMatch(/\.battle-reward-panel\s*{[^}]*text-align:\s*center;/s);
+    expect(stylesheet).toMatch(
+      /\.reward-options\s*{[^}]*align-items:\s*stretch;[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.reward-option\s*{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*90px minmax\(48px, auto\) auto;[^}]*width:\s*150px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.battle-reward-name\s*{[^}]*color:\s*#F5FA00;[^}]*font-weight:\s*700;[^}]*text-align:\s*center;/s
+    );
   });
 
   test('uses a bottom-centred standard button for the assignment result', () => {
@@ -326,7 +345,16 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByText('Reward destination: none')).toBeInTheDocument();
     expect(screen.getByText('Player 1 potions: Potion 1,Potion 2,Potion 3')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^replace potion/i })).toHaveLength(3);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: /roll choice potion/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('New potion')).toContainElement(
+      screen.getByRole('group', { name: /roll choice potion/i })
+    );
+    const potionActions = screen.getByLabelText('Current potions');
+    expect(within(potionActions).getAllByRole('button')).toHaveLength(4);
+    within(potionActions)
+      .getAllByRole('button')
+      .forEach((button) => expect(button).toHaveClass('potion-assignment-button'));
     expect(
       within(screen.getByRole('button', { name: /replace potion 2/i })).getByRole('group', {
         name: /potion 2 potion/i,
@@ -334,6 +362,20 @@ describe('RewardPage choice flow', () => {
     ).not.toHaveAttribute('tabindex');
     expect(screen.getByRole('button', { name: /discard new potion/i })).toBeEnabled();
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
+
+    const stylesheet = readFileSync(`${__dirname}/RewardPage.css`, 'utf8');
+    expect(stylesheet).toMatch(
+      /\.new-potion-reward\s*{[^}]*align-items:\s*center;[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.potion-assignment-actions\s*{[^}]*display:\s*grid;[^}]*gap:\s*15px;[^}]*grid-template-columns:\s*repeat\(4,\s*1fr\);/s
+    );
+    expect(stylesheet).toMatch(
+      /\.potion-assignment-actions\s+button\s*{[^}]*width:\s*100%;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.potion-assignment-button\s+\.potion-icon\s*{[^}]*margin-right:\s*20px;/s
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /replace potion 2/i }));
 
@@ -344,13 +386,16 @@ describe('RewardPage choice flow', () => {
   });
 
   test('shows Japanese potion text throughout the full-capacity replacement flow', () => {
+    const rewardGrantTranslations = getCaveMiniGameTranslations('jp').rewardGrant;
+    const currentPotions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'charger'),
+    ];
+
     renderRewardPage([], (setup) => {
       setup.players[0].language = 'jp';
-      setup.players[0].potions = [
-        POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
-        POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam'),
-        POTION_DEFINITIONS.find(({ id }) => id === 'charger'),
-      ];
+      setup.players[0].potions = currentPotions;
     });
 
     chooseReward(1, '選ぶ');
@@ -358,15 +403,30 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByRole('group', { name: '出目選択 potion' })).toHaveAccessibleDescription(
       '次に振るサイコロの出目を選ぶ。'
     );
-    expect(screen.getByRole('button', { name: 'Replace 小回復' })).toContainElement(
-      screen.getByRole('group', { name: '小回復 potion' })
+    expect(
+      screen.getByText(`${rewardGrantTranslations.potionSlotsFull}.`)
+    ).toBeInTheDocument();
+    currentPotions.forEach((potion) => {
+      const potionName = getPotionName(potion, 'jp');
+      const replaceLabel = rewardGrantTranslations.replacePotion(potionName);
+
+      expect(screen.getByRole('button', { name: replaceLabel })).toContainElement(
+        screen.getByRole('group', { name: `${potionName} potion` })
+      );
+    });
+    expect(
+      screen.getByRole('button', { name: rewardGrantTranslations.discardNewPotion })
+    ).toHaveClass('language-jp');
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: rewardGrantTranslations.replacePotion(getPotionName(currentPotions[0], 'jp')),
+      })
     );
-    expect(screen.getByRole('button', { name: 'Replace アイスビーム' })).toContainElement(
-      screen.getByRole('group', { name: 'アイスビーム potion' })
-    );
-    expect(screen.getByRole('button', { name: 'Replace チャージャー' })).toContainElement(
-      screen.getByRole('group', { name: 'チャージャー potion' })
-    );
+    expect(
+      screen.getByText('報酬ポーションで既存のポーションを交換しました。')
+    ).toHaveClass('language-jp');
   });
 
   test('discards a selected new potion when all potion slots are full', () => {

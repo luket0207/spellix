@@ -1,4 +1,5 @@
 import { cloneSpellSlots, cloneTokenBag } from '../gameSetup/gameSetup';
+import { getSpellColumnCapacity } from './nonBattleSpellEffects';
 
 export const TOKEN_BAG_DROP_ZONE_ID = 'token-bag';
 export const REWARD_TOKEN_DISCARD_DROP_ZONE_ID = 'reward-discard';
@@ -68,8 +69,26 @@ function findTokenLocation(tokenId, tokenBag, spellSlots) {
   return null;
 }
 
-export function moveSpellTokenInDraft({ destinationId, spellSlots, tokenBag, tokenId }) {
+export function moveSpellTokenInDraft({
+  destinationId,
+  mergedColumns = [],
+  spellSlots,
+  tokenBag,
+  tokenId,
+}) {
   if (!destinationId) {
+    return {
+      didMove: false,
+      spellSlots,
+      tokenBag,
+    };
+  }
+
+  const destinationColumn = spellSlots.findIndex(({ id }) => id === destinationId) + 1;
+
+  if (
+    mergedColumns.some(({ removedColumn }) => removedColumn === destinationColumn)
+  ) {
     return {
       didMove: false,
       spellSlots,
@@ -102,7 +121,15 @@ export function moveSpellTokenInDraft({ destinationId, spellSlots, tokenBag, tok
     };
   }
 
-  if (destinationSlot && destinationSlot.tokens.length >= destinationSlot.maxTokens) {
+  const destinationSlotIndex = destinationSlot
+    ? nextSpellSlots.findIndex(({ id }) => id === destinationSlot.id)
+    : -1;
+
+  if (
+    destinationSlot &&
+    destinationSlot.tokens.length >=
+      getSpellColumnCapacity(nextSpellSlots, destinationSlotIndex, mergedColumns)
+  ) {
     return {
       didMove: false,
       spellSlots,

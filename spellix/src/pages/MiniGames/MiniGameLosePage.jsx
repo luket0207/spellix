@@ -24,8 +24,12 @@ function MiniGameLosePage({ randomFn = Math.random }) {
     returnFromMiniGame,
     setPlayerPosition,
   } = useGameSetup();
+  const [failingPlayerId] = useState(
+    () => miniGameResult?.playerId ?? currentPlayer?.id ?? null
+  );
   const failingPlayer =
-    gameSetup.players.find(({ id }) => id === miniGameResult?.playerId) ?? currentPlayer;
+    gameSetup.players.find(({ id }) => id === failingPlayerId) ??
+    (currentPlayer?.id === failingPlayerId ? currentPlayer : null);
   const existingPunishment = miniGameResult?.failurePunishment;
   const [healthLost] = useState(
     () => existingPunishment?.healthLost ?? selectMiniGameHealthLoss(randomFn)

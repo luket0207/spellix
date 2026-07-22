@@ -4,7 +4,9 @@ import Button from '../components/common/Button/Button';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
 import PotionIcon from '../components/potions/PotionIcon';
 import Token from '../components/tokens/Token';
+import Modal from '../components/Modal';
 import { getPotionName } from '../data/potions';
+import { getTokenName } from '../data/tokens';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import {
   canAddTokenToBag,
@@ -21,7 +23,10 @@ import {
   isRewardTokenFullBagDrop,
 } from '../features/rewards/rewardTokenAssignment';
 import SpellTokenAssignment from '../features/spells/SpellTokenAssignment';
+import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
+import { findNextColumnMerge } from '../features/spells/nonBattleSpellEffects';
 import {
+  getCaveMiniGameTranslations,
   getGameplayLanguage,
   getRewardAddedMessage,
   getRewardPageTranslations,
@@ -34,11 +39,13 @@ function RewardPage() {
   const navigate = useNavigate();
   const {
     activeBattle,
+    activatePendingCaveTokenReward,
     addSelectedRewardTokenToBag,
     assignSelectedRewardTokenToSpellSlot,
     advanceTurn,
     battlePlayer,
     clearActiveBattle,
+    continueCaveRewardResolution,
     discardSelectedRewardToken,
     miniGameResult,
     replaceSelectedRewardTokenInBag,
@@ -51,14 +58,21 @@ function RewardPage() {
   const [isTokenBagReplacementRequested, setIsTokenBagReplacementRequested] = useState(false);
   const [selectedSpellSlotId, setSelectedSpellSlotId] = useState('');
   const [selectedTokenBagReplacementId, setSelectedTokenBagReplacementId] = useState('');
+  const [pendingRewardMerge, setPendingRewardMerge] = useState(null);
   const isRewardPageReady = Boolean(activeBattle);
   const currentLanguage = getGameplayLanguage(battlePlayer?.language);
   const rewardPageTranslations = getRewardPageTranslations(currentLanguage);
+  const rewardGrantTranslations = getCaveMiniGameTranslations(
+    currentLanguage
+  ).rewardGrant;
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const isCaveRewardAssignment = activeBattle?.source === 'cave';
+  const isLootChestRewardAssignment = activeBattle?.source === 'lootChest';
   const pendingCaveReward = getPendingCaveReward(miniGameResult?.caveRewardGrant);
-  const caveHasLootChest = Boolean(miniGameResult?.caveRewards?.hasLootChest);
+  const caveHasLootChest = Boolean(
+    miniGameResult?.caveRewards?.hasLootChest && !miniGameResult?.lootChestReward
+  );
 
   useEffect(() => {
     if (!isRewardPageReady) {
@@ -78,11 +92,52 @@ function RewardPage() {
   const rewardBackground = isCaveRewardAssignment
     ? caveBackground
     : getBattleBackgroundSource(activeBattle.environment);
-  const rewardPageStyle = isSelectedTokenReward
+  const usesNightSkyRewardFlow =
+    isSelectedTokenReward ||
+    isCaveRewardAssignment ||
+    isLootChestRewardAssignment;
+  const rewardPageStyle = usesNightSkyRewardFlow
     ? undefined
     : { backgroundImage: `url(${rewardBackground})` };
 
+  const resetTokenPlacementDraft = () => {
+    setIsTokenBagStaged(false);
+    setIsRewardTokenDiscardStaged(false);
+    setIsTokenBagReplacementRequested(false);
+    setSelectedSpellSlotId('');
+    setSelectedTokenBagReplacementId('');
+    setPendingRewardMerge(null);
+  };
+
   const handleContinue = () => {
+    if (miniGameResult?.caveRewardResolution) {
+      resetTokenPlacementDraft();
+      const destination = continueCaveRewardResolution();
+
+      navigate(destination, { replace: true });
+      return;
+    }
+
+    if (isLootChestRewardAssignment) {
+      resetTokenPlacementDraft();
+
+      if (pendingCaveReward?.type === 'token') {
+        activatePendingCaveTokenReward();
+        return;
+      }
+
+      clearActiveBattle();
+
+      if (pendingCaveReward) {
+        navigate('/mini-game/cave', { replace: true });
+        return;
+      }
+
+      returnFromMiniGame();
+      navigate('/gameplay', { replace: true });
+      return;
+    }
+
     clearActiveBattle();
 
     if (isCaveRewardAssignment) {
@@ -111,6 +166,11 @@ function RewardPage() {
       battlePlayer && canAddTokenToBag(battlePlayer.tokenBag)
     );
     const rewardResolution = activeBattle.rewardResolution;
+    const assignmentAriaLabel = isTokenReward
+      ? 'Reward assignment'
+      : rewardResolution
+        ? rewardPageTranslations.potionAdded
+        : rewardGrantTranslations.potionSlotsFull;
     const selectedSpellSlotIndex = battlePlayer?.spellSlots.findIndex(
       ({ id }) => id === selectedSpellSlotId
     );
@@ -198,6 +258,7 @@ function RewardPage() {
 
       const nextSpellSlotId = getRewardSpellSlotDropId({
         destinationId,
+        mergedColumns: battlePlayer?.mergedColumns,
         rewardTokenId: rewardToken?.id,
         spellSlots: battlePlayer?.spellSlots,
         tokenId,
@@ -235,6 +296,25 @@ function RewardPage() {
     );
     const handleConfirmTokenPlacement = () => {
       if (selectedSpellSlotIndex >= 0) {
+        const stagedSpellSlots = battlePlayer.spellSlots.map((slot, index) =>
+          index === selectedSpellSlotIndex
+            ? {
+                ...slot,
+                tokens: [...slot.tokens, { ...rewardToken, committed: true }],
+              }
+            : slot
+        );
+        const columnMerge = findNextColumnMerge({
+          columnMergesUsed: battlePlayer.columnMergesUsed ?? 0,
+          mergedColumns: battlePlayer.mergedColumns ?? [],
+          spellSlots: stagedSpellSlots,
+        });
+
+        if (columnMerge) {
+          setPendingRewardMerge(columnMerge);
+          return;
+        }
+
         assignSelectedRewardTokenToSpellSlot(selectedSpellSlotId);
         return;
       }
@@ -256,24 +336,28 @@ function RewardPage() {
 
     return (
       <main
-        className={`reward-page${isTokenReward ? ' reward-page--assignment' : ''}`}
+        className={`reward-page${
+          usesNightSkyRewardFlow ? ' reward-page--assignment' : ''
+        }`}
         style={rewardPageStyle}
       >
-        {isTokenReward ? <MagicalNightSky /> : null}
+        {usesNightSkyRewardFlow ? <MagicalNightSky /> : null}
         <section
-          aria-label="Reward assignment"
+          aria-label={assignmentAriaLabel}
+          aria-modal={usesNightSkyRewardFlow ? 'true' : undefined}
           className={`reward-panel${
-            isTokenReward
+            usesNightSkyRewardFlow
               ? ` reward-panel--assignment modal-panel modal-panel--default ${languageClassName}`
               : ''
           }`}
+          role={usesNightSkyRewardFlow ? 'dialog' : undefined}
         >
           <h1 className={languageClassName}>{spellAssignmentTranslations.assignReward}</h1>
           {rewardResolution ? (
             <div className="assignment-result-modal">
               <p
-                className={`assignment-result-modal-content${
-                  isTokenReward ? ` ${languageClassName}` : ''
+                className={`assignment-result-modal-content larger-text ${languageClassName}${
+                  isTokenReward ? '' : ' larger-text'
                 }`}
               >
                 {isTokenReward
@@ -287,10 +371,10 @@ function RewardPage() {
                       resolvedSpellSlotIndex + 1
                     )
                   : rewardResolution.destination === 'potionSlot'
-                    ? 'Reward potion added.'
+                    ? rewardPageTranslations.potionAdded
                     : rewardResolution.destination === 'potionSlotReplacement'
-                      ? 'Reward potion replaced an existing potion.'
-                      : 'Reward potion discarded.'}
+                      ? rewardPageTranslations.potionReplaced
+                      : rewardPageTranslations.potionDiscarded}
               </p>
               <div
                 aria-label="Assignment result actions"
@@ -311,6 +395,7 @@ function RewardPage() {
               <>
                 <SpellTokenAssignment
                   language={currentLanguage}
+                  mergedColumns={battlePlayer.mergedColumns}
                   mode="rewardAssignment"
                   isRewardTokenStagedInBag={isTokenBagStaged}
                   isRewardTokenStagedForDiscard={isRewardTokenDiscardStaged}
@@ -347,17 +432,29 @@ function RewardPage() {
             </>
           ) : (
             <>
-            <PotionIcon language={currentLanguage} potion={selectedReward.item} />
-            <p>Potion slots are full.</p>
+            <div
+              aria-label={rewardGrantTranslations.newPotion}
+              className="new-potion-reward"
+            >
+              <PotionIcon language={currentLanguage} potion={selectedReward.item} />
+            </div>
+            <p>{`${rewardGrantTranslations.potionSlotsFull}.`}</p>
             {battlePlayer ? (
-              <ul>
+              <div
+                aria-label={rewardGrantTranslations.currentPotions}
+                className="potion-assignment-actions"
+              >
                 {battlePlayer.potions.map((potion, index) => {
                   const potionName = getPotionName(potion, currentLanguage);
+                  const replacePotionLabel = rewardGrantTranslations.replacePotion(
+                    potionName
+                  );
 
                   return (
-                  <li key={`${potion.id}-${index}`}>
                     <Button
-                      aria-label={`Replace ${potionName}`}
+                      aria-label={replacePotionLabel}
+                      className={`${languageClassName} potion-assignment-button`}
+                      key={`${potion.id}-${index}`}
                       type="button"
                       onClick={() => resolveSelectedPotionReward(index)}
                     >
@@ -366,62 +463,98 @@ function RewardPage() {
                         language={currentLanguage}
                         potion={potion}
                       />
-                      <span>{`Replace ${potionName}`}</span>
+                      <span>{replacePotionLabel}</span>
                     </Button>
-                  </li>
                   );
                 })}
-              </ul>
+                <Button
+                  className={`${languageClassName} potion-assignment-button-discard`}
+                  type="button"
+                  onClick={() => resolveSelectedPotionReward()}
+                >
+                  {rewardGrantTranslations.discardNewPotion}
+                </Button>
+              </div>
             ) : null}
-            <Button type="button" onClick={() => resolveSelectedPotionReward()}>
-              Discard new potion
-            </Button>
             </>
           )}
         </section>
+        <SpellMergeConfirmationModal
+          isOpen={Boolean(pendingRewardMerge)}
+          language={currentLanguage}
+          merge={pendingRewardMerge}
+          onCancel={() => setPendingRewardMerge(null)}
+          onConfirm={() => {
+            assignSelectedRewardTokenToSpellSlot(
+              selectedSpellSlotId,
+              pendingRewardMerge
+            );
+            setPendingRewardMerge(null);
+          }}
+        />
       </main>
     );
   }
 
   return (
     <main className="reward-page" style={rewardPageStyle}>
-      <section aria-label="Reward choices" className="reward-panel">
-        <h1 className={languageClassName}>{rewardPageTranslations.chooseOneReward}</h1>
+      <Modal
+        ariaLabel="Reward choices"
+        isOpen
+        panelClassName={`battle-reward-panel ${languageClassName}`}
+      >
+        <h1 className={`larger-text ${languageClassName}`}>
+          {rewardPageTranslations.chooseOneReward}
+        </h1>
         <div aria-label="Reward options" className="reward-options">
           {rewardChoices.map((rewardChoice, index) => {
-          const itemName =
-            rewardChoice.itemType === 'token'
-              ? rewardChoice.item.label
-              : rewardChoice.item.name;
+            const itemName =
+              rewardChoice.itemType === 'token'
+                ? getTokenName(rewardChoice.item.type, currentLanguage)
+                : getPotionName(rewardChoice.item, currentLanguage);
 
-          return (
-            <div
-              aria-label={`Reward option ${index + 1}`}
-              className="reward-option"
-              key={rewardChoice.id}
-            >
-              {rewardChoice.itemType === 'token' ? (
-                <Token
-                  ariaLabel={`${itemName} reward token`}
-                  language={currentLanguage}
-                  showName
-                  tokenType={rewardChoice.item.type}
-                />
-              ) : (
-                <PotionIcon language={currentLanguage} potion={rewardChoice.item} />
-              )}
-              <Button
-                className={languageClassName}
-                type="button"
-                onClick={() => selectBattleReward(rewardChoice.id)}
+            return (
+              <div
+                aria-label={`Reward option ${index + 1}`}
+                className="reward-option"
+                key={rewardChoice.id}
               >
-                {rewardPageTranslations.choose}
-              </Button>
-            </div>
-          );
+                <div className="battle-reward-icon-row">
+                  {rewardChoice.itemType === 'token' ? (
+                    <Token
+                      ariaLabel={`${rewardChoice.item.label} reward token`}
+                      language={currentLanguage}
+                      showName={false}
+                      tokenType={rewardChoice.item.type}
+                    />
+                  ) : (
+                    <PotionIcon
+                      language={currentLanguage}
+                      potion={rewardChoice.item}
+                      showName={false}
+                    />
+                  )}
+                </div>
+                <div className={`battle-reward-name ${languageClassName}`}>
+                  {itemName}
+                </div>
+                <div
+                  className="battle-reward-button-row"
+                  data-testid="battle-reward-button-row"
+                >
+                  <Button
+                    className={languageClassName}
+                    type="button"
+                    onClick={() => selectBattleReward(rewardChoice.id)}
+                  >
+                    {rewardPageTranslations.choose}
+                  </Button>
+                </div>
+              </div>
+            );
           })}
         </div>
-      </section>
+      </Modal>
     </main>
   );
 }

@@ -49,6 +49,85 @@ describe('reward token assignment drops', () => {
     ).toBe('');
   });
 
+  test('accepts a reward only in committed Grey-adjusted adjacent capacity', () => {
+    const greyAdjustedSlots = [
+      {
+        id: 'slot-1',
+        maxTokens: 5,
+        tokens: Array.from({ length: 5 }, (_, index) => ({
+          id: `red-${index}`,
+          type: 'red',
+        })),
+      },
+      {
+        id: 'slot-2',
+        maxTokens: 5,
+        tokens: [{ committed: true, id: 'grey-1', type: 'grey' }],
+      },
+    ];
+
+    expect(
+      getRewardSpellSlotDropId({
+        destinationId: 'slot-1',
+        rewardTokenId: 'reward-token',
+        spellSlots: greyAdjustedSlots,
+        tokenId: 'reward-token',
+      })
+    ).toBe('slot-1');
+
+    greyAdjustedSlots[1].tokens[0].committed = false;
+    expect(
+      getRewardSpellSlotDropId({
+        destinationId: 'slot-1',
+        rewardTokenId: 'reward-token',
+        spellSlots: greyAdjustedSlots,
+        tokenId: 'reward-token',
+      })
+    ).toBe('');
+  });
+
+  test('uses merged Grey capacity and rejects the removed merged destination', () => {
+    const spellSlots = [
+      {
+        id: 'slot-1',
+        maxTokens: 5,
+        tokens: Array.from({ length: 5 }, (_, index) => ({
+          committed: true,
+          id: `red-${index}`,
+          type: 'red',
+        })),
+      },
+      { id: 'slot-2', maxTokens: 5, tokens: [] },
+      {
+        id: 'slot-3',
+        maxTokens: 5,
+        tokens: [{ committed: true, id: 'grey-3', type: 'grey' }],
+      },
+    ];
+    const mergedColumns = [
+      { activeColumn: 1, columns: [1, 2], removedColumn: 2 },
+    ];
+
+    expect(
+      getRewardSpellSlotDropId({
+        destinationId: 'slot-1',
+        mergedColumns,
+        rewardTokenId: 'reward-token',
+        spellSlots,
+        tokenId: 'reward-token',
+      })
+    ).toBe('slot-1');
+    expect(
+      getRewardSpellSlotDropId({
+        destinationId: 'slot-2',
+        mergedColumns,
+        rewardTokenId: 'reward-token',
+        spellSlots,
+        tokenId: 'reward-token',
+      })
+    ).toBe('');
+  });
+
   test('accepts the new reward token in a non-full token bag only', () => {
     expect(
       isRewardTokenBagDrop({

@@ -1,3 +1,5 @@
+import { getEffectiveSpellColumnIndex } from '../spells/nonBattleSpellEffects';
+
 const RED_DAMAGE_PER_TOKEN = 10;
 const BLUE_GUARD_PER_TOKEN = 5;
 const ORANGE_COUNTER_DAMAGE_PER_TOKEN = 5;
@@ -5,8 +7,12 @@ const GREEN_REDUCTION_PER_TOKEN = 5;
 const PURPLE_BUFF_PER_TOKEN = 5;
 const YELLOW_CHARGE_BUFF = 10;
 
-function getBattleSlotTokens(spellSlots, diceResult) {
-  const slot = spellSlots?.[diceResult - 1];
+function getBattleSlotTokens(actor, diceResult) {
+  const effectiveColumnIndex = getEffectiveSpellColumnIndex(
+    actor?.mergedColumns,
+    diceResult
+  );
+  const slot = actor?.spellSlots?.[effectiveColumnIndex];
 
   if (!slot || slot.displayLabel === 'J' || slot.joinedWith !== undefined) {
     return [];
@@ -47,8 +53,8 @@ export function calculateBattleTurn({
   purpleBuff = 0,
   yellowCharged = false,
 }) {
-  const actorTokens = getBattleSlotTokens(currentActor.spellSlots, diceResult);
-  const opponentTokens = getBattleSlotTokens(opponent.spellSlots, diceResult);
+  const actorTokens = getBattleSlotTokens(currentActor, diceResult);
+  const opponentTokens = getBattleSlotTokens(opponent, diceResult);
   const tokenCounts = {
     actorBlue: countTokens(actorTokens, 'blue'),
     actorLightBlue: countTokens(actorTokens, 'light-blue'),

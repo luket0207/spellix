@@ -30,16 +30,16 @@ function createPlayer({ potions = [], tokenBag = [] } = {}) {
   };
 }
 
-test('keeps the Cave token pending assignment while automatically granting a potion', () => {
+test('keeps the Cave token and potion pending for ordered resolution', () => {
   const result = createCaveRewardGrant(createPlayer(), caveRewards);
 
   expect(result.player.tokenBag).toEqual([]);
-  expect(result.player.potions).toEqual([caveRewards.potion]);
+  expect(result.player.potions).toEqual([]);
   expect(result.rewardGrant.token).toEqual({
     item: caveRewards.token,
     status: 'pendingAssignment',
   });
-  expect(result.rewardGrant.potion.status).toBe('added');
+  expect(result.rewardGrant.potion.status).toBe('pending');
   expect(getPendingCaveReward(result.rewardGrant)).toMatchObject({
     item: caveRewards.token,
     type: 'token',

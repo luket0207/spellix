@@ -1,0 +1,1778 @@
+---
+
+Bug-001: Loot Chest reward icon sizing, reveal timing, and chosen chest layout stability
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Implement Loot Chest page with hidden reward choices, chest shuffle animation, and reward assignment flow
+
+Bug Summary
+
+* The blue cross icons for Nothing rewards are too large.
+* They look much bigger than the Token and Potion reward icons.
+* The reward icons disappear into the loot boxes too quickly, so the player cannot properly see what the possible rewards are.
+* When a loot box is chosen and the reward is revealed, the box disappears in a way that causes the layout to jump.
+* The chosen chest container should remain in place so the Choose button/result area does not move.
+
+Required Fixes
+
+* Make the blue `faXmark` Nothing reward icon visually match the size of the Token and Potion reward icons.
+* Show the reward icons for longer before they animate into the boxes.
+* Set the pre-animation reward display time to:
+
+```txt id="nbkl7s"
+2.5 seconds
+```
+
+* When a chest is chosen:
+
+  * shrink the chest icon.
+  * fade the chest icon out.
+  * keep the chest container in place.
+  * fade the selected reward icon in.
+* The container should still occupy its normal space even when the chest icon is invisible.
+* The button/result layout should not jump after a chest is chosen.
+
+Nothing Icon Size Requirement
+
+* The blue cross icon should be reduced in size.
+* It should look visually balanced against:
+
+  * TokenIcon rewards.
+  * PotionIcon rewards.
+* Do not size the `faXmark` based only on raw Font Awesome dimensions.
+* Adjust it until it visually matches the other reward icons.
+* The colour should remain blue.
+
+Suggested CSS direction:
+
+```css id="n2exab"
+.loot-reward-icon.is-nothing svg {
+  width: 64px;
+  height: 64px;
+  font-size: 64px;
+}
+```
+
+* Exact size can vary.
+* The important requirement is that the Nothing icon no longer looks oversized compared with the other reward icons.
+
+Reward Preview Timing Requirement
+
+* Before the reward icons animate into the loot boxes, keep them visible for:
+
+```txt id="l24f2k"
+2.5 seconds
+```
+
+* This should happen after the page loads and the rewards are shown.
+* The player should have enough time to actually see the possible rewards.
+* Only after this delay should the rewards animate into the boxes and fade out.
+
+Expected sequence:
+
+```txt id="vil980"
+1. Page loads.
+2. Rewards appear above the boxes.
+3. Rewards remain visible for 2.5 seconds.
+4. Rewards animate into the boxes and fade out.
+5. Boxes shuffle.
+6. Choose buttons fade in.
+```
+
+Chosen Chest Reveal Requirement
+
+* When the player chooses a box:
+
+  * the chosen chest icon should shrink.
+  * the chosen chest icon should fade out.
+  * the selected reward icon should fade in.
+* This should make the reveal feel animated instead of instantly replacing the chest.
+
+Suggested animation direction:
+
+```css id="g1zfpk"
+.loot-chest-icon.is-opening {
+  animation: chestShrinkFadeOut 0.4s ease forwards;
+}
+
+.loot-revealed-reward {
+  animation: rewardFadeIn 0.4s ease forwards;
+}
+```
+
+Stable Container Requirement
+
+* The loot chest container must remain in the layout after the chest icon fades out.
+* Do not remove the whole chest container from the DOM.
+* Do not set the container to `display: none`.
+* Do not collapse the container height or width.
+* Only hide or fade the visual chest icon itself.
+* The container should still reserve the same space on the page.
+* The button position should not jump when a chest is chosen.
+
+Suggested structure:
+
+```jsx id="gs1kro"
+<div className="loot-chest-choice">
+  <div className="loot-chest-visual-slot">
+    {!isChosen && (
+      <FontAwesomeIcon icon={faToolbox} className="loot-chest-icon" />
+    )}
+
+    {isChosen && (
+      <RewardIcon reward={selectedReward} className="loot-revealed-reward" />
+    )}
+  </div>
+
+  <Button>Choose</Button>
+</div>
+```
+
+* If the chest icon is conditionally removed, the visual slot must still have a fixed width and height.
+* Alternatively, keep both elements absolutely positioned inside the fixed visual slot and animate opacity.
+
+Suggested CSS direction:
+
+```css id="xjodwb"
+.loot-chest-visual-slot {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loot-chest-icon,
+.loot-revealed-reward {
+  position: absolute;
+}
+```
+
+* Exact sizes can vary.
+* The important requirement is that the layout remains stable.
+
+Button Position Requirement
+
+* Choosing a box should not cause the Choose button, Continue button, or result text to jump.
+* The chest row should keep its spacing.
+* The chosen chest area should still occupy the same width and height.
+* Result text can appear as designed, but the chest container itself should not collapse.
+
+Expected Behaviour After Fix
+
+* The blue Nothing cross icon is visually similar in size to Token and Potion icons.
+* Reward icons stay visible for 2.5 seconds before moving into the boxes.
+* Rewards then animate into the boxes and fade out.
+* Chests shuffle after the reward entry animation.
+* Choose buttons appear after the shuffle.
+* When a chest is chosen, the chest icon shrinks and fades out.
+* The selected reward fades in.
+* The chosen chest container remains in place.
+* Buttons and page layout do not jump after the reveal.
+
+Out Of Scope
+
+* No changes to reward probability table.
+* No changes to reward uniqueness rules.
+* No changes to chest shuffle logic except timing if needed.
+* No changes to token reward assignment.
+* No changes to potion reward handling.
+* No changes to Cave Game reward ordering.
+* No changes to turn return behaviour.
+* No unrelated Loot Chest redesign.
+
+Suspected Cause
+
+* Font Awesome `faXmark` is rendering larger than the custom TokenIcon and PotionIcon components.
+* Reward preview delay is currently too short.
+* The selected chest icon may be removed from the DOM or its container may collapse when the reward is revealed.
+
+Attempted Fixes
+
+* Added red-first assertions for the exact 2.5-second preview boundary, retained selected chest SVG, fixed visual slot, balanced Nothing dimensions, and chest/reward reveal keyframes.
+* Increased the reward preview phase from 1.2 seconds to 2.5 seconds and updated the shared app integration timer to the resulting 4.9-second ready-to-choose point.
+* Kept every chest icon mounted inside a fixed 120px visual slot, then animated only the selected icon while fading the reward into the same slot.
+* Added reduced-motion end states so the selected chest is hidden and its reward remains visible when animations are disabled.
+
+Final Fix
+
+* The blue Nothing `faXmark` now has explicit 64px width, height, and font size so Font Awesome's intrinsic dimensions do not make it oversized.
+* Reward previews remain fully visible for 2.5 seconds before the existing one-second entry animation and shuffle sequence begin.
+* Choosing a chest applies a 0.4-second shrink/fade animation to the still-mounted chest SVG and a matching fade-in animation to the selected reward.
+* A fixed 120px visual slot preserves each chest area's dimensions, so the Choose controls and result layout do not collapse when the selected chest fades out.
+* Relevant Loot Chest generation, state, page, and app integration regression passes 4 suites and 34 tests.
+* `npm run build` and the final whitespace audit are recorded in `testing.txt`.
+
+Testing Required
+
+* Confirm Nothing reward uses blue `faXmark`.
+* Confirm the blue cross icon no longer appears larger than TokenIcon.
+* Confirm the blue cross icon no longer appears larger than PotionIcon.
+* Confirm reward icons remain visible for 2.5 seconds before moving into boxes.
+* Confirm reward icons animate into the boxes after the 2.5-second delay.
+* Confirm reward icons fade out when entering the boxes.
+* Confirm chests shuffle after the reward icons enter.
+* Confirm Choose buttons fade in after the shuffle.
+* Confirm choosing a chest triggers chest shrink animation.
+* Confirm choosing a chest triggers chest fade-out animation.
+* Confirm the selected reward fades in.
+* Confirm the chosen chest container remains in the layout.
+* Confirm the chest visual slot keeps its width and height after reveal.
+* Confirm Choose button/result layout does not jump after reveal.
+* Confirm the page has no unexpected layout shift during reveal.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-002: Improve potion reward assignment modal layout
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-002: Add ordered Cave Game reward resolution flow after loot chest selection
+* EPIC-010 Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+
+Bug Summary
+
+* The potion reward assignment modal needs a cleaner structure.
+* The new potion is currently not centred properly.
+* The action buttons are uneven and not spaced consistently.
+* Potion icons/components inside the buttons need better spacing from the button text.
+
+Required Fixes
+
+* Centre the new potion in the potion assignment area.
+* Make all four potion assignment buttons equal width.
+* Add `15px` margin between the four buttons.
+* Add `20px` margin to the right of the potion component inside each button.
+
+New Potion Position Requirement
+
+* The new potion should be centred within its section of the modal.
+* It should not appear off to the left.
+* The new potion section should use a centred layout.
+
+Suggested CSS direction:
+
+```css id="f0gl47"
+.new-potion-reward {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the new potion is visually centred.
+
+Potion Button Layout Requirement
+
+* All four buttons in the potion assignment area should have equal width.
+* The buttons should be laid out consistently.
+* There should be `15px` margin or gap between each button.
+
+Suggested CSS direction:
+
+```css id="nhh6zp"
+.potion-assignment-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+```
+
+Alternative flex direction:
+
+```css id="llj2bq"
+.potion-assignment-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.potion-assignment-actions button {
+  flex: 1;
+}
+```
+
+* Either grid or flex is acceptable.
+* Do not use `ul` or `li`.
+* The important requirement is:
+
+  * four equal-width buttons.
+  * `15px` spacing between them.
+
+Potion Component Spacing Requirement
+
+* Inside the potion assignment buttons, the potion component should have margin to the right.
+* Add:
+
+```css id="k8wa13"
+margin-right: 20px;
+```
+
+* This should create spacing between the potion component and the button text.
+* The potion icon/component should not feel cramped against the label.
+
+Suggested CSS direction:
+
+```css id="ukj9aq"
+.potion-assignment-button .potion-icon,
+.potion-assignment-button .potion-component {
+  margin-right: 20px;
+}
+```
+
+* Exact selector names can vary.
+* Apply the spacing to the potion component inside the buttons, not globally to all potion icons unless that is safe.
+
+Modal Structure Requirement
+
+* The modal should remain visually consistent with the rest of the game.
+* Keep:
+
+  * wooden modal background.
+  * yellow text.
+  * bold text.
+  * correct English/Japanese fonts.
+  * modal buttons not full width unless explicitly required by the internal button grid.
+* The action buttons in this potion choice area are allowed to share equal widths inside their row.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with CSS grid or flex layouts.
+
+Expected Behaviour After Fix
+
+* The new potion appears centred in the modal.
+* The four potion assignment buttons are equal width.
+* The four buttons have `15px` spacing between them.
+* Potion components inside the buttons have `20px` margin-right.
+* The modal looks structured and balanced.
+* Potion replacement/discard functionality still works.
+* English/Japanese text and fonts still work.
+
+Out Of Scope
+
+* No changes to potion reward generation.
+* No changes to potion capacity.
+* No changes to which potion is added or discarded.
+* No changes to Cave Game reward order.
+* No changes to Loot Chest reward logic.
+* No unrelated modal redesign.
+
+Suspected Cause
+
+* The potion assignment modal layout is likely using left-aligned content and button sizing based on content width.
+* Potion components inside buttons may not have dedicated spacing from text.
+
+Attempted Fixes
+
+* Added red-first Reward page assertions for a centred new-potion section, one four-button action group, equal-width button CSS, 15px grid spacing, and scoped 20px potion-component spacing.
+* Moved the existing discard-new-potion action into the same action container as the three existing-potion replacement actions without changing any handlers.
+
+Final Fix
+
+* Wrapped the new potion in a localized, centred flex section.
+* Reused all four existing `Button` actions inside one CSS grid with four equal columns and a 15px gap.
+* Added a shared `potion-assignment-button` class and scoped `margin-right: 20px` to `.potion-icon` only inside those buttons.
+* Existing wooden modal styling, yellow/bold text, English/Japanese classes, replacement, discard, capacity, and Cave reward ordering behavior remain unchanged.
+* Reward page, queued Loot/Cave state, and app mini-game regression passes 3 suites and 43 tests.
+* `npm run build` and the final whitespace audit are recorded in `testing.txt`.
+
+Testing Required
+
+* Confirm the new potion is centred.
+* Confirm all four potion assignment buttons are equal width.
+* Confirm there is `15px` spacing between buttons.
+* Confirm potion components inside buttons have `20px` right margin.
+* Confirm potion button labels remain readable.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm potion replacement still works.
+* Confirm discarding the new potion still works.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-003: Loot Chest Nothing icon still too large and Continue area causes layout shift
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Implement Loot Chest page with hidden reward choices, chest shuffle animation, and reward assignment flow
+* Bug-001: Loot Chest reward icon sizing, reveal timing, and chosen chest layout stability
+
+Bug Summary
+
+* The Nothing reward icon is still much too large.
+* It still looks far bigger than the Token and Potion reward icons.
+* The Nothing icon should be significantly smaller, around 20px height.
+* There is also a layout shift when the Continue button appears after the reward is revealed.
+* The space for the result / Continue area should already be reserved before it becomes visible.
+
+Required Fixes
+
+* Reduce the Nothing reward icon size again.
+* Target around:
+
+```txt id="o6fbj3"
+20px height
+```
+
+* Ensure the Nothing icon visually fits with the Loot Chest reward reveal UI.
+* Reserve vertical space for the result and Continue area before it appears.
+* Prevent the page elements from shifting when Continue becomes visible.
+
+Nothing Icon Size Requirement
+
+* The blue `faXmark` Nothing icon should be much smaller than it is now.
+* Set its height to approximately:
+
+```txt id="kdbos7"
+20px
+```
+
+* Width should scale proportionally.
+* Do not allow Font Awesome default sizing to make it larger.
+* This should apply to:
+
+  * the reward preview before icons enter the chests.
+  * the selected reward reveal after the player chooses a chest.
+  * any result display icon if present.
+
+Suggested CSS Direction
+
+```css id="i1vgwp"
+.loot-reward-icon.is-nothing svg,
+.loot-revealed-reward.is-nothing svg {
+  height: 20px;
+  width: 20px;
+  font-size: 20px;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the Nothing icon is visually small and no longer dominates the reward UI.
+
+Icon Consistency Requirement
+
+* Token rewards should still use the TokenIcon component without the token name.
+* Potion rewards should still use the PotionIcon component without the potion name.
+* Nothing rewards should use blue `faXmark`.
+* Only the Nothing icon size should be adjusted.
+* Do not shrink TokenIcon or PotionIcon unless required for alignment.
+
+Continue Area Layout Stability Requirement
+
+* When the Continue button appears after reward reveal, the rest of the page should not jump.
+* Reserve the vertical space for the result / Continue area before it is visible.
+* Do not insert the Continue area in a way that pushes the chests, buttons, title, or other elements around.
+* The area can be invisible before reveal, but it should still take up space.
+
+Suggested Structure
+
+```jsx id="iu5q02"
+<div className="loot-result-area">
+  {selectedReward ? (
+    <>
+      <div className="loot-result-text">
+        {resultText}
+      </div>
+
+      <Button>
+        {continueText}
+      </Button>
+    </>
+  ) : null}
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="t4svz4"
+.loot-result-area {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loot-result-area.is-hidden {
+  visibility: hidden;
+}
+```
+
+* Exact height can vary.
+* The important requirement is that the page already accounts for this area before the Continue button appears.
+
+Visibility Requirement
+
+* Before a reward is chosen:
+
+  * the result / Continue area should reserve space.
+  * it should not show visible result text.
+  * it should not show a clickable Continue button.
+* After a reward is chosen:
+
+  * reveal the result text.
+  * reveal the Continue button.
+  * do not change the surrounding layout height.
+
+Do Not Use These Approaches
+
+* Do not use `display: none` on the result area if that causes layout shift.
+* Do not conditionally remove the result area container.
+* Do not allow the button to appear by pushing other elements up or down.
+* Do not collapse the result area before the reward is chosen.
+
+Expected Behaviour After Fix
+
+* The blue Nothing icon is around 20px high.
+* The Nothing icon no longer appears larger than TokenIcon or PotionIcon.
+* Reward preview still works.
+* Reward reveal still works.
+* The Continue button appears after the reward is revealed.
+* When Continue appears, the rest of the page does not shift.
+* The chest row does not jump.
+* The title does not jump.
+* The selected reward area does not push other elements around.
+* The page feels stable during the reveal and result stages.
+
+Out Of Scope
+
+* No changes to Loot Chest reward probability.
+* No changes to reward uniqueness rules.
+* No changes to chest shuffle logic.
+* No changes to reward assignment logic.
+* No changes to token placement.
+* No changes to potion handling.
+* No changes to turn return behaviour.
+* No unrelated Loot Chest redesign.
+
+Suspected Cause
+
+* Font Awesome sizing is still overriding or exceeding the intended Nothing icon size.
+* The result / Continue section may only be added to the DOM after selection, causing a vertical layout shift.
+
+Attempted Fixes
+
+* Bug-001 reduced the Nothing icon size, but it is still too large.
+* This bug further reduces the target size to around 20px height and adds explicit layout reservation for the Continue area.
+* Added red-first page assertions for an always-mounted empty result area, preserved container identity after reward selection, 20px Nothing icon dimensions, and the reserved flex layout.
+* Kept the result container mounted through every Loot Chest phase while conditionally rendering only its result text and Continue button.
+
+Final Fix
+
+* Set the blue `.loot-nothing-icon` font size, height, and width to 20px so the shared icon rendering is consistently smaller in both preview and reveal states without changing Token or Potion icons.
+* Made `.loot-chest-result` an always-mounted, vertically centred flex container with a 120px minimum height, reserving the result and Continue space before a reward is selected.
+* Before selection the reserved container has no visible text or clickable button; after selection the existing localized result and Continue controls render inside that same container without inserting a new layout section.
+* Reward odds, chest timing and shuffle behavior, reward assignment, and turn return behavior are unchanged.
+* The relevant Loot Chest regression passes 4 suites and 34 tests, the production build compiles successfully, and `git diff --check` reports no whitespace errors.
+
+Testing Required
+
+* Confirm the Nothing icon is around 20px high.
+* Confirm the Nothing icon is blue.
+* Confirm the Nothing icon no longer looks larger than TokenIcon.
+* Confirm the Nothing icon no longer looks larger than PotionIcon.
+* Confirm the Nothing icon is correctly sized during reward preview.
+* Confirm the Nothing icon is correctly sized during reward reveal.
+* Confirm the result / Continue area reserves space before a reward is chosen.
+* Confirm Continue is not clickable before a reward is chosen.
+* Confirm Continue appears after the reward is revealed.
+* Confirm no other elements shift when Continue appears.
+* Confirm the title does not move when Continue appears.
+* Confirm the chest row does not move when Continue appears.
+* Confirm the chosen chest container remains stable.
+* Confirm the page has no visible layout jump during result reveal.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-004: Prevent visible player image changing prematurely before screen transition completes
+
+Status
+
+* fixed
+
+Related Feature
+
+* EPIC-010 Feature-013: Build Mini Game Failed screen with punishment health loss and respawn handling
+* EPIC-010 Bug-005: Next-turn modal must always appear after any player turn change
+* EPIC-011 Feature-002: Add ordered Cave Game reward resolution flow after loot chest selection
+
+Bug Summary
+
+* This is a global turn-change visual bug.
+* When a button is clicked and that button triggers a turn change, any player image currently visible on the screen can change to the next player too early.
+* This creates a visual glitch where the current screen briefly shows the next player before the page changes.
+* Example:
+
+  * On the Mini Game Failed / punishment screen, the current player’s image is shown.
+  * The player clicks Continue.
+  * Before the screen changes, the image briefly changes to the next player’s image.
+* This should not happen.
+
+Expected Behaviour
+
+* If a screen is showing a player image, that image should remain the same until the current screen is finished.
+* Clicking a button that triggers a turn change should not immediately update visible player imagery on the outgoing screen.
+* The current screen should continue showing the player who belongs to that screen.
+* The next player’s image should only appear:
+
+  * after navigation to the board is complete.
+  * inside the next-turn modal.
+  * or on the next screen where the new current player is actually relevant.
+
+Actual Behaviour
+
+* The active player changes before the current page has finished transitioning away.
+* Because the visible player image is bound directly to the global current player, it updates immediately.
+* The outgoing screen briefly shows the next player’s image.
+
+Required Fix
+
+* Prevent outgoing screens from visually reacting to the global current player change before navigation is complete.
+* Screens that show a player image should keep a stable local reference to the relevant player for that screen.
+* Do not render player images directly from live global current player state if that screen is about the previous player’s result.
+* Use a locked player reference, route state, or local snapshot for screens such as:
+
+  * Mini Game Failed screen.
+  * reward result screens.
+  * assignment result screens.
+  * any screen where the visible player belongs to the just-finished action rather than the next turn.
+
+Suggested Implementation Direction
+
+* When entering a result/punishment/reward screen, store the relevant player as the screen player.
+* Use that screen player for visuals until the screen is left.
+
+Suggested shape:
+
+```js id="zca6k5"
+const [screenPlayerId] = useState(currentPlayer.id);
+const screenPlayer = players.find((player) => player.id === screenPlayerId);
+```
+
+* Or, if route state is used:
+
+```js id="kc27nn"
+navigate("/mini-game/lose", {
+  state: {
+    playerId: currentPlayer.id
+  }
+});
+```
+
+* Exact implementation can vary.
+* The important requirement is that the visible player image does not change just because the global turn has advanced.
+
+Turn Change Timing Requirement
+
+* It is still valid for the game state to advance the turn.
+* The bug is only about visible outgoing screen content updating too early.
+* If needed, reorder the flow so navigation or local player locking happens before the global current player update affects the page.
+* The next-turn modal invariant still applies:
+
+  * when the active player changes, the next-turn modal must appear 100% of the time.
+* This fix must not stop the next-turn modal from appearing.
+
+Global Rule
+
+* Any screen that shows a player image related to a completed action should not automatically switch that image to the new current player during the outgoing transition.
+* This applies to:
+
+  * Mini Game Failed / punishment screen.
+  * Cave Game result/retreat screens if relevant.
+  * Loot Chest result screens if relevant.
+  * token assignment result screens if relevant.
+  * potion assignment/result modals if relevant.
+  * future mini game result screens.
+* The screen should show the player who caused the result, not the next player.
+
+Mini Game Failed Screen Requirement
+
+* On the Mini Game Failed screen:
+
+  * the player image should remain the failed player’s image.
+  * clicking Continue should not change that image before leaving the page.
+  * clicking Respawn should not change that image before leaving the page.
+* The next player should only be shown once the flow returns to gameplay and the next-turn modal appears.
+
+Reward / Assignment Screen Requirement
+
+* If a reward or assignment screen shows the player image:
+
+  * keep the reward owner’s image stable.
+  * do not switch it to the next player during final Continue.
+* This is especially important when final reward resolution advances the turn.
+
+Do Not Break Turn Flow
+
+* The turn should still advance when it is supposed to.
+* The next-turn modal should still appear when it is supposed to.
+* Roll Again Potion should still keep the same player active.
+* River win roll-again should still keep the same player active.
+* This bug only prevents premature visual updates on the outgoing screen.
+
+Expected Behaviour After Fix
+
+* On Mini Game Failed screen, the player image stays as the punished player.
+* Clicking Continue does not briefly change the image to the next player.
+* Clicking Respawn does not briefly change the image to the next player.
+* After returning to the board, the next-turn modal shows the correct next player.
+* Reward screens do not briefly show the next player before transitioning away.
+* The active player still updates correctly in game state.
+* The next-turn modal still appears after player-to-player turn changes.
+
+Out Of Scope
+
+* No changes to turn order.
+* No changes to next-turn modal text.
+* No changes to punishment health loss logic.
+* No changes to reward generation.
+* No changes to Roll Again Potion behaviour.
+* No changes to player image assets.
+* No unrelated screen redesign.
+
+Suspected Cause
+
+* The visible player image is probably derived directly from the global current player.
+* When the Continue button advances the turn, global current player updates before navigation finishes.
+* The outgoing screen re-renders once with the next player before it unmounts.
+
+Attempted Fixes
+
+* Added a red-first loss-page regression that keeps the outgoing route mounted while clearing `miniGameResult` and advancing the live `currentPlayer`; before the fix, the image changed from the failed player's `m-red.png` to the next player's `f-blue.png`.
+* Audited the related River, Cave, Loot Chest, Reward, and reward-assignment screens. Only Mini Game Failed renders an outgoing result-screen player image through the unsafe live-player fallback; the reward and assignment screens do not render player imagery, and River/Cave retain their result player ID during their own transitions.
+
+Final Fix
+
+* `MiniGameLosePage` now captures the failed player ID once when the screen mounts and continues resolving that same player from the player list after global turn state changes.
+* The fallback to `currentPlayer` is now allowed only when it still matches the captured failed-player ID, preventing the outgoing punishment screen from showing the next player's image after `miniGameResult` is cleared.
+* The player object itself is not frozen, so punishment health changes still come from current game state while the screen identity remains stable.
+* Continue, Respawn, health loss, Start Area placement, turn advancement, River roll-again behavior, Cave return behavior, and next-turn modal behavior are unchanged.
+* The result-page suite, app mini-game integration suite, and five focused failure/turn-return state tests pass; the production build compiles successfully.
+
+Testing Required
+
+* Confirm Mini Game Failed screen shows the failed player’s image.
+* Confirm clicking Continue does not change the image before leaving the screen.
+* Confirm clicking Respawn does not change the image before leaving the screen.
+* Confirm after Continue, the next-turn modal shows the correct next player.
+* Confirm after Respawn, the next-turn modal shows the correct next player.
+* Confirm reward result screens do not briefly show the next player before leaving.
+* Confirm assignment result screens do not briefly show the next player before leaving.
+* Confirm Cave reward resolution still advances turn when appropriate.
+* Confirm Cave reward resolution keeps same player when Roll Again Potion was gained.
+* Confirm River win still keeps same player active.
+* Confirm next-turn modal still appears after any player-to-player turn change.
+* Confirm no stale player image remains on the board after navigation completes.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-005: Light Green max health increase should also increase current health
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Bug Summary
+
+* Light Green tokens currently increase the player’s maximum health.
+* However, when a Light Green token is newly committed, the player’s current health should increase by the same amount.
+* This makes the token feel like it grants extra health, not just extra empty capacity.
+
+Expected Behaviour
+
+* When a Light Green token is committed, it should add:
+
+```txt id="f317we"
++5 max health
++5 current health
+```
+
+* Example:
+
+```txt id="h0lva2"
+Before: 90 / 100
+After adding 1 Light Green token: 95 / 105
+```
+
+* Multiple newly committed Light Green tokens should stack.
+* Example:
+
+```txt id="b3y532"
+Before: 90 / 100
+After adding 2 Light Green tokens: 100 / 110
+```
+
+Required Fix
+
+* When calculating the change caused by newly committed Light Green tokens:
+
+  * increase max health by `5` per added Light Green token.
+  * also increase current health by `5` per added Light Green token.
+* Do not heal beyond the new maximum health.
+* If Light Green tokens are later removed, reduce max health and clamp current health if needed.
+
+Suggested Direction
+
+```js id="th662y"
+const previousLightGreenCount = countCommittedLightGreen(previousSpellSlots);
+const nextLightGreenCount = countCommittedLightGreen(nextSpellSlots);
+
+const lightGreenDelta = nextLightGreenCount - previousLightGreenCount;
+
+if (lightGreenDelta > 0) {
+  player.maxHealth += lightGreenDelta * 5;
+  player.currentHealth = Math.min(
+    player.currentHealth + lightGreenDelta * 5,
+    player.maxHealth
+  );
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that newly added Light Green tokens increase both current and maximum health.
+
+Out Of Scope
+
+* No changes to Light Green battle behaviour.
+* No changes to potion healing.
+* No changes to respawn health.
+* No changes to battle damage.
+* No changes to health bar styling.
+* No unrelated health system redesign.
+
+Attempted Fixes
+
+* Added red-first utility coverage for one and two newly committed Light Green tokens and for committing at full health; the existing implementation reproduced the bug by leaving current health unchanged.
+* Updated the provider-level spell commit regression from the obsolete no-heal expectation to the required current-health increase.
+
+Final Fix
+
+* `applyLightGreenHealthBonus` now compares the already-applied Light Green max-health bonus with the bonus from the next committed spell slots.
+* Only a positive newly committed bonus is added to current health, so adding tokens heals by 5 each without repeatedly healing during later recalculations.
+* Current health remains capped by the new maximum, and removing Light Green tokens still reduces maximum health and clamps current health when needed.
+* Token-bag contents, Light Green battle behavior, potion healing, respawn health, battle damage, and health-bar styling are unchanged.
+* The complete focused regression passes 9 suites and 102 tests, and the production build compiles successfully.
+
+Testing Required
+
+* Confirm adding 1 Light Green token at 90/100 changes health to 95/105.
+* Confirm adding 2 Light Green tokens at 90/100 changes health to 100/110.
+* Confirm adding Light Green at full health 100/100 changes health to 105/105.
+* Confirm current health never exceeds max health.
+* Confirm removing Light Green reduces max health.
+* Confirm removing Light Green clamps current health if current health is above the new max.
+* Confirm Light Green in token bag does not affect health.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-006: Grey token capacity increase should only apply after commit
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Bug Summary
+
+* Grey tokens increase the capacity of adjacent spell columns.
+* This capacity increase should only apply after the Grey token has been committed.
+* While the player is still editing the spell assignment modal, newly placed Grey tokens should not immediately increase adjacent column capacity.
+
+Expected Behaviour
+
+* Grey token capacity bonuses should be based on committed spell slots only.
+* A Grey token being moved around in the current uncommitted edit state should not increase adjacent capacity yet.
+* The capacity bonus applies only after the player confirms and commits the spell changes.
+* Until committed, adjacent columns should still use their currently committed capacity values.
+
+Example
+
+* Player places a Grey token into column 2 during editing.
+* Columns 1 and 3 should not immediately gain extra capacity.
+* If the player commits the change, then columns 1 and 3 gain +1 capacity.
+* If the player cancels the change, no capacity change happens.
+
+Required Fix
+
+* Separate committed capacity from draft/editing capacity.
+* Capacity checks during editing should be based on currently committed Grey tokens, not newly staged Grey tokens.
+* On commit:
+
+  * apply the Grey token placement.
+  * recalculate committed capacities.
+  * update future spell assignment capacity displays and limits.
+
+Suggested Direction
+
+```js id="b4qez8"
+const committedCapacity = getColumnCapacityFromCommittedSlots(player.committedSpellSlots);
+```
+
+* Do not calculate live capacity from temporary draft spell slots while editing.
+* The draft state can show where the Grey token will go, but the capacity effect should not activate until save/commit.
+
+Commit Validation Requirement
+
+* If committing a Grey token would increase adjacent capacity, that capacity can be applied after commit.
+* If removing a committed Grey token would cause adjacent columns to exceed their new capacity:
+
+  * prevent commit, or
+  * require the player to move/remove enough tokens first.
+* Do not allow an invalid committed state.
+
+Out Of Scope
+
+* No changes to Grey token effect amount.
+* No changes to Grey token adjacency rules.
+* No changes to base spell slot capacity.
+* No changes to token rarity.
+* No unrelated spell assignment redesign.
+
+Attempted Fixes
+
+* Added red-first coverage for pure capacity calculation, draft token movement, and rendered assignment limits.
+* Before the fix, one committed and one draft Grey token in column 2 incorrectly raised columns 1 and 3 to capacity 7, and a draft Grey token allowed a sixth token into an adjacent base-capacity column.
+
+Final Fix
+
+* The shared column-capacity helper now counts only Grey tokens whose `committed` flag is true.
+* Draft Grey tokens remain visible in their staged columns but do not change adjacent displayed limits, drag/drop acceptance, or draft over-capacity checks.
+* Once saved, the existing commit flow marks the Grey token committed, so subsequent assignment sessions receive the adjacent capacity bonus through the same helper.
+* Cancelling continues to discard draft spell state without changing the player's committed slots or capacities.
+* Grey effect amount, physical adjacency, base capacity, rarity, spell-assignment UI, and unrelated token behavior are unchanged.
+* The complete focused regression passes 9 suites and 105 tests, including normal and reward assignment capacity behavior, and the production build compiles successfully.
+
+Testing Required
+
+* Confirm placing an uncommitted Grey token in column 2 does not immediately increase column 1 capacity.
+* Confirm placing an uncommitted Grey token in column 2 does not immediately increase column 3 capacity.
+* Confirm committing the Grey token then increases adjacent capacity.
+* Confirm cancelling the edit does not apply the Grey capacity bonus.
+* Confirm removing a committed Grey token updates capacity only after commit.
+* Confirm invalid over-capacity states cannot be committed.
+* Confirm `X of X tokens` reflects committed capacity correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-007: White merge tokens should be removed after merging and merged columns cannot merge again
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Bug Summary
+
+* When two columns are merged using White tokens, the White tokens that caused the merge should also be removed.
+* An already merged column should not be able to merge again.
+* In the committed spells component, merged columns should span two column spaces while preserving the same total layout area.
+
+Expected Behaviour
+
+* To merge two adjacent columns, the player places one White token in each column.
+* When the merge is confirmed:
+
+  * the losing column’s tokens are removed.
+  * the White merge token in the retained column is also removed.
+  * the White merge token in the losing column is also removed as part of that column being cleared.
+* After the merge, the merged pair acts as one column.
+* An already merged column cannot be merged again.
+* The merged display should span 2 columns in the committed spells component.
+
+White Token Removal Requirement
+
+* The White tokens are consumed by the merge.
+* They should not remain as active tokens after the merge.
+* This applies to both White tokens used in the merge:
+
+  * the White token in the retained column.
+  * the White token in the removed/lost column.
+* Since the losing column is cleared, its White token will already be removed.
+* The retained column must also have its White merge token removed.
+
+Example
+
+```txt id="w7603w"
+Column 2: Red, White
+Column 3: Blue, White
+
+Merge columns 2 and 3.
+Column 3 loses its tokens.
+Column 2 keeps Red.
+Column 2 loses White because it was consumed by the merge.
+
+Final active merged column 2+3: Red
+```
+
+Already Merged Column Requirement
+
+* Once a column is part of a merged pair, it cannot be merged again.
+* Examples:
+
+  * if columns 2+3 are merged, column 2 cannot merge with 1.
+  * if columns 2+3 are merged, column 3 cannot merge with 4.
+  * the merged 2+3 pair cannot merge into a larger 2+3+4 group.
+* White tokens placed in already merged columns should do nothing for merging.
+* They should remain redundant unless another feature later changes this.
+
+Merge Detection Requirement
+
+* When checking for new merge opportunities, exclude:
+
+  * any column already in `player.mergedColumns`.
+  * any column that is part of an existing merged pair.
+* Only unmerged adjacent columns can create a new merge.
+* Preserve the two-merge-per-game limit.
+
+Merged Column Display Requirement
+
+* In the committed spells component, merged columns should visually span two columns.
+* They should take up the same total space as the two original columns.
+* Nothing should jump around or shrink.
+* If columns 2 and 3 are merged:
+
+  * the merged display should span the space for columns 2 and 3.
+  * the title should display `2+3`.
+  * the merged area should visibly look like one joined spell column.
+* The committed spells layout should still preserve the full six-column width.
+
+Suggested Display Direction
+
+```txt id="qx5v2x"
+Column 1 | Merged 2+3 spanning 2 columns | Column 4 | Column 5 | Column 6
+```
+
+Suggested CSS Direction
+
+```css id="n8wq86"
+.committed-spell-column.is-merged {
+  grid-column: span 2;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that merged columns span two original column spaces and keep the committed spells component stable.
+
+Out Of Scope
+
+* No changes to the merge limit.
+* No changes to the merge confirmation text.
+* No changes to the losing-column selection rules.
+* No changes to Grey token behaviour except interactions needed for merged layout.
+* No changes to Light Green health behaviour.
+* No unrelated committed spells redesign.
+
+Attempted Fixes
+
+* Added a red-first merge regression that expected the retained column to contain only its non-White token after confirmation; the existing implementation reproduced the bug by retaining `[White, Red]`.
+* Strengthened existing coverage to prove merge scanning skips columns in an existing pair and can still find a later unused pair.
+* Updated the committed-spell display regression to render slots produced by the real merge helper instead of synthetic post-merge data.
+
+Final Fix
+
+* `applyColumnMerge` now consumes the first White token in the retained active column while continuing to clear every token from the losing column.
+* The helper still clones its input, preserves all retained non-White tokens, and leaves additional unused White tokens intact if a column contains more than one.
+* Existing merged-column records still prevent either physical column in a merged pair from participating in another merge, while later unmerged adjacent pairs remain eligible up to the two-merge limit.
+* The existing committed-spell component continues to render one `X+X` item spanning two original grid tracks, and merged battle dice aliases are unchanged.
+* Both normal spell confirmation and reward-token merge confirmation already reuse `applyColumnMerge`, so the consumed-token rule applies to both paths without new state or components.
+* The complete focused regression passes 9 suites and 105 tests, and the production build compiles successfully.
+
+Testing Required
+
+* Confirm merging consumes the White token in the retained column.
+* Confirm merging removes the White token in the losing column.
+* Confirm the losing column’s other tokens are removed as before.
+* Confirm the retained column keeps its non-White tokens.
+* Confirm the merged column does not include the consumed White token.
+* Confirm a merged column cannot be merged again.
+* Confirm a column adjacent to a merged pair cannot merge with a column already in that pair.
+* Confirm White tokens in already merged columns do not trigger another merge.
+* Confirm the two-merge-per-game limit still works.
+* Confirm merged columns visually span two columns in committed spells.
+* Confirm merged columns take up the same total space as before.
+* Confirm merged column title displays like `2+3`.
+* Confirm the committed spells layout does not jump.
+* Confirm battle rolls still trigger merged columns correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+* Bug-006: Grey token capacity increase should only apply after commit
+* Bug-007: White merge tokens should be removed after merging and merged columns cannot merge again
+* EPIC-010 Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+
+Bug Summary
+
+* Merged spell columns are represented correctly in the committed spells display, but the Spell Token Assignment component must also treat them as merged.
+* A merged pair should no longer display two separate droppable areas.
+* It should display one droppable area spanning the space previously occupied by both columns.
+* Merged columns must also be treated as one effective column when calculating adjacency.
+* Effects that target adjacent columns, including buffs and Grey-token capacity increases, must target the merged column as a whole.
+
+Expected Behaviour
+
+* If columns 1 and 2 are merged:
+
+  * remove one of the two original droppable areas.
+  * display one merged droppable area titled `1+2`.
+  * make that area span the original space of columns 1 and 2.
+  * treat merged `1+2` as adjacent to column 3.
+* If column 3 provides a buff or capacity increase to an adjacent column:
+
+  * that effect should apply to merged column `1+2`.
+* If merged column `1+2` provides an adjacent-column effect:
+
+  * it should apply to column 3.
+* The effect should apply once per relevant token, not once for each original column inside the merged group.
+
+Spell Token Assignment Display Requirement
+
+* When loading the Spell Token Assignment component, read the player’s committed merged-column state.
+* Replace each merged pair with one effective assignment column.
+* Do not render the removed column’s separate drop zone.
+* The merged drop zone should occupy the combined visual width of the two original columns.
+
+Example:
+
+```txt id="50cnr2"
+Before merge:
+1 | 2 | 3 | 4 | 5 | 6
+
+After merging 1 and 2:
+1+2     | 3 | 4 | 5 | 6
+```
+
+* The `1+2` area must span exactly two original column spaces.
+* The total width of the Spell Token Assignment layout must remain unchanged.
+* Other columns must not move unpredictably or expand into the freed space.
+
+Suggested CSS Grid Direction
+
+```css id="ln2rm0"
+.spell-slot-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.spell-slot-column.is-merged {
+  grid-column: span 2;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the merged assignment area spans two original columns.
+
+Merged Drop Zone Requirement
+
+* The merged area should contain one droppable zone.
+* All tokens belonging to the effective merged column should be displayed in this zone.
+* The player should drag new tokens into this single merged drop zone.
+* Do not provide a second hidden or overlapping drop zone for the removed column.
+* Do not allow tokens to be separately assigned to the removed column through drag-and-drop state.
+
+Merged Column Title Requirement
+
+* The merged assignment column title should show both original column numbers.
+* Examples:
+
+```txt id="c1lud5"
+1+2
+2+3
+3+4
+4+5
+5+6
+```
+
+* Keep the title centred over the merged droppable area.
+* Numeric titles do not require translation.
+* Preserve the existing large spell-column title styling.
+
+Effective Column Group Requirement
+
+* Spell columns should be converted into ordered effective column groups before rendering or calculating adjacency.
+* Examples:
+
+```js id="byp8t9"
+[
+  { columns: [1, 2], label: "1+2", isMerged: true },
+  { columns: [3], label: "3", isMerged: false },
+  { columns: [4], label: "4", isMerged: false },
+  { columns: [5], label: "5", isMerged: false },
+  { columns: [6], label: "6", isMerged: false }
+]
+```
+
+```js id="hw16se"
+[
+  { columns: [1], label: "1", isMerged: false },
+  { columns: [2, 3], label: "2+3", isMerged: true },
+  { columns: [4], label: "4", isMerged: false },
+  { columns: [5], label: "5", isMerged: false },
+  { columns: [6], label: "6", isMerged: false }
+]
+```
+
+* Exact data structure can vary.
+* Rendering, capacity calculations, and adjacent-column effects should use these effective groups where appropriate.
+
+Effective Adjacency Requirement
+
+* Once columns are merged, adjacency should be calculated using the ordered effective column groups.
+* The effective group immediately before or after another group is adjacent to it.
+
+Examples:
+
+```txt id="xml32j"
+Merged 1+2:
+1+2 is adjacent to 3.
+3 is adjacent to 1+2 and 4.
+```
+
+```txt id="cx8si5"
+Merged 2+3:
+1 is adjacent to 2+3.
+2+3 is adjacent to 1 and 4.
+4 is adjacent to 2+3 and 5.
+```
+
+```txt id="5xr7mr"
+Merged 5+6:
+5+6 is adjacent to 4.
+4 is adjacent to 3 and 5+6.
+```
+
+* Do not continue treating the two original columns in a merged pair as separately adjacent.
+* The merged group acts as one column for adjacency-based effects.
+
+Grey Token Capacity Interaction
+
+* Grey token capacity effects must use effective adjacency.
+* Example:
+
+  * columns 1 and 2 are merged.
+  * column 3 contains one committed Grey token.
+  * merged column `1+2` receives +1 capacity.
+* If column 3 contains two committed Grey tokens:
+
+  * merged column `1+2` receives +2 capacity.
+* Do not apply the capacity increase twice merely because the merged group contains two original column numbers.
+
+Grey Token Inside a Merged Column
+
+* If a merged column contains committed Grey tokens, those tokens affect the effective groups directly beside the merged column.
+* Example:
+
+  * columns 2 and 3 are merged.
+  * merged `2+3` contains one Grey token.
+  * column 1 receives +1 capacity.
+  * column 4 receives +1 capacity.
+* The Grey token should not affect any non-adjacent columns.
+* Each Grey token should apply once to each adjacent effective group.
+
+Capacity Calculation Example
+
+* Effective groups:
+
+```txt id="t5m3jy"
+1 | 2+3 | 4 | 5 | 6
+```
+
+* If column 1 has one Grey token and column 4 has two Grey tokens:
+
+  * merged `2+3` receives +3 total capacity.
+* This is:
+
+  * +1 from column 1.
+  * +2 from column 4.
+
+Capacity Timing Requirement
+
+* Preserve Bug-006 behaviour.
+* Newly staged Grey tokens must not apply their capacity effect until the spell changes are committed.
+* The Spell Token Assignment component should initially use currently committed Grey-token effects.
+* After commit, recalculate the capacities using the new effective groups and newly committed Grey tokens.
+
+Merged Column Capacity Requirement
+
+* Visually spanning two columns should not automatically double the merged column’s token capacity.
+* The merged column’s capacity should follow the existing merged-column and Grey-token capacity rules.
+* Only explicit capacity effects should increase its capacity.
+* Display the merged group’s effective count using the existing format:
+
+```txt id="jazyw8"
+X of X tokens
+```
+
+* The capacity text should appear once for the merged drop zone, not once for each original column.
+
+Adjacent Buff Interaction
+
+* Any mechanic that buffs adjacent spell columns should also use effective adjacency.
+* This includes Purple-token adjacent-column buffs and any future effect explicitly described as targeting adjacent columns.
+* Example:
+
+  * columns 1 and 2 are merged.
+  * column 3 applies a buff to an adjacent column.
+  * the buff applies to merged `1+2`.
+* Apply the buff to the merged group once.
+* Do not duplicate the buff across original columns 1 and 2.
+
+Generic Adjacency Helper Requirement
+
+* Prefer one shared helper for determining effective adjacent columns.
+* Do not create separate adjacency logic for Grey tokens, Purple tokens, and future effects.
+
+Suggested direction:
+
+```js id="mg7xmr"
+function getAdjacentEffectiveGroups(effectiveGroups, groupIndex) {
+  return [
+    effectiveGroups[groupIndex - 1],
+    effectiveGroups[groupIndex + 1]
+  ].filter(Boolean);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that all adjacency-based effects use the same merged-column-aware ordering.
+
+Token Storage Requirement
+
+* Tokens placed into the merged assignment area should be stored against the retained active column or another canonical merged-group location.
+* Do not split the tokens between both original columns.
+* Battle resolution for either original roll number should continue to resolve the same canonical merged token collection.
+* The removed column must remain inactive.
+
+Already Merged Column Requirement
+
+* Preserve Bug-007 behaviour.
+* A merged column cannot be merged again.
+* The Spell Token Assignment component must not offer a second merge involving either original column in an existing merged group.
+* White tokens placed inside an already merged column remain redundant and should not trigger another merge.
+
+Layout Stability Requirement
+
+* The total assignment component width must remain stable.
+* A merged drop zone should span two original grid columns.
+* Neighbouring columns should remain aligned.
+* The modal should not jump when loaded with merged columns.
+* The Confirm button and lower sections should remain in their normal positions.
+* Token Bag and Trash sections should remain unchanged.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with CSS grid or flex layouts.
+* This applies to:
+
+  * effective spell-column groups.
+  * merged drop zones.
+  * token displays.
+  * adjacency-related UI.
+
+Expected Behaviour After Fix
+
+* Merged columns appear merged in the Spell Token Assignment component.
+* One original drop zone is removed.
+* The remaining merged drop zone spans two column spaces.
+* The merged title displays both column numbers.
+* Tokens can be dropped into the merged area.
+* Tokens cannot be dropped separately into the removed column.
+* The total assignment layout width remains unchanged.
+* Merged columns use effective adjacency.
+* Grey capacity effects from neighbouring columns apply to the merged group.
+* Grey tokens inside a merged group affect its effective neighbours.
+* Adjacent buffs apply to the merged group once.
+* Merged groups cannot be merged again.
+* Battle resolution still treats either original roll number as the merged column.
+
+Out Of Scope
+
+* No changes to how a new merge is initially confirmed.
+* No changes to the two-merges-per-game limit.
+* No changes to the losing-column selection rule.
+* No changes to White-token consumption.
+* No changes to Light Green health behaviour.
+* No changes to non-adjacent token effects.
+* No unrelated Spell Token Assignment redesign.
+
+Suspected Cause
+
+* The Spell Token Assignment component may still render directly from the six original spell-slot arrays.
+* Adjacency calculations may still use original numeric column indexes instead of effective merged groups.
+* The committed spells display and assignment component may currently use separate column-shaping logic.
+
+Attempted Fixes
+
+* Feature-004 added merged-column behaviour.
+* Bug-007 updated the committed spells display so merged columns span two columns.
+* This bug extends the same merged-column structure into Spell Token Assignment and adjacency calculations.
+* Added a shared effective-column grouping helper that orders normal and merged groups, uses the retained active slot as the canonical token location, and supports either side being the retained column.
+* Spell Token Assignment now renders one merged item and one drop zone titled `X+X`, omits the removed column, spans the combined width of two existing assignment columns, and preserves the five-item layout for one merge.
+* Normal and reward assignment now pass the player's committed `mergedColumns` state into the assignment component.
+* Normal draft movement now rejects a direct destination ID belonging to the removed side of a merged pair.
+* Red-first tests reproduced both prior failures: six physical assignment zones rendered and movement into the removed slot succeeded.
+* Added red-first capacity coverage showing raw physical adjacency rejected valid merged capacity, displayed `1 / 5` instead of `1 / 6`, and did not guard the removed reward destination.
+* Effective groups now provide the shared Grey-capacity ordering for assignment display, normal movement, reward placement, provider validation, and over-capacity checks.
+
+Final Fix
+
+* Spell Token Assignment renders each persisted merge as one canonical `X+X` drop zone backed by the retained active slot, omits the removed slot, and spans exactly two prior assignment widths.
+* Normal and reward assignment use effective-group committed Grey capacity for displayed limits and placement validation without double-counting the two physical columns.
+* Grey tokens inside a merged group affect both neighbouring effective groups once, while uncommitted Grey tokens remain inactive until save.
+* Normal movement, reward staging, and provider reward resolution reject direct placement into the removed slot; over-capacity validation reports the merged label.
+* Existing White consumption, no-remerge protection, two-merge limit, canonical battle slot mapping, Token Bag/Trash sections, and lo-fi assignment styling remain unchanged.
+* The separate Bug-009 owns the remaining cross-system adjacent-buff work, including Purple and shared committed-display/battle adjacency; Bug-009 was not changed in this pass.
+* The complete focused regression passes 9 suites and 113 tests, and the production build compiles successfully.
+
+Testing Required
+
+* Confirm merging columns 1 and 2 results in one `1+2` drop zone.
+* Confirm the original column 2 drop zone is no longer rendered separately.
+* Confirm merged `1+2` spans two original column spaces.
+* Confirm the total assignment layout width remains unchanged.
+* Confirm columns 3–6 remain correctly aligned.
+* Confirm merging columns 2 and 3 results in one `2+3` drop zone.
+* Confirm merging columns 5 and 6 results in one `5+6` drop zone.
+* Confirm tokens can be dropped into the merged area.
+* Confirm tokens cannot be dropped into the removed column.
+* Confirm the merged area displays the correct token count and capacity.
+* Confirm spanning two visual spaces does not automatically double capacity.
+* Confirm a committed Grey token in column 3 increases merged `1+2` capacity.
+* Confirm two committed Grey tokens in column 3 increase merged `1+2` capacity by 2.
+* Confirm a Grey token inside merged `2+3` affects columns 1 and 4.
+* Confirm Grey effects are not counted twice against a merged group.
+* Confirm uncommitted Grey tokens still do not apply capacity increases.
+* Confirm adjacent Purple buffs target merged groups correctly.
+* Confirm adjacent effects apply once per token rather than once per original merged column.
+* Confirm an already merged column cannot trigger another merge.
+* Confirm either original battle roll number still triggers the merged token collection.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.
+
+
+---
+
+Bug-009: Merged columns must be treated as adjacent to neighbouring effective columns
+
+Status
+
+* not started
+
+Related Feature
+
+* Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+* Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+
+Bug Summary
+
+* Merged columns are still not acting as adjacent to their neighbours.
+* Once two columns are merged, they should become one effective column.
+* That effective merged column should then be adjacent to the effective columns immediately before and after it.
+* Example:
+
+  * if columns 2 and 3 are merged, the merged `2+3` column should be adjacent to columns 1 and 4.
+
+Expected Behaviour
+
+* If columns 2 and 3 are merged:
+
+```txt id="01oa6t"
+1 | 2+3 | 4 | 5 | 6
+```
+
+* Effective adjacency should be:
+
+```txt id="7nk3tn"
+1 is adjacent to 2+3.
+2+3 is adjacent to 1 and 4.
+4 is adjacent to 2+3 and 5.
+5 is adjacent to 4 and 6.
+6 is adjacent to 5.
+```
+
+* The original internal adjacency between columns 2 and 3 should no longer matter because they are now one merged column.
+* The merged column should not be treated as two separate columns for adjacency checks.
+
+Required Fix
+
+* Any logic that checks adjacent spell columns must use effective column groups instead of raw column numbers.
+* This applies to:
+
+  * Grey token capacity increases.
+  * Purple token adjacent buffs.
+  * any future token effect that targets adjacent spell columns.
+  * Spell Token Assignment capacity display.
+  * committed spell display calculations.
+  * battle calculations if adjacency-based effects are used there.
+* Do not calculate adjacency using `columnNumber - 1` and `columnNumber + 1` directly once merged columns exist.
+
+Effective Column Group Requirement
+
+* Build an ordered list of effective columns first.
+* Then calculate adjacency from that ordered list.
+
+Example:
+
+```js id="4hcnam"
+const effectiveColumns = [
+  { label: "1", columns: [1], isMerged: false },
+  { label: "2+3", columns: [2, 3], isMerged: true },
+  { label: "4", columns: [4], isMerged: false },
+  { label: "5", columns: [5], isMerged: false },
+  { label: "6", columns: [6], isMerged: false }
+];
+```
+
+* In this example:
+
+  * index 0 is adjacent to index 1.
+  * index 1 is adjacent to index 0 and index 2.
+  * index 2 is adjacent to index 1 and index 3.
+
+Suggested Helper
+
+```js id="htazwn"
+function getAdjacentEffectiveColumns(effectiveColumns, effectiveColumnIndex) {
+  return [
+    effectiveColumns[effectiveColumnIndex - 1],
+    effectiveColumns[effectiveColumnIndex + 1]
+  ].filter(Boolean);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that adjacency is based on effective visual/gameplay columns, not original raw column numbers.
+
+Examples
+
+Merged columns 1 and 2:
+
+```txt id="mbylt6"
+1+2 | 3 | 4 | 5 | 6
+```
+
+Expected adjacency:
+
+```txt id="g38igd"
+1+2 is adjacent to 3.
+3 is adjacent to 1+2 and 4.
+```
+
+Merged columns 2 and 3:
+
+```txt id="3nhuoe"
+1 | 2+3 | 4 | 5 | 6
+```
+
+Expected adjacency:
+
+```txt id="wjwsg7"
+2+3 is adjacent to 1 and 4.
+```
+
+Merged columns 5 and 6:
+
+```txt id="9up6t1"
+1 | 2 | 3 | 4 | 5+6
+```
+
+Expected adjacency:
+
+```txt id="a4z6bh"
+5+6 is adjacent to 4.
+4 is adjacent to 3 and 5+6.
+```
+
+Grey Token Requirement
+
+* Grey token capacity bonuses must respect merged-column adjacency.
+* Example:
+
+  * columns 2 and 3 are merged.
+  * column 1 has one committed Grey token.
+  * merged `2+3` should receive +1 capacity.
+* Example:
+
+  * columns 2 and 3 are merged.
+  * column 4 has one committed Grey token.
+  * merged `2+3` should receive +1 capacity.
+* If both column 1 and column 4 each have one Grey token:
+
+  * merged `2+3` should receive +2 capacity.
+* The bonus should apply once per Grey token.
+* The bonus should not apply twice because the merged column contains two original column numbers.
+
+Grey Token Inside Merged Column Requirement
+
+* If a merged column contains Grey tokens, they should affect its effective neighbours.
+* Example:
+
+  * columns 2 and 3 are merged.
+  * merged `2+3` contains one Grey token.
+  * column 1 gets +1 capacity.
+  * column 4 gets +1 capacity.
+* It should not affect column 5.
+* It should not double-apply to column 1 or 4.
+
+Adjacent Buff Requirement
+
+* Any adjacent-column buff should follow the same effective adjacency rules.
+* Example:
+
+  * columns 2 and 3 are merged.
+  * column 4 buffs adjacent columns.
+  * merged `2+3` should receive the buff.
+* The buff should apply once to the merged group.
+* Do not apply the buff separately to column 2 and column 3.
+
+Spell Token Assignment Requirement
+
+* The Spell Token Assignment component should calculate adjacent capacity and buffs using effective columns.
+* If columns 2 and 3 are merged, the assignment component should treat the layout as:
+
+```txt id="jmrt6h"
+1 | 2+3 | 4 | 5 | 6
+```
+
+* It should not treat column 2 as adjacent only to 1 and 3.
+* It should not treat column 3 as adjacent only to 2 and 4.
+* It should treat the merged `2+3` area as adjacent to 1 and 4.
+
+Committed Spells Requirement
+
+* The committed spells component should use the same effective adjacency model.
+* Any displayed capacity, buff, or affected-column calculation should match the Spell Token Assignment component.
+* Avoid having assignment and committed displays calculate adjacency differently.
+
+Do Not Double Count
+
+* A merged column is one effective column.
+* Effects targeting it should apply once unless multiple actual tokens are causing the effect.
+* Do not apply an adjacent effect once for column 2 and again for column 3 when the target is merged `2+3`.
+* Do not treat the internal join between columns 2 and 3 as an adjacency relationship.
+
+Shared Logic Requirement
+
+* Use shared helper logic wherever possible.
+* Avoid separate custom adjacency implementations in:
+
+  * Spell Token Assignment.
+  * committed spells.
+  * battle logic.
+  * token effect helpers.
+* One helper should build effective columns.
+* One helper should resolve neighbours from those effective columns.
+
+Expected Behaviour After Fix
+
+* Merged `1+2` is adjacent to column 3.
+* Merged `2+3` is adjacent to columns 1 and 4.
+* Merged `3+4` is adjacent to columns 2 and 5.
+* Merged `4+5` is adjacent to columns 3 and 6.
+* Merged `5+6` is adjacent to column 4.
+* Grey token capacity increases apply to merged neighbouring columns.
+* Grey tokens inside merged columns apply to neighbouring effective columns.
+* Adjacent buffs apply to merged neighbouring columns.
+* Adjacent effects do not double-count merged original columns.
+* Spell Token Assignment and committed spells use the same adjacency model.
+
+Out Of Scope
+
+* No changes to merge confirmation text.
+* No changes to the two-merges-per-game limit.
+* No changes to White token consumption.
+* No changes to merged-column visual spanning.
+* No changes to Light Green health behaviour.
+* No unrelated token effect redesign.
+
+Suspected Cause
+
+* Some adjacency logic is probably still checking raw original column numbers.
+* For example, it may still be using direct numeric neighbours such as:
+
+```js id="27jb3h"
+columnIndex - 1
+columnIndex + 1
+```
+
+* That works for six separate columns, but fails after two columns become one effective merged column.
+
+Attempted Fixes
+
+* Bug-008 required the Spell Token Assignment component to display merged columns as one droppable area.
+* This bug specifically fixes the remaining adjacency logic so merged columns behave as neighbours correctly.
+
+Final Fix
+
+* Not fixed yet.
+
+Testing Required
+
+* Confirm merged `1+2` is adjacent to column 3.
+* Confirm merged `2+3` is adjacent to columns 1 and 4.
+* Confirm merged `3+4` is adjacent to columns 2 and 5.
+* Confirm merged `4+5` is adjacent to columns 3 and 6.
+* Confirm merged `5+6` is adjacent to column 4.
+* Confirm a Grey token in column 1 increases capacity of merged `2+3`.
+* Confirm a Grey token in column 4 increases capacity of merged `2+3`.
+* Confirm Grey tokens in both column 1 and column 4 stack on merged `2+3`.
+* Confirm a Grey token inside merged `2+3` increases capacity of columns 1 and 4.
+* Confirm Grey token effects do not double-count against merged columns.
+* Confirm adjacent buffs apply to merged columns.
+* Confirm adjacent buffs apply only once to each merged target.
+* Confirm Spell Token Assignment displays the correct effective capacities.
+* Confirm committed spells displays the same effective capacities.
+* Confirm battle calculations that rely on adjacency use the same result.
+* Confirm there are no console errors.
+* Update `testing.txt` with regression steps before marking this bug fixed.

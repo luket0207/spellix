@@ -86,6 +86,7 @@ function SpellsModal({
           </div>
           <SpellTokenAssignment
             language={currentLanguage}
+            mergedColumns={currentPlayer.mergedColumns}
             onTokenDrop={onTokenDrop}
             spellSlots={draftSpellSlots}
             tokenBag={draftTokenBag}

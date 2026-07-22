@@ -24,6 +24,7 @@ function consolidateSlotTokens(tokens = []) {
 function CommittedSpellSlotList({
   language,
   lightBlueUses = null,
+  mergedColumns = [],
   purpleBuffs = [],
   spellSlots,
   title = 'Spells',
@@ -44,21 +45,45 @@ function CommittedSpellSlotList({
       ) : null}
       <ul className="committed-spell-slot-list">
         {spellSlots.map((slot, index) => {
-          const consolidatedTokens = consolidateSlotTokens(slot.tokens);
+          const columnNumber = index + 1;
+          const merge = mergedColumns.find(({ columns = [] }) =>
+            columns.includes(columnNumber)
+          );
+
+          if (merge?.removedColumn === columnNumber) {
+            return null;
+          }
+
+          const activeIndex = merge ? merge.activeColumn - 1 : index;
+          const activeSlot = spellSlots[activeIndex] ?? slot;
+          const displayedColumns = merge?.columns ?? [columnNumber];
+          const slotLabel = displayedColumns.join(' and ');
+          const consolidatedTokens = consolidateSlotTokens(activeSlot.tokens);
+          const isPurpleBuffed = displayedColumns.some(
+            (displayedColumn) => purpleBuffs[displayedColumn - 1] > 0
+          );
 
           return (
-            <li key={slot.id} className="committed-spell-slot-item">
+            <li
+              data-column-span={merge ? '2' : '1'}
+              key={merge ? `merged-${displayedColumns.join('-')}` : slot.id}
+              className={`committed-spell-slot-item${
+                merge ? ' committed-spell-slot-item--merged' : ''
+              }`}
+            >
               <div
                 className={`committed-spell-slot-column${
-                  purpleBuffs[index] > 0 ? ' committed-spell-slot-column--purple-buffed' : ''
+                  isPurpleBuffed ? ' committed-spell-slot-column--purple-buffed' : ''
                 }${
                   yellowCharged ? ' committed-spell-slot-column--yellow-charged' : ''
                 }`}
               >
-                <span className="committed-spell-slot-number">{index + 1}</span>
+                <span className="committed-spell-slot-number">
+                  {displayedColumns.join('+')}
+                </span>
                 <div className="committed-spell-token-stack">
-                  {slot.displayLabel ? (
-                    <span className="committed-spell-slot-text">{slot.displayLabel}</span>
+                  {activeSlot.displayLabel ? (
+                    <span className="committed-spell-slot-text">{activeSlot.displayLabel}</span>
                   ) : null}
                   {consolidatedTokens.map(({ count, tokenType }) => {
                     const uses =
@@ -68,15 +93,15 @@ function CommittedSpellSlotList({
                           ? yellowUses
                           : null;
                     const displayCount = Array.isArray(uses)
-                      ? Math.max(0, uses[index] ?? 0)
+                      ? Math.max(0, uses[activeIndex] ?? 0)
                       : count;
 
                     return (
                       <Token
-                        key={`${slot.id}-${tokenType}`}
+                        key={`${activeSlot.id}-${tokenType}`}
                         ariaLabel={`${displayCount > 1 ? `${displayCount} ` : ''}${tokenType} token${
                           displayCount > 1 ? 's' : ''
-                        } in slot ${index + 1}`}
+                        } in slot ${slotLabel}`}
                         count={displayCount}
                         faded={Array.isArray(uses) && displayCount === 0}
                         language={language}

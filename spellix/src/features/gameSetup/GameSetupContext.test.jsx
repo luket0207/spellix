@@ -105,6 +105,53 @@ function PlayerLanguageProbe() {
   );
 }
 
+function NonBattleSpellEffectsProbe() {
+  const { currentPlayer, updatePlayerSpells } = useGameSetup();
+  const commitLightGreen = () => {
+    const spellSlots = currentPlayer.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens:
+        index === 0
+          ? [{ committed: true, id: 'light-green-1', type: 'light-green' }]
+          : slot.tokens,
+    }));
+
+    updatePlayerSpells(currentPlayer.id, {
+      columnMergesUsed: 1,
+      hasCommittedInitialSpells: true,
+      mergedColumns: [{ activeColumn: 2, columns: [2, 3], removedColumn: 3 }],
+      spellSlots,
+      tokenBag: currentPlayer.tokenBag,
+    });
+  };
+
+  return (
+    <div>
+      <button type="button" onClick={commitLightGreen}>Commit non-battle effects</button>
+      <p>{`Player health: ${currentPlayer.currentHealth}/${currentPlayer.maxHealth}`}</p>
+      <p>{`Merges used: ${currentPlayer.columnMergesUsed ?? 0}`}</p>
+      <p>{`Merged columns: ${currentPlayer.mergedColumns?.[0]?.columns.join('+') ?? 'none'}`}</p>
+    </div>
+  );
+}
+
+test('persists merged columns and applies committed Light Green health', () => {
+  const setup = createFreezeSetup();
+  setup.players[0].currentHealth = 80;
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <NonBattleSpellEffectsProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /commit non-battle effects/i }));
+
+  expect(screen.getByText('Player health: 85/105')).toBeInTheDocument();
+  expect(screen.getByText('Merges used: 1')).toBeInTheDocument();
+  expect(screen.getByText('Merged columns: 2+3')).toBeInTheDocument();
+});
+
 function FreezeResolutionProbe() {
   const {
     activeBattle,

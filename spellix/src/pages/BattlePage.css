@@ -362,3 +362,21 @@
   top: 10px;
   z-index: 50;
 }
+
+.battle-turn-modal-content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.battle-turn-modal-image {
+  display: block;
+  height: 150px;
+  margin: 0 auto;
+  width: auto;
+}
+
+.battle-loss-message {
+  text-align: center;
+}

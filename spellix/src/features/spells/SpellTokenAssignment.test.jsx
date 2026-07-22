@@ -99,6 +99,90 @@ describe('SpellTokenAssignment', () => {
     );
   });
 
+  test('shows Grey-adjusted capacity for physically adjacent columns', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[1].tokens = [
+      { committed: true, id: 'grey-1', type: 'grey' },
+      { committed: true, id: 'grey-2', type: 'grey' },
+    ];
+
+    render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={spellSlots}
+        tokenBag={[]}
+      />
+    );
+
+    expect(within(screen.getByLabelText('Assignment column 1')).getByText('1 / 7')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Assignment column 2')).getByText('2 / 5')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Assignment column 3')).getByText('0 / 7')).toBeInTheDocument();
+  });
+
+  test('does not display adjacent capacity from an uncommitted Grey token', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[1].tokens = [
+      { committed: true, id: 'grey-committed', type: 'grey' },
+      { committed: false, id: 'grey-draft', type: 'grey' },
+    ];
+
+    render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={spellSlots}
+        tokenBag={[]}
+      />
+    );
+
+    expect(within(screen.getByLabelText('Assignment column 1')).getByText('1 / 6')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Assignment column 3')).getByText('0 / 6')).toBeInTheDocument();
+  });
+
+  test('renders a merged pair as one canonical assignment drop zone spanning both columns', () => {
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+    const { container } = render(
+      <SpellTokenAssignment
+        mergedColumns={[{ activeColumn: 1, columns: [1, 2], removedColumn: 2 }]}
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[]}
+      />
+    );
+
+    const mergedColumn = screen.getByLabelText('Assignment column 1+2');
+
+    expect(mergedColumn).toHaveClass('spell-slot-item--merged');
+    expect(mergedColumn).toHaveAttribute('data-column-span', '2');
+    expect(within(mergedColumn).getByRole('heading', { name: '1+2' })).toBeInTheDocument();
+    expect(within(mergedColumn).getByLabelText('Spell slot 1+2')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Assignment column 2')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.spell-slot-item')).toHaveLength(5);
+    expect(stylesheet).toMatch(
+      /\.spell-slot-item--merged\s*{[^}]*width:\s*292px;[^}]*flex-basis:\s*292px;/s
+    );
+  });
+
+  test('shows effective committed Grey capacity once on a merged assignment column', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[2].tokens = [
+      { committed: true, id: 'grey-3', type: 'grey' },
+      { committed: false, id: 'grey-draft-3', type: 'grey' },
+    ];
+
+    render(
+      <SpellTokenAssignment
+        mergedColumns={[{ activeColumn: 1, columns: [1, 2], removedColumn: 2 }]}
+        onTokenDrop={jest.fn()}
+        spellSlots={spellSlots}
+        tokenBag={[]}
+      />
+    );
+
+    expect(
+      within(screen.getByLabelText('Assignment column 1+2')).getByText('1 / 6')
+    ).toBeInTheDocument();
+  });
+
   test('defines the polished spell slot and token bag visual states', () => {
     const componentSource = readFileSync(
       `${__dirname}/SpellTokenAssignment.jsx`,

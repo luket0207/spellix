@@ -1,0 +1,2073 @@
+---
+
+Feature-001: Implement Loot Chest page with hidden reward choices, chest shuffle animation, and reward assignment flow
+
+Status
+
+* done
+
+Completion Notes
+
+* Replaced the Loot Chest placeholder with the complete animated choice flow: one Nothing reward, two unique weighted generated rewards, reward-entry and shuffle phases, one locked choice, localized result copy, and Continue processing.
+* Reused `MagicalNightSky`, the global `Button`, `Token`, `PotionIcon`, centralized token/potion definitions, reward generators, reward assignment, potion capacity handling, mini-game return metadata, and existing language font classes.
+* Added one pure Loot Chest reward utility and one page-specific stylesheet because no existing code generated this reward set or provided the requested chest animation states.
+* Used the allowed queue fallback for multiple token rewards: Loot Chest appears first, its selected token is assigned first, and any preserved Cave token is activated immediately afterward before final return.
+* Potion rewards auto-add when capacity is available and reuse the existing localized replacement/discard flow when full; Nothing changes no inventory.
+* River returns keep the same player, while Cave returns continue to follow the preserved Roll Again or next-player metadata.
+* No extra routes, reward types, dependencies, persistence, sound, or unrelated refactors were added.
+
+Related Feature
+
+* EPIC-010 Feature-003: Add River Mini Game debug trigger, mini game flow, loot chest page, and mini game lose page
+* EPIC-010 Feature-010: Add Cave Mini Game with debug trigger, reward tracking, retreat flow, and roll-again reward
+* EPIC-010 Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* EPIC-010 Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* EPIC-010 Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+* EPIC-010 Bug-005: Next-turn modal must always appear after any player turn change
+* EPIC-010 Bug-008: Cave token rewards should use existing token assignment component instead of auto-adding to token bag
+
+Goal
+
+* Implement the Loot Chest page.
+* Players should arrive here after:
+
+  * winning the River Mini Game.
+  * finding a loot chest in the Cave Mini Game and retreating successfully.
+* The player should see 3 loot chests.
+* Each loot chest should contain one hidden reward.
+* The rewards should be shown briefly, animated into the chests, shuffled, and then chosen by the player.
+* The selected reward should be revealed.
+* Token and potion rewards should be handled through the normal reward placement/storage flows.
+* The page must preserve whether the turn should advance or remain with the same player.
+
+Scope
+
+* Create or complete the Loot Chest page.
+* Use the animated gameplay night sky background.
+* Use Font Awesome `faToolbox` for loot chest icons.
+* Use Font Awesome `faXmark` for Nothing rewards.
+* Generate 3 hidden chest rewards:
+
+  * 1 guaranteed Nothing.
+  * 2 generated rewards from the loot reward table.
+* Show reward icons above the chests.
+* Animate rewards into the chests.
+* Shuffle the chests in a way the player cannot track.
+* Fade in Choose buttons.
+* Reveal the selected reward.
+* Show a result sentence and Continue button.
+* Handle token reward assignment.
+* Handle potion reward storage.
+* Preserve Cave Game return behaviour.
+* Support English/Japanese text and correct fonts.
+* Avoid `ul` and `li` elements.
+
+Background Requirement
+
+* The Loot Chest page should use the animated night sky background from the Gameplay page.
+* This should include:
+
+  * starry night background.
+  * twinkling stars.
+  * magical background effects if they are part of the shared background.
+* Reuse the existing background component where practical.
+* Do not duplicate animation logic if it can be shared.
+* The background should cover the full page.
+
+Title Requirement
+
+* The title should appear above the 3 loot chests.
+* English:
+
+```txt id="ha9x2m"
+Choose your loot
+```
+
+* Japanese:
+
+```txt id="vo67ay"
+戦利品を選んでください。
+```
+
+* The title should use the current player’s selected language.
+* The title should use the correct language font:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* The title should have around:
+
+```txt id="ey6bjs"
+100px
+```
+
+margin below it before the loot chest row.
+
+Loot Chest Icon Requirement
+
+* Use Font Awesome icon:
+
+```txt id="nr3otu"
+faToolbox
+```
+
+* This icon represents each loot chest.
+* There should be 3 loot chest icons.
+* All 3 loot chest icons should look identical.
+* Each loot chest icon should be around:
+
+```txt id="ccim0r"
+100px width
+```
+
+* The chest icons should use a yellow/orange gradient.
+* The chests should be placed horizontally next to each other in the centre of the page.
+* Each chest should have a slow pulsating glow behind it.
+* The glow should be light yellow.
+* The glow should make the chests look like they are shining.
+
+Suggested chest layout:
+
+```jsx id="l35mek"
+<div className="loot-chest-row">
+  <div className="loot-chest-choice">
+    <FontAwesomeIcon icon={faToolbox} className="loot-chest-icon" />
+  </div>
+
+  <div className="loot-chest-choice">
+    <FontAwesomeIcon icon={faToolbox} className="loot-chest-icon" />
+  </div>
+
+  <div className="loot-chest-choice">
+    <FontAwesomeIcon icon={faToolbox} className="loot-chest-icon" />
+  </div>
+</div>
+```
+
+Suggested styling direction:
+
+```css id="mfnio8"
+.loot-chest-icon {
+  width: 100px;
+  height: 100px;
+}
+
+.loot-chest-choice::before {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: rgba(255, 245, 120, 0.45);
+  filter: blur(18px);
+  animation: lootChestGlow 2.5s ease-in-out infinite;
+}
+```
+
+* Exact implementation can vary.
+* Preserve readability and clickability.
+
+Reward Icon Requirement
+
+* Each reward type should use a different visual icon.
+
+Token reward:
+
+* Use the existing Token component.
+* Do not show the token name under the icon.
+* The token itself should still reflect the actual generated token type.
+
+Potion reward:
+
+* Use the existing Potion component.
+* Do not show the potion name under the icon.
+* The potion itself should still reflect the actual generated potion type.
+
+Nothing reward:
+
+* Use Font Awesome icon:
+
+```txt id="k7g4ln"
+faXmark
+```
+
+* The Nothing icon should be blue.
+
+Reward Generation Requirement
+
+* Each Loot Chest page instance should generate 3 chest rewards.
+* There must always be exactly 1 Nothing reward.
+* The remaining 2 rewards should be generated from the loot reward table.
+* Because there are 3 chests total, the page should produce:
+
+```txt id="rgcezs"
+1 Nothing
+2 generated rewards
+```
+
+* The 3 rewards are then assigned to the 3 chests before the shuffle.
+
+Loot Reward Chance Table
+
+* Use the following table when generating each of the 2 non-Nothing rewards:
+
+```txt id="uzvm7w"
+Reward Type | Chance
+Common Token | 40
+Rare Token | 10
+Common Potion | 40
+Rare Potion | 10
+```
+
+* These values are weighted chances out of 100.
+* A selected Common Token should generate an actual common token.
+* A selected Rare Token should generate an actual rare token.
+* A selected Common Potion should generate an actual common potion.
+* A selected Rare Potion should generate an actual rare potion.
+
+Reward Uniqueness Requirement
+
+* There can only be 1 of each reward category in a single Loot Chest choice set.
+* Reward categories are:
+
+  * Common Token.
+  * Rare Token.
+  * Common Potion.
+  * Rare Potion.
+  * Nothing.
+* Example allowed:
+
+  * Common Token + Rare Token + Nothing.
+* Example allowed:
+
+  * Common Potion + Rare Potion + Nothing.
+* Example not allowed:
+
+  * Common Token + Common Token + Nothing.
+* Example not allowed:
+
+  * Rare Potion + Rare Potion + Nothing.
+* If a duplicate reward category is selected while generating the 2 non-Nothing rewards, reroll or choose from the remaining valid categories.
+* Nothing must always appear exactly once.
+
+Suggested Reward Shape
+
+```js id="dwio8z"
+{
+  id: crypto.randomUUID(),
+  category: "commonToken",
+  rewardType: "token",
+  rarity: "common",
+  token: generatedToken
+}
+```
+
+```js id="mtss7q"
+{
+  id: crypto.randomUUID(),
+  category: "nothing",
+  rewardType: "nothing"
+}
+```
+
+* Exact property names can vary.
+* The important requirement is that category, reward type, rarity, and generated token/potion data are preserved.
+
+Initial Reward Reveal Sequence
+
+* When the player arrives on the Loot Chest page:
+
+  * generate the 3 chest rewards.
+  * display the 3 reward icons above the loot chest icons.
+* The reward icons should be positioned absolutely.
+* They should not move the page layout around.
+* Each reward icon should appear about:
+
+```txt id="cc95wz"
+50px
+```
+
+above its matching loot chest.
+
+Reward Into Chest Animation Requirement
+
+* After the reward icons are shown, animate them moving toward the loot boxes.
+* The icons should fade out at the end of the animation.
+* This should visually show the rewards going inside the loot boxes.
+* After the animation completes, the rewards should no longer be visible.
+
+Chest Shuffle Requirement
+
+* After the rewards enter the boxes, shuffle the 3 loot chests.
+* The shuffle animation should make it impossible for the player to follow which chest moved where.
+* The shuffle should be visually clear and quick enough to feel like a game action.
+* The final reward-to-chest mapping should remain correct internally.
+* After shuffling, line the 3 boxes back up horizontally in the centre of the page.
+
+Suggested shuffle options:
+
+* move chests in overlapping paths.
+
+* temporarily cross positions.
+
+* use multiple rapid swaps.
+
+* add slight scale/opacity/blur movement if useful.
+
+* avoid any obvious one-to-one trackable movement.
+
+* Exact animation design can vary.
+
+* The requirement is that the user should not be able to reliably track which box contains which reward.
+
+Choose Button Requirement
+
+* After the chests finish shuffling:
+
+  * show 3 Choose buttons.
+  * one button below each chest.
+  * fade the buttons in.
+* Button text:
+
+  * English: `Choose`
+  * Japanese: `選ぶ`
+* Reuse existing translation if already present.
+* Buttons should use the global Button component.
+* Buttons should be disabled until the reward-entry and shuffle animations are complete.
+
+Choose Interaction Requirement
+
+* When the player clicks a Choose button:
+
+  * reveal the reward inside that chest.
+  * disable all Choose buttons.
+  * do not allow a second chest choice.
+  * show the result sentence.
+  * show a Continue button underneath the result.
+* The selected reward reveal should use the correct reward icon:
+
+  * TokenIcon without name.
+  * PotionIcon without name.
+  * blue `faXmark` for Nothing.
+
+Result Sentence Requirement
+
+* After the player chooses a chest, show:
+
+```txt id="lbgvf9"
+You got a X
+```
+
+* Japanese:
+
+```txt id="ufqhuz"
+Xを手に入れました。
+```
+
+* Replace `X` with the reward display text.
+* Reuse existing translations for:
+
+  * Token.
+  * Potion.
+  * Loot Chest, if needed elsewhere.
+  * token names.
+  * potion names.
+  * Nothing, if already translated.
+* If new text is needed for Nothing, use:
+
+  * English: `Nothing`
+  * Japanese: `何もなし`
+* Example English:
+
+  * `You got a Red token`
+  * `You got a potion`
+  * `You got Nothing`
+* Example Japanese:
+
+  * `ダメージトークンを手に入れました。`
+  * `ポーションを手に入れました。`
+  * `何もなしを手に入れました。`
+* If grammar-specific Japanese phrasing is already handled elsewhere, use the existing helper/pattern.
+
+Continue Button Requirement
+
+* After the result sentence appears, show a Continue button.
+* English:
+
+```txt id="s8akxq"
+Continue
+```
+
+* Japanese:
+
+```txt id="p4z3mu"
+続ける
+```
+
+* The Continue button should appear under the result.
+* It should use the global Button component.
+* It should follow the normal modal/page button styling used for this page.
+
+Reward Handling Requirement
+
+* When the player clicks Continue after reward reveal:
+
+  * if the selected reward is a token, handle token placement through the normal reward token assignment component.
+  * if the selected reward is a potion, handle potion adding through the normal potion reward logic.
+  * if the selected reward is Nothing, apply no reward and continue to the correct return flow.
+
+Token Reward Assignment Requirement
+
+* Token rewards from Loot Chest should use the normal Spell Token Assignment component.
+* The component should use the generic styling from EPIC-010 Feature-015.
+* The player should be able to place the token into:
+
+  * spell slots.
+  * token bag.
+  * trash/discard.
+* TokenIcon in the Loot Chest page itself should not show the token name.
+* The assignment component may show names/status according to its own rules.
+
+Potion Reward Storage Requirement
+
+* Potion rewards from Loot Chest should use the normal potion reward handling.
+* If the player has room in potion slots:
+
+  * add the potion automatically.
+* If potion slots are full:
+
+  * show the usual modal asking which current potion to remove or whether to discard the newly gained potion.
+* Reuse existing English/Japanese text and fonts.
+* Do not create a separate Loot Chest potion flow if the normal flow can be reused.
+
+Nothing Reward Requirement
+
+* If the chosen chest contains Nothing:
+
+  * no token is assigned.
+  * no potion is added.
+  * continue directly to the correct return flow.
+
+Turn Return Behaviour Requirement
+
+* The Loot Chest page must preserve whether the turn should advance or stay with the same player.
+* This return behaviour can come from:
+
+  * River Mini Game win.
+  * Cave Game retreat with no Roll Again Potion.
+  * Cave Game retreat with Roll Again Potion.
+  * future reward sources.
+* The Loot Chest page should not blindly decide turn behaviour on its own.
+* It should use return metadata passed into the page.
+
+Suggested return metadata:
+
+```js id="ygt655"
+{
+  source: "river",
+  playerId,
+  returnBehaviour: "samePlayerRollAgain"
+}
+```
+
+```js id="lnrlul"
+{
+  source: "cave",
+  playerId,
+  returnBehaviour: hasRollAgainPotion
+    ? "samePlayerRollAgain"
+    : "nextPlayerTurn"
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that turn behaviour survives the whole Loot Chest flow and any reward assignment flow.
+
+River Mini Game Return Requirement
+
+* If the player arrives from winning the River Mini Game:
+
+  * after Loot Chest reward handling completes, return to the board.
+  * keep the same player active.
+  * show the existing River roll-again modal or same-player roll-again message as already specified.
+* Do not advance to the next player after a River Mini Game win.
+
+Cave Game Return Requirement
+
+* If the player arrives from Cave Game with no Roll Again Potion:
+
+  * after Loot Chest reward handling completes, return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+* If the player arrives from Cave Game with Roll Again Potion:
+
+  * after Loot Chest reward handling completes, return to the board.
+  * keep the same player active.
+  * show the Roll Again Potion modal.
+* The Loot Chest page must preserve this through:
+
+  * chest selection.
+  * result reveal.
+  * token assignment.
+  * potion full-slot modal.
+  * return to board.
+
+Cave Game Loot Chest Ordering Requirement
+
+* If the player found a loot chest in the Cave Game, the Loot Chest page should appear before Cave token assignment.
+* This means:
+
+  * Cave Game retreat with loot chest should route to Loot Chest first.
+  * If the Cave Game also found a token, do not assign that Cave token before the Loot Chest page.
+* After the Loot Chest reward is selected:
+
+  * if there are token rewards from both Cave Game and Loot Chest, both should be placed through the Spell Token Assignment component.
+  * the player should be able to place both tokens.
+* Do not lose either token.
+* Do not silently add either token to the token bag.
+* Do not discard either token automatically.
+
+Multiple Token Assignment Requirement
+
+* If the player has more than one pending token reward after the Loot Chest selection:
+
+  * the Spell Token Assignment component should support assigning multiple reward tokens in one flow, or
+  * the assignment flow should queue them one after another without losing state.
+* Preferred behaviour:
+
+  * show both pending tokens in the assignment component.
+  * allow both to be placed before final confirmation.
+* This is required for the case where:
+
+  * Cave Game generated a token.
+  * Cave Game generated a loot chest.
+  * the Loot Chest selected reward is also a token.
+* If the existing assignment component cannot safely support multiple tokens in one screen yet, implement a queue as a fallback, but the user-facing flow must allow both tokens to be placed correctly.
+
+Multiple Token Assignment UI Requirement
+
+* If multiple reward tokens are shown in the assignment component:
+
+  * each reward token should appear in the reward token area.
+  * each token should need placement before Confirm is enabled.
+  * status should show where each token has been placed.
+  * the layout should remain stable after each token is moved.
+* Preserve Feature-015 visual rules:
+
+  * glowing reward box while placement is needed.
+  * disabled/slightly transparent empty state.
+  * Confirm always visible but disabled until all required placements are valid.
+* Do not use `ul` or `li`.
+
+Loot Chest Text Translation Requirement
+
+* All visible Loot Chest page text should support English and Japanese.
+* Required translations:
+
+  * `Choose your loot` = `戦利品を選んでください。`
+  * `Choose` = `選ぶ`
+  * `Continue` = `続ける`
+  * `You got a X` = `Xを手に入れました。`
+  * `Nothing` = `何もなし`
+* Reuse existing translations for:
+
+  * Token.
+  * Potion.
+  * token names.
+  * potion names.
+  * Roll Again Potion.
+  * Loot Chest.
+  * reward assignment text.
+  * potion full-slot modal text.
+* English text should use Unkempt.
+* Japanese text should use Noto Serif Japanese / Noto Serif JP.
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` elements on the Loot Chest page.
+* Use `div` elements with CSS grid or flex layouts.
+* This applies to:
+
+  * chest row.
+  * reward icons.
+  * buttons.
+  * result display.
+  * any pending reward display.
+  * any multiple token assignment support added for this feature.
+
+Animation State Requirement
+
+* The Loot Chest page should have clear animation states.
+* Suggested states:
+
+```txt id="sxmpng"
+showingRewards
+rewardsEnteringChests
+shufflingChests
+readyToChoose
+rewardRevealed
+processingReward
+```
+
+* Choose buttons should only be enabled in `readyToChoose`.
+* Continue should only be enabled after `rewardRevealed`.
+* Reward assignment should only begin after Continue is clicked.
+
+Expected Behaviour
+
+* Player arrives on Loot Chest page from River win or Cave loot.
+* Page uses the animated night sky background.
+* Title appears above the chests with around 100px margin below.
+* 3 identical `faToolbox` loot chest icons appear horizontally centred.
+* Chests are about 100px wide.
+* Chests use a yellow/orange gradient.
+* Chests have slow pulsating light yellow glow.
+* 3 reward icons appear about 50px above the chests.
+* Reward icons are absolutely positioned and do not shift layout.
+* Reward icons animate into the chests and fade out.
+* Chests shuffle in a way the player cannot track.
+* Chests line back up.
+* Choose buttons fade in below the chests.
+* Player chooses one chest.
+* Selected reward is revealed.
+* Result sentence displays in English or Japanese.
+* Continue appears underneath the result.
+* Token reward opens the normal Spell Token Assignment component.
+* Potion reward uses normal potion storage logic.
+* Nothing reward grants nothing.
+* Return behaviour is preserved.
+* River win returns to same player roll-again flow.
+* Cave loot without Roll Again Potion advances to next player after reward handling.
+* Cave loot with Roll Again Potion keeps same player after reward handling.
+* Cave token plus Loot Chest token results in both tokens being assigned.
+
+Out Of Scope
+
+* No new battle reward table changes.
+* No changes to Cave Game probability table.
+* No changes to River Mini Game rules.
+* No changes to potion data.
+* No changes to token data.
+* No new reward types beyond Token, Potion, and Nothing.
+* No loot chest reward choices beyond 3 chests.
+* No saving chest history after the reward flow completes.
+* No sound effects.
+* No advanced accessibility animation toggle unless already available.
+* No `ul` / `li` elements.
+
+Assumptions
+
+* The shared animated night sky background can be used on this page.
+* Font Awesome is already available in the project.
+* `faToolbox` and `faXmark` can be imported from the installed Font Awesome package.
+* TokenIcon and PotionIcon support hiding the name.
+* Existing token and potion rarity data can be reused.
+* Existing Spell Token Assignment component can be reused or extended.
+* Existing potion full-slot handling can be reused.
+* Route/context state can preserve return behaviour through reward assignment.
+
+Stop Point
+
+* Stop once the Loot Chest page displays 3 animated chests, generates one Nothing and two unique weighted rewards, shuffles the chests, allows one choice, reveals the selected reward, processes token/potion/nothing outcomes through existing reward flows, and preserves correct turn return behaviour for River and Cave sources.
+
+Testing Checkpoints
+
+* Confirm Loot Chest page can be reached from River Mini Game win.
+* Confirm Loot Chest page can be reached from Cave Game loot chest retreat.
+* Confirm page uses the animated night sky background.
+* Confirm title displays `Choose your loot` in English.
+* Confirm title displays `戦利品を選んでください。` in Japanese.
+* Confirm title has around 100px margin below it.
+* Confirm 3 loot chests are visible.
+* Confirm loot chests use `faToolbox`.
+* Confirm loot chests are around 100px wide.
+* Confirm loot chests use yellow/orange gradient.
+* Confirm all loot chests look identical.
+* Confirm loot chests are horizontally centred.
+* Confirm each loot chest has a slow pulsating light yellow glow.
+* Confirm reward icons appear about 50px above the chests before entering.
+* Confirm reward icons are absolutely positioned and do not shift layout.
+* Confirm Token reward uses TokenIcon without token name.
+* Confirm Potion reward uses PotionIcon without potion name.
+* Confirm Nothing reward uses blue `faXmark`.
+* Confirm reward icons animate into the boxes.
+* Confirm reward icons fade out at the end of the entry animation.
+* Confirm chest shuffle animation occurs after reward icons enter.
+* Confirm shuffle is not easy to visually track.
+* Confirm chests line back up after shuffle.
+* Confirm Choose buttons fade in after shuffle.
+* Confirm Choose buttons are disabled before shuffle completes.
+* Confirm Choose button displays in English.
+* Confirm Choose button displays in Japanese.
+* Confirm only one chest can be chosen.
+* Confirm selected reward is revealed.
+* Confirm result sentence displays in English.
+* Confirm result sentence displays in Japanese.
+* Confirm Continue appears after reward reveal.
+* Confirm Common Token has 40 weight.
+* Confirm Rare Token has 10 weight.
+* Confirm Common Potion has 40 weight.
+* Confirm Rare Potion has 10 weight.
+* Confirm exactly one Nothing reward is generated.
+* Confirm exactly two non-Nothing rewards are generated.
+* Confirm duplicate reward categories are not generated.
+* Confirm Common Token generates an actual common token.
+* Confirm Rare Token generates an actual rare token.
+* Confirm Common Potion generates an actual common potion.
+* Confirm Rare Potion generates an actual rare potion.
+* Confirm token reward opens Spell Token Assignment.
+* Confirm potion reward adds to potion slots if there is room.
+* Confirm potion reward opens full-slot modal if potion slots are full.
+* Confirm Nothing reward grants nothing.
+* Confirm River Mini Game source returns to same player roll-again flow.
+* Confirm Cave Game source without Roll Again Potion advances to next player.
+* Confirm Cave Game source with Roll Again Potion keeps same player active.
+* Confirm next-turn modal appears after Cave source with player-to-player turn change.
+* Confirm Roll Again Potion modal appears after Cave source with same-player return.
+* Confirm Cave Game loot chest appears before Cave token assignment.
+* Confirm Cave token reward is not lost when routing through Loot Chest page.
+* Confirm if Loot Chest also gives a token, both tokens can be assigned.
+* Confirm multiple pending token rewards do not exceed capacity rules.
+* Confirm no reward is granted twice.
+* Confirm no `ul` or `li` elements are used.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+---
+
+Feature-002: Add ordered Cave Game reward resolution flow after loot chest selection
+
+Status
+
+* done
+
+Completion Notes
+
+* Added an explicit Cave reward resolution state with `lootChest`, `tokenAssignment`, `potionResolution`, and `finalTurnBehaviour` stages plus source-preserving token and potion queues.
+* Cave retreat now defers all token and potion inventory changes, opens Loot Chest first when present, assigns every pending token next, resolves pending potions one at a time, and only then applies the stored turn behaviour.
+* Loot Chest token and potion rewards join the same Cave queue without replacing Cave rewards; Loot tokens retain first-token assignment order while all token work still completes before either source's potion work.
+* Reused the existing Spell Token Assignment controls for spell slots, token bag, replacement, and discard, including sequential assignment when both Loot and Cave provide tokens.
+* Reused the existing potion capacity and replacement/discard logic. Available potions now show the required translated confirmation before continuing, while full slots require a replacement or discard choice for each queued potion.
+* Reused `MagicalNightSky`, the wooden modal classes, global `Button`, `PotionIcon`, existing English/Japanese reward text, and established language font classes on the potion confirmation and full-capacity states.
+* Final return is blocked until the queue is empty. Roll Again preserves the active player and notice; no Roll Again advances to the next player through the global next-turn modal invariant.
+* River Loot Chest behavior, reward probabilities, reward types, routes, dependencies, and unrelated inventory behavior were not changed.
+* No `ul` or `li` elements were introduced.
+
+Related Feature
+
+* EPIC-011 Feature-001: Implement Loot Chest page with hidden reward choices, chest shuffle animation, and reward assignment flow
+* EPIC-010 Feature-012: Add Cave Mini Game reward generation, retreat reward handling, loot routing, and roll-again preservation
+* EPIC-010 Feature-014: Grant Cave Game token and potion rewards, handle full bags/slots, and add Cave reward debug buttons
+* EPIC-010 Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+* EPIC-010 Bug-005: Next-turn modal must always appear after any player turn change
+
+Goal
+
+* Add a strict reward handling order after the Cave Game.
+* Ensure all Cave Game rewards and Loot Chest rewards are resolved in a predictable sequence.
+* Prevent tokens, potions, loot chest rewards, or roll-again turn behaviour from being lost.
+* Make the reward resolution flow consistent and easy to extend later.
+
+Required Reward Resolution Order
+
+* After the Cave Game, rewards must be handled in this exact order:
+
+```txt id="t6cs2h"
+1. Resolve Loot Chest if one was found.
+2. Assign all pending tokens.
+3. Resolve all pending potions.
+4. Apply final turn behaviour.
+```
+
+* Do not apply final turn behaviour until all rewards have been resolved.
+* Do not return fully to normal board control until this sequence is complete.
+
+Step 1: Loot Chest Resolution
+
+* If the player found a loot chest in the Cave Game:
+
+  * send the player to the Loot Chest page first.
+  * resolve the Loot Chest reward using EPIC-011 Feature-001.
+
+* This must happen before assigning any Cave Game token rewards.
+
+* If the Loot Chest reward is a token, add it to the pending token rewards queue.
+
+* If the Loot Chest reward is a potion, add it to the pending potion rewards queue.
+
+* If the Loot Chest reward is Nothing, add nothing.
+
+* After the Loot Chest page finishes, continue to token assignment.
+
+* If the player did not find a loot chest:
+
+  * skip this step.
+  * go directly to token assignment.
+
+Step 2: Token Assignment
+
+* After Loot Chest resolution is complete, assign any pending tokens.
+* Pending tokens may come from:
+
+  * the Cave Game itself.
+  * the Loot Chest reward.
+  * both.
+* All pending tokens must be handled through the existing Spell Token Assignment component.
+* Do not automatically place Cave Game tokens into the token bag.
+* Do not silently discard pending tokens.
+* If there are multiple pending tokens, they must all be assigned or discarded before continuing.
+
+Token Assignment Options
+
+* Each pending token should be assignable to:
+
+  * a valid spell slot.
+  * the token bag.
+  * trash/discard.
+* Use the generic Spell Token Assignment styling from EPIC-010 Feature-015.
+* Use the animated night sky background.
+* Use the wooden modal-style assignment container.
+* Do not use `ul` or `li`.
+
+Multiple Token Requirement
+
+* If the Cave Game produced a token and the Loot Chest also produced a token:
+
+  * both tokens must be handled.
+* Preferred behaviour:
+
+  * show both pending tokens in one Spell Token Assignment flow.
+* Acceptable fallback:
+
+  * queue the tokens and show the assignment flow once per token.
+* In either case:
+
+  * no token should be lost.
+  * final reward handling must wait until all pending tokens are resolved.
+
+Step 3: Potion Resolution
+
+* After all pending tokens have been assigned or discarded, resolve pending potions.
+* Pending potions may come from:
+
+  * the Cave Game itself.
+  * the Loot Chest reward.
+  * both.
+* Potions do not use the Spell Token Assignment component.
+* Potions should be added to the player’s potion slots if there is room.
+* If the potion slots are full:
+
+  * show the usual modal asking which current potion to discard.
+  * also allow the player to discard the newly gained potion.
+* If the potion slots are not full:
+
+  * still show a modal on top of the starry night background confirming that the potion has been added.
+* This confirmation modal should appear even when no decision is required.
+
+Potion Added Modal Requirement
+
+* When a potion is successfully added and there was room, show a modal.
+* The modal should sit above the animated night sky background.
+* It should use the wooden modal background and normal modal styling.
+* It should tell the player the potion has been added to their potions.
+* Reuse existing translated text where possible.
+* If new text is needed, add English and Japanese.
+* The modal should use:
+
+  * yellow text.
+  * bold text.
+  * correct language font.
+  * button at the bottom.
+  * centred button.
+  * button not full width.
+* Since this is a simple text-only modal, the main `<p>` tag should use `larger-text`.
+
+Full Potion Modal Requirement
+
+* If the player’s potion slots are full:
+
+  * show the existing full-potion replacement/discard modal.
+  * use the starry night background behind it.
+  * use wooden modal styling.
+  * preserve English/Japanese translations.
+  * preserve correct fonts.
+* The player must choose before the reward resolution flow continues.
+* Do not silently discard the new potion.
+* Do not exceed potion capacity.
+
+Multiple Potion Requirement
+
+* If there is more than one pending potion:
+
+  * process them one at a time.
+  * show the added confirmation or full-potion choice for each potion.
+* Do not lose later pending potions while handling an earlier one.
+* Final turn behaviour must wait until all pending potions are resolved.
+
+Step 4: Final Turn Behaviour
+
+* After Loot Chest, token assignment, and potion resolution are all complete, apply final turn behaviour.
+* Final turn behaviour depends on whether the Cave Game produced a Roll Again Potion.
+
+If Roll Again Potion was gained:
+
+* Keep the same player active.
+* Do not advance to the next player.
+* Return to the board.
+* Show the Roll Again Potion modal.
+* The same player can roll again.
+
+Roll Again Potion modal text:
+
+```txt id="hmpbcf"
+Your roll again potion was used, it is your turn to roll again.
+```
+
+Japanese:
+
+```txt id="rmzm9l"
+もう一度サイコロを振れるポーションが使用されました。もう一度サイコロを振る番です。
+```
+
+* This modal is text-only, so the main `<p>` tag must use `larger-text`.
+
+If Roll Again Potion was not gained:
+
+* Return to the board.
+* Advance to the next player.
+* Show the next-turn modal first.
+* Follow the global next-turn modal invariant:
+
+  * any active-player change must show the next-turn modal 100% of the time.
+
+Reward Queue Requirement
+
+* Use a clear pending reward queue or reward resolution state.
+* Suggested structure:
+
+```js id="ur4f08"
+const pendingRewardResolution = {
+  source: "cave",
+  playerId,
+  hasLootChest,
+  hasRollAgainPotion,
+  pendingTokens: [],
+  pendingPotions: [],
+  lootResolved: false,
+  tokensResolved: false,
+  potionsResolved: false,
+  finalReturnBehaviour: hasRollAgainPotion
+    ? "samePlayerRollAgain"
+    : "nextPlayerTurn"
+};
+```
+
+* Exact structure can vary.
+* The important requirement is that reward handling is ordered and state is not lost across pages/modals.
+
+Resolution State Requirement
+
+* The reward resolution flow should know which stage it is currently processing.
+* Suggested stages:
+
+```txt id="efppvz"
+lootChest
+tokenAssignment
+potionResolution
+finalTurnBehaviour
+complete
+```
+
+* The game should move through these stages in order.
+* Do not skip a stage unless there are no rewards of that type.
+* Do not run stages out of order.
+
+Cave Game Source Requirement
+
+* This feature is specifically for reward handling after the Cave Game.
+* River Mini Game loot chest flow can keep its existing behaviour unless it uses the same reward resolver safely.
+* If a shared reward resolver is created, ensure River source metadata is preserved correctly.
+
+Language Requirement
+
+* All reward handling modals must support English and Japanese.
+* Use current player language.
+* Reuse existing translations wherever possible.
+* Apply correct fonts:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* If language is missing or invalid, fall back to English.
+
+Visual Requirement
+
+* Loot Chest page uses the animated night sky background.
+* Spell Token Assignment uses the animated night sky background.
+* Potion added and full-potion modals should appear over the animated night sky background.
+* Modal content should use the wooden modal background.
+* Modal buttons should be at the bottom, centred, and not full width.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` elements in any new reward resolution UI.
+* Use `div` elements with CSS grid or flex layouts.
+
+Expected Behaviour
+
+* Cave Game reward handling always starts with Loot Chest if one was found.
+* Loot Chest reward is resolved before Cave tokens are assigned.
+* Any tokens from Cave Game and Loot Chest are assigned after Loot Chest resolution.
+* All pending tokens are handled before potions.
+* Potions are handled after tokens.
+* Potion added confirmation modal appears even when potion slots are not full.
+* Full potion slots still trigger the replacement/discard modal.
+* Final turn behaviour only happens after all reward handling is complete.
+* Roll Again Potion keeps the same player active.
+* No Roll Again Potion advances to the next player.
+* Next-turn modal appears after player-to-player turn changes.
+* Reward state is not lost between Cave Game, Loot Chest, token assignment, potion handling, and board return.
+
+Out Of Scope
+
+* No changes to Cave Game probability table.
+* No changes to Loot Chest reward chance table.
+* No changes to token rarity odds.
+* No changes to potion rarity odds.
+* No new reward types.
+* No changes to River Mini Game rules.
+* No unrelated inventory redesign.
+* No sound effects.
+* No `ul` or `li` elements.
+
+Assumptions
+
+* Cave Game already stores whether a loot chest was found.
+* Cave Game already stores whether Roll Again Potion was found.
+* Cave Game can preserve pending rewards through route/context state.
+* Loot Chest page can return selected rewards into a pending reward queue.
+* Spell Token Assignment can handle one or more pending tokens.
+* Potion full-capacity handling already exists or is being implemented.
+
+Stop Point
+
+* Stop once Cave Game reward resolution always follows this order: Loot Chest first, token assignment second, potion handling third, final turn behaviour last, with correct Roll Again Potion behaviour and translated modal UI.
+
+Testing Checkpoints
+
+* Confirm Cave Game with loot chest routes to Loot Chest first.
+* Confirm Cave Game without loot chest skips Loot Chest.
+* Confirm Cave Game token is not assigned before Loot Chest if loot chest exists.
+* Confirm Loot Chest token reward is added to pending tokens.
+* Confirm Loot Chest potion reward is added to pending potions.
+* Confirm Loot Chest Nothing reward adds no pending reward.
+* Confirm all pending tokens are assigned after Loot Chest resolution.
+* Confirm Cave token and Loot Chest token can both be assigned.
+* Confirm no pending token is lost.
+* Confirm potion resolution starts only after all tokens are resolved.
+* Confirm potion is added automatically if there is room.
+* Confirm potion added confirmation modal appears even when there is room.
+* Confirm full potion slots show replacement/discard modal.
+* Confirm multiple pending potions are processed one at a time.
+* Confirm final turn behaviour does not happen before reward handling is complete.
+* Confirm Roll Again Potion keeps the same player active after all reward handling.
+* Confirm Roll Again Potion modal appears.
+* Confirm no Roll Again Potion advances to the next player after all reward handling.
+* Confirm next-turn modal appears after that turn change.
+* Confirm reward resolution state survives page changes.
+* Confirm reward resolution state survives token assignment.
+* Confirm reward resolution state survives potion modals.
+* Confirm all new UI uses English font for English players.
+* Confirm all new UI uses Japanese font for Japanese players.
+* Confirm modal buttons are bottom-centred and not full width.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+---
+
+Feature-003: Clean up Battle modals for turn display, loss punishment, and reward choice
+
+Status
+
+* done
+
+Completion Notes
+
+* Updated the existing Battle turn `Modal` with a centred image/text wrapper, a stable actor-image class, `larger-text`, and the battling player's English/Japanese font class without changing its two-second timing or enemy auto-roll flow.
+* Updated the Battle loss `Modal` with localized loss and Respawn copy, centred `larger-text`, and the current language class while preserving punishment, death-token removal, respawn, turn advancement, and next-turn modal behavior.
+* Reworked the shared `DeathResult` display from `ul`/`li` markup to icon-first div rows. Each row reuses `Token` with its name and tooltip hidden, retains the removed token's column information, and uses localized yellow/bold text.
+* Reused the shared `Modal` for the Battle reward choice over the unchanged Battle environment background. The exact localized heading now reads `Choose your reward` / `報酬を選んでください。` and uses `larger-text`.
+* Split every reward option into fixed icon, localized name, and Button rows so icons and Choose buttons remain aligned when names wrap. Existing `Token`, `PotionIcon`, reward generation, selection, and assignment handlers remain unchanged.
+* Reused `Modal`, `Button`, `Token`, `PotionIcon`, Battle background selection, centralized token/potion names, and existing language classes. Added only `DeathResult.css` because the shared death component had no component-level row styling.
+* No Battle damage, dice, enemy-turn, reward probability, token rarity, assignment, background-selection, route, dependency, or unrelated page behavior was changed.
+
+Related Feature
+
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-006 Feature-003: Add battle debug dice buttons
+* EPIC-007 Feature-001: Add death token punishment and respawn result screen
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-009 Feature-004: Apply modal background and yellow text styling
+* EPIC-010 Feature-007: Add larger-text class to text-only modal paragraphs
+* EPIC-011 Bug-007: Replace token and potion modal lists with div-based grid/flex layouts
+
+Goal
+
+* Clean up Battle-related modals so they follow the game’s current modal style rules.
+* Ensure Battle turn modal text and player image are centred.
+* Fix the Battle loss / punishment modal fonts and remove `ul` usage.
+* Redesign the Battle win reward-choice modal so it uses the wooden modal background, yellow text, and stable reward layout.
+* Preserve all existing Battle logic and reward functionality.
+
+Scope
+
+* Update Battle turn modal.
+* Update Battle loss / punishment modal.
+* Update Battle win reward choice modal.
+* Apply correct English/Japanese fonts.
+* Apply `larger-text` where required.
+* Remove `ul` / `li` usage from these modals.
+* Use TokenIcon without token names where required.
+* Preserve battle background behind the reward modal.
+* Preserve existing reward selection and battle result logic.
+
+Battle Turn Modal Requirement
+
+* The Battle player/enemy turn modal should apply the `larger-text` class to the main turn text.
+* The turn text should be centred.
+* The player or enemy image shown in the modal should also be centred.
+* The modal should follow normal modal text styling:
+
+  * yellow text.
+  * bold text.
+  * correct language font.
+  * wooden modal background if it already uses the normal modal component.
+* The image and text should feel visually aligned.
+
+Expected layout:
+
+```txt id="p2kd4c"
+Centered image
+
+Centered turn text with larger-text
+```
+
+* Preserve existing timing and auto-close behaviour.
+* Preserve existing turn text:
+
+  * English: `X Turn`
+  * Japanese: `Xのターン`
+* Use the battle actor’s correct name:
+
+  * player colour name for players.
+  * enemy name for enemies.
+* Use Japanese enemy/player names when the triggering player’s language is Japanese.
+
+Suggested structure:
+
+```jsx id="vr3s7b"
+<div className="battle-turn-modal-content">
+  <img className="battle-turn-modal-image" src={actorImage} alt="" />
+
+  <p className={`larger-text ${languageClass}`}>
+    {turnText}
+  </p>
+</div>
+```
+
+Battle Turn Modal Styling Direction
+
+```css id="zp4p8m"
+.battle-turn-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.battle-turn-modal-image {
+  display: block;
+  margin: 0 auto;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that both the image and text are centred.
+
+Battle Loss / Punishment Modal Requirement
+
+* The Battle punishment modal where it says something like:
+
+```txt id="w8wssf"
+The player has lost
+```
+
+should be cleaned up.
+
+* It already has the correct background.
+* The fonts are wrong and must be fixed.
+* It currently uses a `ul`, which must be removed.
+* The top text should be centred.
+* The top text should use the `larger-text` class.
+* All text should use the correct language font:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* All normal modal text should be yellow and bold.
+
+Top Text Requirement
+
+* The main loss text should:
+
+  * be centred.
+  * use `larger-text`.
+  * use correct language font.
+  * use yellow modal text styling.
+
+Suggested structure:
+
+```jsx id="l3he4j"
+<p className={`larger-text ${languageClass}`}>
+  {battleLossText}
+</p>
+```
+
+Removed Token List Requirement
+
+* Removed tokens should not be displayed in a `ul`.
+* Do not use `li`.
+* Display removed token rows using `div` elements.
+* Each removed token row should show:
+
+  * the TokenIcon on the left.
+  * the removal text on the right.
+* The TokenIcon should not include the token name.
+* The text should explain that the token was removed.
+* Preserve the existing removed-token information.
+
+Suggested structure:
+
+```jsx id="zk93ia"
+<div className="removed-token-list">
+  {removedTokens.map((removedToken) => (
+    <div className="removed-token-row" key={removedToken.id}>
+      <TokenIcon
+        token={removedToken.token}
+        language={language}
+        showName={false}
+      />
+
+      <div className={`removed-token-text ${languageClass}`}>
+        {removedTokenText}
+      </div>
+    </div>
+  ))}
+</div>
+```
+
+Suggested styling:
+
+```css id="x95y8e"
+.removed-token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.removed-token-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.removed-token-text {
+  color: #F5FA00;
+  font-weight: bold;
+}
+```
+
+* Exact class names can vary.
+* The important requirements are:
+
+  * no `ul`.
+  * no `li`.
+  * TokenIcon left.
+  * removed text right.
+  * correct fonts and yellow text.
+
+Battle Win Reward Choice Modal Requirement
+
+* The win modal where the player chooses the token they want to win needs redesigning.
+* It should appear inside a modal with the wooden background.
+* It should sit above the Battle background.
+* Do not replace the Battle background behind it.
+* The modal should follow normal modal styling:
+
+  * wooden background.
+  * yellow text.
+  * bold text.
+  * correct English/Japanese fonts.
+  * button styling consistent with modal rules.
+* The current reward selection logic should remain unchanged.
+
+Battle Background Preservation
+
+* The Battle win reward choice modal should appear over the existing Battle background.
+* Do not switch to the starry night background for this specific Battle win reward choice modal unless another feature says so.
+* The player should still visually feel that they are on the Battle result screen.
+
+Choose Reward Text Requirement
+
+* The heading text should be:
+
+```txt id="y9w6wl"
+Choose your reward
+```
+
+* Japanese should use the existing translation if already present.
+* If not present, use:
+
+```txt id="fhrrwt"
+報酬を選んでください。
+```
+
+* The heading should:
+
+  * be yellow.
+  * be bold.
+  * use `larger-text`.
+  * be centred.
+  * use correct language font.
+
+Reward Text Requirement
+
+* The token text in the reward choices should be yellow.
+* Token names should use the correct language.
+* English token text should use Unkempt.
+* Japanese token text should use Noto Serif Japanese / Noto Serif JP.
+* If token names wrap onto two lines, the layout should still remain aligned.
+
+Reward Choice Layout Requirement
+
+* Reward choices should remain horizontally stacked and centred.
+* The layout must account for token names that take two lines.
+* Token images should always line up horizontally with each other.
+* Choose buttons should always line up horizontally with each other.
+* Long token names should not push the token image or button out of alignment.
+
+Suggested reward card structure:
+
+```jsx id="r9jkpw"
+<div className="battle-reward-options">
+  {rewardChoices.map((reward) => (
+    <div className="battle-reward-card" key={reward.id}>
+      <div className="battle-reward-icon-row">
+        <TokenIcon
+          token={reward.token}
+          language={language}
+          showName={false}
+        />
+      </div>
+
+      <div className={`battle-reward-name ${languageClass}`}>
+        {rewardName}
+      </div>
+
+      <div className="battle-reward-button-row">
+        <Button>
+          {chooseText}
+        </Button>
+      </div>
+    </div>
+  ))}
+</div>
+```
+
+Suggested CSS direction:
+
+```css id="co7u9j"
+.battle-reward-options {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.battle-reward-card {
+  width: 150px;
+  display: grid;
+  grid-template-rows: 90px minmax(48px, auto) auto;
+  justify-items: center;
+  text-align: center;
+}
+
+.battle-reward-icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.battle-reward-name {
+  color: #F5FA00;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.battle-reward-button-row {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+}
+```
+
+* Exact sizes can vary.
+* The important requirements are:
+
+  * reward cards horizontally centred.
+  * token icons line up.
+  * names can wrap.
+  * Choose buttons line up.
+  * text remains yellow.
+
+Choose Button Requirement
+
+* Reward Choose buttons should use the global Button component.
+* Button text:
+
+  * English: `Choose`
+  * Japanese: `選ぶ`
+* Buttons should align evenly across all reward cards.
+* Buttons should not jump or sit at different heights because one token name is longer.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` in any of these Battle modal updates.
+* Use `div` elements with grid or flex layouts.
+* This applies to:
+
+  * removed-token display.
+  * reward choices.
+  * modal internal lists.
+  * any other newly touched Battle modal markup.
+
+Translation Requirement
+
+* All touched modal text must support English and Japanese.
+* Reuse existing translations wherever possible.
+* Apply correct fonts:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* If language is missing or invalid, fall back to English.
+
+Expected Behaviour
+
+* Battle turn modal text uses `larger-text`.
+* Battle turn modal text is centred.
+* Battle turn modal actor image is centred.
+* Battle loss / punishment modal uses correct fonts.
+* Battle loss / punishment modal top text is centred and uses `larger-text`.
+* Battle loss / punishment modal no longer uses `ul` or `li`.
+* Removed tokens are shown in div rows.
+* Removed token rows show TokenIcon without name on the left.
+* Removed token rows show removal text on the right.
+* Battle win reward choice modal appears inside a wooden modal panel.
+* Battle win reward choice modal appears above the Battle background.
+* `Choose your reward` text is yellow and uses `larger-text`.
+* Reward token text is yellow.
+* Reward choices remain horizontally stacked and centred.
+* Token icons line up even when names wrap.
+* Choose buttons line up even when names wrap.
+* Existing reward choice logic still works.
+
+Out Of Scope
+
+* No changes to Battle damage logic.
+* No changes to Battle dice logic.
+* No changes to enemy turn logic.
+* No changes to reward generation probabilities.
+* No changes to token rarity.
+* No changes to spell slot/token assignment behaviour after the reward is chosen.
+* No changes to Battle background selection.
+* No unrelated Battle page redesign.
+
+Assumptions
+
+* Battle modals already have access to current language.
+* TokenIcon supports hiding token names.
+* The global Button component is available.
+* The wooden modal background styling is already available from normal modal styles.
+* The Battle win reward modal currently appears over a Battle background that should be preserved.
+
+Stop Point
+
+* Stop once the Battle turn modal, Battle loss/punishment modal, and Battle win reward choice modal all follow the current modal styling rules, avoid `ul`/`li`, apply `larger-text` where required, and keep reward card icons/buttons aligned.
+
+Testing Checkpoints
+
+* Confirm Battle turn modal text has `larger-text`.
+* Confirm Battle turn modal text is centred.
+* Confirm Battle turn modal player image is centred.
+* Confirm Battle turn modal enemy image is centred when applicable.
+* Confirm Battle turn modal English text uses Unkempt.
+* Confirm Battle turn modal Japanese text uses Noto Serif Japanese.
+* Confirm Battle loss modal top text is centred.
+* Confirm Battle loss modal top text has `larger-text`.
+* Confirm Battle loss modal text is yellow.
+* Confirm Battle loss modal uses correct English font.
+* Confirm Battle loss modal uses correct Japanese font.
+* Confirm Battle loss modal does not use `ul`.
+* Confirm Battle loss modal does not use `li`.
+* Confirm removed tokens display in div rows.
+* Confirm each removed token row shows TokenIcon without token name.
+* Confirm each removed token row shows removal text beside the token.
+* Confirm Battle win reward choice modal uses the wooden modal background.
+* Confirm Battle win reward choice modal appears above the Battle background.
+* Confirm `Choose your reward` is yellow.
+* Confirm `Choose your reward` has `larger-text`.
+* Confirm reward token names are yellow.
+* Confirm reward choices are horizontally stacked.
+* Confirm reward choices are centred.
+* Confirm token icons line up across reward cards.
+* Confirm token names can wrap onto two lines without breaking alignment.
+* Confirm Choose buttons line up across reward cards.
+* Confirm Choose buttons use the global Button component.
+* Confirm Choose button displays in English.
+* Confirm Choose button displays in Japanese.
+* Confirm choosing a battle reward still works.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Status
+
+* done
+
+Completion Notes
+
+* Added a focused pure spell-effects helper because no existing module calculated Light Green health, Grey capacity, White merge selection, or effective merged battle columns.
+* Newly committed Light Green tokens now add 5 to both max and current health each; spell commits, reward placement, merge losses, battle losses, and mini-game death penalties recalculate the bonus without repeat healing and clamp current health when needed.
+* Committed Grey tokens now stack +1 capacity into physically adjacent columns only. Normal spell movement, reward-token placement, capacity displays, and save validation all use the effective committed capacity; draft Grey tokens do not activate the bonus before save.
+* White pairs are detected only in adjacent, previously unmerged columns and are limited to two persisted merges per player. Confirming a merge consumes one White token from the retained column and clears the losing column; loss selection follows total token count, then existing rarity metadata, then `Math.random` for a complete tie.
+* Reused the shared wooden `Modal`, global `Button`, existing Yes/No translations, language classes, spell assignment flow, committed-spell renderer, and battle resolver. Added one feature-local merge confirmation component because both normal spell commits and direct reward placement require the same confirmation.
+* Player state now stores `baseMaxHealth`, `columnMergesUsed`, and `mergedColumns`. Each merge record contains one-based `columns`, `activeColumn`, and `removedColumn`; Gameplay, Reward, Battle, and committed-spell display read the same persisted state.
+* Merged committed columns span the same two original grid tracks, show an `X+X` title, render only retained tokens, and resolve either physical dice result to the retained battle column without double-triggering.
+* Existing Black-first death-token behavior and all previously implemented battle token effects remain unchanged. No reward odds, rarity data, potion rules, routes, dependencies, sound, or unrelated UI were changed.
+
+Related Feature
+
+* EPIC-003 Feature-002: Add player spell slots and token assignment
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-007 Feature-004: Add global TokenIcon component
+* EPIC-008 Feature-005: Add token names and translations
+* EPIC-011 Feature-003: Clean up Battle modals for turn display, loss punishment, and reward choice
+
+Goal
+
+* Implement the remaining token behaviours that affect gameplay outside of battle.
+* These are:
+
+  * Light Green: increases player health.
+  * White: merges adjacent spell columns.
+  * Grey: increases adjacent spell column capacity.
+* Preserve existing Black token behaviour.
+* Ensure merged columns are visually represented in the committed spells display.
+* Ensure all new confirmation text supports English and Japanese with correct fonts.
+
+Scope
+
+* Add Light Green non-battle effect.
+* Add White merge-token effect.
+* Add Grey adjacent-capacity effect.
+* Add merge confirmation modal.
+* Add merged-column battle behaviour.
+* Add merged-column visual display in committed spells.
+* Preserve existing Black token behaviour.
+* Preserve battle token effects already implemented.
+* Preserve spell assignment and committed-token rules.
+
+Non-Battle Token Summary
+
+```txt id="0e9ryr"
+Light Green: +5 max HP while committed in a spell slot.
+Black: already implemented; no action needed.
+White: merge two adjacent columns when one White token is committed in each column.
+Grey: +1 token capacity to adjacent spell columns while committed in a spell slot.
+```
+
+Light Green Token Requirement
+
+* When a Light Green token is committed in a spell slot, it adds:
+
+```txt id="nnyfzd"
++5 HP
+```
+
+to that player’s overall health.
+
+* This should affect the player’s maximum health.
+* Multiple Light Green tokens should stack.
+* Example:
+
+  * 1 Light Green token = +5 max HP.
+  * 3 Light Green tokens = +15 max HP.
+* The health bonus applies while the Light Green token is committed in a spell slot.
+* Light Green tokens in the token bag should not affect health.
+* Light Green tokens that are discarded or removed should no longer affect health.
+
+Health Update Requirement
+
+* If a player adds Light Green tokens to committed spell slots:
+
+  * increase their max health accordingly.
+* If a player later removes Light Green tokens through a valid effect:
+
+  * reduce their max health accordingly.
+* Current health should not exceed the updated max health.
+* If the max health increases, current health does not need to automatically heal unless already supported elsewhere.
+* If the max health decreases below current health, clamp current health to the new max.
+
+Suggested calculation:
+
+```js id="8z4sna"
+const lightGreenCount = committedSpellSlots
+  .flat()
+  .filter((token) => token.colour === "Light Green").length;
+
+const maxHealth = baseMaxHealth + lightGreenCount * 5;
+```
+
+* Exact implementation can vary.
+* The important requirement is that committed Light Green tokens increase overall player health by 5 each.
+
+Black Token Requirement
+
+* Black token behaviour is already implemented.
+* No new action is needed for Black tokens in this feature.
+* Do not change existing Black token behaviour.
+
+White Token Merge Requirement
+
+* White tokens can be used to merge two adjacent spell columns.
+* To merge two columns:
+
+  * the player must place one White token in each of two adjacent columns.
+* Adjacent means directly next to each other.
+* Valid examples:
+
+  * columns 1 and 2.
+  * columns 2 and 3.
+  * columns 3 and 4.
+  * columns 4 and 5.
+  * columns 5 and 6.
+* Invalid examples:
+
+  * columns 2 and 4.
+  * columns 1 and 3.
+  * columns 1 and 6.
+
+Merge Limit Requirement
+
+* A player can only merge columns twice per game.
+* After a player has successfully merged twice:
+
+  * additional White tokens do nothing.
+  * they can still exist in spell slots.
+  * they are redundant and have no further merge effect.
+* The game should track successful merges per player.
+
+Suggested state:
+
+```js id="s9vnn9"
+player.columnMergesUsed = 0;
+player.mergedColumns = [
+  { columns: [2, 3], activeColumn: 2, removedColumn: 3 }
+];
+```
+
+* Exact structure can vary.
+* The important requirements are:
+
+  * maximum 2 merges per player per game.
+  * persisted merged-column state.
+  * battle and committed-spell displays can read this state.
+
+White Merge Detection Requirement
+
+* On committing spell changes, check whether the committed spell setup creates a valid new merge.
+* A valid merge attempt requires:
+
+  * a White token in one column.
+  * a White token in an adjacent column.
+  * the two columns are not already merged together.
+  * the player has fewer than 2 successful merges.
+* If more than one possible merge is present, handle one at a time or apply a clear deterministic rule.
+* Avoid accidentally merging non-adjacent columns.
+* Avoid merging the same column into multiple separate groups unless explicitly supported later.
+
+Merge Confirmation Requirement
+
+* When a valid merge is detected during commit, show a different confirmation alert instead of the normal commit confirmation.
+* English:
+
+```txt id="g0ilom"
+Committing this change will merge columns X and X. This means you will lose the tokens from column X. Is this ok?
+```
+
+* Japanese:
+
+```txt id="zze2k4"
+この変更を確定すると、列Xと列Xが統合されます。そのため、列Xにあるトークンは失われます。よろしいですか？
+```
+
+* Replace each `X` with the relevant column number.
+* The first two `X` values are the two columns being merged.
+* The final `X` is the column that will lose its tokens.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct English/Japanese font.
+  * bottom-centred buttons.
+* This is a text-only confirmation modal, so the main `<p>` tag should use `larger-text`.
+
+Merge Token Loss Rule
+
+* When two columns are merged, one column loses its tokens.
+* Decide which column loses tokens using this priority order:
+
+```txt id="8uj0c5"
+1. The column with the fewest total tokens loses its tokens.
+2. If both columns have the same number of total tokens, the column with the fewest rare tokens loses its tokens.
+3. If both columns are still tied, choose one of the two columns at random.
+```
+
+* The losing column loses all tokens in that column.
+* The retained column keeps its tokens.
+* The two columns then act as one merged column from that point onward.
+
+Rare Token Count Requirement
+
+* For the merge loss tie-breaker, count rare tokens in each candidate column.
+* Rare tokens should use existing token rarity data.
+* If rarity is missing, treat the token as common unless existing project logic says otherwise.
+* Only committed tokens in the two merge candidate columns should be counted.
+
+Merge Confirmation Example
+
+* If columns 3 and 4 are being merged:
+
+  * compare total token counts in column 3 and column 4.
+  * if one has fewer tokens, that column is the losing column.
+  * if totals are equal, compare rare-token counts.
+  * if still equal, choose one randomly.
+* The confirmation might say:
+
+```txt id="umysri"
+Committing this change will merge columns 3 and 4. This means you will lose the tokens from column 4. Is this ok?
+```
+
+Merged Column Battle Requirement
+
+* Once two columns are merged, they act as one column in battle.
+* If either column number is rolled, the whole merged column is triggered.
+* Example:
+
+  * columns 3 and 4 are merged.
+  * the retained merged token set contains 2 Red tokens.
+  * if battle roll is 3, the merged column triggers and deals 20 damage.
+  * if battle roll is 4, the same merged column triggers and deals 20 damage.
+* The roll number should still visually/semantically correspond to the rolled number, but the effects should use the merged column’s combined active token set.
+* Do not double-trigger the merged column if the roll maps to either side.
+* Merged columns should behave consistently for both player attacks and enemy/opponent matching logic where player spell columns are referenced.
+
+Merged Column Storage Requirement
+
+* Store merged-column state in a way battle logic can query.
+* Suggested helper:
+
+```js id="evuimd"
+function getEffectiveSpellColumn(player, rolledColumnNumber) {
+  const merge = player.mergedColumns.find((merge) =>
+    merge.columns.includes(rolledColumnNumber)
+  );
+
+  if (!merge) {
+    return player.spellSlots[rolledColumnNumber - 1];
+  }
+
+  return player.spellSlots[merge.activeColumn - 1];
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that either rolled number in a merged pair triggers the retained merged column’s token effects.
+
+Merged Column Display Requirement
+
+* In the committed spells component, merged columns should look visibly merged.
+* The merged columns should still take up exactly the same total space as they did before.
+* Nothing should jump around.
+* If columns 2 and 3 are merged:
+
+  * the display still occupies the same width previously used by columns 2 and 3.
+  * the columns should look visually joined.
+  * the title should display:
+
+```txt id="c2wa44"
+2+3
+```
+
+* The merged display should make it clear that the two columns now act together.
+
+Committed Spells Layout Requirement
+
+* Do not change the overall committed spells component width.
+* Do not change the space allocated for the 6 original column positions.
+* Merged columns should visually combine without shifting neighbouring columns.
+* If columns 2 and 3 are merged:
+
+  * column 2 and 3 area should look like one joined section.
+  * title should be `2+3`.
+  * the removed/lost column should not show active tokens.
+  * the retained column’s tokens should be shown as the active merged tokens.
+* Exact visual styling can vary, but merged columns must be obvious.
+
+Suggested display direction:
+
+```txt id="jwsi1e"
+Column 1 | Merged column 2+3 occupying two original column widths | Column 4 | Column 5 | Column 6
+```
+
+* If the implementation keeps both column cells in the DOM, style their shared border/heading to look merged.
+* If the implementation renders a wider merged card, ensure it spans the same space as the original two columns.
+
+Grey Token Capacity Requirement
+
+* Grey tokens increase the capacity of adjacent spell columns.
+* When a Grey token is committed in a spell slot:
+
+  * add +1 capacity to the column immediately to the left, if one exists.
+  * add +1 capacity to the column immediately to the right, if one exists.
+* Grey token effects stack.
+* Grey tokens in the token bag do not affect capacity.
+* Grey tokens only affect adjacent columns, not their own column.
+
+Grey Token Examples
+
+* Grey token in column 2:
+
+  * column 1 capacity +1.
+  * column 3 capacity +1.
+* Two Grey tokens in column 2:
+
+  * column 1 capacity +2.
+  * column 3 capacity +2.
+* Grey token in column 1:
+
+  * column 2 capacity +1 only.
+* Grey token in column 6:
+
+  * column 5 capacity +1 only.
+
+Capacity Calculation Requirement
+
+* Base spell column capacity remains whatever the current base capacity is.
+* Existing default appears to be 5 tokens per spell column.
+* Grey tokens should modify the effective capacity dynamically.
+* Suggested calculation:
+
+```js id="ceoes1"
+function getColumnCapacity(player, columnIndex) {
+  const baseCapacity = 5;
+  const leftColumn = player.spellSlots[columnIndex - 1];
+  const rightColumn = player.spellSlots[columnIndex + 1];
+
+  const greyFromLeft = countGreyTokens(leftColumn);
+  const greyFromRight = countGreyTokens(rightColumn);
+
+  return baseCapacity + greyFromLeft + greyFromRight;
+}
+```
+
+* Adjust indexes according to implementation.
+* The important requirement is:
+
+  * column capacity increases based on Grey tokens in adjacent columns.
+  * effects stack.
+  * edge columns only affect their one neighbour.
+
+Grey Token Assignment Requirement
+
+* The spell assignment UI must respect effective capacity.
+* If a Grey token increases adjacent capacity:
+
+  * adjacent columns should allow the additional token slots.
+* If removing a Grey token causes an adjacent column to exceed capacity:
+
+  * prevent commit until the affected column is within capacity, or
+  * require the player to remove enough tokens before saving.
+* Do not allow committed spell columns to remain above their effective capacity after Grey effects are removed.
+
+Grey Token Display Requirement
+
+* Existing `X of X tokens` display should reflect effective capacity.
+* Example:
+
+  * base column capacity is 5.
+  * adjacent Grey token adds +1.
+  * display should show `X of 6 tokens`.
+* If multiple Grey tokens affect the column, show the updated capacity.
+* This should work in English and Japanese if the surrounding UI is translated.
+
+Merged Columns and Grey Tokens Interaction
+
+* Grey token effects should use physical column adjacency.
+* If a Grey token is in column 2:
+
+  * it affects columns 1 and 3.
+* If columns are merged, preserve clear and consistent behaviour:
+
+  * Grey effects should still be calculated based on the original column numbers unless a later feature changes this.
+  * merged-column visual display should show the effective capacity correctly.
+* Avoid double-counting Grey effects through merged-column aliases.
+
+Merged Columns and Light Green Interaction
+
+* Light Green health bonuses should still count if the Light Green token remains in an active retained merged column.
+* Tokens from the losing merged column are lost and should no longer contribute effects.
+* If Light Green tokens are lost through merging, max health should update accordingly.
+
+Merged Columns and White Token Interaction
+
+* White tokens used to create a successful merge count toward merge detection.
+* After the merge is committed:
+
+  * the merge state should persist.
+  * additional White tokens in already-merged columns should not create unintended extra merges.
+* If the player has already used 2 merges:
+
+  * White tokens should no longer create merge prompts.
+
+Translation Requirement
+
+* Add or reuse translations for the merge confirmation.
+* English:
+
+```txt id="r3vzb7"
+Committing this change will merge columns X and X. This means you will lose the tokens from column X. Is this ok?
+```
+
+* Japanese:
+
+```txt id="v2rw61"
+この変更を確定すると、列Xと列Xが統合されます。そのため、列Xにあるトークンは失われます。よろしいですか？
+```
+
+* Use correct fonts:
+
+  * English: Unkempt.
+  * Japanese: Noto Serif Japanese / Noto Serif JP.
+* The confirmation modal should use modal text rules.
+* Buttons should reuse existing Yes/No translations:
+
+  * Yes / はい
+  * No / いいえ
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` elements in any new UI.
+* Use `div` elements with flex or grid layouts.
+
+Expected Behaviour
+
+* Light Green tokens committed in spell slots increase max HP by 5 each.
+* Light Green tokens in token bag do not affect max HP.
+* Removing Light Green tokens updates max HP.
+* Black tokens remain unchanged.
+* White tokens in adjacent columns trigger a merge confirmation on commit.
+* Non-adjacent White tokens do not merge.
+* Player can successfully merge columns at most twice per game.
+* After 2 merges, White tokens do nothing.
+* Merge confirmation shows which columns merge and which column loses tokens.
+* The losing column is selected by fewest tokens, then fewest rare tokens, then random.
+* After merging, either rolled number triggers the retained merged column in battle.
+* Merged columns look visibly merged in committed spells.
+* Merged columns occupy the same total visual space as before.
+* Merged column title displays like `2+3`.
+* Grey tokens increase adjacent column capacity by +1 each.
+* Grey token effects stack.
+* Grey tokens in column 1 only affect column 2.
+* Grey tokens in column 6 only affect column 5.
+* Spell assignment respects Grey-adjusted capacity.
+* `X of X tokens` reflects Grey-adjusted capacity.
+* All new confirmation text is translated and uses correct fonts.
+
+Out Of Scope
+
+* No changes to already implemented Black token behaviour.
+* No new battle token effects.
+* No changes to Red, Blue, Orange, Green, Light Blue, Purple, or Yellow battle logic.
+* No changes to token rarity.
+* No changes to reward generation.
+* No changes to potion logic.
+* No unrelated spell assignment redesign.
+* No sound effects.
+* No `ul` or `li` elements.
+
+Assumptions
+
+* The game has 6 spell columns.
+* Base spell column capacity is currently 5 unless modified by existing data.
+* Token rarity data already exists.
+* White and Grey tokens can be committed into spell slots like other tokens.
+* Battle logic can be updated to resolve an effective spell column from a rolled number.
+* The committed spells component can be updated to render merged columns without changing total layout width.
+
+Stop Point
+
+* Stop once Light Green health bonuses, White adjacent-column merging, Grey adjacent capacity increases, merged-column battle behaviour, and merged-column committed-spell display are all implemented with translated confirmation text and correct modal styling.
+
+Testing Checkpoints
+
+* Confirm one committed Light Green token adds 5 max HP.
+* Confirm multiple committed Light Green tokens stack.
+* Confirm Light Green tokens in token bag do not affect HP.
+* Confirm removing Light Green tokens updates max HP.
+* Confirm current health is clamped if max health decreases.
+* Confirm Black token behaviour is unchanged.
+* Confirm White tokens in adjacent columns trigger merge confirmation.
+* Confirm White tokens in non-adjacent columns do not trigger merge confirmation.
+* Confirm merge confirmation displays English text correctly.
+* Confirm merge confirmation displays Japanese text correctly.
+* Confirm merge confirmation uses correct fonts.
+* Confirm merge confirmation uses `larger-text`.
+* Confirm merge confirmation buttons are bottom-centred.
+* Confirm the column with fewer tokens is selected as the losing column.
+* Confirm if token totals are tied, the column with fewer rare tokens loses.
+* Confirm if both totals and rare-token counts are tied, one column is selected randomly.
+* Confirm the losing column’s tokens are removed after confirming.
+* Confirm cancelling the merge confirmation does not commit the merge.
+* Confirm a player can merge once.
+* Confirm a player can merge twice.
+* Confirm a player cannot merge a third time.
+* Confirm after two merges, White tokens do nothing.
+* Confirm merged columns trigger in battle from either rolled number.
+* Confirm merged columns do not double-trigger.
+* Confirm merged columns show visibly joined in committed spells.
+* Confirm merged columns keep the same total layout width.
+* Confirm merged column title displays like `2+3`.
+* Confirm Grey token in column 2 adds capacity to columns 1 and 3.
+* Confirm two Grey tokens in column 2 add +2 capacity to columns 1 and 3.
+* Confirm Grey token in column 1 only affects column 2.
+* Confirm Grey token in column 6 only affects column 5.
+* Confirm Grey tokens do not affect their own column.
+* Confirm spell assignment allows extra capacity from Grey tokens.
+* Confirm removing Grey tokens prevents commit if adjacent columns now exceed capacity.
+* Confirm `X of X tokens` displays updated capacity.
+* Confirm Grey effects do not double-count through merged columns.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

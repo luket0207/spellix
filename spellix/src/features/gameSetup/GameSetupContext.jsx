@@ -22,13 +22,30 @@ import {
 import { gainPotion, resolvePendingPotion } from '../potions/potionCapacity';
 import { generateBattleRewardChoices } from '../rewards/rewardItems';
 import {
+  createCavePotionRewardAssignment,
   createCaveTokenRewardAssignment,
   createCaveRewardGrant,
   getPendingCaveReward,
   resolveCavePotionReward as resolveCavePotionRewardGrant,
 } from '../miniGames/caveRewardGrant';
+import {
+  addLootChestReward,
+  createCaveRewardResolution,
+  getNextPendingCaveReward,
+  resolvePendingCaveReward as resolvePendingCaveQueuedReward,
+} from '../miniGames/caveRewardResolution';
+import {
+  createLootChestRewardAssignment,
+  resolveLootChestAssignment,
+} from '../miniGames/lootChest';
 import { getPlayerPieceImageName } from './pieceImages';
 import { assignStartingPositions, createBoard } from '../gameBoard/board';
+import {
+  applyColumnMerge,
+  applyLightGreenHealthBonus,
+  getEffectiveSpellColumnIndex,
+  getSpellColumnCapacity,
+} from '../spells/nonBattleSpellEffects';
 
 const GameSetupContext = createContext(null);
 
@@ -50,6 +67,45 @@ function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
   };
 }
 
+function finishMiniGameReturn(currentSetup) {
+  const result = currentSetup.miniGameResult;
+
+  if (!result?.result) {
+    return { ...currentSetup, miniGameResult: null };
+  }
+
+  const playerTurnIndex = currentSetup.turnOrder.indexOf(result.playerId);
+  const shouldAdvanceTurn = result.returnBehaviour === 'nextPlayerTurn';
+  const nextTurnIndex =
+    playerTurnIndex >= 0 && currentSetup.turnOrder.length > 0
+      ? shouldAdvanceTurn
+        ? (playerTurnIndex + 1) % currentSetup.turnOrder.length
+        : playerTurnIndex
+      : currentSetup.currentTurnIndex;
+  const returnedSetup = {
+    ...currentSetup,
+    activeBattle: null,
+    miniGameResult: null,
+    miniGameReturnNotice:
+      result.type === 'river' && result.result === 'win'
+        ? {
+            message: 'You crossed the river! You may roll again.',
+            playerId: result.playerId,
+            type: result.type,
+          }
+        : result.type === 'cave' && result.result === 'win' && result.rollAgain
+          ? {
+              message:
+                'Your roll again potion was used, it is your turn to roll again.',
+              playerId: result.playerId,
+              type: result.type,
+            }
+          : null,
+  };
+
+  return transitionToPlayerTurn(returnedSetup, nextTurnIndex);
+}
+
 function resolveCaveTokenAssignment(miniGameResult, activeBattle, destination, details = {}) {
   const tokenGrant = miniGameResult?.caveRewardGrant?.token;
 
@@ -68,6 +124,131 @@ function resolveCaveTokenAssignment(miniGameResult, activeBattle, destination, d
         status: destination === 'discarded' ? 'discarded' : 'assigned',
       },
     },
+  };
+}
+
+function resolveCavePotionAssignment(miniGameResult, activeBattle, destination) {
+  const potionGrant = miniGameResult?.caveRewardGrant?.potion;
+
+  if (activeBattle?.source !== 'cave' || potionGrant?.status !== 'pending') {
+    return miniGameResult;
+  }
+
+  return {
+    ...miniGameResult,
+    caveRewardGrant: {
+      ...miniGameResult.caveRewardGrant,
+      potion: {
+        ...potionGrant,
+        destination,
+        status:
+          destination === 'potionSlot'
+            ? 'added'
+            : destination === 'potionSlotReplacement'
+              ? 'replaced'
+              : 'discarded',
+      },
+    },
+  };
+}
+
+function resolveCaveAssignment(miniGameResult, activeBattle, destination, details = {}) {
+  let nextResult = resolveLootChestAssignment(
+    miniGameResult,
+    activeBattle,
+    destination
+  );
+
+  nextResult = resolveCaveTokenAssignment(
+    nextResult,
+    activeBattle,
+    destination,
+    details
+  );
+  nextResult = resolveCavePotionAssignment(nextResult, activeBattle, destination);
+
+  const selectedReward = activeBattle?.rewardChoices?.find(
+    ({ id }) => id === activeBattle.selectedRewardChoiceId
+  );
+
+  if (nextResult?.caveRewardResolution && selectedReward?.itemType) {
+    nextResult = {
+      ...nextResult,
+      caveRewardResolution: resolvePendingCaveQueuedReward(
+        nextResult.caveRewardResolution,
+        {
+          destination,
+          rewardType: selectedReward.itemType,
+          source: activeBattle.source,
+        }
+      ),
+    };
+  }
+
+  return nextResult;
+}
+
+function createQueuedCaveAssignment(playerId, pendingReward) {
+  if (pendingReward?.source === 'lootChest') {
+    return createLootChestRewardAssignment(playerId, pendingReward.reward);
+  }
+
+  return pendingReward?.rewardType === 'token'
+    ? createCaveTokenRewardAssignment(playerId, pendingReward?.item)
+    : createCavePotionRewardAssignment(playerId, pendingReward?.item);
+}
+
+function advanceCaveRewardResolution(currentSetup) {
+  const miniGameResult = currentSetup.miniGameResult;
+  const resolution = miniGameResult?.caveRewardResolution;
+  const pendingReward = getNextPendingCaveReward(resolution);
+  const player = currentSetup.players.find(
+    ({ id }) => id === miniGameResult?.playerId
+  );
+
+  if (!resolution || !resolution.lootResolved || !player) {
+    return currentSetup;
+  }
+
+  if (!pendingReward) {
+    return finishMiniGameReturn(currentSetup);
+  }
+
+  const assignment = createQueuedCaveAssignment(player.id, pendingReward);
+
+  if (!assignment) {
+    return currentSetup;
+  }
+
+  if (pendingReward.rewardType === 'token') {
+    return { ...currentSetup, activeBattle: assignment };
+  }
+
+  const potionResult = gainPotion(player.potions, pendingReward.item);
+
+  if (potionResult.pendingPotion) {
+    return { ...currentSetup, activeBattle: assignment };
+  }
+
+  return {
+    ...currentSetup,
+    activeBattle: {
+      ...assignment,
+      rewardResolution: {
+        choiceId: assignment.selectedRewardChoiceId,
+        destination: 'potionSlot',
+      },
+    },
+    miniGameResult: resolveCaveAssignment(
+      miniGameResult,
+      assignment,
+      'potionSlot'
+    ),
+    players: currentSetup.players.map((currentPlayer) =>
+      currentPlayer.id === player.id
+        ? { ...currentPlayer, potions: potionResult.potions }
+        : currentPlayer
+    ),
   };
 }
 
@@ -113,7 +294,10 @@ function createLostBattleSetup(currentSetup, activeBattle) {
     },
     players: currentSetup.players.map((currentPlayer) =>
       currentPlayer.id === activeBattle.playerId
-        ? { ...currentPlayer, spellSlots: penaltyResult.spellSlots }
+        ? applyLightGreenHealthBonus(
+            { ...currentPlayer, spellSlots: penaltyResult.spellSlots },
+            penaltyResult.spellSlots
+          )
         : currentPlayer
     ),
   };
@@ -141,11 +325,22 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     return {
       ...setup,
       pendingNextTurnModal: Boolean(setup.pendingNextTurnModal),
-      players: setup.players.map((player, index) => ({
-        ...player,
-        language: player.language ?? DEFAULT_PLAYER_LANGUAGE,
-        number: player.number ?? index + 1,
-      })),
+      players: setup.players.map((player, index) => {
+        const normalizedPlayer = {
+          ...player,
+          baseMaxHealth: player.baseMaxHealth ?? player.maxHealth ?? 100,
+          columnMergesUsed:
+            player.columnMergesUsed ?? player.mergedColumns?.length ?? 0,
+          language: player.language ?? DEFAULT_PLAYER_LANGUAGE,
+          mergedColumns: player.mergedColumns ?? [],
+          number: player.number ?? index + 1,
+        };
+
+        return applyLightGreenHealthBonus(
+          normalizedPlayer,
+          normalizedPlayer.spellSlots
+        );
+      }),
     };
   });
 
@@ -290,14 +485,21 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         cavePlayer && !currentSetup.miniGameResult.caveRewardGrant
           ? createCaveRewardGrant(cavePlayer, options.caveRewards)
           : null;
-      const caveTokenAssignment = createCaveTokenRewardAssignment(
-        cavePlayer?.id,
-        caveGrantResult?.rewardGrant.token?.item
-      );
-
-      return {
+      const returnBehaviour =
+        result === 'loss' || (isCaveRetreat && !rollAgain)
+          ? 'nextPlayerTurn'
+          : 'samePlayerRollAgain';
+      const caveRewardResolution =
+        isCaveRetreat && cavePlayer
+          ? createCaveRewardResolution({
+              caveRewards: options.caveRewards,
+              finalReturnBehaviour: returnBehaviour,
+              playerId: cavePlayer.id,
+            })
+          : null;
+      const completedSetup = {
         ...currentSetup,
-        activeBattle: caveTokenAssignment ?? currentSetup.activeBattle,
+        activeBattle: isCaveRetreat ? null : currentSetup.activeBattle,
         miniGameResult: {
           ...currentSetup.miniGameResult,
           ...(isCaveRetreat
@@ -306,14 +508,12 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                   caveGrantResult?.rewardGrant ??
                   currentSetup.miniGameResult.caveRewardGrant ??
                   null,
+                caveRewardResolution,
                 caveRewards: options.caveRewards ?? null,
               }
             : {}),
           result,
-          returnBehaviour:
-            result === 'loss' || (isCaveRetreat && !rollAgain)
-              ? 'nextPlayerTurn'
-              : 'samePlayerRollAgain',
+          returnBehaviour,
           rollAgain,
         },
         players: caveGrantResult
@@ -324,6 +524,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             )
           : currentSetup.players,
       };
+
+      return caveRewardResolution?.lootResolved &&
+        getNextPendingCaveReward(caveRewardResolution)
+        ? advanceCaveRewardResolution(completedSetup)
+        : completedSetup;
     });
   };
 
@@ -370,6 +575,155 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     resolvePendingCaveReward(replacedPotionIndex);
   };
 
+  const claimLootChestReward = (reward) => {
+    const miniGameResult = gameSetup.miniGameResult;
+    const player = gameSetup.players.find(
+      ({ id }) => id === miniGameResult?.playerId
+    );
+
+    if (
+      miniGameResult?.result !== 'win' ||
+      miniGameResult.lootChestReward ||
+      !player ||
+      !['token', 'potion', 'nothing'].includes(reward?.itemType)
+    ) {
+      return '/gameplay';
+    }
+
+    const isCaveReward =
+      miniGameResult.type === 'cave' && miniGameResult.caveRewardResolution;
+
+    if (isCaveReward) {
+      const nextResolution = addLootChestReward(
+        miniGameResult.caveRewardResolution,
+        reward
+      );
+      const destination = getNextPendingCaveReward(nextResolution)
+        ? '/reward'
+        : '/gameplay';
+
+      setGameSetup((currentSetup) => {
+        const currentResult = currentSetup.miniGameResult;
+
+        if (
+          currentResult?.lootChestReward ||
+          !currentResult?.caveRewardResolution
+        ) {
+          return currentSetup;
+        }
+
+        const queuedResolution = addLootChestReward(
+          currentResult.caveRewardResolution,
+          reward
+        );
+        const queuedSetup = {
+          ...currentSetup,
+          activeBattle: null,
+          miniGameResult: {
+            ...currentResult,
+            caveRewardResolution: queuedResolution,
+            lootChestReward: {
+              ...reward,
+              ...(reward.item ? { item: { ...reward.item } } : {}),
+              ...(reward.itemType === 'nothing'
+                ? { destination: 'nothing', status: 'resolved' }
+                : { status: 'processing' }),
+            },
+          },
+        };
+
+        return advanceCaveRewardResolution(queuedSetup);
+      });
+
+      return destination;
+    }
+
+    const potionResult =
+      reward.itemType === 'potion'
+        ? gainPotion(player.potions, reward.item)
+        : null;
+    const rewardAssignment =
+      reward.itemType === 'token' || potionResult?.pendingPotion
+        ? createLootChestRewardAssignment(player.id, reward)
+        : null;
+    const pendingCaveReward = getPendingCaveReward(
+      miniGameResult.caveRewardGrant
+    );
+    const destination = rewardAssignment
+      ? '/reward'
+      : gameSetup.activeBattle?.source === 'cave'
+        ? '/reward'
+        : pendingCaveReward
+          ? '/mini-game/cave'
+          : '/gameplay';
+
+    setGameSetup((currentSetup) => {
+      const currentResult = currentSetup.miniGameResult;
+      const currentPlayer = currentSetup.players.find(
+        ({ id }) => id === currentResult?.playerId
+      );
+
+      if (currentResult?.lootChestReward || !currentPlayer) {
+        return currentSetup;
+      }
+
+      const currentPotionResult =
+        reward.itemType === 'potion'
+          ? gainPotion(currentPlayer.potions, reward.item)
+          : null;
+      const currentAssignment =
+        reward.itemType === 'token' || currentPotionResult?.pendingPotion
+          ? createLootChestRewardAssignment(currentPlayer.id, reward)
+          : null;
+      const status = currentAssignment ? 'processing' : 'resolved';
+
+      return {
+        ...currentSetup,
+        activeBattle: currentAssignment ?? currentSetup.activeBattle,
+        miniGameResult: {
+          ...currentResult,
+          lootChestReward: {
+            ...reward,
+            ...(reward.item ? { item: { ...reward.item } } : {}),
+            ...(status === 'resolved'
+              ? {
+                  destination:
+                    reward.itemType === 'potion' ? 'potionSlot' : 'nothing',
+                }
+              : {}),
+            status,
+          },
+        },
+        players:
+          reward.itemType === 'potion' && !currentPotionResult.pendingPotion
+            ? currentSetup.players.map((currentSetupPlayer) =>
+                currentSetupPlayer.id === currentPlayer.id
+                  ? { ...currentSetupPlayer, potions: currentPotionResult.potions }
+                  : currentSetupPlayer
+              )
+            : currentSetup.players,
+      };
+    });
+
+    return destination;
+  };
+
+  const activatePendingCaveTokenReward = () => {
+    setGameSetup(advanceCaveRewardResolution);
+  };
+
+  const continueCaveRewardResolution = () => {
+    const hasPendingReward = Boolean(
+      getNextPendingCaveReward(gameSetup.miniGameResult?.caveRewardResolution)
+    );
+
+    setGameSetup((currentSetup) =>
+      advanceCaveRewardResolution({ ...currentSetup, activeBattle: null })
+    );
+
+    return hasPendingReward ? '/reward' : '/gameplay';
+  };
+
   const applyMiniGameFailurePunishment = (playerId, healthLost) => {
     setGameSetup((currentSetup) => {
       const miniGameResult = currentSetup.miniGameResult;
@@ -414,11 +768,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         },
         players: currentSetup.players.map((currentPlayer) =>
           currentPlayer.id === playerId
-            ? {
-                ...currentPlayer,
-                currentHealth: nextHealth,
-                spellSlots: penaltyResult?.spellSlots ?? currentPlayer.spellSlots,
-              }
+            ? applyLightGreenHealthBonus(
+                {
+                  ...currentPlayer,
+                  currentHealth: nextHealth,
+                  spellSlots: penaltyResult?.spellSlots ?? currentPlayer.spellSlots,
+                },
+                penaltyResult?.spellSlots ?? currentPlayer.spellSlots
+              )
             : currentPlayer
         ),
       };
@@ -440,35 +797,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
-      const playerTurnIndex = currentSetup.turnOrder.indexOf(result.playerId);
-      const shouldAdvanceTurn = result.returnBehaviour === 'nextPlayerTurn';
-      const nextTurnIndex =
-        playerTurnIndex >= 0 && currentSetup.turnOrder.length > 0
-          ? shouldAdvanceTurn
-            ? (playerTurnIndex + 1) % currentSetup.turnOrder.length
-            : playerTurnIndex
-          : currentSetup.currentTurnIndex;
-      const returnedSetup = {
-        ...currentSetup,
-        miniGameResult: null,
-        miniGameReturnNotice:
-          result.type === 'river' && result.result === 'win'
-            ? {
-                message: 'You crossed the river! You may roll again.',
-                playerId: result.playerId,
-                type: result.type,
-              }
-            : result.type === 'cave' && result.result === 'win' && result.rollAgain
-              ? {
-                  message:
-                    'Your roll again potion was used, it is your turn to roll again.',
-                  playerId: result.playerId,
-                  type: result.type,
-                }
-              : null,
-      };
+      if (result.lootChestReward?.status === 'processing') {
+        return currentSetup;
+      }
 
-      return transitionToPlayerTurn(returnedSetup, nextTurnIndex);
+      return finishMiniGameReturn(currentSetup);
     });
   };
 
@@ -525,13 +858,23 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       ...currentSetup,
       players: currentSetup.players.map((player) =>
         player.id === playerId
-          ? {
-              ...player,
-              tokenBag: cloneTokenBag(nextSpellData.tokenBag),
-              spellSlots: cloneSpellSlots(nextSpellData.spellSlots),
-              hasCommittedInitialSpells:
-                nextSpellData.hasCommittedInitialSpells ?? player.hasCommittedInitialSpells,
-            }
+          ? (() => {
+              const spellSlots = cloneSpellSlots(nextSpellData.spellSlots);
+              const nextPlayer = {
+                ...player,
+                columnMergesUsed:
+                  nextSpellData.columnMergesUsed ?? player.columnMergesUsed ?? 0,
+                hasCommittedInitialSpells:
+                  nextSpellData.hasCommittedInitialSpells ?? player.hasCommittedInitialSpells,
+                mergedColumns: (nextSpellData.mergedColumns ?? player.mergedColumns ?? []).map(
+                  (merge) => ({ ...merge, columns: [...merge.columns] })
+                ),
+                spellSlots,
+                tokenBag: cloneTokenBag(nextSpellData.tokenBag),
+              };
+
+              return applyLightGreenHealthBonus(nextPlayer, spellSlots);
+            })()
           : player
       ),
     }));
@@ -673,11 +1016,16 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const chargeUses = activeBattle[chargeUsesKey] ?? [0, 0, 0, 0, 0, 0];
       const freezeUses = activeBattle[freezeUsesKey] ?? [0, 0, 0, 0, 0, 0];
       const purpleBuffs = activeBattle[purpleBuffsKey] ?? [0, 0, 0, 0, 0, 0];
+      const currentActor = isPlayerActor ? playerBattleState : enemyBattleState;
+      const effectiveActorColumnIndex = getEffectiveSpellColumnIndex(
+        currentActor.mergedColumns,
+        diceResult
+      );
       const result = calculateBattleTurn({
-        chargeAvailable: (chargeUses[diceResult - 1] ?? 0) > 0,
-        currentActor: isPlayerActor ? playerBattleState : enemyBattleState,
+        chargeAvailable: (chargeUses[effectiveActorColumnIndex] ?? 0) > 0,
+        currentActor,
         diceResult,
-        freezeAvailable: (freezeUses[diceResult - 1] ?? 0) > 0,
+        freezeAvailable: (freezeUses[effectiveActorColumnIndex] ?? 0) > 0,
         opponent: isPlayerActor ? enemyBattleState : playerBattleState,
         purpleBuff: purpleBuffs[diceResult - 1] ?? 0,
         yellowCharged: Boolean(activeBattle[chargedKey]),
@@ -693,7 +1041,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           ...(result.freezeApplied
             ? {
                 [freezeUsesKey]: freezeUses.map((uses, index) =>
-                  index === diceResult - 1 ? Math.max(0, uses - 1) : uses
+                  index === effectiveActorColumnIndex ? Math.max(0, uses - 1) : uses
                 ),
                 [frozenOpponentKey]: true,
               }
@@ -701,7 +1049,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           ...(result.chargeApplied
             ? {
                 [chargeUsesKey]: chargeUses.map((uses, index) =>
-                  index === diceResult - 1 ? Math.max(0, uses - 1) : uses
+                  index === effectiveActorColumnIndex ? Math.max(0, uses - 1) : uses
                 ),
               }
             : {}),
@@ -983,6 +1331,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
               : 'potionSlotReplacement',
           },
         },
+        miniGameResult: resolveCaveAssignment(
+          currentSetup.miniGameResult,
+          activeBattle,
+          isDiscardingNewPotion ? 'potionDiscarded' : 'potionSlotReplacement'
+        ),
         players: currentSetup.players.map((currentPlayer) =>
           currentPlayer.id === player.id
             ? {
@@ -1035,7 +1388,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             ...(replacedTokenId ? { replacedTokenId } : {}),
           },
         },
-        miniGameResult: resolveCaveTokenAssignment(
+        miniGameResult: resolveCaveAssignment(
           currentSetup.miniGameResult,
           activeBattle,
           destination,
@@ -1072,7 +1425,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     resolveSelectedTokenReward('tokenBagReplacement', replacedTokenId);
   };
 
-  const assignSelectedRewardTokenToSpellSlot = (spellSlotId) => {
+  const assignSelectedRewardTokenToSpellSlot = (spellSlotId, columnMerge = null) => {
     setGameSetup((currentSetup) => {
       const activeBattle = currentSetup.activeBattle;
       const selectedReward = activeBattle?.rewardChoices?.find(
@@ -1080,6 +1433,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       );
       const player = currentSetup.players.find(({ id }) => id === activeBattle?.playerId);
       const spellSlot = player?.spellSlots.find(({ id }) => id === spellSlotId);
+      const spellSlotIndex = player?.spellSlots.findIndex(({ id }) => id === spellSlotId) ?? -1;
+      const spellSlotColumn = spellSlotIndex + 1;
 
       if (
         !activeBattle ||
@@ -1088,7 +1443,15 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         selectedReward?.itemType !== 'token' ||
         !player ||
         !spellSlot ||
-        spellSlot.tokens.length >= spellSlot.maxTokens
+        player.mergedColumns?.some(
+          ({ removedColumn }) => removedColumn === spellSlotColumn
+        ) ||
+        spellSlot.tokens.length >=
+          getSpellColumnCapacity(
+            player.spellSlots,
+            spellSlotIndex,
+            player.mergedColumns
+          )
       ) {
         return currentSetup;
       }
@@ -1108,7 +1471,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             spellSlotId,
           },
         },
-        miniGameResult: resolveCaveTokenAssignment(
+        miniGameResult: resolveCaveAssignment(
           currentSetup.miniGameResult,
           activeBattle,
           'spellSlot',
@@ -1116,17 +1479,40 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         ),
         players: currentSetup.players.map((currentPlayer) =>
           currentPlayer.id === player.id
-            ? {
-                ...currentPlayer,
-                spellSlots: currentPlayer.spellSlots.map((currentSlot) =>
+            ? (() => {
+                const placedSpellSlots = currentPlayer.spellSlots.map((currentSlot) =>
                   currentSlot.id === spellSlotId
                     ? {
                         ...currentSlot,
                         tokens: [...currentSlot.tokens, rewardToken],
                       }
                     : currentSlot
-                ),
-              }
+                );
+                const shouldMerge = Boolean(
+                  columnMerge &&
+                    (currentPlayer.columnMergesUsed ?? 0) < 2 &&
+                    !(currentPlayer.mergedColumns ?? []).some(({ columns = [] }) =>
+                      columns.some((column) => columnMerge.columns.includes(column))
+                    )
+                );
+                const spellSlots = shouldMerge
+                  ? applyColumnMerge(placedSpellSlots, columnMerge)
+                  : placedSpellSlots;
+                const mergedColumns = shouldMerge
+                  ? [...(currentPlayer.mergedColumns ?? []), columnMerge]
+                  : currentPlayer.mergedColumns ?? [];
+
+                return applyLightGreenHealthBonus(
+                  {
+                    ...currentPlayer,
+                    columnMergesUsed:
+                      (currentPlayer.columnMergesUsed ?? 0) + (shouldMerge ? 1 : 0),
+                    mergedColumns,
+                    spellSlots,
+                  },
+                  spellSlots
+                );
+              })()
             : currentPlayer
         ),
       };
@@ -1147,6 +1533,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   return (
     <GameSetupContext.Provider
       value={{
+        activatePendingCaveTokenReward,
         activeBattle: gameSetup.activeBattle ?? null,
         addSelectedRewardTokenToBag,
         assignSelectedRewardTokenToSpellSlot,
@@ -1171,6 +1558,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         applyBattleEffect,
         applyBattleDiceResult,
         clearActiveBattle,
+        claimLootChestReward,
+        continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
         completeMiniGame,
         dismissMiniGameReturnNotice,

@@ -1,4 +1,5 @@
 import { DEFAULT_PLAYER_GENDER, getPlayerPieceImageName } from './pieceImages';
+import { applyLightGreenHealthBonus } from '../spells/nonBattleSpellEffects';
 
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
@@ -60,16 +61,24 @@ export function createPlayers(playerCount, existingPlayers = []) {
     const colour = existingPlayer?.colour ?? PLAYER_COLOURS[index];
     const gender = existingPlayer?.gender ?? DEFAULT_PLAYER_GENDER;
 
-    return {
+    const player = {
       id: playerId,
       number: index + 1,
       anywhereMode: existingPlayer?.anywhereMode ?? false,
+      baseMaxHealth: existingPlayer?.baseMaxHealth ?? existingPlayer?.maxHealth ?? 100,
+      columnMergesUsed:
+        existingPlayer?.columnMergesUsed ?? existingPlayer?.mergedColumns?.length ?? 0,
       colour,
       currentHealth: existingPlayer?.currentHealth ?? 100,
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
       language: existingPlayer?.language ?? DEFAULT_PLAYER_LANGUAGE,
       maxHealth: existingPlayer?.maxHealth ?? 100,
+      mergedColumns:
+        existingPlayer?.mergedColumns?.map((merge) => ({
+          ...merge,
+          columns: [...merge.columns],
+        })) ?? [],
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
@@ -78,6 +87,8 @@ export function createPlayers(playerCount, existingPlayers = []) {
         : createInitialSpellSlots(),
       hasCommittedInitialSpells: existingPlayer?.hasCommittedInitialSpells ?? false,
     };
+
+    return applyLightGreenHealthBonus(player, player.spellSlots);
   });
 }
 

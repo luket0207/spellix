@@ -1,4 +1,4 @@
-import { gainPotion, resolvePendingPotion } from '../potions/potionCapacity';
+import { resolvePendingPotion } from '../potions/potionCapacity';
 
 const CAVE_TOKEN_REWARD_CHOICE_ID = 'cave-token-reward';
 
@@ -24,8 +24,30 @@ export function createCaveTokenRewardAssignment(playerId, token) {
   };
 }
 
+export function createCavePotionRewardAssignment(playerId, potion) {
+  if (!playerId || !potion?.id) {
+    return null;
+  }
+
+  return {
+    environment: 'fields',
+    phase: 'reward',
+    playerId,
+    rewardChoices: [
+      {
+        category: `${potion.rarity ?? 'Common'} Potion`,
+        id: 'cave-potion-reward',
+        item: { ...potion },
+        itemType: 'potion',
+      },
+    ],
+    selectedRewardChoiceId: 'cave-potion-reward',
+    source: 'cave',
+  };
+}
+
 export function createCaveRewardGrant(player, caveRewards = {}) {
-  let nextPlayer = {
+  const nextPlayer = {
     ...player,
     potions: (player.potions ?? []).map((potion) => ({ ...potion })),
     tokenBag: (player.tokenBag ?? []).map((token) => ({ ...token })),
@@ -40,13 +62,10 @@ export function createCaveRewardGrant(player, caveRewards = {}) {
   }
 
   if (caveRewards.potion) {
-    const potionResult = gainPotion(nextPlayer.potions, caveRewards.potion);
-
     rewardGrant.potion = {
       item: { ...caveRewards.potion },
-      status: potionResult.pendingPotion ? 'pending' : 'added',
+      status: 'pending',
     };
-    nextPlayer = { ...nextPlayer, potions: potionResult.potions };
   }
 
   return { player: nextPlayer, rewardGrant };

@@ -18,7 +18,6 @@ import {
   getGameplayLanguage,
 } from '../../i18n/translations';
 import ogreImage from '../../images/enemies/AO.png';
-import CaveRewardChoiceModal from './CaveRewardChoiceModal';
 import CaveRewardList from './CaveRewardList';
 import './CaveMiniGame.css';
 
@@ -33,7 +32,6 @@ function CaveMiniGame() {
     currentPlayer,
     gameSetup,
     miniGameResult,
-    resolvePendingCavePotionReward,
     returnFromMiniGame,
   } = useGameSetup();
   const [caveRewards, setCaveRewards] = useState(() =>
@@ -76,8 +74,9 @@ function CaveMiniGame() {
   const isDecisionPhase = phase === 'playing' || phase === 'moving' || phase === 'chasing';
   const decisionsDisabled = phase !== 'playing';
   const pendingCaveReward = getPendingCaveReward(miniGameResult?.caveRewardGrant);
-  const pendingCavePotion =
-    pendingCaveReward?.type === 'potion' ? pendingCaveReward : null;
+  const hasUnopenedLootChest = Boolean(
+    caveRewards.hasLootChest && !miniGameResult?.lootChestReward
+  );
 
   const schedule = (callback, delay) => {
     const timerId = setTimeout(() => {
@@ -164,7 +163,7 @@ function CaveMiniGame() {
       rollAgain: caveRewards.hasRollAgainPotion,
     });
 
-    if (caveRewards.token) {
+    if ((caveRewards.token || caveRewards.potion) && !hasUnopenedLootChest) {
       navigate('/reward');
     }
   };
@@ -201,14 +200,16 @@ function CaveMiniGame() {
   };
 
   const handleContinue = () => {
-    if (phase === 'retreated' && !pendingCaveReward) {
-      if (caveRewards.hasLootChest) {
+    if (phase === 'retreated') {
+      if (hasUnopenedLootChest) {
         navigate('/mini-game/loot-chest');
         return;
       }
 
-      returnFromMiniGame();
-      navigate('/gameplay', { replace: true });
+      if (!pendingCaveReward) {
+        returnFromMiniGame();
+        navigate('/gameplay', { replace: true });
+      }
     }
   };
 
@@ -315,11 +316,11 @@ function CaveMiniGame() {
           ) : (
             <Button
               className={languageClassName}
-              disabled={Boolean(pendingCaveReward)}
+              disabled={Boolean(pendingCaveReward && !hasUnopenedLootChest)}
               type="button"
               onClick={handleContinue}
             >
-              {caveRewards.hasLootChest ? translations.openLoot : translations.continue}
+              {hasUnopenedLootChest ? translations.openLoot : translations.continue}
             </Button>
           )}
         </div>
@@ -334,13 +335,6 @@ function CaveMiniGame() {
           />
         ) : null}
       </section>
-      <CaveRewardChoiceModal
-        language={currentLanguage}
-        onDiscard={() => resolvePendingCavePotionReward()}
-        onReplace={resolvePendingCavePotionReward}
-        pendingReward={pendingCavePotion}
-        player={miniGamePlayer}
-      />
     </main>
   );
 }

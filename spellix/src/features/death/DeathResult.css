@@ -1,0 +1,17 @@
+.death-result-token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.death-result-token-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.death-result-token-text,
+.death-result-empty {
+  color: #F5FA00;
+  font-weight: 700;
+}

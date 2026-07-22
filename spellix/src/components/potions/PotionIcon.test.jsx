@@ -43,6 +43,21 @@ describe('PotionIcon', () => {
     );
   });
 
+  test('can hide its visible name while preserving its accessible reward identity', () => {
+    render(
+      <PotionIcon
+        focusable={false}
+        potion={POTION_DEFINITIONS[0]}
+        showName={false}
+      />
+    );
+
+    const icon = screen.getByRole('group', { name: /roll choice potion/i });
+
+    expect(within(icon).queryByText('Roll Choice')).not.toBeInTheDocument();
+    expect(icon).toHaveAccessibleDescription(POTION_DEFINITIONS[0].description);
+  });
+
   test('shows Japanese text and updates when the active language changes', () => {
     const potion = POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice');
     const { rerender } = render(<PotionIcon language="jp" potion={potion} />);

@@ -15,6 +15,7 @@ import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import PotionList from '../features/potions/PotionList';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
+import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
 import SpellsModal from '../features/spells/SpellsModal';
 import {
   createCommittedSpellData,
@@ -22,6 +23,11 @@ import {
   isStartingSpellSetupComplete,
   moveSpellTokenInDraft,
 } from '../features/spells/spellSetup';
+import {
+  applyColumnMerge,
+  findNextColumnMerge,
+  getOverCapacityColumnNumbers,
+} from '../features/spells/nonBattleSpellEffects';
 import {
   getCaveMiniGameTranslations,
   getGameplayLanguage,
@@ -55,6 +61,7 @@ function GameplayPage() {
   const [showSpellCancelConfirmation, setShowSpellCancelConfirmation] = useState(false);
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
+  const [mergeSaveDraft, setMergeSaveDraft] = useState(null);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
   const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
@@ -76,9 +83,17 @@ function GameplayPage() {
     spellSlots: draftSpellSlots,
     tokenBag: draftTokenBag,
   });
+  const overCapacityColumns = getOverCapacityColumnNumbers(
+    draftSpellSlots,
+    currentPlayer?.mergedColumns
+  );
+  const capacityValidationMessage =
+    overCapacityColumns.length > 0
+      ? spellAssignmentTranslations.overCapacity(overCapacityColumns)
+      : '';
   const isSpellSaveDisabled = isForcedSpellSetup
-    ? !isStartingSetupComplete
-    : !hasUnsavedSpellChanges;
+    ? !isStartingSetupComplete || overCapacityColumns.length > 0
+    : !hasUnsavedSpellChanges || overCapacityColumns.length > 0;
 
   useEffect(() => {
     if (gameSetup.turnOrder.length === 0 && gameSetup.players.length > 0) {
@@ -108,6 +123,7 @@ function GameplayPage() {
     setShowSpellCancelConfirmation(false);
     setShowSpellSaveConfirmation(false);
     setSpellValidationMessage('');
+    setMergeSaveDraft(null);
   }, [currentPlayer, showSpellsModal]);
 
   const handleRollDice = () => {
@@ -189,6 +205,7 @@ function GameplayPage() {
   const handleSpellTokenDrop = (tokenId, destinationId) => {
     const movementResult = moveSpellTokenInDraft({
       destinationId,
+      mergedColumns: currentPlayer.mergedColumns,
       spellSlots: draftSpellSlots,
       tokenBag: draftTokenBag,
       tokenId,
@@ -226,24 +243,99 @@ function GameplayPage() {
       return;
     }
 
+    if (overCapacityColumns.length > 0) {
+      setSpellValidationMessage(capacityValidationMessage);
+      return;
+    }
+
+    const mergedColumns = currentPlayer.mergedColumns ?? [];
+    const columnMergesUsed = currentPlayer.columnMergesUsed ?? 0;
+    const pendingMerge = findNextColumnMerge({
+      columnMergesUsed,
+      mergedColumns,
+      spellSlots: draftSpellSlots,
+    });
+
+    if (pendingMerge) {
+      setMergeSaveDraft({
+        columnMergesUsed,
+        mergedColumns,
+        pendingMerge,
+        spellSlots: draftSpellSlots,
+        tokenBag: draftTokenBag,
+      });
+      return;
+    }
+
     setShowSpellSaveConfirmation(true);
   };
 
-  const handleConfirmSpellSave = () => {
+  const commitSpellSave = ({
+    columnMergesUsed = currentPlayer?.columnMergesUsed ?? 0,
+    mergedColumns = currentPlayer?.mergedColumns ?? [],
+    spellSlots = draftSpellSlots,
+    tokenBag = draftTokenBag,
+  } = {}) => {
     if (!currentPlayer) {
       return;
     }
 
     updatePlayerSpells(currentPlayer.id, {
       ...createCommittedSpellData({
-        spellSlots: draftSpellSlots,
-        tokenBag: draftTokenBag,
+        spellSlots,
+        tokenBag,
       }),
+      columnMergesUsed,
       hasCommittedInitialSpells: true,
+      mergedColumns,
     });
     setShowSpellSaveConfirmation(false);
+    setMergeSaveDraft(null);
     setShowSpellsModal(false);
     setSpellValidationMessage('');
+  };
+
+  const handleConfirmSpellSave = () => {
+    commitSpellSave();
+  };
+
+  const handleConfirmColumnMerge = () => {
+    if (!mergeSaveDraft?.pendingMerge) {
+      return;
+    }
+
+    const spellSlots = applyColumnMerge(
+      mergeSaveDraft.spellSlots,
+      mergeSaveDraft.pendingMerge
+    );
+    const mergedColumns = [
+      ...mergeSaveDraft.mergedColumns,
+      mergeSaveDraft.pendingMerge,
+    ];
+    const columnMergesUsed = mergeSaveDraft.columnMergesUsed + 1;
+    const pendingMerge = findNextColumnMerge({
+      columnMergesUsed,
+      mergedColumns,
+      spellSlots,
+    });
+
+    if (pendingMerge) {
+      setMergeSaveDraft({
+        ...mergeSaveDraft,
+        columnMergesUsed,
+        mergedColumns,
+        pendingMerge,
+        spellSlots,
+      });
+      return;
+    }
+
+    commitSpellSave({
+      columnMergesUsed,
+      mergedColumns,
+      spellSlots,
+      tokenBag: mergeSaveDraft.tokenBag,
+    });
   };
 
   const handleConfirmSpellCancel = () => {
@@ -343,6 +435,7 @@ function GameplayPage() {
         {currentPlayer?.hasCommittedInitialSpells ? (
           <CommittedSpellSlots
             language={currentLanguage}
+            mergedColumns={currentPlayer.mergedColumns}
             spellSlots={currentPlayer.spellSlots}
             title={gameplayTranslations.spells}
             titleClassName={languageClassName}
@@ -367,7 +460,15 @@ function GameplayPage() {
         onSave={handleSpellSaveRequest}
         isSaveDisabled={isSpellSaveDisabled}
         onTokenDrop={handleSpellTokenDrop}
-        validationMessage={spellValidationMessage}
+        validationMessage={spellValidationMessage || capacityValidationMessage}
+      />
+
+      <SpellMergeConfirmationModal
+        isOpen={Boolean(mergeSaveDraft?.pendingMerge)}
+        language={currentLanguage}
+        merge={mergeSaveDraft?.pendingMerge}
+        onCancel={() => setMergeSaveDraft(null)}
+        onConfirm={handleConfirmColumnMerge}
       />
 
       <Modal

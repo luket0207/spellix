@@ -1,10 +1,12 @@
 import {
+  getBattleLossMessage,
   getBattleTitle,
   getBattleTurnMessage,
   getCaveMiniGameTranslations,
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
+  getLootChestTranslations,
   getMiniGameFailureTranslations,
   getNextTurnMessage,
   getPlayerColourDisplayName,
@@ -15,6 +17,26 @@ import {
 } from './translations';
 
 describe('gameplay translations', () => {
+  test('returns exact Loot Chest copy in both languages with English fallback', () => {
+    const english = getLootChestTranslations('en');
+    const japanese = getLootChestTranslations('jp');
+
+    expect(english.title).toBe('Choose your loot');
+    expect(english.choose).toBe('Choose');
+    expect(english.continue).toBe('Continue');
+    expect(english.nothing).toBe('Nothing');
+    expect(english.result('Damage token')).toBe('You got a Damage token');
+    expect(english.result('Nothing', false)).toBe('You got Nothing');
+    expect(japanese.title).toBe('戦利品を選んでください。');
+    expect(japanese.choose).toBe('選ぶ');
+    expect(japanese.continue).toBe('続ける');
+    expect(japanese.nothing).toBe('何もなし');
+    expect(japanese.result('ダメージトークン')).toBe(
+      'ダメージトークンを手に入れました。'
+    );
+    expect(getLootChestTranslations('invalid')).toBe(english);
+  });
+
   test('returns Mini Game Failed punishment translations with English fallback', () => {
     const english = getMiniGameFailureTranslations('en');
     const japanese = getMiniGameFailureTranslations('jp');
@@ -172,6 +194,18 @@ describe('gameplay translations', () => {
       trash: 'ゴミ箱',
     });
     expect(japanese.placedInSpellSlot(3)).toBe('呪文スロット3に配置');
+    expect(english.mergeConfirmation(2, 3, 3)).toBe(
+      'Committing this change will merge columns 2 and 3. This means you will lose the tokens from column 3. Is this ok?'
+    );
+    expect(japanese.mergeConfirmation(2, 3, 3)).toBe(
+      'この変更を確定すると、列2と列3が統合されます。そのため、列3にあるトークンは失われます。よろしいですか？'
+    );
+    expect(english.overCapacity([1, 3])).toBe(
+      'Columns 1 and 3 exceed their token capacity.'
+    );
+    expect(japanese.overCapacity([1, 3])).toBe(
+      '列1と列3がトークン容量を超えています。'
+    );
     expect(getSpellAssignmentTranslations('invalid')).toBe(english);
   });
 
@@ -200,13 +234,19 @@ describe('gameplay translations', () => {
   test('returns reward choice translations with an English fallback', () => {
     expect(getRewardPageTranslations('en')).toEqual({
       choose: 'Choose',
-      chooseOneReward: 'Choose one reward',
+      chooseOneReward: 'Choose your reward',
       continue: 'Continue',
+      potionAdded: 'Reward potion added.',
+      potionDiscarded: 'Reward potion discarded.',
+      potionReplaced: 'Reward potion replaced an existing potion.',
     });
     expect(getRewardPageTranslations('jp')).toEqual({
       choose: '選ぶ',
-      chooseOneReward: '報酬を1つ選んでください',
+      chooseOneReward: '報酬を選んでください。',
       continue: '続ける',
+      potionAdded: '報酬ポーションを追加しました。',
+      potionDiscarded: '報酬ポーションを破棄しました。',
+      potionReplaced: '報酬ポーションで既存のポーションを交換しました。',
     });
     expect(getRewardPageTranslations('invalid')).toBe(getRewardPageTranslations('en'));
   });
@@ -223,6 +263,8 @@ describe('gameplay translations', () => {
     expect(getEnemyDisplayName('jp', enemy)).toBe('毒ヒゲネズミ');
     expect(getBattleTurnMessage('en', 'Vilewhisker Rat')).toBe('Vilewhisker Rat Turn');
     expect(getBattleTurnMessage('jp', '毒ヒゲネズミ')).toBe('毒ヒゲネズミのターン');
+    expect(getBattleLossMessage('en')).toBe('The player has lost.');
+    expect(getBattleLossMessage('jp')).toBe('プレイヤーは敗北しました。');
     expect(getBattleTitle('en', enemy)).toBe('Vilewhisker Rat Battle');
     expect(getBattleTitle('jp', enemy)).toBe('毒ヒゲネズミバトル');
   });

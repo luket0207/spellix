@@ -21,6 +21,10 @@ import {
   REWARD_TOKEN_DISCARD_DROP_ZONE_ID,
   TOKEN_BAG_DROP_ZONE_ID,
 } from './spellSetup';
+import {
+  getEffectiveSpellColumnGroups,
+  getEffectiveSpellColumnCapacities,
+} from './nonBattleSpellEffects';
 import './spells.css';
 
 function DraggableSpellToken({ ariaLabel, language, onClick, showName = false, token }) {
@@ -93,6 +97,7 @@ function SpellTokenAssignment({
   isRewardTokenStagedInBag = false,
   isRewardTokenStagedForDiscard = false,
   language,
+  mergedColumns = [],
   mode = 'spellsModal',
   onTokenBagTokenClick,
   onTokenDrop,
@@ -144,15 +149,26 @@ function SpellTokenAssignment({
       isRewardTokenStagedInBag ||
       stagedRewardDestinationId
   );
+  const effectiveColumnGroups = getEffectiveSpellColumnGroups(
+    spellSlots,
+    mergedColumns
+  );
   const rewardPlacementStatus = isRewardTokenStagedForDiscard
     ? translations.placedInDiscardArea
     : hasStagedRewardTokenBagReplacement || isRewardTokenStagedInBag
       ? translations.placedInTokenBag
       : stagedRewardDestinationId
         ? translations.placedInSpellSlot(
-            spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
+            effectiveColumnGroups.find(
+              ({ slot }) => slot.id === stagedRewardDestinationId
+            )?.label ??
+              spellSlots.findIndex(({ id }) => id === stagedRewardDestinationId) + 1
           )
         : '';
+  const columnCapacities = getEffectiveSpellColumnCapacities(
+    spellSlots,
+    mergedColumns
+  );
 
   return (
     <DndContext
@@ -197,7 +213,7 @@ function SpellTokenAssignment({
         <section className="spell-slot-section">
           <div className="spell-slot-scroll">
             <div aria-label="Spell slots" className="spell-slot-list">
-              {spellSlots.map((slot, index) => {
+              {effectiveColumnGroups.map(({ isMerged, label, slot }, groupIndex) => {
                 const hasStagedReward =
                   rewardToken &&
                   !isRewardTokenStagedInBag &&
@@ -210,12 +226,15 @@ function SpellTokenAssignment({
 
                 return (
                   <div
-                    aria-label={`Assignment column ${index + 1}`}
-                    key={slot.id}
-                    className="spell-slot-item"
+                    aria-label={`Assignment column ${label}`}
+                    className={`spell-slot-item${
+                      isMerged ? ' spell-slot-item--merged' : ''
+                    }`}
+                    data-column-span={isMerged ? '2' : '1'}
+                    key={isMerged ? `merged-${label}` : slot.id}
                   >
-                    <h4>{index + 1}</h4>
-                    <TokenDropZone id={slot.id} label={`Spell slot ${index + 1}`}>
+                    <h4>{label}</h4>
+                    <TokenDropZone id={slot.id} label={`Spell slot ${label}`}>
                       {displayedTokens.length > 0 ? (
                         displayedTokens.map((token) => (
                           <DraggableSpellToken
@@ -233,7 +252,7 @@ function SpellTokenAssignment({
                         <span>{translations.dropTokensHere}</span>
                       )}
                     </TokenDropZone>
-                    <p>{`${displayedTokens.length} / ${slot.maxTokens}`}</p>
+                    <p>{`${displayedTokens.length} / ${columnCapacities[groupIndex]}`}</p>
                   </div>
                 );
               })}

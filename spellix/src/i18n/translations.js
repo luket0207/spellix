@@ -16,13 +16,37 @@ const GAMEPLAY_TRANSLATIONS = {
 const REWARD_PAGE_TRANSLATIONS = {
   en: {
     choose: 'Choose',
-    chooseOneReward: 'Choose one reward',
+    chooseOneReward: 'Choose your reward',
     continue: 'Continue',
+    potionAdded: 'Reward potion added.',
+    potionDiscarded: 'Reward potion discarded.',
+    potionReplaced: 'Reward potion replaced an existing potion.',
   },
   jp: {
     choose: '選ぶ',
-    chooseOneReward: '報酬を1つ選んでください',
+    chooseOneReward: '報酬を選んでください。',
     continue: '続ける',
+    potionAdded: '報酬ポーションを追加しました。',
+    potionDiscarded: '報酬ポーションを破棄しました。',
+    potionReplaced: '報酬ポーションで既存のポーションを交換しました。',
+  },
+};
+
+const LOOT_CHEST_TRANSLATIONS = {
+  en: {
+    choose: 'Choose',
+    continue: 'Continue',
+    nothing: 'Nothing',
+    result: (rewardName, useArticle = true) =>
+      `You got ${useArticle ? 'a ' : ''}${rewardName}`,
+    title: 'Choose your loot',
+  },
+  jp: {
+    choose: '\u9078\u3076',
+    continue: '\u7d9a\u3051\u308b',
+    nothing: '\u4f55\u3082\u306a\u3057',
+    result: (rewardName) => `${rewardName}\u3092\u624b\u306b\u5165\u308c\u307e\u3057\u305f\u3002`,
+    title: '\u6226\u5229\u54c1\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002',
   },
 };
 
@@ -161,8 +185,14 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     discardAreaLocation: 'discard area',
     dropTokensHere: 'Drop tokens here',
     newRewardToken: 'New Reward Token',
+    mergeConfirmation: (firstColumn, secondColumn, removedColumn) =>
+      `Committing this change will merge columns ${firstColumn} and ${secondColumn}. This means you will lose the tokens from column ${removedColumn}. Is this ok?`,
     no: 'No',
     noAvailableTokens: 'No available tokens',
+    overCapacity: (columns) =>
+      columns.length === 1
+        ? `Column ${columns[0]} exceeds its token capacity.`
+        : `Columns ${columns.join(' and ')} exceed their token capacity.`,
     rewardPlacementInstruction:
       'Place the token into your spells, token bag or discard it to continue',
     placedInDiscardArea: 'Placed in discard area',
@@ -192,8 +222,12 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     discardAreaLocation: '破棄エリア',
     dropTokensHere: 'ここにトークンをドロップ',
     newRewardToken: '新しい報酬トークン',
+    mergeConfirmation: (firstColumn, secondColumn, removedColumn) =>
+      `この変更を確定すると、列${firstColumn}と列${secondColumn}が統合されます。そのため、列${removedColumn}にあるトークンは失われます。よろしいですか？`,
     no: 'いいえ',
     noAvailableTokens: '使用可能なトークンがありません',
+    overCapacity: (columns) =>
+      `列${columns.join('と列')}がトークン容量を超えています。`,
     rewardPlacementInstruction:
       '続けるには、トークンを自分のスペルかトークンバッグに配置するか、破棄してください。',
     placedInDiscardArea: '破棄エリアに配置',
@@ -237,6 +271,10 @@ export function getRewardPageTranslations(language) {
   return REWARD_PAGE_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
+export function getLootChestTranslations(language) {
+  return LOOT_CHEST_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
 export function getRiverMiniGameTranslations(language) {
   return RIVER_MINI_GAME_TRANSLATIONS[getGameplayLanguage(language)];
 }
@@ -278,6 +316,12 @@ export function getBattleTurnMessage(language, actorName) {
   return getGameplayLanguage(language) === 'jp'
     ? `${actorName}のターン`
     : `${actorName} Turn`;
+}
+
+export function getBattleLossMessage(language) {
+  return getGameplayLanguage(language) === 'jp'
+    ? 'プレイヤーは敗北しました。'
+    : 'The player has lost.';
 }
 
 export function getBattleTitle(language, enemy) {

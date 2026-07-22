@@ -14,11 +14,13 @@ import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import {
+  getBattleLossMessage,
   getBattleTitle,
   getBattleTurnMessage,
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
+  getMiniGameFailureTranslations,
   getPlayerColourDisplayName,
 } from '../i18n/translations';
 import './BattlePage.css';
@@ -111,6 +113,7 @@ function BattlePage() {
   const [showTurnModal, setShowTurnModal] = useState(isActiveBattle);
   const currentLanguage = getGameplayLanguage(battlePlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const failureTranslations = getMiniGameFailureTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
 
   advanceBattleTurnRef.current = advanceBattleTurn;
@@ -361,6 +364,7 @@ function BattlePage() {
           <CommittedSpellSlotList
             language={currentLanguage}
             lightBlueUses={activeBattle.playerFreezeUses}
+            mergedColumns={battlePlayer.mergedColumns}
             purpleBuffs={activeBattle.playerPurpleBuffs}
             spellSlots={battlePlayer.spellSlots}
             title=""
@@ -457,29 +461,43 @@ function BattlePage() {
       <Modal
         ariaLabel="Battle turn"
         isOpen={showTurnModal}
+        panelClassName={`battle-turn-modal ${languageClassName}`}
       >
-        <p className={languageClassName}>{battleTurnMessage}</p>
-        {turnActorImageSource ? (
-          <img
-            alt={battleTurnMessage}
-            aria-label="Battle turn actor"
-            src={turnActorImageSource}
-            style={{ height: '150px', width: 'auto' }}
-          />
-        ) : null}
+        <div className="battle-turn-modal-content">
+          {turnActorImageSource ? (
+            <img
+              alt={battleTurnMessage}
+              aria-label="Battle turn actor"
+              className="battle-turn-modal-image"
+              src={turnActorImageSource}
+            />
+          ) : null}
+          <p className={`larger-text ${languageClassName}`}>{battleTurnMessage}</p>
+        </div>
       </Modal>
 
       <Modal
         actions={
-          <Button type="button" variant="secondary" onClick={handleRespawn}>
-            Respawn
+          <Button
+            className={languageClassName}
+            type="button"
+            variant="secondary"
+            onClick={handleRespawn}
+          >
+            {failureTranslations.respawn}
           </Button>
         }
         ariaLabel="Battle lost"
         isOpen={showLoseModal}
+        panelClassName={`battle-loss-modal ${languageClassName}`}
       >
-        <p>The player has lost.</p>
-        <DeathResult removedTokens={activeBattle.deathPenalty?.removedTokens} />
+        <p className={`battle-loss-message larger-text ${languageClassName}`}>
+          {getBattleLossMessage(currentLanguage)}
+        </p>
+        <DeathResult
+          language={currentLanguage}
+          removedTokens={activeBattle.deathPenalty?.removedTokens}
+        />
       </Modal>
     </main>
   );

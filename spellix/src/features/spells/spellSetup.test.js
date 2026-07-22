@@ -69,6 +69,95 @@ describe('spellSetup helpers', () => {
     expect(result.spellSlots[0].tokens).toHaveLength(5);
   });
 
+  test('allows Grey-adjusted capacity and blocks the next token beyond it', () => {
+    const [player] = createPlayers(1);
+    const spellSlots = player.spellSlots.map((slot) => ({ ...slot, tokens: [] }));
+    spellSlots[0].tokens = Array.from({ length: 5 }, (_, index) => ({
+      committed: true,
+      id: `filled-token-${index + 1}`,
+      type: 'red',
+    }));
+    spellSlots[1].tokens = [{ committed: true, id: 'grey-1', type: 'grey' }];
+    const [firstToken, secondToken, ...remainingBag] = player.tokenBag;
+
+    const allowed = moveSpellTokenInDraft({
+      destinationId: spellSlots[0].id,
+      spellSlots,
+      tokenBag: [firstToken, secondToken, ...remainingBag],
+      tokenId: firstToken.id,
+    });
+    const blocked = moveSpellTokenInDraft({
+      destinationId: spellSlots[0].id,
+      spellSlots: allowed.spellSlots,
+      tokenBag: allowed.tokenBag,
+      tokenId: secondToken.id,
+    });
+
+    expect(allowed.didMove).toBe(true);
+    expect(allowed.spellSlots[0].tokens).toHaveLength(6);
+    expect(blocked.didMove).toBe(false);
+  });
+
+  test('does not activate adjacent capacity from an uncommitted Grey token', () => {
+    const [player] = createPlayers(1);
+    const spellSlots = player.spellSlots.map((slot) => ({ ...slot, tokens: [] }));
+    spellSlots[0].tokens = Array.from({ length: 5 }, (_, index) => ({
+      committed: true,
+      id: `filled-token-${index + 1}`,
+      type: 'red',
+    }));
+    spellSlots[1].tokens = [{ committed: false, id: 'grey-draft', type: 'grey' }];
+    const [tokenToMove, ...remainingBag] = player.tokenBag;
+
+    const blocked = moveSpellTokenInDraft({
+      destinationId: spellSlots[0].id,
+      spellSlots,
+      tokenBag: [tokenToMove, ...remainingBag],
+      tokenId: tokenToMove.id,
+    });
+
+    expect(blocked.didMove).toBe(false);
+    expect(blocked.spellSlots[0].tokens).toHaveLength(5);
+  });
+
+  test('rejects direct assignment into the removed side of a merged column', () => {
+    const [player] = createPlayers(1);
+    const tokenToMove = player.tokenBag[0];
+    const result = moveSpellTokenInDraft({
+      destinationId: player.spellSlots[1].id,
+      mergedColumns: [{ activeColumn: 1, columns: [1, 2], removedColumn: 2 }],
+      spellSlots: player.spellSlots,
+      tokenBag: player.tokenBag,
+      tokenId: tokenToMove.id,
+    });
+
+    expect(result.didMove).toBe(false);
+    expect(result.spellSlots).toBe(player.spellSlots);
+    expect(result.tokenBag).toBe(player.tokenBag);
+  });
+
+  test('uses effective Grey capacity when moving into a merged column', () => {
+    const [player] = createPlayers(1);
+    const spellSlots = player.spellSlots.map((slot) => ({ ...slot, tokens: [] }));
+    spellSlots[0].tokens = Array.from({ length: 5 }, (_, index) => ({
+      committed: true,
+      id: `red-${index + 1}`,
+      type: 'red',
+    }));
+    spellSlots[2].tokens = [{ committed: true, id: 'grey-3', type: 'grey' }];
+    const tokenToMove = player.tokenBag[0];
+    const result = moveSpellTokenInDraft({
+      destinationId: spellSlots[0].id,
+      mergedColumns: [{ activeColumn: 1, columns: [1, 2], removedColumn: 2 }],
+      spellSlots,
+      tokenBag: player.tokenBag,
+      tokenId: tokenToMove.id,
+    });
+
+    expect(result.didMove).toBe(true);
+    expect(result.spellSlots[0].tokens).toHaveLength(6);
+  });
+
   test('moves an uncommitted token back to the bag from a spell slot', () => {
     const [player] = createPlayers(1);
     const tokenToMove = player.tokenBag[0];

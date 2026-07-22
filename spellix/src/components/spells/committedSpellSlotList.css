@@ -39,10 +39,13 @@
 
 .committed-spell-slot-item {
   display: flex;
-  width: 40px;
   min-width: 40px;
   flex: 0 0 40px;
   box-sizing: border-box;
+}
+
+.committed-spell-slot-item--merged {
+  grid-column: span 2;
 }
 
 .committed-spell-slot-column {

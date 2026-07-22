@@ -36,6 +36,7 @@
 
 .potion-icon-name {
   overflow-wrap: anywhere;
+  margin-top: 8px;
 }
 
 .potion-icon-tooltip {

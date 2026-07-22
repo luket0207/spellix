@@ -123,6 +123,30 @@ test('uses the same rolled slot for both actors and ignores non-active token col
   expect(result.nextOpponent).toEqual({ currentHealth: 95, guard: 0 });
 });
 
+test.each([2, 3])(
+  'uses the retained merged spell column when physical column %i is rolled',
+  (diceResult) => {
+    const currentActor = createActor({
+      spellSlots: createSpellSlots(
+        createSlot([createToken('red', 1), createToken('red', 2)]),
+        1
+      ),
+    });
+    currentActor.mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+
+    const result = calculateBattleTurn({
+      currentActor,
+      diceResult,
+      opponent: createActor({ currentHealth: 100 }),
+    });
+
+    expect(result.damage.outgoing).toBe(20);
+    expect(result.nextOpponent.currentHealth).toBe(80);
+  }
+);
+
 test.each([
   [1, 5],
   [2, 10],

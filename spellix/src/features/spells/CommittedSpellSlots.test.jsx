@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import CommittedSpellSlotList from '../../components/spells/CommittedSpellSlotList';
 import CommittedSpellSlots from './CommittedSpellSlots';
+import { applyColumnMerge } from './nonBattleSpellEffects';
 
 function createSpellSlots() {
   return Array.from({ length: 6 }, (_, index) => ({
@@ -107,6 +108,32 @@ describe('CommittedSpellSlots', () => {
     expect(columns).toHaveLength(6);
     expect(columns[1].querySelector('.committed-spell-slot-number')).not.toBeNull();
     expect(columns[1].querySelector('.token-display')).toBeNull();
+  });
+
+  test('renders a merged column across two original tracks with the retained tokens', () => {
+    const draftSpellSlots = createSpellSlots();
+    draftSpellSlots[1].tokens = [
+      { committed: true, id: 'white-2', type: 'white' },
+      { committed: true, id: 'red-2', type: 'red' },
+    ];
+    draftSpellSlots[2].tokens = [
+      { committed: true, id: 'white-3', type: 'white' },
+    ];
+    const mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+    const spellSlots = applyColumnMerge(draftSpellSlots, mergedColumns[0]);
+    const { container } = render(
+      <CommittedSpellSlots mergedColumns={mergedColumns} spellSlots={spellSlots} />
+    );
+
+    const mergedColumn = screen.getByText('2+3').closest('.committed-spell-slot-item');
+
+    expect(mergedColumn).toHaveClass('committed-spell-slot-item--merged');
+    expect(mergedColumn).toHaveAttribute('data-column-span', '2');
+    expect(within(mergedColumn).getByLabelText('red token in slot 2 and 3')).toBeInTheDocument();
+    expect(within(mergedColumn).queryByLabelText('white token in slot 2 and 3')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.committed-spell-slot-item')).toHaveLength(5);
   });
 
   test('optionally marks only Purple-buffed columns without changing the default display', () => {

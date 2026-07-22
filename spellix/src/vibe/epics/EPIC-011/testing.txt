@@ -1,0 +1,531 @@
+---
+
+Feature-001: Implement Loot Chest page with hidden reward choices, chest shuffle animation, and reward assignment flow
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Win the River Mini Game and continue to Loot Chest.
+   Expected: The full-page animated gameplay night sky appears with `Choose your loot`, three horizontally centred identical toolbox chests, and three reward previews above them.
+2. Watch the initial sequence without interacting.
+   Expected: Reward previews remain outside layout flow, move into the chests and fade, the three chests cross and blur during shuffle, then return to a centred row before Choose buttons fade in.
+3. Inspect the initial rewards across several new Loot Chest visits.
+   Expected: Each set contains exactly one blue Nothing X and two generated rewards from different Common Token, Rare Token, Common Potion, or Rare Potion categories; token and potion icons show no name underneath.
+4. Try to choose before and after the animation, then click a second chest after choosing.
+   Expected: No Choose action is available until the sequence completes; only the first completed choice is accepted and all three Choose buttons disable afterward.
+5. Choose a token reward and press Continue.
+   Expected: The existing generic Spell Token Assignment opens and allows spell-slot, token-bag, full-bag replacement, or Trash placement before its Confirm action enables.
+6. Choose a potion with fewer than three current potions and press Continue.
+   Expected: The exact generated potion is added automatically and the flow returns according to the stored mini-game metadata.
+7. Choose a potion with three current potions and press Continue.
+   Expected: The existing localized full-potion decision allows replacing one current potion or discarding the new potion, uses no list markup, and does not grant the reward twice.
+8. Choose Nothing and press Continue.
+   Expected: No token or potion is added and the flow returns according to the stored mini-game metadata.
+9. Complete River Loot with each reward outcome.
+   Expected: Gameplay returns with the same player active and the existing River roll-again notice.
+10. Retreat from Cave with Loot but no Roll Again Potion, complete the Loot reward, and finish any pending Cave rewards.
+    Expected: Loot opens before Cave token assignment; after every pending reward is resolved, Gameplay advances to the next player and shows the next-turn modal.
+11. Repeat Cave Loot with a Roll Again Potion and with both a Cave token and Loot token.
+    Expected: The Loot token assignment completes first, the preserved Cave token assignment follows without either token being lost, and final Gameplay keeps the same player with the Roll Again Potion notice.
+12. Repeat the page and full reward flow in Japanese, at desktop/mobile sizes, with reduced motion, and inspect the console.
+    Expected: Required Japanese copy and Noto Serif JP classes appear, English uses Unkempt, the layout remains usable, reduced motion disables new animations, no `ul`/`li` appears, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first tests failed against the old placeholder because the reward generator did not exist and the route had no night sky, localized title, chest states, choices, or reward handoff.
+* `src/features/miniGames/lootChest.test.js` verifies the exact 40/10/40/10 weights, exactly one Nothing reward, two unique non-Nothing categories, real rarity-matched token/potion generation, immutable shuffling, and preserved reward data.
+* `src/pages/MiniGames/LootChestPage.test.jsx` verifies night-sky reuse, exact English/Japanese copy, three `faToolbox` chests, three initial previews, timed entry/shuffle/ready phases, single-choice locking, reveal/result/Continue behavior, Nothing return, no list markup, and requested CSS contracts.
+* `src/features/miniGames/lootChestState.test.jsx` verifies automatic potion storage, full-potion replacement, Nothing, River same-player return, Cave next-player return, and sequential Loot-token/Cave-token assignment.
+* The expanded regression passes 14 suites and 123 tests covering Loot Chest, River, Cave, Cave grants, shared mini-game/reward state, Spell Token Assignment, RewardPage capacity paths, PotionIcon, translations, and app routing.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* The project has no `npm run lint` script, so that preferred command is unavailable; the production build completed Create React App compile checks.
+* JSDOM cannot prove real animation smoothness, whether the shuffle is visually untrackable to a person, pointer drag geometry, responsive visual fit, glow/gradient rendering, or actual font rendering.
+
+Manual Testing Still Needed
+
+* Run the twelve-step browser regression above for real animation timing, visual trackability, drag/drop, responsive behavior, language fonts, reduced motion, and console inspection.
+
+---
+
+Feature-002: Add ordered Cave Game reward resolution flow after loot chest selection
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Retreat from Cave after finding Loot, a token, and a potion.
+   Expected: Loot Chest opens first; neither the Cave token assignment nor potion UI appears before the chest is resolved.
+2. Select Nothing from Loot in that flow.
+   Expected: Nothing adds no queue item, then the Cave token assignment opens before the Cave potion is granted.
+3. Select a token from Loot while Cave also has a token.
+   Expected: The Loot token and Cave token each use Spell Token Assignment, neither is lost or auto-added, and no potion UI appears until both are assigned or discarded.
+4. Exercise spell-slot, token-bag, full-bag replacement, and Trash placement across the two tokens.
+   Expected: Existing capacity and placement rules remain intact, and each confirmation advances to the next queued reward only once.
+5. Select a potion from Loot while Cave also has a potion and the player has room.
+   Expected: Each potion is added one at a time; each addition shows its own wooden confirmation over the animated night sky before the next potion or final return.
+6. Repeat step 5 with three occupied potion slots.
+   Expected: Each queued potion separately requires replacing a current potion or discarding the new one; capacity never exceeds three and the later potion remains queued.
+7. Complete the queue without a Roll Again Potion.
+   Expected: The active player changes only after all rewards resolve, Gameplay opens, and the next-turn modal appears before board control is restored.
+8. Complete the same queue with a Roll Again Potion.
+   Expected: The same player remains active and the localized Roll Again Potion notice appears only after all rewards resolve.
+9. Repeat available/full potion resolution for an English and Japanese player.
+   Expected: Confirmation/full-capacity text and buttons use the current language, English uses `language-en`, Japanese uses `language-jp`, and the simple confirmation paragraph uses `larger-text`.
+10. Inspect both potion states at desktop/mobile sizes and inspect the console/DOM.
+    Expected: Night sky and wooden modal remain usable, actions are centred and not full width, no `ul`/`li` is introduced, and no console error occurs.
+
+Automated Tests Completed
+
+* Red-first coverage confirmed the ordered Cave queue module was absent before implementation.
+* `src/features/miniGames/caveRewardResolution.test.js` verifies Loot-first state, Loot/Cave source preservation, all-token-before-potion ordering, two sequential potions, Nothing, and final-turn readiness.
+* `src/features/miniGames/caveRewardGrant.test.js` verifies Cave token and potion grants remain pending instead of mutating inventory during retreat.
+* `src/features/miniGames/lootChestState.test.jsx` verifies sequential Loot/Cave tokens, two full-capacity potions processed one at a time, no early turn advance, and the next-turn invariant after completion.
+* `src/AppMiniGames.test.jsx` verifies the end-to-end Loot/token/potion/roll-again order, available-potion confirmation, full-potion decisions, animated night sky, wooden modal classes, `larger-text`, and English/Japanese font classes.
+* The final focused regression passes 6 suites and 60 tests covering Cave grants, ordered queue state, Loot Chest state handoff, Cave UI, Reward page UI, and app-level mini-game flows.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script, so that preferred command is unavailable; the production build completed Create React App compile checks.
+* The full repository suite currently reports 47 passing suites / 469 passing tests and 9 failing suites / 21 failing tests in both parallel and serial runs. The remaining failures are outside this feature's focused green suites and include existing stale source/label assertions plus the `App.test.jsx` source-map crash.
+* JSDOM does not verify real responsive fit, rendered fonts, modal visual placement, drag geometry, or browser console output.
+
+Manual Testing Still Needed
+
+* Run the ten-step browser regression above for real token drag/drop, sequential modal presentation, responsive behavior, rendered fonts, and console inspection.
+
+---
+
+Bug-001: Loot Chest reward icon sizing, reveal timing, and chosen chest layout stability
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open Loot Chest and compare the three reward previews before they move.
+   Expected: The blue Nothing X is visually balanced with the token and potion previews and remains blue.
+2. Time the initial preview phase from page load.
+   Expected: All three rewards remain visible for 2.5 seconds before they begin moving into the chests.
+3. Continue watching without interacting.
+   Expected: Rewards enter and fade, chests shuffle afterward, then the Choose buttons appear at about 4.9 seconds total.
+4. Choose each reward type across repeated visits.
+   Expected: The selected chest shrinks and fades over 0.4 seconds while its reward fades into the same visual position.
+5. Watch the selected chest, its Choose button, the result text, and Continue button during reveal.
+   Expected: The chest area keeps the same width and height; controls and result content do not jump because the visual slot remains mounted.
+6. Repeat at desktop/mobile widths and with reduced motion enabled.
+   Expected: The fixed slot remains stable; reduced motion immediately hides the selected chest and shows its reward without overlapping visuals.
+7. Complete River and Cave Loot flows and inspect the browser console.
+   Expected: Reward assignment and return behavior are unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first page assertions reproduced the 1.2-second preview and missing stable visual slot before the fix.
+* `src/pages/MiniGames/LootChestPage.test.jsx` verifies the 2499ms/2500ms phase boundary, retained selected chest SVG, fixed visual slot, 64px Nothing dimensions, reveal keyframes, single-choice lock, and route handoff.
+* `src/AppMiniGames.test.jsx` verifies River/Cave Loot flows use the new 4.9-second ready point without changing reward resolution or turn return behavior.
+* The relevant Loot Chest generation, state, page, and app regression passes 4 suites and 34 tests.
+
+Automated Test Limitations
+
+* JSDOM verifies timing, DOM stability, class changes, and CSS contracts but cannot visually judge perceived icon balance, animation smoothness, or real-browser layout shift.
+* The project has no `npm run lint` script, so that preferred command is unavailable.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above to confirm perceived icon balance, smooth reveal animation, responsive layout stability, reduced-motion rendering, and console output.
+
+---
+
+Bug-002: Improve potion reward assignment modal layout
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Gain a potion while all three potion slots are occupied.
+   Expected: The full-capacity reward assignment opens with the newly gained potion centred in its own section.
+2. Inspect the three replacement actions and the discard-new-potion action.
+   Expected: All four buttons appear in one row with equal widths and 15px spacing between adjacent buttons.
+3. Inspect each replacement button.
+   Expected: Its potion component has 20px space before the replacement label; labels remain readable and the spacing does not affect potion icons elsewhere.
+4. Replace each current potion in separate runs.
+   Expected: The selected slot receives the new potion, capacity remains three, and the existing localized completion state appears.
+5. Repeat and discard the newly gained potion.
+   Expected: Existing potions remain unchanged and the localized discarded completion state appears.
+6. Repeat in English and Japanese and inspect the DOM/console.
+   Expected: Existing language font classes and translated labels remain, the layout uses no `ul`/`li`, and no console error occurs.
+
+Automated Tests Completed
+
+* Red-first Reward page coverage reproduced the missing centred wrapper and unified action layout before the fix.
+* `src/pages/RewardPage.test.jsx` verifies the centred new-potion section, four actions in one container, shared button class, equal-width grid CSS, 15px gap, scoped 20px potion margin, English/Japanese text, replacement, and discard.
+* `src/features/miniGames/lootChestState.test.jsx` verifies full-capacity and multiple queued potion state remains correct.
+* `src/AppMiniGames.test.jsx` verifies Cave/Loot potion decisions and final reward ordering remain unchanged.
+* The final scoped regression passes 3 suites and 43 tests.
+
+Automated Test Limitations
+
+* JSDOM verifies DOM grouping, classes, CSS contracts, and actions but cannot visually judge final spacing or responsive fit in a real browser.
+* The project has no `npm run lint` script, so that preferred command is unavailable.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm real rendered centring, equal widths, 15px spacing, 20px icon separation, language fonts, and console output.
+
+---
+
+Bug-003: Loot Chest Nothing icon still too large and Continue area causes layout shift
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open Loot Chest and inspect the Nothing reward during the initial preview.
+   Expected: The blue X is approximately 20px high and does not dominate the Token or Potion rewards.
+2. Let the rewards enter the chests, wait for the shuffle to finish, and choose the Nothing chest.
+   Expected: The revealed blue X keeps the same approximately 20px dimensions while Token and Potion sizing remains unchanged.
+3. Inspect the area below the chest row before choosing any chest.
+   Expected: Space is already reserved for the result and Continue controls, but no result text or clickable Continue button is visible.
+4. Choose each reward type across repeated visits and watch the title, chest row, selected chest, and controls.
+   Expected: The localized result and Continue button appear inside the reserved area without moving the surrounding page content.
+5. Continue through Token, Potion, and Nothing rewards.
+   Expected: Existing reward assignment and return behavior remains unchanged.
+6. Repeat at desktop and mobile widths and inspect the browser console.
+   Expected: The result area remains stable, controls remain usable, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first page assertions reproduced the absent pre-selection result container and 64px Nothing icon before implementation.
+* `src/pages/MiniGames/LootChestPage.test.jsx` verifies the result area is initially empty, contains no Continue button, remains the same DOM node after selection, and uses the 20px Nothing icon plus 120px reserved flex-area CSS contracts.
+* The relevant Loot Chest generation, state, page, and app regression passes 4 suites and 34 tests.
+* `npm run build` compiles successfully and `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* JSDOM verifies DOM persistence, control visibility, class behavior, and CSS contracts but cannot visually judge perceived icon scale or real-browser layout shift.
+* The project has no `npm run lint` script, so that preferred command is unavailable.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm rendered icon scale, layout stability at responsive sizes, reward handoff, and console output.
+
+---
+
+Bug-004: Prevent visible player image changing prematurely before screen transition completes
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Lose a River or Cave mini game with at least two players in turn order.
+   Expected: Mini Game Failed shows the image and health of the player who lost.
+2. Let the punishment complete while the failed player remains alive, then click Continue.
+   Expected: The failed player's image remains unchanged until Gameplay replaces the screen.
+3. Repeat with enough damage to reduce the failed player to zero health, then click Respawn.
+   Expected: The failed player's image remains unchanged until navigation, and that player respawns at full health in the Start Area.
+4. Inspect Gameplay after either player-to-player return.
+   Expected: The active player has advanced correctly and the next-turn modal shows the new player's image before board control resumes.
+5. Win River and return from Cave with a Roll Again Potion.
+   Expected: Same-player return behavior remains intact and no next-player image appears on the outgoing flow.
+6. Complete a Cave return without a Roll Again Potion after resolving all rewards.
+   Expected: Turn advancement still waits for reward completion and the next-turn modal appears after returning to Gameplay.
+7. Repeat Continue and Respawn in English and Japanese while inspecting the browser console.
+   Expected: Existing localized content remains correct and no console errors or player-image flashes occur.
+
+Automated Tests Completed
+
+* Red-first coverage reproduced the image changing from `m-red.png` to `f-blue.png` when `miniGameResult` cleared and the live current player advanced while the loss page remained mounted.
+* `src/pages/MiniGames/MiniGameResultPages.test.jsx` passes 4 tests covering stable failed-player imagery, one-time punishment, Continue, Respawn, health clamping, language behavior, and existing page contracts.
+* `src/AppMiniGames.test.jsx` passes its full app-level mini-game flow, including loss return, Cave/River reward behavior, and navigation.
+* Five focused `src/features/miniGames/miniGameState.test.jsx` tests pass for one-time punishment, full-health Start Area respawn, River same-player return, River loss advancement, and Cave next-turn modal queuing.
+* `npm run build` compiles successfully.
+
+Automated Test Limitations
+
+* The broader `miniGameState.test.jsx` run currently has three unrelated Cave reward expectation failures involving old token/potion sequencing assumptions; these do not exercise `MiniGameLosePage` or the player-image lock and were not changed in this bug fix.
+* JSDOM verifies stable image source across rerenders but cannot visually measure a real browser's transition frame or detect a perceptible flash.
+* The project has no `npm run lint` script, so that preferred command is unavailable.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above to confirm there is no visible image flash during real navigation, and verify the next-turn modal, responsive rendering, translations, and console output.
+
+---
+
+Feature-003: Clean up Battle modals for turn display, loss punishment, and reward choice
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start a Battle in English and observe the opening player-turn modal, then wait two seconds for it to close.
+   Expected: The wooden modal shows the centred player image above centred larger turn text in the English font, and its existing auto-close timing is unchanged.
+2. Continue until an enemy turn modal appears.
+   Expected: The correct centred enemy image and localized enemy name appear, then the existing enemy auto-roll flow begins after the modal closes.
+3. Lose a Battle with removable tokens in multiple spell columns.
+   Expected: The wooden loss modal shows centred larger yellow/bold loss text, and each removed token appears in a div row with its unnamed Token icon on the left and column-removal text on the right; no `ul` or `li` appears inside the modal.
+4. Lose with only protected starting tokens, then repeat both loss cases with a Japanese player.
+   Expected: The no-removal explanation remains visible when applicable; loss, removed-token, and Respawn text use the correct language and font.
+5. Win a Battle and inspect the reward choice screen.
+   Expected: The existing Battle environment remains behind a wooden modal whose centred larger heading reads `Choose your reward` or `報酬を選んでください。`.
+6. Inspect reward choices containing short and wrapping token/potion names.
+   Expected: Choices remain horizontally centred, icons share one row, yellow localized names can wrap in their reserved row, and all Choose buttons remain aligned.
+7. Choose each reward type and finish its assignment flow.
+   Expected: The existing reward is selected once and normal token/potion assignment, capacity handling, completion, and turn behavior remain unchanged.
+8. Repeat the three modal flows at desktop/mobile widths and inspect the DOM and console.
+   Expected: Modal content remains usable, no updated modal contains `ul`/`li`, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first contracts reproduced the missing centred turn classes, hardcoded Battle loss content, `ul`/`li` death result, old translucent reward panel, old reward heading, visible Token names, and unstable reward rows before implementation.
+* Fifteen Feature-003-specific tests pass across `BattlePage.test.jsx`, `RewardPage.test.jsx`, `DeathResult.test.jsx`, and `translations.test.js`, covering English/Japanese copy and font classes, `larger-text`, centred wrappers, wooden modal classes, Battle background preservation, div-only removed-token rows, icon/name/button row contracts, exact Choose text, and reward selection continuity.
+* `DeathResult.test.jsx`, `rewardStateContext.test.jsx`, and `MiniGameResultPages.test.jsx` pass 3 suites and 15 tests, confirming the shared death display, Battle reward state, and Mini Game Failed flow remain functional.
+* `npm run build` compiles successfully.
+
+Automated Test Limitations
+
+* The full Battle/Reward focused run still exposes two unrelated existing assertions: one expects obsolete `Dice result: 1` copy, and one expects the discard-new-potion action to have a prior Bug-002 shared button class. Neither exercises Feature-003 modal behavior and neither was changed in this scoped pass.
+* JSDOM verifies DOM order, classes, text, and CSS contracts but cannot visually judge rendered centring, two-line name alignment, wooden texture appearance, or responsive fit in a real browser.
+* The project has no `npm run lint` script, so that preferred command is unavailable.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above for rendered alignment, modal timing, real reward-name wrapping, responsive behavior, language fonts, Battle background appearance, and console inspection.
+
+---
+
+Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Commit one Light Green token, then commit two more without changing current health through another effect.
+   Expected: Max health and current health each increase by 5 and then by 10 more; a Light Green token left in the token bag has no effect.
+2. Remove committed Light Green tokens through a merge loss or death-token penalty while current health is above the resulting maximum.
+   Expected: Max health loses 5 per removed Light Green token and current health is clamped to the new maximum.
+3. Put one White token in each of two adjacent columns and save.
+   Expected: The normal save alert is replaced by the wooden merge confirmation, its larger yellow/bold text names both columns and the losing column, and Yes/No use the current English or Japanese font and copy.
+4. Choose No, then repeat and choose Yes.
+   Expected: No leaves the draft uncommitted; Yes removes every token from the selected losing column, retains the other column's tokens, persists one merge, and closes the spell flow after all pending merge confirmations are resolved.
+5. Exercise fewer-total-token, equal-total/fewer-rare-token, and complete-tie pairs.
+   Expected: The fewer-token column loses first, then the fewer-rare column; a complete tie selects either candidate randomly.
+6. Commit non-adjacent White tokens, attempt overlapping pairs, then create two valid disjoint merges and add another White pair.
+   Expected: Non-adjacent/overlapping pairs do not merge, only valid pairs prompt, and no third merge occurs after two successful merges.
+7. Award a White token directly into a spell slot next to an existing White token.
+   Expected: The same merge confirmation appears before reward placement resolves; cancelling keeps the reward uncommitted and confirming records the merge.
+8. Inspect Gameplay and Battle committed spells after merging columns 2 and 3.
+   Expected: One `2+3` column spans the same two original grid tracks, neighbouring columns do not shift, the losing tokens are absent, and retained tokens remain visible.
+9. Enter Battle with Red tokens in the retained side of a merged pair and force each of the pair's dice values separately.
+   Expected: Either result triggers the same retained token set exactly once; existing guard, counter, reduction, Freeze, Charge, and Purple behavior remains operational.
+10. Commit one and then two Grey tokens in column 2.
+    Expected: Columns 1 and 3 display capacities 6 and then 7, column 2 remains at its base capacity, and assignment accepts the corresponding extra tokens.
+11. Repeat with Grey in columns 1 and 6, then remove Grey while a neighbouring column uses the extra capacity.
+    Expected: Edge Grey affects only column 2 or 5, physical adjacency remains unchanged by merges, and Save is disabled with a localized over-capacity explanation until the excess tokens are removed.
+12. Lose a Battle with removable Black and non-Black tokens, then inspect the DOM and console in English and Japanese.
+    Expected: Existing Black-first removal is unchanged, new confirmation UI contains no `ul`/`li`, all controls remain usable, and no console error occurs.
+
+Automated Tests Completed
+
+* Red-first execution failed all 9 selected suites on the intended missing contracts: absent rule/helper and merge-modal modules, static normal/reward capacity, no merged alias roll/display, no Light Green context update, and missing translations.
+* The completed focused regression passes 9 suites and 101 tests across `nonBattleSpellEffects.test.js`, `spellSetup.test.js`, `rewardTokenAssignment.test.js`, `SpellTokenAssignment.test.jsx`, `CommittedSpellSlots.test.jsx`, `SpellMergeConfirmationModal.test.jsx`, `battleTurn.test.js`, `GameSetupContext.test.jsx`, and `translations.test.js`.
+* Coverage verifies Light Green stacking/clamping, Grey adjacency/stacking/over-capacity detection, White adjacency/limit/loss priority/random tie/application, persisted player fields, merged dice aliases, merged grid spans, effective assignment capacity, exact English/Japanese confirmation text, correct font classes, and shared Modal/Button actions.
+* A selected existing integration regression passes 6 suites and 16 tests for forced spell saving, reward spell-slot placement, Battle turn alternation, Purple/limited-use display, health loss, Black-first/protected-token punishment, shared death result, and player initialization.
+* `npm run build` compiles successfully after Create React App/ESLint checks, and `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* The broader six-suite run reports 74 passing and 8 failing tests. The failures are unrelated stale assertions: three expect shortened forced-setup copy, Gameplay and Battle each expect obsolete dice-result copy, two expect older player-image sizing/alignment, and Reward expects the prior Bug-002 discard action class.
+* JSDOM verifies rule outputs, state, DOM spans, classes, and text but cannot visually judge the joined-column border, wooden texture, real drag geometry, font rendering, responsive stability, or browser console output.
+
+Manual Testing Still Needed
+
+* Run the twelve-step browser regression above for real drag/drop, sequential merge prompts, random-tie observation, merged-column visual joining, responsive behavior, rendered fonts, and console inspection.
+
+---
+
+Bug-005: Light Green max health increase should also increase current health
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Start at 90/100 health and commit one Light Green token.
+   Expected: Health becomes 95/105.
+2. Start at 90/100 health and commit two Light Green tokens together.
+   Expected: Health becomes 100/110.
+3. Start at full health, 100/100, and commit one Light Green token.
+   Expected: Health becomes 105/105 and current health does not exceed maximum health.
+4. Recalculate spell effects without adding another Light Green token.
+   Expected: Current health does not increase again.
+5. Remove committed Light Green tokens while current health is above the resulting maximum.
+   Expected: Maximum health loses 5 per removed token and current health is clamped to the new maximum.
+6. Leave a Light Green token in the token bag without committing it.
+   Expected: Current and maximum health remain unchanged, with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the bug: two newly committed Light Green tokens changed 90/100 to 90/110 instead of 100/110.
+* The focused regression passes 2 suites and 17 tests across `nonBattleSpellEffects.test.js` and `GameSetupContext.test.jsx`.
+* Coverage verifies one-token and two-token additions, full-health growth, no repeat healing for an existing bonus, removal clamping, and the provider-level spell commit path.
+* The complete Feature-004 regression passes 9 suites and 102 tests across spell effects, setup, assignment, rewards, committed display, merge confirmation, battle, context, and translations.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm the displayed health values and browser console behavior during real spell assignment.
+
+---
+
+Bug-006: Grey token capacity increase should only apply after commit
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open spell assignment with no committed Grey token and place a draft Grey token in column 2.
+   Expected: Columns 1 and 3 keep their current committed capacities; the draft Grey token remains visible in column 2.
+2. Fill column 1 to its current capacity and try to place one more token while the Grey token is still uncommitted.
+   Expected: The extra token is not accepted because draft Grey does not activate capacity.
+3. Cancel the spell edit, then reopen spell assignment.
+   Expected: The Grey token is not committed and adjacent capacities remain unchanged.
+4. Place the Grey token again, save, confirm the save, and reopen spell assignment.
+   Expected: The Grey token is committed and columns 1 and 3 each show one additional capacity.
+5. With one committed and one draft Grey token in column 2, inspect columns 1 and 3.
+   Expected: Each adjacent column receives only the committed token's +1 bonus; the draft token adds nothing until committed.
+6. Attempt to save any state that exceeds capacity based on committed Grey tokens.
+   Expected: Save remains blocked until all columns fit their currently active committed capacities, with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the bug in all three layers: draft Grey inflated helper capacity, allowed an extra adjacent token, and displayed an inflated assignment limit.
+* The focused regression passes 3 suites and 39 tests across `nonBattleSpellEffects.test.js`, `spellSetup.test.js`, and `SpellTokenAssignment.test.jsx`.
+* Coverage verifies committed Grey still grants adjacent capacity while uncommitted Grey is ignored by calculation, movement enforcement, and rendered limits.
+* The complete Feature-004 regression passes 9 suites and 105 tests, including reward placement accepting committed Grey capacity and rejecting draft Grey capacity.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The broader Gameplay regression reports 13 passing and 6 failing tests due to unrelated stale assertions for three shortened forced-setup messages, removed dice-result copy, and two older player-image style contracts. The cancel test reaches its obsolete image-height assertion before exercising Cancel.
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm save/cancel interaction, displayed capacities, and browser console behavior with real drag/drop.
+
+---
+
+Bug-007: White merge tokens should be removed after merging and merged columns cannot merge again
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Put one White token and one non-White token in column 2, put one White token in column 3, then save and confirm the merge.
+   Expected: The losing column is cleared, the retained column keeps its non-White token, and both White tokens used for the merge are gone.
+2. Inspect the committed spells display after merging columns 2 and 3.
+   Expected: One `2+3` column spans the same two original tracks, shows the retained non-White token, omits the consumed White token, and the surrounding layout remains stable.
+3. Place White tokens in columns 1 and 4 after columns 2 and 3 are merged.
+   Expected: Neither White token can merge with a column already in the `2+3` pair.
+4. Add White tokens to another unused adjacent pair while a prior merged pair exists.
+   Expected: The unused pair can still merge, while no column from the existing pair participates again.
+5. Attempt a third valid merge after two merges have been committed.
+   Expected: No third merge is offered because the existing two-merge limit remains active.
+6. Roll either physical dice value belonging to a merged pair during Battle.
+   Expected: Both values resolve the retained spell column exactly once, with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the bug: the losing column was cleared but the retained column still contained its White merge token.
+* The focused regression passes 2 suites and 19 tests across `nonBattleSpellEffects.test.js` and `CommittedSpellSlots.test.jsx`.
+* Coverage verifies retained White consumption, losing-column clearing, retained non-White preservation, immutable input slots, used-column exclusion, later unused-pair detection, the two-merge limit, `2+3` span/title, stable item count, and merged dice aliases.
+* The complete Feature-004 regression passes 9 suites and 105 tests across spell effects, setup, assignment, rewards, committed display, merge confirmation, battle, context, and translations.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm both confirmation paths, rendered layout stability, Battle behavior, and browser console output.
+
+---
+
+Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+
+Test Status
+
+* passed
+
+Completed Assignment Fix
+
+Manual Regression Steps And Expected Results
+
+1. Commit a merge for columns 1 and 2, then reopen normal Spell Token Assignment.
+   Expected: One assignment item titled `1+2` appears, spans the former width of columns 1 and 2, and the separate column 2 item/drop zone is absent.
+2. Repeat with a merge whose retained active slot is the second physical column.
+   Expected: The merged item remains in physical order, displays tokens from the retained slot, and uses that retained slot as its only drop target.
+3. Open reward-token assignment for a player with a committed merge.
+   Expected: The same merged assignment item and canonical drop zone are displayed.
+4. Drag a movable token into the merged drop zone.
+   Expected: The token is staged against the retained active slot; no separate removed-slot destination is available.
+5. Inspect the assignment DOM and surrounding Token Bag/Trash sections.
+   Expected: Five assignment items render for one merge, the merged item has a two-column span marker, no `ul`/`li` is introduced, and Token Bag/Trash remain unchanged.
+6. Merge columns 1 and 2, commit one Grey token in column 3, and reopen assignment.
+   Expected: Merged `1+2` receives +1 capacity once; a staged uncommitted Grey in column 3 adds no further capacity.
+7. Merge columns 2 and 3 with one committed Grey retained inside the merged group.
+   Expected: Columns 1 and 4 each receive +1 capacity, while non-adjacent columns receive nothing.
+8. Fill a merged column to base capacity, provide committed Grey capacity from its effective neighbour, then place one more token through normal and reward assignment.
+   Expected: Both paths accept the token using the same effective capacity and continue rejecting the removed slot ID.
+9. Remove or stage away required committed Grey support while the merged column exceeds its resulting capacity.
+   Expected: Save is blocked and the validation message identifies the merged `X+X` column.
+
+Automated Tests Completed
+
+* Red-first execution reproduced both slice failures: Spell Token Assignment rendered six physical zones and `moveSpellTokenInDraft` accepted the removed slot ID.
+* The first focused grouping, assignment, and movement regression passes 3 suites and 42 tests.
+* Red-first capacity execution failed in all intended layers: effective Grey capacity, movement, display, reward placement, and removed reward destination handling.
+* The effective-capacity regression passes 4 suites and 54 tests.
+* The complete Feature-004 regression passes 9 suites and 113 tests across spell effects, setup, assignment, rewards, committed display, merge confirmation, battle, context, and translations.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies item count, labels, classes, span metadata, and removed-slot rejection but cannot visually judge real drag geometry or rendered width stability.
+
+Separate Follow-Up
+
+* Bug-009 separately tracks shared effective adjacency for Purple buffs, committed-display calculations, and battle calculations. Its status remains `not started`.
+* Run the nine-step browser regression above for real drag/drop geometry, reward/provider interaction, rendered width stability, and console output.
