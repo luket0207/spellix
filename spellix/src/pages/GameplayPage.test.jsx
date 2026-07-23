@@ -532,6 +532,75 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(within(secondPlayerPotions).queryByText('Roll Choice')).not.toBeInTheDocument();
   });
 
+  test('confirms Board potion use and removes only the selected duplicate', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const boardPotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'copy-and-paste'
+    );
+
+    initialGameSetup.players[0].potions = [boardPotion, boardPotion];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const potionSection = screen.getByRole('region', { name: /potions/i });
+    const useButtons = within(potionSection).getAllByRole('button', { name: 'Use' });
+
+    expect(useButtons).toHaveLength(2);
+    fireEvent.click(useButtons[1]);
+
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText('Are you sure you want to use Copy and Paste?')
+    ).toHaveClass('larger-text', 'language-en');
+    expect(within(confirmation).getByText('Potion Description')).toBeInTheDocument();
+    expect(
+      within(confirmation).getByText(boardPotion.description)
+    ).not.toHaveClass('larger-text');
+
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
+    expect(screen.queryByRole('dialog', { name: /use potion confirmation/i })).not.toBeInTheDocument();
+    expect(within(potionSection).getAllByRole('button', { name: 'Use' })).toHaveLength(2);
+
+    fireEvent.click(within(potionSection).getAllByRole('button', { name: 'Use' })[1]);
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(within(potionSection).getByText('1/3')).toBeInTheDocument();
+    expect(within(potionSection).getAllByRole('button', { name: 'Use' })).toHaveLength(1);
+    expect(initialGameSetup.players[0].currentHealth).toBe(100);
+  });
+
+  test('shows Battle and Mini potions on the board without Use controls', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'bridge-builder'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const potionSection = screen.getByRole('region', { name: /potions/i });
+
+    expect(within(potionSection).getByText('First Aid')).toBeInTheDocument();
+    expect(within(potionSection).getByText('Bridge Builder')).toBeInTheDocument();
+    expect(within(potionSection).queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
+  });
+
   test('locks the temporary dice modal for the full sequence and uses its result for movement', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
     renderGameplayPage();

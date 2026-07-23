@@ -9,13 +9,23 @@ function getExpectedTokenTypes(rarity) {
     .map(([type]) => type);
 }
 
-function getExpectedPotionIds(rarity) {
-  return POTION_DEFINITIONS.filter((potion) => potion.rarity === rarity).map(({ id }) => id);
+function getExpectedPotionIds(rarity, availability = null) {
+  return POTION_DEFINITIONS.filter(
+    (potion) =>
+      potion.rarity === rarity &&
+      (!availability ||
+        potion.availability === 'Both' ||
+        potion.availability === availability)
+  ).map(({ id }) => id);
 }
 
-function selectEveryItem(category, itemCount) {
+function selectEveryItem(category, itemCount, availability) {
   return Array.from({ length: itemCount }, (_, index) =>
-    generateRewardItem(category, () => (index + 0.5) / itemCount)
+    generateRewardItem(
+      category,
+      () => (index + 0.5) / itemCount,
+      availability
+    )
   );
 }
 
@@ -104,6 +114,59 @@ describe('rewardItems', () => {
     expect(selectedIds).not.toEqual(
       expect.arrayContaining(getExpectedPotionIds(rarity === 'Common' ? 'Rare' : 'Common'))
     );
+  });
+
+  test.each([
+    ['Battle', REWARD_CATEGORIES.COMMON_POTION, 'Common'],
+    ['Battle', REWARD_CATEGORIES.RARE_POTION, 'Rare'],
+    ['Board', REWARD_CATEGORIES.COMMON_POTION, 'Common'],
+    ['Board', REWARD_CATEGORIES.RARE_POTION, 'Rare'],
+  ])(
+    'selects only %s-compatible %s potions',
+    (availability, category, rarity) => {
+      const expectedIds = getExpectedPotionIds(rarity, availability);
+      const selectedIds = selectEveryItem(
+        category,
+        expectedIds.length,
+        availability
+      ).map(({ item }) => item.id);
+
+      expect(selectedIds).toEqual(expectedIds);
+    }
+  );
+
+  test('keeps board-only potions out of generated battle choices', () => {
+    const choices = generateBattleRewardChoices(4, () => 0.9999);
+    const potionChoices = choices.filter(({ itemType }) => itemType === 'potion');
+
+    expect(
+      potionChoices.every(({ item }) =>
+        ['Battle', 'Both'].includes(item.availability)
+      )
+    ).toBe(true);
+  });
+
+  test('keeps Mini potions out of standard pools and exposes them to Mini contexts', () => {
+    const miniPotionIds = ['bridge-builder', 'good-decisions', 'cave-runner'];
+    const boardIds = selectEveryItem(
+      REWARD_CATEGORIES.COMMON_POTION,
+      getExpectedPotionIds('Common', 'Board').length,
+      'Board'
+    ).map(({ item }) => item.id);
+    const battleIds = selectEveryItem(
+      REWARD_CATEGORIES.COMMON_POTION,
+      getExpectedPotionIds('Common', 'Battle').length,
+      'Battle'
+    ).map(({ item }) => item.id);
+    const miniIds = selectEveryItem(
+      REWARD_CATEGORIES.COMMON_POTION,
+      getExpectedPotionIds('Common', 'Mini').length,
+      'Mini'
+    ).map(({ item }) => item.id);
+
+    expect(boardIds).not.toEqual(expect.arrayContaining(miniPotionIds));
+    expect(battleIds).not.toEqual(expect.arrayContaining(miniPotionIds));
+    expect(miniIds).toEqual(expect.arrayContaining(miniPotionIds));
   });
 
   test('returns independent item data without mutating the potion catalog', () => {

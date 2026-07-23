@@ -13,6 +13,7 @@ function PotionCapacityProbe() {
     grantPotionToPlayer,
     pendingPotionGrant,
     resolvePendingPotionGrant,
+    consumePlayerPotion,
   } = useGameSetup();
 
   return (
@@ -28,6 +29,9 @@ function PotionCapacityProbe() {
       </button>
       <button type="button" onClick={() => resolvePendingPotionGrant(1)}>
         Replace Second
+      </button>
+      <button type="button" onClick={() => consumePlayerPotion('player-1', 1)}>
+        Use Player 1 Second
       </button>
       <p>{`Player 1 potions: ${gameSetup.players[0].potions.map(({ id }) => id).join(',') || 'none'}`}</p>
       <p>{`Player 2 potions: ${gameSetup.players[1].potions.map(({ id }) => id).join(',') || 'none'}`}</p>
@@ -110,5 +114,20 @@ describe('potion capacity context integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /replace second/i }));
 
     expect(screen.getByText('Player 2 potions: roll-choice,heal,ice-beam')).toBeInTheDocument();
+  });
+
+  test('uses only the selected potion instance when duplicate ids exist', () => {
+    render(
+      <GameSetupProvider
+        initialGameSetup={createPotionSetup([rollChoice, rollChoice, iceBeam])}
+      >
+        <PotionCapacityProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /use player 1 second/i }));
+
+    expect(screen.getByText('Player 1 potions: roll-choice,ice-beam')).toBeInTheDocument();
+    expect(screen.getByText('Player 2 potions: none')).toBeInTheDocument();
   });
 });

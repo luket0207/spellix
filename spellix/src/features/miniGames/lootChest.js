@@ -44,7 +44,7 @@ export function generateLootChestRewards(randomFn = Math.random) {
 
     return {
       id: `loot-reward-${index + 1}`,
-      ...generateRewardItem(category, randomFn),
+      ...generateRewardItem(category, randomFn, 'Board'),
     };
   });
 

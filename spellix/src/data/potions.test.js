@@ -4,203 +4,78 @@ import {
   POTION_DEFINITIONS,
 } from './potions';
 
-const EXPECTED_POTION_NAMES = [
-  'Roll Choice',
-  'Small Heal',
-  'Heal',
-  'First Aid',
-  'Teleport to *',
-  'Copy and Paste',
-  'Gambeller',
-  'Starting Charge',
-  'Tokensmith',
-  'Ice Beam',
-  'Charger',
-  'Heavy Weight',
-  'Troublemaker',
-  'Devine Chance',
-  'Buy and Sell',
-  'Cauldron',
-  'Storm Master',
-  'Double Dice',
-  'Bridge Builder',
-  'Good Decisions',
-  'Cave Runner',
+const EXPECTED_POTIONS = [
+  ['roll-choice', 'Roll Choice', '出目選択', 'Both', 'Rare', 'Choose the next roll of the dice', '次に振るサイコロの出目を選ぶ。', 'blue'],
+  ['small-heal', 'Small Heal', '小回復', 'Both', 'Common', 'Recover 30% HP', 'HPを30％回復する。', 'green'],
+  ['heal', 'Heal', '回復', 'Both', 'Rare', 'Recover 60% HP', 'HPを60％回復する。', 'green'],
+  ['first-aid', 'First Aid', '応急処置', 'Battle', 'Common', 'Recover 50% HP', 'HPを50％回復する。', 'green'],
+  ['copy-and-paste', 'Copy and Paste', 'コピー＆ペースト', 'Board', 'Common', 'Duplicate any common token in your token pouch', 'トークンポーチにある好きなコモントークンを1個複製する。', 'orange'],
+  ['metal-detector', 'Metal Detector', '金属探知機', 'Board', 'Rare', 'Find loot wherever you land this turn.', 'このターンは、どのマスに止まっても戦利品を発見する。', 'yellow'],
+  ['starting-charge', 'Starting Charge', '初期チャージ', 'Board', 'Common', 'If you encounter a battle this turn, all your slots are charged on your first turn in battle', 'このターンにバトルが発生した場合、バトルの最初のターンにすべてのスロットがチャージされる。', 'orange'],
+  ['tokensmith', 'Tokensmith', 'トークン職人', 'Board', 'Common', 'Remove a token from a slot and put it into your token pouch', 'スロットからトークンを1個取り外し、トークンポーチに入れる。', 'grey'],
+  ['redo', 'Redo', 'やり直し', 'Board', 'Rare', 'You can rearrange your tokens as much as you like this turn.', 'このターン中、トークンを好きなだけ並べ替えることができる。', 'yellow'],
+  ['ice-beam', 'Ice Beam', 'アイスビーム', 'Battle', 'Common', 'Freeze your opponent', '対戦相手を凍結させる。', 'light-blue'],
+  ['charger', 'Charger', 'チャージャー', 'Battle', 'Common', 'Charge your attacks next turn', '次のターンの攻撃をチャージする。', 'yellow'],
+  ['heavy-weight', 'Heavy Weight', 'ヘビーウェイト', 'Board', 'Rare', 'The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn.', '自分に最も近いプレイヤー（同じ距離に2人以上いる場合はランダムに選ばれる）は、次のターンのサイコロの出目が半分になる（端数切り上げ）。', 'blue'],
+  ['troublemaker', 'Troublemaker', 'トラブルメーカー', 'Board', 'Rare', 'Choose any other player and roll the dice for your turn. If even they lose 1 token, if odd you lose a token.', '他のプレイヤーを1人選び、このターンのサイコロを振る。出目が偶数ならそのプレイヤーはトークンを1個失い、奇数なら自分がトークンを1個失う。', 'purple'],
+  ['devine-chance', 'Devine Chance', '神の好機', 'Board', 'Common', 'Roll the dice for your turn. If even you heal to full HP. If odd everyone else does.', 'このターンのサイコロを振る。出目が偶数なら、自分のHPが全回復する。奇数なら、自分以外のすべてのプレイヤーのHPが全回復する。', 'green'],
+  ['buy-and-sell', 'Buy and Sell', '売買', 'Board', 'Rare', 'Discard four tokens from your token pouch. Get a choice of 2 random tokens and pick one to gain.', 'トークンポーチからトークンを4個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。', 'orange'],
+  ['cauldron', 'Cauldron', '大釜', 'Board', 'Common', 'Pick one of 3 potions to gain.', '3つのポーションから1つを選んで獲得する。', 'red'],
+  ['storm-master', 'Storm Master', '嵐の支配者', 'Board', 'Rare', 'Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over.', 'このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまる。奇数なら、自分はこのターン移動できず、そのままターンを終了する。', 'red'],
+  ['double-dice', 'Double Dice', 'ダブルダイス', 'Board', 'Common', 'Roll 2 dice this turn.', 'このターンはサイコロを2個振る。', 'blue'],
+  ['bridge-builder', 'Bridge Builder', '橋職人', 'Mini', 'Common', 'Auto win a River Mini Game', '川のミニゲームに自動的に勝利する。', 'light-blue'],
+  ['good-decisions', 'Good Decisions', '賢明な選択', 'Mini', 'Common', 'Remove any forfeits from a decision', '選択によって受けるペナルティをすべて無効にする。', 'orange'],
+  ['cave-runner', 'Cave Runner', '洞窟ランナー', 'Mini', 'Common', 'Escape a cave encounter with no damage but lose any prizes you had.', 'ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。', 'grey'],
+  ['smokescreen', 'Smokescreen', '煙幕', 'Board', 'Common', 'You will not encounter a battle this turn.', 'このターンはバトルが発生しない。', 'grey'],
+  ['cosmic-intervention', 'Cosmic Intervention', '宇宙の介入', 'Battle', 'Common', 'Deal 10 damage to your opponent', '対戦相手に10ダメージを与える。', 'red'],
+  ['shields-down', 'Shields Down', 'シールドダウン', 'Battle', 'Common', 'Remove all guard from your opponent this turn', 'このターン、対戦相手のガードをすべて取り除く。', 'blue'],
+  ['thaw', 'Thaw', '解凍', 'Battle', 'Common', 'Auto unfreeze yourself', '自分の凍結状態を自動的に解除する。', 'orange'],
+  ['sos', 'SOS', 'SOS', 'Board', 'Common', 'Teleport to the field village', 'フィールドの村にテレポートする。', 'light-blue'],
 ];
 
-const EXPECTED_POTION_COLOURS = {
-  'roll-choice': 'blue',
-  'small-heal': 'green',
-  heal: 'green',
-  'first-aid': 'green',
-  'teleport-to-feature': 'yellow',
-  'copy-and-paste': 'orange',
-  gambeller: 'red',
-  'starting-charge': 'yellow',
-  tokensmith: 'grey',
-  'ice-beam': 'light-blue',
-  charger: 'yellow',
-  'heavy-weight': 'blue',
-  troublemaker: 'purple',
-  'devine-chance': 'green',
-  'buy-and-sell': 'orange',
-  cauldron: 'red',
-  'storm-master': 'red',
-  'double-dice': 'blue',
-  'bridge-builder': 'light-blue',
-  'good-decisions': 'orange',
-  'cave-runner': 'grey',
-};
-
-const EXPECTED_JAPANESE_POTIONS = {
-  'roll-choice': ['出目選択', '次に振るサイコロの出目を選ぶ。'],
-  'small-heal': ['小回復', 'HPを30％回復する。'],
-  heal: ['回復', 'HPを60％回復する。'],
-  'first-aid': ['応急処置', 'HPを50％回復する。'],
-  'teleport-to-feature': [
-    '*へテレポート',
-    '*feature*へテレポートし、そこを起点としてサイコロを振る。',
-  ],
-  'copy-and-paste': [
-    'コピー＆ペースト',
-    'トークンポーチにある好きなコモントークンを1個複製する。',
-  ],
-  gambeller: [
-    'ギャンブラー',
-    'トークンポーチから好きなトークンを2個捨て、このターンのサイコロを振る。出目が偶数なら、新しいトークンを1個獲得する。',
-  ],
-  'starting-charge': [
-    '初期チャージ',
-    'このターンにバトルが発生した場合、バトルでの最初のターンに、すべてのスロットが10チャージされる。',
-  ],
-  tokensmith: [
-    'トークン職人',
-    'スロットからトークンを1個取り外し、トークンポーチに入れる。',
-  ],
-  'ice-beam': ['アイスビーム', '対戦相手を凍結させる。'],
-  charger: ['チャージャー', '次のターン、攻撃を5チャージする。'],
-  'heavy-weight': [
-    'ヘビーウェイト',
-    '自分に最も近いプレイヤーは、次のターンのサイコロの出目が半分になる（端数は切り上げ）。同じ距離に複数のプレイヤーがいる場合は、対象をランダムに決める。例：5が出た場合、移動できるのは3マスとなる。',
-  ],
-  troublemaker: [
-    'トラブルメーカー',
-    '他のプレイヤーを1人選び、このターンのサイコロを振る。出目が偶数なら、そのプレイヤーはトークンポーチ内のすべてのトークンを失う。奇数なら、自分がトークンポーチ内のすべてのトークンを失う。',
-  ],
-  'devine-chance': [
-    '神の好機',
-    'このターンのサイコロを振る。出目が偶数なら、自分のHPが全回復する。奇数なら、自分以外のすべてのプレイヤーのHPが全回復する。',
-  ],
-  'buy-and-sell': [
-    '売買',
-    'トークンポーチからトークンを4個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。',
-  ],
-  cauldron: [
-    '大釜',
-    '異なる3つのポーションを確認する。その後ポーションがシャッフルされ、見ずに1つ選んで獲得する。',
-  ],
-  'storm-master': [
-    '嵐の支配者',
-    'このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまる。奇数なら、自分はこのターン移動できず、そのままターンを終了する。',
-  ],
-  'double-dice': ['ダブルダイス', 'このターンはサイコロを2個振る。'],
-  'bridge-builder': ['橋職人', '川のミニゲームに自動的に勝利する。'],
-  'good-decisions': [
-    '賢明な選択',
-    '選択によって受けるペナルティをすべて無効にする。',
-  ],
-  'cave-runner': [
-    '洞窟ランナー',
-    'ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。',
-  ],
-};
+function toComparablePotion(potion) {
+  return [
+    potion.id,
+    potion.name,
+    potion.japaneseName,
+    potion.availability,
+    potion.rarity,
+    potion.description,
+    potion.japaneseDescription,
+    potion.colour,
+  ];
+}
 
 describe('potion definitions', () => {
-  test('contains every preliminary potion with required data', () => {
-    expect(POTION_DEFINITIONS.map(({ name }) => name)).toEqual(EXPECTED_POTION_NAMES);
-    expect(POTION_DEFINITIONS).toHaveLength(21);
-
-    POTION_DEFINITIONS.forEach((potion) => {
-      expect(potion).toEqual({
-        availability: expect.stringMatching(/^(Both|Battle|Board)$/),
-        colour: EXPECTED_POTION_COLOURS[potion.id],
-        description: expect.any(String),
-        id: expect.any(String),
-        japaneseDescription: expect.any(String),
-        japaneseName: expect.any(String),
-        name: expect.any(String),
-        rarity: expect.stringMatching(/^(Common|Rare)$/),
-      });
-      expect(potion.description).not.toHaveLength(0);
-      expect(potion.japaneseDescription).not.toHaveLength(0);
-      expect(potion.japaneseName).not.toHaveLength(0);
-    });
+  test('matches the complete revamped source-of-truth table', () => {
+    expect(POTION_DEFINITIONS.map(toComparablePotion)).toEqual(EXPECTED_POTIONS);
+    expect(POTION_DEFINITIONS).toHaveLength(26);
+    expect(new Set(POTION_DEFINITIONS.map(({ id }) => id)).size).toBe(26);
   });
 
-  test('contains the exact Japanese name and description for every potion', () => {
-    expect(
-      Object.fromEntries(
-        POTION_DEFINITIONS.map(({ id, japaneseDescription, japaneseName }) => [
-          id,
-          [japaneseName, japaneseDescription],
-        ])
-      )
-    ).toEqual(EXPECTED_JAPANESE_POTIONS);
+  test('contains no deprecated potion records', () => {
+    expect(POTION_DEFINITIONS.map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining(['teleport-to-feature', 'gambeller'])
+    );
   });
 
-  test('selects text by language and safely falls back to English', () => {
-    const potion = POTION_DEFINITIONS[0];
+  test('supports exact Japanese text and English fallback helpers', () => {
+    const rollChoice = POTION_DEFINITIONS[0];
 
-    expect(getPotionName(potion, 'jp')).toBe('出目選択');
-    expect(getPotionDescription(potion, 'jp')).toBe(
+    expect(getPotionName(rollChoice, 'jp')).toBe('出目選択');
+    expect(getPotionDescription(rollChoice, 'jp')).toBe(
       '次に振るサイコロの出目を選ぶ。'
     );
-    expect(getPotionName(potion, 'en')).toBe('Roll Choice');
-    expect(getPotionName(potion)).toBe('Roll Choice');
-    expect(getPotionDescription(potion, 'invalid')).toBe(potion.description);
-    expect(getPotionName({ name: 'Fallback', japaneseName: '' }, 'jp')).toBe(
-      'Fallback'
+    expect(getPotionName(rollChoice, 'en')).toBe('Roll Choice');
+    expect(getPotionName(rollChoice, 'invalid')).toBe('Roll Choice');
+    expect(getPotionDescription(rollChoice, 'invalid')).toBe(
+      'Choose the next roll of the dice'
+    );
+    expect(getPotionName({ ...rollChoice, japaneseName: '' }, 'jp')).toBe(
+      'Roll Choice'
     );
     expect(
-      getPotionDescription(
-        { description: 'Fallback description', japaneseDescription: '' },
-        'jp'
-      )
-    ).toBe('Fallback description');
-  });
-
-  test('preserves exact requirement values for representative potions', () => {
-    expect(POTION_DEFINITIONS.find(({ name }) => name === 'Roll Choice')).toEqual({
-      availability: 'Both',
-      colour: 'blue',
-      description: 'Choose the next roll of the dice',
-      id: 'roll-choice',
-      japaneseDescription: '次に振るサイコロの出目を選ぶ。',
-      japaneseName: '出目選択',
-      name: 'Roll Choice',
-      rarity: 'Rare',
-    });
-    expect(POTION_DEFINITIONS.find(({ name }) => name === 'Teleport to *')).toEqual({
-      availability: 'Board',
-      colour: 'yellow',
-      description: 'Teleport to *feature*, then roll the dice starting from there.',
-      id: 'teleport-to-feature',
-      japaneseDescription:
-        '*feature*へテレポートし、そこを起点としてサイコロを振る。',
-      japaneseName: '*へテレポート',
-      name: 'Teleport to *',
-      rarity: 'Common',
-    });
-    expect(POTION_DEFINITIONS.find(({ name }) => name === 'Cave Runner')).toEqual({
-      availability: 'Board',
-      colour: 'grey',
-      description: 'Escape a cave encounter with no damage but lose any prizes you had.',
-      id: 'cave-runner',
-      japaneseDescription:
-        'ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。',
-      japaneseName: '洞窟ランナー',
-      name: 'Cave Runner',
-      rarity: 'Common',
-    });
+      getPotionDescription({ ...rollChoice, japaneseDescription: '' }, 'jp')
+    ).toBe('Choose the next roll of the dice');
   });
 });

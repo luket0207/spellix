@@ -617,3 +617,139 @@ Manual Testing Still Needed
 
 * Run the seven-step browser regression above for real turn progression, every merge pattern, rendered buff state, and console inspection.
 * Bug-011 remains a separate `not started` entry and was not evaluated or updated in this Bug-010 pass.
+
+---
+
+Feature-005: Replace potion data with revamped source-of-truth potion table
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open the debug potion selector and inspect every option.
+   Expected: Exactly 26 potions are available in source-table order; Teleport to * and Gambeller are absent.
+2. Grant several changed and new potions, then inspect the inventory in English.
+   Expected: The exact English names and descriptions from the source table appear with the existing potion icon layout.
+3. Switch the same inventory to Japanese, then switch to an invalid or missing language value if the browser flow permits it.
+   Expected: Exact Japanese names and descriptions appear for Japanese; unsupported language values fall back to English.
+4. Generate Common and Rare battle potion rewards repeatedly.
+   Expected: Every potion matches the requested rarity and has Battle or Both availability.
+5. Generate Common and Rare Cave and Loot Chest potion rewards repeatedly.
+   Expected: Every potion matches the requested rarity and has Board or Both availability; existing reward ordering is unchanged.
+6. Grant a potion to a player with an available slot, then grant one to a player with full potion slots and exercise replacement and discard.
+   Expected: Existing slot, replacement, discard, save, and reset behavior remains unchanged.
+7. Inspect representative potion colours, including Grey, Light Blue, Purple, and Red.
+   Expected: Existing potion icon colour classes render the source-table colour without changing token colours.
+8. Inspect the browser console throughout the regression.
+   Expected: No missing potion, translation, or rendering errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced 6 intended failures with 33 passing tests: the old 21-entry table remained, deprecated records remained, and reward generation ignored Battle/Board context.
+* The focused data and generation regression passes 4 suites and 39 tests.
+* The complete isolated potion regression passes 11 suites and 83 tests across the exact dataset contract, localization, icons, inventory, debug selection, battle rewards, Cave and Loot Chest generation, reward resolution, grants, and replacement flows.
+* Coverage verifies all 26 complete metadata records, unique stable ids, deprecated-record removal, exact Devine Chance spelling, English fallback, every rarity/context pool, and context-safe generated rewards.
+* A broader 15-suite run passed 138 tests and exposed 9 unrelated stale assertions in existing Battle-level copy, Gameplay copy/style, and Reward button-class tests. The one potion-related stale debug count was updated and now passes.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplies the available ESLint compile check.
+* New potion mechanics were intentionally not implemented because this feature is data-only.
+* JSDOM verifies metadata and rendered DOM behavior but cannot visually judge colours or inspect a real browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above for rendered colours, real reward interaction, save/reset behavior, and console inspection.
+* Bug-011 remains a separate `not started` entry and was not evaluated or updated in this Feature-005 pass.
+
+---
+
+Bug-011: Buffed merged columns must apply buffs to both original roll numbers regardless of buff direction
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Merge columns 2 and 3 and retain either original column as the active spell slot.
+   Expected: The committed display shows one effective `2+3` column.
+2. Put one Purple token in column 1, resolve column 1, and advance through the opponent turn.
+   Expected: The merged `2+3` column is shown as buffed once.
+3. Put one Blue token in merged `2+3`, roll 2, and resolve the turn.
+   Expected: The player gains 10 guard: 5 from Blue plus one 5-point Purple buff.
+4. Repeat the left-source setup and roll 3.
+   Expected: The player gains the same 10 guard and the buff is not applied twice.
+5. Repeat steps 2 through 4 with the Purple source in column 4.
+   Expected: Both roll 2 and roll 3 apply the same merged-column buff regardless of source direction.
+6. Repeat representative edge and middle merges, then check a non-merged Purple target.
+   Expected: Every raw number in a merged target resolves to its one effective buff, while non-merged behavior is unchanged.
+7. If comparing Red damage against Hellcrown Reaper, account for its roll-2 Green reduction.
+   Expected: Raw Purple-buffed damage is the same for the merged roll aliases even though final health loss can differ because opponent defenses use their own rolled column.
+8. Inspect the browser console throughout the regression.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The reported production failure could not be reproduced. The initial new-test failures were test-probe expectation errors: guard was read from the wrong state object and source column 4 correctly buffed its other adjacent column 5 as well.
+* The corrected focused battle-context suite passes 1 suite and 16 tests.
+* Four new end-to-end cases verify Purple creation from column 1 and column 4, canonical `2+3` pending and active storage, consumption through roll 2 and roll 3, and exactly one 5-point buff through a 10-guard assertion.
+* The broader merged-column regression passes 109 of 110 tests across 5 suites. The only failure is an unrelated stale BattlePage assertion for removed `Dice result: 1` copy; all effective-column, battle calculation, context, Purple display, and Purple consumption tests pass.
+* Existing coverage also verifies every possible merged pair, either retained active side, effective adjacency, non-merged Purple behavior, and one visual buff marker per merged group.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, calculations, and visual classes but cannot visually inspect a real browser or its console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to verify real turn timing, visible buff markers, each merge layout, and console output.
+* Bug-012 remains a separate `not started` entry and was not evaluated or updated in this Bug-011 pass.
+
+---
+
+Bug-012: Update Bridge Builder, Good Decisions, and Cave Runner potion availability to Mini
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open the debug potion selector and inspect Bridge Builder, Good Decisions, and Cave Runner.
+   Expected: All three remain available by their existing names and retain their existing translations, descriptions, rarities, and colours.
+2. Inspect the central data or a debug metadata view for the three affected potions.
+   Expected: Each has `Mini` availability; no other potion metadata changed.
+3. Generate standard Common Board potion rewards repeatedly.
+   Expected: Bridge Builder, Good Decisions, and Cave Runner never appear.
+4. Generate Common Battle potion rewards repeatedly.
+   Expected: The three Mini potions never appear.
+5. Exercise an explicitly Mini-aware Common potion selection.
+   Expected: All three Mini potions can be selected, alongside any `Both` potions allowed by the existing context rule.
+6. Exercise existing Bridge Builder, Good Decisions, and Cave Runner interactions where those mechanics are available.
+   Expected: Their behavior is unchanged because only availability metadata changed.
+7. Generate Cave and Loot Chest rewards and inspect the browser console.
+   Expected: Existing reward ordering and token behavior remain unchanged, and no errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-012 with 2 intended failures and 24 passing tests: the exact table still contained three `Board` values and the standard Board pool selected all three IDs.
+* The focused potion data and reward generation regression passes 2 suites and 26 tests.
+* The broader potion consumer regression passes 9 suites and 73 tests across the exact 26-record table, context-aware generation, Cave and Loot Chest generation and resolution, grants, inventory, icons, and debug selection.
+* Coverage verifies all three exact `Mini` values, exclusion from standard Board and Battle pools, inclusion in an explicit Mini pool, and preservation of every other source-table field.
+* `npm run build` compiles successfully after Create React App/ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* The three potion mechanics were not changed or added in this data-only bug fix; existing behavior is protected by leaving all non-data production files untouched.
+* JSDOM cannot inspect a real browser console or manually exercise any potion mechanic that is not yet connected to an automated flow.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above for debug metadata, real reward draws, available potion interactions, and console inspection.

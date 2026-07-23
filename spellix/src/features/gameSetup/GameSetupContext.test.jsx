@@ -201,6 +201,9 @@ function PurpleResolutionProbe() {
       <button type="button" onClick={() => applyBattleDiceResult(3)}>
         Apply slot 3
       </button>
+      <button type="button" onClick={() => applyBattleDiceResult(4)}>
+        Apply slot 4
+      </button>
       <button type="button" onClick={advanceBattleTurn}>
         Advance battle
       </button>
@@ -221,8 +224,10 @@ function PurpleResolutionProbe() {
         Resolve even freeze
       </button>
       <p>{`Player Purple buffs: ${activeBattle?.playerPurpleBuffs?.join(',')}`}</p>
+      <p>{`Player next Purple buffs: ${activeBattle?.playerNextPurpleBuffs?.join(',') ?? 'none'}`}</p>
       <p>{`Enemy Purple buffs: ${activeBattle?.enemyPurpleBuffs?.join(',')}`}</p>
       <p>{`Player charged: ${activeBattle?.playerCharged}`}</p>
+      <p>{`Player guard: ${activeBattle?.playerGuard}`}</p>
       <p>{`Enemy health: ${battleEnemy?.currentHealth}`}</p>
     </div>
   );
@@ -520,6 +525,78 @@ test.each([
     expect(
       screen.getByText(`Enemy health: ${expectedEnemyHealth}`)
     ).toBeInTheDocument();
+  }
+);
+
+test.each([
+  [1, 2],
+  [1, 3],
+  [4, 2],
+  [4, 3],
+])(
+  'applies one merged 2+3 Purple buff from source %i when rolled as %i',
+  (sourceColumn, targetRoll) => {
+    const initialGameSetup = createFreezeSetup({
+      activeBattle: {
+        currentBattleActor: 'player',
+        enemyCurrentHealth: 120,
+        enemyFreezeUses: [0, 0, 0, 0, 0, 0],
+        enemyFrozen: false,
+        enemyGuard: 0,
+        enemyId: 'hellcrown-reaper',
+        enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
+        isResolvingTurn: false,
+        level: 4,
+        outcome: null,
+        pendingEffects: [],
+        phase: 'active',
+        playerFreezeUses: [0, 0, 0, 0, 0, 0],
+        playerFrozen: false,
+        playerGuard: 0,
+        playerId: 'player-1',
+        playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
+      },
+    });
+
+    initialGameSetup.players[0].spellSlots =
+      initialGameSetup.players[0].spellSlots.map((slot, index) => ({
+        ...slot,
+        tokens:
+          index === sourceColumn - 1
+            ? [{ committed: true, id: 'purple-source', type: 'purple' }]
+            : index === 1
+              ? [{ committed: true, id: 'blue-merged', type: 'blue' }]
+              : [],
+      }));
+    initialGameSetup.players[0].mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <PurpleResolutionProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: `Apply slot ${sourceColumn}` })
+    );
+    const expectedNextBuffs =
+      sourceColumn === 1 ? '0,5,0,0,0,0' : '0,5,0,0,5,0';
+    expect(
+      screen.getByText(`Player next Purple buffs: ${expectedNextBuffs}`)
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /advance battle/i }));
+    expect(
+      screen.getByText(`Player Purple buffs: ${expectedNextBuffs}`)
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /advance battle/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: `Apply slot ${targetRoll}` })
+    );
+
+    expect(screen.getByText(/player guard: 10/i)).toBeInTheDocument();
   }
 );
 

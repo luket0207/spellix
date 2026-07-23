@@ -14,6 +14,7 @@ import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup'
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import PotionList from '../features/potions/PotionList';
+import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
 import SpellsModal from '../features/spells/SpellsModal';
@@ -33,6 +34,7 @@ import {
   getGameplayLanguage,
   getGameplayTranslations,
   getNextTurnMessage,
+  getPotionUsageTranslations,
   getRiverMiniGameTranslations,
   getSpellAssignmentTranslations,
 } from '../i18n/translations';
@@ -51,6 +53,7 @@ function GameplayPage() {
     pendingNextTurnModal,
     setPlayerPosition,
     updatePlayerSpells,
+    consumePlayerPotion,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
   const [draftSpellSlots, setDraftSpellSlots] = useState([]);
@@ -62,11 +65,13 @@ function GameplayPage() {
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [mergeSaveDraft, setMergeSaveDraft] = useState(null);
+  const [pendingPotionUse, setPendingPotionUse] = useState(null);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
   const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
   const riverMiniGameTranslations = getRiverMiniGameTranslations(currentLanguage);
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
+  const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
   const showSpellsNotification = Boolean(currentPlayer?.tokenBag?.length);
@@ -94,6 +99,17 @@ function GameplayPage() {
   const isSpellSaveDisabled = isForcedSpellSetup
     ? !isStartingSetupComplete || overCapacityColumns.length > 0
     : !hasUnsavedSpellChanges || overCapacityColumns.length > 0;
+
+  const handleConfirmPotionUse = () => {
+    if (pendingPotionUse) {
+      consumePlayerPotion(
+        pendingPotionUse.playerId,
+        pendingPotionUse.potionIndex
+      );
+    }
+
+    setPendingPotionUse(null);
+  };
 
   useEffect(() => {
     if (gameSetup.turnOrder.length === 0 && gameSetup.players.length > 0) {
@@ -443,12 +459,29 @@ function GameplayPage() {
         ) : null}
 
         <PotionList
+          context="board"
           language={currentLanguage}
           languageClassName={languageClassName}
+          onUsePotion={(potion, potionIndex) =>
+            setPendingPotionUse({
+              playerId: currentPlayer.id,
+              potion,
+              potionIndex,
+            })
+          }
           potions={currentPlayer?.potions ?? []}
           title={gameplayTranslations.potions}
+          useText={potionUsageTranslations.use}
         />
       </section>
+
+      <PotionUseConfirmationModal
+        isOpen={Boolean(pendingPotionUse)}
+        language={currentLanguage}
+        onCancel={() => setPendingPotionUse(null)}
+        onConfirm={handleConfirmPotionUse}
+        potion={pendingPotionUse?.potion}
+      />
 
       <SpellsModal
         currentPlayer={currentPlayer}

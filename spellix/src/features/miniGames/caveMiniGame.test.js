@@ -126,6 +126,8 @@ test('generates exact potion objects with 20 percent rare and 80 percent common 
 
   expect(rarePotion).toMatchObject({ id: expect.any(String), rarity: 'Rare' });
   expect(commonPotion).toMatchObject({ id: expect.any(String), rarity: 'Common' });
+  expect(['Board', 'Both']).toContain(rarePotion.availability);
+  expect(['Board', 'Both']).toContain(commonPotion.availability);
   expect(rarePotion).toHaveProperty('japaneseName');
   expect(commonPotion).toHaveProperty('name');
 });

@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../../data/potions';
 import PotionList from './PotionList';
 
@@ -92,6 +92,38 @@ describe('PotionList', () => {
     expect(within(potionSection).getByText('0/3')).toBeInTheDocument();
   });
 
+  test('shows aligned Use controls only for Board and Both potions', () => {
+    const onUsePotion = jest.fn();
+    const potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'bridge-builder'),
+    ];
+
+    const { container } = render(
+      <PotionList
+        context="board"
+        onUsePotion={onUsePotion}
+        potions={potions}
+        useText="Use"
+      />
+    );
+
+    const slots = container.querySelectorAll('.potion-slot');
+
+    expect(slots).toHaveLength(4);
+    expect(container.querySelectorAll('.potion-use-button-space')).toHaveLength(4);
+    expect(within(slots[0]).getByRole('button', { name: 'Use' })).toBeInTheDocument();
+    expect(within(slots[1]).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(slots[2]).getByRole('button', { name: 'Use' })).toBeInTheDocument();
+    expect(within(slots[3]).queryByRole('button')).not.toBeInTheDocument();
+    expect(container.querySelector('ul, li')).toBeNull();
+
+    fireEvent.click(within(slots[2]).getByRole('button', { name: 'Use' }));
+    expect(onUsePotion).toHaveBeenCalledWith(potions[2], 2);
+  });
+
   test('mirrors the committed spell display styling without scrollbars', () => {
     const componentSource = readFileSync(`${__dirname}/PotionList.jsx`, 'utf8');
     const stylesheet = readFileSync(`${__dirname}/PotionList.css`, 'utf8');
@@ -130,6 +162,9 @@ describe('PotionList', () => {
     expect(stylesheet).toMatch(/\.potion-slot\s*{[^}]*border-radius:\s*8px;/s);
     expect(stylesheet).toMatch(
       /\.potion-slot\s*{[^}]*linear-gradient\(180deg, rgba\(92, 63, 35, 0\.1\), rgba\(255, 255, 255, 0\.12\)\),[^}]*rgba\(255, 248, 229, 0\.7\);/s
+    );
+    expect(stylesheet).toMatch(
+      /\.potion-use-button-space\s*{[^}]*min-height:[^;]+;[^}]*display:\s*flex;/s
     );
     expect(stylesheet).not.toMatch(/\.potion-slot p\s*{/);
     expect(stylesheet).not.toMatch(/overflow(?:-x|-y)?:\s*(?:auto|scroll);/);

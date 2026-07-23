@@ -13,6 +13,25 @@ const GAMEPLAY_TRANSLATIONS = {
   },
 };
 
+const POTION_USAGE_TRANSLATIONS = {
+  en: {
+    confirmUse: (potionName) => `Are you sure you want to use ${potionName}?`,
+    descriptionTitle: 'Potion Description',
+    no: 'No',
+    use: 'Use',
+    yes: 'Yes',
+  },
+  jp: {
+    confirmUse: (potionName) =>
+      `${potionName}\u3092\u4f7f\u7528\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f`,
+    descriptionTitle:
+      '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
+    no: '\u3044\u3044\u3048',
+    use: '\u4f7f\u7528\u3059\u308b',
+    yes: '\u306f\u3044',
+  },
+};
+
 const REWARD_PAGE_TRANSLATIONS = {
   en: {
     choose: 'Choose',
@@ -265,6 +284,10 @@ export function getGameplayLanguage(language) {
 
 export function getGameplayTranslations(language) {
   return GAMEPLAY_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
+export function getPotionUsageTranslations(language) {
+  return POTION_USAGE_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
 export function getRewardPageTranslations(language) {

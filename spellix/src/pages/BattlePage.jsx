@@ -13,6 +13,8 @@ import DeathResult from '../features/death/DeathResult';
 import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
+import BattlePotionList from '../features/potions/BattlePotionList';
+import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
 import {
   getBattleLossMessage,
   getBattleTitle,
@@ -22,6 +24,7 @@ import {
   getGameplayTranslations,
   getMiniGameFailureTranslations,
   getPlayerColourDisplayName,
+  getPotionUsageTranslations,
 } from '../i18n/translations';
 import './BattlePage.css';
 
@@ -95,6 +98,7 @@ function BattlePage() {
     setActiveBattlePhase,
     setPlayerHealth,
     setPlayerPosition,
+    consumePlayerPotion,
   } = useGameSetup();
   const lastDiceRollRef = useRef(null);
   const turnTransitionTimeoutRef = useRef(null);
@@ -108,12 +112,14 @@ function BattlePage() {
   const [isBattleDiceRolling, setIsBattleDiceRolling] = useState(false);
   const [pendingEnemyAttackAfterFreeze, setPendingEnemyAttackAfterFreeze] = useState(false);
   const [showLoseModal, setShowLoseModal] = useState(false);
+  const [pendingPotionUse, setPendingPotionUse] = useState(null);
   const hasBattleContext = Boolean(activeBattle && battleEnemy && battlePlayer);
   const isActiveBattle = Boolean(activeBattle?.phase === 'active' && battlePlayer);
   const [showTurnModal, setShowTurnModal] = useState(isActiveBattle);
   const currentLanguage = getGameplayLanguage(battlePlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
   const failureTranslations = getMiniGameFailureTranslations(currentLanguage);
+  const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
 
   advanceBattleTurnRef.current = advanceBattleTurn;
@@ -217,6 +223,13 @@ function BattlePage() {
       !isPlayerTurn ||
       isBattleDiceRolling
   );
+  const areBattlePotionsDisabled = Boolean(
+    showTurnModal ||
+      activeBattle.isResolvingTurn ||
+      !isActiveBattle ||
+      !isPlayerTurn ||
+      isBattleDiceRolling
+  );
   const turnActorName = isPlayerTurn
     ? getPlayerColourDisplayName(currentLanguage, battlePlayer.colour)
     : enemyDisplayName;
@@ -301,6 +314,14 @@ function BattlePage() {
       id: (currentRequest?.id ?? 0) + 1,
       value,
     }));
+  };
+
+  const handleConfirmPotionUse = () => {
+    if (pendingPotionUse) {
+      consumePlayerPotion(battlePlayer.id, pendingPotionUse.potionIndex);
+    }
+
+    setPendingPotionUse(null);
   };
 
   return (
@@ -419,6 +440,15 @@ function BattlePage() {
       </div>
 
       <div className="battle-dice">
+        <BattlePotionList
+          disabled={areBattlePotionsDisabled}
+          language={currentLanguage}
+          onUsePotion={(potion, potionIndex) =>
+            setPendingPotionUse({ potion, potionIndex })
+          }
+          potions={battlePlayer.potions}
+          useText={potionUsageTranslations.use}
+        />
         {isFreezeCheck && !showTurnModal ? <p>Roll to see if you unfreeze</p> : null}
         <DiceRoll
           autoRoll={shouldAutoRollEnemy}
@@ -433,6 +463,14 @@ function BattlePage() {
           rollButtonLabel={gameplayTranslations.rollDice}
         />
       </div>
+
+      <PotionUseConfirmationModal
+        isOpen={Boolean(pendingPotionUse)}
+        language={currentLanguage}
+        onCancel={() => setPendingPotionUse(null)}
+        onConfirm={handleConfirmPotionUse}
+        potion={pendingPotionUse?.potion}
+      />
 
       {/* DEBUG ONLY: Floating battle debug controls. Remove before production. */}
       <div className="battle-debug-controls">

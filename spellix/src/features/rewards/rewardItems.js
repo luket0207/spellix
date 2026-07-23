@@ -9,24 +9,34 @@ const REWARD_ITEM_REQUIREMENTS = {
   [REWARD_CATEGORIES.RARE_POTION]: { itemType: 'potion', rarity: 'Rare' },
 };
 
-function getEligibleItems({ itemType, rarity }) {
+function getEligibleItems({ itemType, rarity }, availability) {
   if (itemType === 'token') {
     return Object.entries(TOKEN_DEFINITIONS)
       .filter(([, definition]) => definition.rarity === rarity)
       .map(([type, definition]) => ({ type, ...definition }));
   }
 
-  return POTION_DEFINITIONS.filter((potion) => potion.rarity === rarity);
+  return POTION_DEFINITIONS.filter(
+    (potion) =>
+      potion.rarity === rarity &&
+      (!availability ||
+        potion.availability === 'Both' ||
+        potion.availability === availability)
+  );
 }
 
-export function generateRewardItem(category, randomFn = Math.random) {
+export function generateRewardItem(
+  category,
+  randomFn = Math.random,
+  availability = null
+) {
   const requirement = REWARD_ITEM_REQUIREMENTS[category];
 
   if (!requirement) {
     return null;
   }
 
-  const eligibleItems = getEligibleItems(requirement);
+  const eligibleItems = getEligibleItems(requirement, availability);
 
   if (eligibleItems.length === 0) {
     return null;
@@ -49,6 +59,6 @@ export function generateBattleRewardChoices(battleLevel, randomFn = Math.random)
 
   return categories.map((category, index) => ({
     id: `reward-choice-${index + 1}`,
-    ...generateRewardItem(category, randomFn),
+    ...generateRewardItem(category, randomFn, 'Battle'),
   }));
 }

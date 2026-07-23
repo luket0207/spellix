@@ -38,6 +38,9 @@ describe('lootChest', () => {
 
       expect(generatedReward).toMatchObject({ category, itemType });
       expect(generatedReward.item.rarity).toBe(rarity);
+      if (itemType === 'potion') {
+        expect(['Board', 'Both']).toContain(generatedReward.item.availability);
+      }
     }
   );
 

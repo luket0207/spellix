@@ -2071,3 +2071,386 @@ Testing Checkpoints
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Replace potion data with revamped source-of-truth potion table
+
+Status
+
+* done
+
+Completed Implementation
+
+* Replaced the central flat potion dataset with the exact 26-entry table from this feature.
+* Removed the deprecated Teleport to * and Gambeller records and added every new potion record.
+* Preserved the existing lower-case colour identifiers because they map directly to the existing potion icon CSS classes.
+* Added Battle/Both filtering to battle potion rewards and Board/Both filtering to Cave and Loot Chest potion rewards.
+* Reused the existing potion icon, inventory, debug, grant, discard, and replacement flows without adding potion mechanics, components, styling, or ordering changes.
+
+Related Feature
+
+* EPIC-003 Feature-002: Add player spell slots and token assignment
+* EPIC-010 Feature-012: Add Cave reward generation
+* EPIC-010 Feature-014: Add Cave reward granting
+* EPIC-011 Feature-001: Add Loot Chest page
+* EPIC-011 Feature-002: Add ordered Cave Game reward resolution flow
+
+Goal
+
+* Replace the game’s current potion data with the new revamped potion table.
+* Treat the table in this feature as the single source of truth for potion data.
+* Remove any existing potion that is not present in this table.
+* Update any existing potion whose name, Japanese name, battle/board usage, rarity, description, Japanese description, or colour has changed.
+* Do not change potion functionality in this feature.
+
+Scope
+
+* Replace potion metadata.
+* Update English potion names.
+* Update Japanese potion names.
+* Update battle/board availability.
+* Update rarity.
+* Update English descriptions.
+* Update Japanese descriptions.
+* Update potion colour.
+* Remove deprecated potion records.
+* Add newly introduced potion records.
+* Preserve all current potion functionality and use flows.
+
+Core Rule
+
+* The table below is the source of truth.
+* The safest implementation is to remove all current potion data from the game and replace it with this table.
+* Any potion not listed here should no longer exist in the game.
+* Any potion listed here should exist exactly as described here.
+* Potion functionality should not be touched unless a data field requires the existing function to point at the correct potion entry.
+
+Potion Source Of Truth
+
+```txt id="bmvvl1"
+Name	Japanese Name	Battle/Board	Rarity	Description	Japanese Description	Colour
+Roll Choice	出目選択	Both	Rare	Choose the next roll of the dice	次に振るサイコロの出目を選ぶ。	Blue
+Small Heal	小回復	Both	Common	Recover 30% HP	HPを30％回復する。	Green
+Heal	回復	Both	Rare	Recover 60% HP	HPを60％回復する。	Green
+First Aid	応急処置	Battle	Common	Recover 50% HP	HPを50％回復する。	Green
+Copy and Paste	コピー＆ペースト	Board	Common	Duplicate any common token in your token pouch	トークンポーチにある好きなコモントークンを1個複製する。	Orange
+Metal Detector	金属探知機	Board	Rare	Find loot wherever you land this turn.	このターンは、どのマスに止まっても戦利品を発見する。	Yellow
+Starting Charge	初期チャージ	Board	Common	If you encounter a battle this turn, all your slots are charged on your first turn in battle	このターンにバトルが発生した場合、バトルの最初のターンにすべてのスロットがチャージされる。	Orange
+Tokensmith	トークン職人	Board	Common	Remove a token from a slot and put it into your token pouch	スロットからトークンを1個取り外し、トークンポーチに入れる。	Grey
+Redo	やり直し	Board	Rare	You can rearrange your tokens as much as you like this turn.	このターン中、トークンを好きなだけ並べ替えることができる。	Yellow
+Ice Beam	アイスビーム	Battle	Common	Freeze your opponent	対戦相手を凍結させる。	Light Blue
+Charger	チャージャー	Battle	Common	Charge your attacks next turn	次のターンの攻撃をチャージする。	Yellow
+Heavy Weight	ヘビーウェイト	Board	Rare	The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn.	自分に最も近いプレイヤー（同じ距離に2人以上いる場合はランダムに選ばれる）は、次のターンのサイコロの出目が半分になる（端数切り上げ）。	Blue
+Troublemaker	トラブルメーカー	Board	Rare	Choose any other player and roll the dice for your turn. If even they lose 1 token, if odd you lose a token.	他のプレイヤーを1人選び、このターンのサイコロを振る。出目が偶数ならそのプレイヤーはトークンを1個失い、奇数なら自分がトークンを1個失う。	Purple
+Devine Chance	神の好機	Board	Common	Roll the dice for your turn. If even you heal to full HP. If odd everyone else does.	このターンのサイコロを振る。出目が偶数なら、自分のHPが全回復する。奇数なら、自分以外のすべてのプレイヤーのHPが全回復する。	Green
+Buy and Sell	売買	Board	Rare	Discard four tokens from your token pouch. Get a choice of 2 random tokens and pick one to gain.	トークンポーチからトークンを4個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。	Orange
+Cauldron	大釜	Board	Common	Pick one of 3 potions to gain.	3つのポーションから1つを選んで獲得する。	Red
+Storm Master	嵐の支配者	Board	Rare	Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over.	このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまる。奇数なら、自分はこのターン移動できず、そのままターンを終了する。	Red
+Double Dice	ダブルダイス	Board	Common	Roll 2 dice this turn.	このターンはサイコロを2個振る。	Blue
+Bridge Builder	橋職人	Board	Common	Auto win a River Mini Game	川のミニゲームに自動的に勝利する。	Light Blue
+Good Decisions	賢明な選択	Board	Common	Remove any forfeits from a decision	選択によって受けるペナルティをすべて無効にする。	Orange
+Cave Runner	洞窟ランナー	Board	Common	Escape a cave encounter with no damage but lose any prizes you had.	ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。	Grey
+Smokescreen	煙幕	Board	Common	You will not encounter a battle this turn.	このターンはバトルが発生しない。	Grey
+Cosmic Intervention	宇宙の介入	Battle	Common	Deal 10 damage to your opponent	対戦相手に10ダメージを与える。	Red
+Shields Down	シールドダウン	Battle	Common	Remove all guard from your opponent this turn	このターン、対戦相手のガードをすべて取り除く。	Blue
+Thaw	解凍	Battle	Common	Auto unfreeze yourself	自分の凍結状態を自動的に解除する。	Orange
+SOS	SOS	Board	Common	Teleport to the field village	フィールドの村にテレポートする。	Light Blue
+```
+
+Data Shape Requirement
+
+* Each potion should have at least the following fields:
+
+  * stable id.
+  * English name.
+  * Japanese name.
+  * availability type.
+  * rarity.
+  * English description.
+  * Japanese description.
+  * colour.
+* Availability values should support:
+
+  * `Both`
+  * `Battle`
+  * `Board`
+* Rarity values should support:
+
+  * `Common`
+  * `Rare`
+* Colour values should support:
+
+  * `Blue`
+  * `Green`
+  * `Orange`
+  * `Yellow`
+  * `Grey`
+  * `Light Blue`
+  * `Purple`
+  * `Red`
+
+Suggested Data Direction
+
+```js id="rg0q93"
+{
+  id: "roll-choice",
+  name: {
+    en: "Roll Choice",
+    jp: "出目選択"
+  },
+  availability: "Both",
+  rarity: "Rare",
+  description: {
+    en: "Choose the next roll of the dice",
+    jp: "次に振るサイコロの出目を選ぶ。"
+  },
+  colour: "Blue"
+}
+```
+
+* Exact structure can vary.
+* The important requirement is that all potion displays and reward systems use the new data.
+
+Potion Replacement Requirement
+
+* Remove all existing potion data before adding this table, or otherwise ensure the final dataset exactly matches this table.
+* Do not leave old potion records in the game.
+* Do not keep duplicate potion entries.
+* Do not keep outdated names or descriptions.
+* Do not keep old rarity, colour, or Battle/Board values if they conflict with this table.
+
+Deprecated Potion Requirement
+
+* Any potion that existed previously but is not in this table should be removed from:
+
+  * potion data files.
+  * reward generation pools.
+  * potion inventory displays.
+  * debug potion selectors.
+  * battle potion lists.
+  * board potion lists.
+  * translation maps.
+* Do not allow deprecated potions to appear from loot, cave rewards, debug buttons, or existing generation helpers.
+
+New Potion Requirement
+
+* Add all new potions from this table wherever potion data is consumed.
+* Newly added potions should be available in the correct contexts:
+
+  * `Battle` potions only in battle potion contexts.
+  * `Board` potions only in board potion contexts.
+  * `Both` potions in both battle and board contexts.
+* Newly added potions should appear in reward generation if their rarity and availability allow it.
+
+Functionality Preservation Requirement
+
+* Do not change potion functionality in this feature.
+* Existing potion behaviours should continue to work if the corresponding potion still exists.
+* If a potion has been renamed but uses existing functionality, remap the existing functionality to the new potion id/name.
+* If a newly listed potion does not yet have implemented functionality, it can exist as data but should not break the game.
+* Do not implement new potion mechanics unless they are already supported by existing potion functionality.
+
+Important Distinction
+
+* This feature is a data revamp.
+* It is not a potion functionality implementation feature.
+* The descriptions define the intended potion meaning, but this feature should not rewrite gameplay systems to add missing mechanics.
+* Any missing behaviour can be implemented in later features or bugs.
+
+Reward Generation Requirement
+
+* Potion reward generation should use the new potion table.
+* Common potion rewards should only pull from potions marked `Common`.
+* Rare potion rewards should only pull from potions marked `Rare`.
+* Battle-only potion rewards should not appear in board-only reward contexts unless an existing system explicitly allows battle potions there.
+* Board-only potion rewards should not appear in battle-only reward contexts.
+* Both potions can appear in either context.
+* Loot Chest and Cave reward logic should use this updated potion data without changing their reward sequence.
+
+Potion Inventory Requirement
+
+* Player potion inventory should display the new names, Japanese names, colours, and descriptions.
+* Existing potion slots and potion replacement behaviour should remain unchanged.
+* If a player already has a potion that has been removed from the new table:
+
+  * replace or discard it safely according to existing save/reset behaviour.
+  * do not let the UI crash because the potion id no longer exists.
+* If persistent save data exists only in local/session state, a full reset may be acceptable if that is already normal for the project.
+
+Debug Tool Requirement
+
+* Any debug buttons, debug selectors, or testing helpers for potions should use this new table.
+* Remove deprecated potions from debug controls.
+* Add new potions to debug controls.
+* Preserve existing debug behaviour.
+
+Translation Requirement
+
+* Use the Japanese names and Japanese descriptions exactly as provided in the table.
+* Use existing language selection logic.
+* English UI should display:
+
+  * English name.
+  * English description.
+* Japanese UI should display:
+
+  * Japanese name.
+  * Japanese description.
+* If language is missing or invalid, fall back to English.
+* Do not auto-translate these values in code.
+
+Spelling Requirement
+
+* Preserve potion names exactly as provided.
+* In particular, use:
+
+```txt id="e9kr2p"
+Devine Chance
+```
+
+* Do not silently rename it to `Divine Chance` unless a later feature explicitly says to correct it.
+
+Colour Display Requirement
+
+* Potion colour should use the `Colour` field from this table.
+* If potion icons/cards are colour-coded, update them to match the new colour values.
+* If a colour has no existing style mapping, add a safe style mapping for it.
+* Do not change token colour behaviour.
+
+Battle / Board Availability Requirement
+
+* The `Battle/Board` field controls where the potion can be used or offered.
+* `Battle` means battle-only.
+* `Board` means board-only.
+* `Both` means available in both contexts.
+* Do not infer availability from the description.
+* Use the table value.
+
+Expected Final Potion Count
+
+* The final potion list should contain exactly 26 potions.
+* The final potion list should be:
+
+```txt id="x8g29a"
+Roll Choice
+Small Heal
+Heal
+First Aid
+Copy and Paste
+Metal Detector
+Starting Charge
+Tokensmith
+Redo
+Ice Beam
+Charger
+Heavy Weight
+Troublemaker
+Devine Chance
+Buy and Sell
+Cauldron
+Storm Master
+Double Dice
+Bridge Builder
+Good Decisions
+Cave Runner
+Smokescreen
+Cosmic Intervention
+Shields Down
+Thaw
+SOS
+```
+
+Expected Behaviour
+
+* Potion data in the game matches the new table exactly.
+* Old potions not in this table are removed.
+* Changed potions are updated.
+* New potions are added.
+* Potion names display correctly in English.
+* Potion names display correctly in Japanese.
+* Potion descriptions display correctly in English.
+* Potion descriptions display correctly in Japanese.
+* Potion rarity matches the table.
+* Potion colour matches the table.
+* Potion Battle/Board availability matches the table.
+* Potion reward generation uses the new data.
+* Potion debug tools use the new data.
+* Existing potion functionality still works.
+* No potion functionality is rewritten as part of this feature.
+
+Out Of Scope
+
+* No new potion mechanics.
+* No changes to potion slot count.
+* No changes to potion replacement modal logic.
+* No changes to Cave reward ordering.
+* No changes to Loot Chest reward ordering.
+* No changes to token rewards.
+* No changes to battle damage systems.
+* No changes to board movement systems.
+* No unrelated potion UI redesign.
+* No `ul` or `li` elements in any newly touched UI.
+
+Assumptions
+
+* Potion data is centralised or can be centralised.
+* Potion functionality is connected to potion ids or names.
+* Some old potion names may already have behaviour attached.
+* Some new potion entries may not yet have behaviour implemented.
+* This feature should not fill in missing behaviour unless that behaviour already exists elsewhere.
+
+Stop Point
+
+* Stop once the game’s potion dataset exactly matches the table in this feature, deprecated potions are removed, new potions are added, changed potions are updated, and existing potion functionality still works without being redesigned.
+
+Testing Checkpoints
+
+* Confirm the final potion list contains exactly 26 potions.
+* Confirm every potion in the source-of-truth table exists in the game.
+* Confirm no potion outside the table exists in the game.
+* Confirm Roll Choice data is correct.
+* Confirm Small Heal data is correct.
+* Confirm Heal data is correct.
+* Confirm First Aid data is correct.
+* Confirm Copy and Paste data is correct.
+* Confirm Metal Detector data is correct.
+* Confirm Starting Charge data is correct.
+* Confirm Tokensmith data is correct.
+* Confirm Redo data is correct.
+* Confirm Ice Beam data is correct.
+* Confirm Charger data is correct.
+* Confirm Heavy Weight data is correct.
+* Confirm Troublemaker data is correct.
+* Confirm Devine Chance data is correct and spelling is preserved.
+* Confirm Buy and Sell data is correct.
+* Confirm Cauldron data is correct.
+* Confirm Storm Master data is correct.
+* Confirm Double Dice data is correct.
+* Confirm Bridge Builder data is correct.
+* Confirm Good Decisions data is correct.
+* Confirm Cave Runner data is correct.
+* Confirm Smokescreen data is correct.
+* Confirm Cosmic Intervention data is correct.
+* Confirm Shields Down data is correct.
+* Confirm Thaw data is correct.
+* Confirm SOS data is correct.
+* Confirm English names display correctly.
+* Confirm Japanese names display correctly.
+* Confirm English descriptions display correctly.
+* Confirm Japanese descriptions display correctly.
+* Confirm rarity values match the table.
+* Confirm colour values match the table.
+* Confirm Battle/Board values match the table.
+* Confirm Common potion generation only pulls Common potions.
+* Confirm Rare potion generation only pulls Rare potions.
+* Confirm battle potion contexts use Battle and Both potions.
+* Confirm board potion contexts use Board and Both potions.
+* Confirm Loot Chest uses the updated potion table.
+* Confirm Cave rewards use the updated potion table.
+* Confirm debug potion tools use the updated potion table.
+* Confirm existing implemented potion functionality still works.
+* Confirm removed/deprecated potions cannot be generated.
+* Confirm there are no missing translation errors.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

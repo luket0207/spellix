@@ -2006,7 +2006,7 @@ Bug-011: Buffed merged columns must apply buffs to both original roll numbers re
 
 Status
 
-* not started
+* fixed
 
 Related Feature
 
@@ -2212,10 +2212,15 @@ Attempted Fixes
 * Bug-010 attempted to make buffs applied to merged columns trigger from either merged number.
 * The current behaviour suggests the implementation still has asymmetric merged-column resolution.
 * This bug clarifies that the solution must be direction-independent and key-based at the effective-column level.
+* Reproduced the reported `2+3` scenarios through the battle context with Purple sourced from column 1 and column 4, then consumed through roll 2 and roll 3.
+* The reported buff asymmetry did not reproduce. All four direction/roll combinations stored the merged target at its canonical active slot and applied one 5-point Purple buff.
+* The differing final damage in the older roll-2 and roll-3 regression came from Hellcrown Reaper's roll-2 column applying 10 Green reduction. It was not caused by the Purple buff missing.
 
 Final Fix
 
-* Not fixed yet.
+* No production logic change was required because `createAdjacentPurpleBuffs`, battle consumption, and the committed spell display already resolve merged columns through the shared effective-column helpers added for Bugs 009 and 010.
+* Added an end-to-end battle-context regression that creates a `2+3` buff from either neighboring direction, verifies canonical pending and active storage, and confirms both roll numbers apply the buff exactly once.
+* Kept enemy defensive effects out of the final assertion by using one Blue token and confirming exactly 10 guard: 5 base guard plus one 5-point Purple buff.
 
 Testing Required
 
@@ -2238,3 +2243,146 @@ Testing Required
 * Confirm non-merged buff behaviour still works.
 * Confirm there are no console errors.
 * Update `testing.txt` with regression steps before marking this bug fixed.
+
+---
+
+Bug-012: Update Bridge Builder, Good Decisions, and Cave Runner potion availability to Mini
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-005: Replace potion data with revamped source-of-truth potion table
+
+Bug Summary
+
+* There was a small error in the potion source-of-truth table from Feature-005.
+* Three potions were incorrectly listed with `Board` availability.
+* These potions should instead have their `Battle/Board` value set to `Mini`.
+* The affected potions are:
+
+  * Bridge Builder
+  * Good Decisions
+  * Cave Runner
+
+Required Data Correction
+
+```txt id="e4x0sl"
+Name	Japanese Name	Battle/Board
+Bridge Builder	橋職人	Mini
+Good Decisions	賢明な選択	Mini
+Cave Runner	洞窟ランナー	Mini
+```
+
+Updated Availability Requirement
+
+* The potion availability system must now support:
+
+```txt id="w5br64"
+Battle
+Board
+Both
+Mini
+```
+
+* `Mini` means the potion is used for mini-game or decision-style encounters rather than normal board movement or battle.
+* These potions should not be treated as standard `Board` potions after this correction.
+
+Affected Potion Requirements
+
+* `Bridge Builder`
+
+  * Japanese name: `橋職人`
+  * Availability should be `Mini`
+  * This is used for River Mini Game behaviour.
+
+* `Good Decisions`
+
+  * Japanese name: `賢明な選択`
+  * Availability should be `Mini`
+  * This is used for decision/forfeit-removal behaviour.
+
+* `Cave Runner`
+
+  * Japanese name: `洞窟ランナー`
+  * Availability should be `Mini`
+  * This is used for Cave encounter escape behaviour.
+
+Potion Data Requirement
+
+* Update the central potion data so these three potions use `Mini`.
+* Do not change their:
+
+  * English names.
+  * Japanese names.
+  * rarity.
+  * descriptions.
+  * Japanese descriptions.
+  * colours.
+  * existing functionality.
+* Only correct the availability value.
+
+Generation Requirement
+
+* Reward generation should respect the new `Mini` availability.
+* These potions should appear only in contexts that are allowed to generate or grant Mini potions.
+* They should no longer appear in standard Board-only potion pools unless Mini potions are intentionally included there by explicit reward logic.
+* Battle potion pools should not include these potions.
+* Both potion pools should not automatically include these potions unless the logic explicitly includes Mini potions.
+
+Functionality Requirement
+
+* Do not change the functionality of these potions.
+* Bridge Builder should still auto-win a River Mini Game.
+* Good Decisions should still remove forfeits from a decision.
+* Cave Runner should still escape a cave encounter with no damage while losing any prizes gained.
+* This bug only corrects the availability category.
+
+Expected Behaviour After Fix
+
+* Bridge Builder has `Mini` availability.
+* Good Decisions has `Mini` availability.
+* Cave Runner has `Mini` availability.
+* These three potions are no longer treated as normal Board potions.
+* Mini potion availability is recognised by the potion data system.
+* Existing functionality for these potions still works.
+* Feature-005 potion data remains otherwise unchanged.
+
+Out Of Scope
+
+* No changes to potion functionality.
+* No changes to potion names.
+* No changes to potion descriptions.
+* No changes to potion rarity.
+* No changes to potion colours.
+* No changes to potion inventory slot behaviour.
+* No changes to Cave reward ordering.
+* No unrelated reward generation redesign.
+
+Attempted Fixes
+
+* Red-first tests confirmed all three affected records still used `Board` and were selected by the standard Board Common potion pool.
+* Reviewed the existing context filter before changing reward code. It already accepts an explicit availability value, includes exact matches plus `Both`, and therefore supports `Mini` without a new branch or abstraction.
+
+Final Fix
+
+* Changed only Bridge Builder, Good Decisions, and Cave Runner availability from `Board` to `Mini` in the central potion table.
+* Preserved every other field and all existing potion functionality.
+* Added regression coverage proving standard Board and Battle pools exclude these IDs while an explicit Mini context can select them.
+
+Testing Required
+
+* Confirm Bridge Builder availability is `Mini`.
+* Confirm Good Decisions availability is `Mini`.
+* Confirm Cave Runner availability is `Mini`.
+* Confirm these three potions no longer appear in standard Board-only potion pools.
+* Confirm these three potions do not appear in Battle-only potion pools.
+* Confirm Mini-aware reward or encounter contexts can still access them where appropriate.
+* Confirm Bridge Builder functionality is unchanged.
+* Confirm Good Decisions functionality is unchanged.
+* Confirm Cave Runner functionality is unchanged.
+* Confirm all other potion data from Feature-005 is unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

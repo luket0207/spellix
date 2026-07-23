@@ -1,0 +1,539 @@
+---
+
+Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+
+Status
+
+* done
+
+Completion Notes
+
+* Added Board-context Use controls for `Board` and `Both` potions while keeping all owned `Battle` and `Mini` potions visible without active controls and reserving equal button space on every board card.
+* Added a centred Battle potion section above the existing dice control that shows only `Battle` and `Both` potions, preserves inventory indexes, aligns cards, and disables Use outside the player turn.
+* Added one shared context-eligibility helper and one shared confirmation modal using the existing Modal, Button, PotionIcon, potion translation helpers, and language font classes.
+* Added exact English and Japanese Use, question, description subtitle, Yes, and No copy with English fallback.
+* Confirming removes only the selected potion instance through the existing game setup context; cancelling leaves inventory unchanged.
+* No potion effects, Mini trigger UI, routes, reward behavior, inventory capacity, replacement logic, dice logic, movement logic, dependencies, or unrelated styling/refactors were added.
+
+Related Feature
+
+* EPIC-011 Feature-005: Replace potion data with revamped source-of-truth potion table
+* EPIC-011 Bug-012: Update Bridge Builder, Good Decisions, and Cave Runner potion availability to Mini
+
+Goal
+
+* Start implementing potion usage by adding the places where potions can be triggered.
+* Add trigger UI for:
+
+  * Board potions from the gameplay board UI.
+  * Battle potions from the battle UI.
+  * Both potions from both board and battle contexts.
+* Add a shared confirmation modal that appears whenever a potion is triggered.
+* Remove the potion from the player’s potion slots after confirmed use.
+* Do not implement the actual potion effects yet.
+
+Scope
+
+* Add Board potion Use buttons in gameplay UI.
+* Add Battle potion section above the battle dice roll.
+* Add Battle potion Use buttons.
+* Add shared potion-use confirmation modal.
+* Remove confirmed potion from the player’s potion slots.
+* Support English and Japanese confirmation text.
+* Show potion description in the confirmation modal.
+* Preserve layout alignment for potion slots with and without buttons.
+* Keep Mini potion usage out of scope.
+
+Potion Availability Rules
+
+* Potion availability now controls where the potion can be triggered.
+* Supported values are:
+
+```txt id="is5g21"
+Board
+Battle
+Both
+Mini
+```
+
+* `Board` potions can only be triggered from the gameplay board UI.
+* `Battle` potions can only be triggered from the battle UI.
+* `Both` potions can be triggered from either the gameplay board UI or the battle UI.
+* `Mini` potions are out of scope for this feature.
+* Mini potions should not appear in the battle potion section.
+* Mini potions should appear in the board potion slots if the player owns them, but they should not have a Use button.
+
+Shared Potion Trigger Confirmation Modal
+
+* Whenever a potion is triggered from anywhere, show a confirmation modal.
+* This modal appears before the potion is consumed.
+* English question:
+
+```txt id="p5fwff"
+Are you sure you want to use X?
+```
+
+* Japanese question:
+
+```txt id="crbmqw"
+Xを使用してもよろしいですか？
+```
+
+* `X` should be replaced with the potion name in the current language.
+* English should use the English potion name.
+* Japanese should use the Japanese potion name.
+
+Confirmation Modal Text Requirements
+
+* The main question must use the `larger-text` class.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * bottom-centred buttons.
+  * buttons that are not full width.
+* The confirmation modal is a text-focused modal, so the question should be placed in a `<p>` with `larger-text`.
+
+Suggested structure:
+
+```jsx id="ern9a4"
+<p className={`larger-text ${languageClass}`}>
+  {confirmUsePotionText}
+</p>
+```
+
+Potion Description Requirement
+
+* Below the confirmation question, show the potion description.
+* Add a subtitle above the description.
+* English subtitle:
+
+```txt id="f0k5t1"
+Potion Description
+```
+
+* Japanese subtitle:
+
+```txt id="to8mjs"
+ポーションの説明
+```
+
+* The subtitle should use normal modal text styling.
+* The potion description should use normal-sized text, not `larger-text`.
+* The description should use the current language.
+* English should show the English potion description.
+* Japanese should show the Japanese potion description.
+
+Suggested modal layout:
+
+```txt id="nla764"
+Are you sure you want to use X?
+
+Potion Description
+
+Potion description text here.
+
+Yes / No
+```
+
+Confirmation Modal Button Behaviour
+
+* The modal should show Yes and No choices.
+* If the player chooses No:
+
+  * close the modal.
+  * do not remove the potion.
+  * do not trigger any effect.
+* If the player chooses Yes:
+
+  * remove the potion from the player’s potion slots.
+  * close the modal.
+  * do not trigger the potion effect yet, because potion effects are out of scope for this feature.
+
+Button translations:
+
+```txt id="hnyqwu"
+Yes	はい
+No	いいえ
+```
+
+Potion Removal Requirement
+
+* When confirmed, the used potion should be removed from the current player’s potion slots.
+* Only the selected potion instance should be removed.
+* If the player has two copies of the same potion, using one should remove only one copy.
+* Empty potion slot behaviour should follow existing potion inventory rules.
+* Do not remove anything when the player cancels.
+
+Board Potion Trigger Requirement
+
+* Board potion trigger UI should be added to the potions section within the gameplay UI.
+* When a potion with availability `Board` or `Both` is in the player’s potion slots:
+
+  * show a Use button beneath that potion.
+* English button text:
+
+```txt id="cc2gxf"
+Use
+```
+
+* Japanese button text:
+
+```txt id="w0w5c5"
+使用する
+```
+
+* Clicking this button should open the shared potion-use confirmation modal.
+* The potion should not be removed until the player confirms Yes.
+
+Board Potion Visibility Requirement
+
+* All owned potions should still be shown in the gameplay potion section.
+* If a potion is not usable on the board:
+
+  * still show the potion.
+  * do not show an active Use button beneath it.
+* This means:
+
+  * `Board` potions show Use.
+  * `Both` potions show Use.
+  * `Battle` potions do not show Use on the board.
+  * `Mini` potions do not show Use on the board.
+
+Board Potion Layout Requirement
+
+* The potion display must remain neat and aligned even when some potions have Use buttons and others do not.
+* Potion cards/slots should stay the same height.
+* Potion names, icons, descriptions, and buttons should remain inline with each other.
+* A potion without a Use button should reserve the same button area so the layout does not jump.
+* Do not allow one potion card to become shorter just because it has no button.
+
+Suggested board potion card structure:
+
+```jsx id="f7kwsb"
+<div className="gameplay-potion-card">
+  <PotionIcon potion={potion} />
+
+  <div className="gameplay-potion-button-space">
+    {canUseOnBoard ? (
+      <Button onClick={() => openPotionUseModal(potion)}>
+        {useText}
+      </Button>
+    ) : null}
+  </div>
+</div>
+```
+
+Suggested CSS direction:
+
+```css id="kjbwal"
+.gameplay-potion-card {
+  display: grid;
+  grid-template-rows: auto 42px;
+  align-items: center;
+  justify-items: center;
+}
+
+.gameplay-potion-button-space {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* Exact class names and heights can vary.
+* The important requirement is that every potion card reserves the same vertical space.
+
+Battle Potion Trigger Requirement
+
+* Add a new potion section inside the same battle UI element as the dice roll.
+* This new section should sit above the dice roll.
+* The section should be centred.
+* Only potions that can be used in battle should appear here.
+* Battle-usable potions are:
+
+  * `Battle`
+  * `Both`
+* Potions with availability `Board` should not appear in the battle potion section.
+* Potions with availability `Mini` should not appear in the battle potion section.
+
+Battle Potion Section Layout
+
+* The battle potion section should be centred above the dice roll.
+* It should sit inside the same parent element as the dice roll so it visually belongs to the battle controls.
+* If the player has no battle-usable potions:
+
+  * do not show an empty broken section.
+  * either hide the section or reserve clean spacing according to the existing battle layout.
+* If the player has battle-usable potions:
+
+  * show each battle-usable potion.
+  * show a Use button beneath each potion.
+  * keep all potion cards aligned.
+
+Suggested battle layout:
+
+```txt id="dv8k1z"
+Battle controls panel
+
+Battle usable potions
+[ Potion ] [ Potion ] [ Potion ]
+[  Use  ] [  Use  ] [  Use  ]
+
+Dice roll area
+```
+
+Battle Potion Card Requirement
+
+* Each battle potion card should use the same height.
+* Potion icons should line up.
+* Potion names should line up.
+* Use buttons should line up.
+* Long potion names should not cause buttons to sit at different heights.
+* Use the same Use translations as board:
+
+```txt id="ml2jdt"
+Use	使用する
+```
+
+Suggested battle potion card structure:
+
+```jsx id="rhqnla"
+<div className="battle-potion-card">
+  <div className="battle-potion-icon-row">
+    <PotionIcon potion={potion} />
+  </div>
+
+  <div className={`battle-potion-name ${languageClass}`}>
+    {potionName}
+  </div>
+
+  <div className="battle-potion-button-row">
+    <Button onClick={() => openPotionUseModal(potion)}>
+      {useText}
+    </Button>
+  </div>
+</div>
+```
+
+Suggested CSS direction:
+
+```css id="c7vuwp"
+.battle-potion-section {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.battle-potion-card {
+  width: 120px;
+  display: grid;
+  grid-template-rows: 64px minmax(40px, auto) 42px;
+  justify-items: center;
+  text-align: center;
+}
+
+.battle-potion-icon-row,
+.battle-potion-button-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* Exact dimensions can vary.
+* The important requirement is aligned potion cards with aligned Use buttons.
+
+Battle Turn Requirement
+
+* Potions can only be triggered on the player’s turn in battle.
+* Do not allow the player to use potions during the opponent/enemy turn.
+* If the battle UI remains visible during enemy actions, hide or disable battle potion Use buttons during that period.
+* Do not consume a potion unless the player confirms the modal.
+
+Mini Potion Requirement
+
+* Mini potion trigger logic is out of scope for this feature.
+* Mini potions should not appear in the battle potion section.
+* Mini potions should appear in board potion slots if owned, but they should be unusable there.
+* Do not add Mini-specific trigger buttons yet.
+* Do not implement River, Cave, or Decision mini-game potion use in this feature.
+
+Both Potion Requirement
+
+* `Both` potions should be usable from:
+
+  * the board gameplay UI.
+  * the battle UI.
+* They should show a Use button in both contexts.
+* Using a Both potion from either context should show the same confirmation modal.
+* Confirming should remove the potion from the player’s potion slots.
+
+No Potion Effect Requirement
+
+* Potion effects are out of scope.
+* After confirming Yes:
+
+  * remove the potion.
+  * close the modal.
+  * do not apply heal, damage, teleport, freeze, roll change, or any other effect yet.
+* This feature only proves that potions can be triggered and consumed from valid contexts.
+
+Shared Helper Requirement
+
+* Use shared logic to determine whether a potion can be used in a context.
+* Avoid separate hardcoded checks across board and battle UI.
+
+Suggested helper:
+
+```js id="xcwq2m"
+function canUsePotionInContext(potion, context) {
+  if (context === "board") {
+    return potion.availability === "Board" || potion.availability === "Both";
+  }
+
+  if (context === "battle") {
+    return potion.availability === "Battle" || potion.availability === "Both";
+  }
+
+  if (context === "mini") {
+    return potion.availability === "Mini";
+  }
+
+  return false;
+}
+```
+
+* Mini can be included in the helper for later use, but no Mini UI trigger should be implemented in this feature.
+
+Translation Requirement
+
+* Add or reuse translations for:
+
+  * Use
+  * Are you sure you want to use X?
+  * Potion Description
+  * Yes
+  * No
+* Required strings:
+
+```txt id="eykurr"
+Use	使用する
+Are you sure you want to use X?	Xを使用してもよろしいですか？
+Potion Description	ポーションの説明
+Yes	はい
+No	いいえ
+```
+
+* Use the potion’s translated name in place of `X`.
+* Use the potion’s translated description in the description body.
+* If language is missing or invalid, fall back to English.
+
+Font Requirement
+
+* English text should use the game’s English font.
+* Japanese text should use the game’s Japanese font.
+* The modal question should use `larger-text`.
+* Description text should be normal size.
+* Button text should use existing Button styling.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with CSS grid or flex layouts.
+* This applies to:
+
+  * board potion slot layout.
+  * battle potion list.
+  * modal description layout.
+  * any newly touched potion UI.
+
+Expected Behaviour
+
+* Board potion slots show all owned potions.
+* Board and Both potions show a Use button on the board.
+* Battle potions do not show a Use button on the board.
+* Mini potions do not show a Use button on the board.
+* Board potion card heights stay aligned whether or not a button is shown.
+* Battle UI has a centred potion section above the dice roll.
+* Battle potion section only shows Battle and Both potions.
+* Battle potion cards show Use buttons.
+* Battle potion cards remain aligned and the same height.
+* Mini potions do not appear in the battle potion section.
+* Clicking Use opens the confirmation modal.
+* Confirmation modal question uses `larger-text`.
+* Confirmation modal includes Potion Description subtitle.
+* Confirmation modal includes the potion description.
+* Clicking No closes the modal and keeps the potion.
+* Clicking Yes removes the selected potion from the player’s potion slots.
+* Clicking Yes does not apply the potion’s actual gameplay effect yet.
+* Both potions can be triggered from board and battle.
+* All relevant text supports English and Japanese.
+
+Out Of Scope
+
+* No actual potion effects.
+* No Mini potion trigger UI.
+* No River Mini Game potion usage.
+* No Cave Mini Game potion usage.
+* No Decision mini-game potion usage.
+* No changes to potion reward generation.
+* No changes to potion inventory size.
+* No changes to potion replacement modal logic.
+* No changes to battle dice logic.
+* No changes to board movement logic.
+* No unrelated potion UI redesign.
+
+Assumptions
+
+* Player potion slots already exist.
+* Potion data includes availability, English/Japanese names, and English/Japanese descriptions.
+* The gameplay UI already has a potion section.
+* The battle UI already has a dice roll control area.
+* The global modal and Button components are available.
+* Potion functionality will be implemented in later EPIC-012 features.
+
+Stop Point
+
+* Stop once Board and Battle potion trigger UI exists, the shared confirmation modal works from both contexts, confirmed potions are removed from player potion slots, and no actual potion effects are applied yet.
+
+Testing Checkpoints
+
+* Give the current player a Board potion.
+* Confirm it appears in the gameplay potion section.
+* Confirm it has a Use button on the board.
+* Confirm it does not appear in the battle potion section.
+* Give the current player a Battle potion.
+* Confirm it appears in the gameplay potion section without a Use button.
+* Confirm it appears in the battle potion section with a Use button.
+* Give the current player a Both potion.
+* Confirm it has a Use button on the board.
+* Confirm it appears in battle with a Use button.
+* Give the current player a Mini potion.
+* Confirm it appears on the board without a Use button.
+* Confirm it does not appear in the battle potion section.
+* Confirm board potion cards remain the same height with and without buttons.
+* Confirm battle potion cards remain the same height and aligned.
+* Confirm the battle potion section is centred above the dice roll.
+* Click Use on a Board potion and confirm the modal opens.
+* Click Use on a Battle potion and confirm the modal opens.
+* Click Use on a Both potion from board and confirm the modal opens.
+* Click Use on a Both potion from battle and confirm the modal opens.
+* Confirm the modal question uses the potion name.
+* Confirm the modal question uses `larger-text`.
+* Confirm the modal displays Potion Description.
+* Confirm the modal displays the correct potion description.
+* Confirm Japanese modal text displays correctly.
+* Confirm Japanese Use button displays correctly.
+* Click No and confirm the potion remains in the player’s potion slots.
+* Click Yes and confirm exactly that potion is removed.
+* Confirm duplicate potions only remove one copy.
+* Confirm no potion effect is applied after confirming.
+* Confirm potions cannot be used during the enemy turn in battle.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

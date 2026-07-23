@@ -56,7 +56,7 @@ export function generateCavePotionReward(randomFn = Math.random) {
       ? REWARD_CATEGORIES.RARE_POTION
       : REWARD_CATEGORIES.COMMON_POTION;
 
-  return generateRewardItem(category, randomFn)?.item ?? null;
+  return generateRewardItem(category, randomFn, 'Board')?.item ?? null;
 }
 
 export function getAdjustedCaveProbabilities(step, acquiredRewards = createCaveRewards()) {

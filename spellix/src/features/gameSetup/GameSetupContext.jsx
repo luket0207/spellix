@@ -908,6 +908,35 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
+  const consumePlayerPotion = (playerId, potionIndex) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+
+      if (
+        !player ||
+        !Number.isInteger(potionIndex) ||
+        potionIndex < 0 ||
+        potionIndex >= player.potions.length
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                potions: currentPlayer.potions.filter(
+                  (_, index) => index !== potionIndex
+                ),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
   const resolvePendingPotionGrant = (replacedPotionIndex) => {
     setGameSetup((currentSetup) => {
       const pendingGrant = currentSetup.pendingPotionGrant;
@@ -1597,6 +1626,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         startBattle,
         startMiniGame,
         updatePlayerSpells,
+        consumePlayerPotion,
       }}
     >
       {children}

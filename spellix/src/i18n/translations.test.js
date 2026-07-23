@@ -10,6 +10,7 @@ import {
   getMiniGameFailureTranslations,
   getNextTurnMessage,
   getPlayerColourDisplayName,
+  getPotionUsageTranslations,
   getRewardAddedMessage,
   getRewardPageTranslations,
   getRiverMiniGameTranslations,
@@ -127,6 +128,31 @@ describe('gameplay translations', () => {
     expect(getGameplayLanguage()).toBe('en');
     expect(getGameplayLanguage('invalid')).toBe('en');
     expect(getGameplayTranslations('invalid')).toEqual(getGameplayTranslations('en'));
+  });
+
+  test('returns exact potion usage copy in both languages with English fallback', () => {
+    const english = getPotionUsageTranslations('en');
+    const japanese = getPotionUsageTranslations('jp');
+
+    expect(english.confirmUse('Roll Choice')).toBe(
+      'Are you sure you want to use Roll Choice?'
+    );
+    expect(english).toMatchObject({
+      descriptionTitle: 'Potion Description',
+      no: 'No',
+      use: 'Use',
+      yes: 'Yes',
+    });
+    expect(japanese.confirmUse('\u51fa\u76ee\u9078\u629e')).toBe(
+      '\u51fa\u76ee\u9078\u629e\u3092\u4f7f\u7528\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f'
+    );
+    expect(japanese).toMatchObject({
+      descriptionTitle: '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
+      no: '\u3044\u3044\u3048',
+      use: '\u4f7f\u7528\u3059\u308b',
+      yes: '\u306f\u3044',
+    });
+    expect(getPotionUsageTranslations('invalid')).toBe(english);
   });
 
   test('returns every River Mini Game instruction and result in English and Japanese', () => {

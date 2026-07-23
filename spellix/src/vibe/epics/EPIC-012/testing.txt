@@ -1,0 +1,46 @@
+---
+
+Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give one player Board, Battle, Both, and Mini potions, then open the gameplay board.
+   Expected: All four appear; only Board and Both show localized Use buttons, and all cards reserve the same button space.
+2. Trigger a Board potion and select No.
+   Expected: The shared wooden modal shows localized name, question, description subtitle, description, and Yes/No controls; No closes it without removing the potion.
+3. Trigger one of two identical Board or Both potions and select Yes.
+   Expected: The modal closes, exactly the selected instance is removed, and no health, damage, movement, dice, freeze, teleport, or other effect occurs.
+4. Enter Battle with Board, Battle, Both, and Mini potions.
+   Expected: A centred section above the dice shows only Battle and Both potions with aligned names and Use buttons.
+5. Trigger a Battle or Both potion during the player turn and confirm it.
+   Expected: The same confirmation modal opens and exactly that potion is consumed without applying an effect.
+6. Advance to the enemy turn.
+   Expected: Battle potion Use buttons are disabled and no potion can be triggered.
+7. Repeat the Board and Battle flows with a Japanese player.
+   Expected: Use, question, potion name and description, subtitle, Yes, and No are Japanese and use the Japanese font class.
+8. Inspect the new Board, Battle, and modal potion markup and the browser console.
+   Expected: No new `ul` or `li` elements appear and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature with 13 failures and 54 passing tests across the initial potion, context, Gameplay, and Battle coverage.
+* The final focused unit regression passes 6 suites and 45 tests for context eligibility, Board controls and reserved space, Battle filtering/alignment/indexes, exact duplicate removal, shared modal behavior, exact translations, language fallback, and no-list markup.
+* The final isolated page integration regression passes 2 suites and all 4 EPIC-012 scenarios; 49 unrelated page tests were intentionally skipped by the name filter.
+* Before isolation, the full Gameplay suite passed both new scenarios and 15 of 21 tests overall; its six failures are pre-existing stale assertions for spell warning copy, removed dice-result copy, and image sizing.
+* Before isolation, the full Battle suite passed both new scenarios and 31 of 32 tests overall; its sole failure is the pre-existing stale assertion for removed `Dice result: 1` copy.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, filtering, callbacks, placement order, disabled controls, classes, and markup but cannot visually inspect real-browser alignment, the wooden image asset, or console output.
+* Actual potion effects remain intentionally unimplemented and therefore are verified only by unchanged player state in the trigger-flow tests.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to verify real visual alignment, modal imagery and colours, turn timing, Japanese rendering, and console output.

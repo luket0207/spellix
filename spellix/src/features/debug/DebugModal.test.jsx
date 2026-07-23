@@ -322,7 +322,14 @@ describe('DebugModal', () => {
 
     expect(screen.getByLabelText(/potion target player/i)).toHaveValue('player-1');
     expect(screen.getByLabelText(/potion type/i)).toHaveValue('roll-choice');
-    expect(screen.getByLabelText(/potion type/i).options).toHaveLength(21);
+    const potionOptionIds = Array.from(
+      screen.getByLabelText(/potion type/i).options
+    ).map(({ value }) => value);
+
+    expect(potionOptionIds).toEqual(POTION_DEFINITIONS.map(({ id }) => id));
+    expect(potionOptionIds).not.toEqual(
+      expect.arrayContaining(['teleport-to-feature', 'gambeller'])
+    );
     expect(screen.getByRole('button', { name: /give potion/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /give token/i })).toBeEnabled();
 

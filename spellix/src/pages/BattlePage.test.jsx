@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { POTION_DEFINITIONS } from '../data/potions';
 import { getEnemyById } from '../features/battle/enemies';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createPlayers } from '../features/gameSetup/gameSetup';
@@ -123,6 +124,7 @@ function GameStateSnapshot() {
       <p>{`Player 1 health: ${playerOne.currentHealth}`}</p>
       <p>{`Player 1 spell tokens: ${playerOneSpellTokenIds || 'none'}`}</p>
       <p>{`Player 1 position: ${gameSetup.players[0].position.x},${gameSetup.players[0].position.y}`}</p>
+      <p>{`Player 1 potions: ${playerOne.potions.map(({ id }) => id).join(',') || 'none'}`}</p>
     </div>
   );
 }
@@ -258,6 +260,60 @@ describe('BattlePage flows', () => {
       'style',
       expect.stringContaining('fields.png')
     );
+  });
+
+  test('shows only Battle-compatible potions above the dice and confirms one use', () => {
+    const setup = createBattleSetup();
+
+    setup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'bridge-builder'),
+    ];
+
+    renderBattleFlow(['/battle'], setup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', { name: /battle potions/i });
+    const dicePanel = document.querySelector('.battle-dice');
+
+    expect(dicePanel.firstElementChild).toBe(potionSection);
+    expect(within(potionSection).getByText('First Aid')).toBeInTheDocument();
+    expect(within(potionSection).getByText('Roll Choice')).toBeInTheDocument();
+    expect(within(potionSection).queryByText('Copy and Paste')).not.toBeInTheDocument();
+    expect(within(potionSection).queryByText('Bridge Builder')).not.toBeInTheDocument();
+    expect(within(potionSection).getAllByRole('button', { name: 'Use' })).toHaveLength(2);
+    expect(potionSection.querySelector('ul, li')).toBeNull();
+
+    fireEvent.click(within(potionSection).getAllByRole('button', { name: 'Use' })[0]);
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(within(confirmation).getByText(/First Aid/)).toHaveClass('larger-text');
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    expect(screen.getByText('Player 1 potions: roll-choice,copy-and-paste,bridge-builder')).toBeInTheDocument();
+    expect(within(potionSection).queryByText('First Aid')).not.toBeInTheDocument();
+  });
+
+  test('disables battle potion Use controls outside the player turn', () => {
+    const setup = createBattleSetup();
+
+    setup.activeBattle.currentBattleActor = 'enemy';
+    setup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+    ];
+
+    renderBattleFlow(['/battle'], setup);
+
+    const potionSection = screen.getByRole('region', { name: /battle potions/i });
+
+    expect(within(potionSection).getByRole('button', { name: 'Use' })).toBeDisabled();
   });
 
   test('removes player health in steps, clamps at zero, and respawns on loss', () => {

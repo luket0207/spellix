@@ -1,0 +1,27 @@
+.battle-potion-section {
+  align-items: stretch;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.battle-potion-card {
+  display: grid;
+  grid-template-rows: 40px minmax(48px, 1fr) 42px;
+  justify-items: center;
+  min-height: 130px;
+  text-align: center;
+  width: 120px;
+}
+
+.battle-potion-icon-row,
+.battle-potion-button-row {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.battle-potion-name {
+  overflow-wrap: anywhere;
+}
