@@ -6,6 +6,7 @@ import './PotionList.css';
 
 function PotionList({
   context,
+  disabled = false,
   language = 'en',
   languageClassName = '',
   onUsePotion,
@@ -29,6 +30,7 @@ function PotionList({
                 {canUsePotionInContext(potion, context) ? (
                   <Button
                     className={languageClassName}
+                    disabled={disabled}
                     type="button"
                     onClick={() => onUsePotion(potion, index)}
                   >

@@ -226,6 +226,7 @@ function BattlePage() {
   const areBattlePotionsDisabled = Boolean(
     showTurnModal ||
       activeBattle.isResolvingTurn ||
+      activeBattle.playerPotionUsedThisTurn ||
       !isActiveBattle ||
       !isPlayerTurn ||
       isBattleDiceRolling
@@ -318,7 +319,11 @@ function BattlePage() {
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
-      consumePlayerPotion(battlePlayer.id, pendingPotionUse.potionIndex);
+      consumePlayerPotion(
+        battlePlayer.id,
+        pendingPotionUse.potionIndex,
+        'battle'
+      );
     }
 
     setPendingPotionUse(null);

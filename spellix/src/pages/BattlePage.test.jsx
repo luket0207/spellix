@@ -89,6 +89,7 @@ function createBattleSetup() {
 function GameStateSnapshot() {
   const {
     activeBattle,
+    advanceBattleTurn,
     battleEnemy,
     battlePlayer,
     currentPlayer,
@@ -125,6 +126,9 @@ function GameStateSnapshot() {
       <p>{`Player 1 spell tokens: ${playerOneSpellTokenIds || 'none'}`}</p>
       <p>{`Player 1 position: ${gameSetup.players[0].position.x},${gameSetup.players[0].position.y}`}</p>
       <p>{`Player 1 potions: ${playerOne.potions.map(({ id }) => id).join(',') || 'none'}`}</p>
+      <button type="button" onClick={advanceBattleTurn}>
+        Advance battle actor
+      </button>
     </div>
   );
 }
@@ -299,6 +303,61 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText('Player 1 potions: roll-choice,copy-and-paste,bridge-builder')).toBeInTheDocument();
     expect(within(potionSection).queryByText('First Aid')).not.toBeInTheDocument();
+    expect(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    ).toBeDisabled();
+
+    fireEvent.click(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    );
+    expect(
+      screen.queryByRole('dialog', { name: /use potion confirmation/i })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Advance battle actor' })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Advance battle actor' })
+    );
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    ).toBeEnabled();
+  });
+
+  test('cancelling Battle potion confirmation does not lock usage', () => {
+    const setup = createBattleSetup();
+
+    setup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+    ];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    fireEvent.click(
+      within(potionSection).getAllByRole('button', { name: 'Use' })[0]
+    );
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'No' })
+    );
+
+    expect(screen.getByText('Player 1 potions: first-aid,roll-choice')).toBeInTheDocument();
+    within(potionSection).getAllByRole('button', { name: 'Use' }).forEach(
+      (button) => expect(button).toBeEnabled()
+    );
   });
 
   test('disables battle potion Use controls outside the player turn', () => {

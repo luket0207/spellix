@@ -20,6 +20,7 @@ import {
   replaceTokenInBag,
 } from '../debug/tokenBagAdmin';
 import { gainPotion, resolvePendingPotion } from '../potions/potionCapacity';
+import { canUsePotionInContext } from '../potions/potionUsage';
 import { generateBattleRewardChoices } from '../rewards/rewardItems';
 import {
   createCavePotionRewardAssignment,
@@ -57,11 +58,26 @@ function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
     return currentSetup;
   }
 
+  const didPlayerChange = nextPlayerId !== currentPlayerId;
+
   return {
     ...currentSetup,
     currentTurnIndex: nextTurnIndex,
+    players: didPlayerChange
+      ? currentSetup.players.map((player) =>
+          player.id === nextPlayerId
+            ? {
+                ...player,
+                turnPotionUsage: {
+                  ...player.turnPotionUsage,
+                  boardPotionUsedThisTurn: false,
+                },
+              }
+            : player
+        )
+      : currentSetup.players,
     pendingNextTurnModal:
-      nextPlayerId !== currentPlayerId
+      didPlayerChange
         ? true
         : Boolean(currentSetup.pendingNextTurnModal),
   };
@@ -328,12 +344,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       players: setup.players.map((player, index) => {
         const normalizedPlayer = {
           ...player,
+          activePotion: player.activePotion ? { ...player.activePotion } : null,
           baseMaxHealth: player.baseMaxHealth ?? player.maxHealth ?? 100,
           columnMergesUsed:
             player.columnMergesUsed ?? player.mergedColumns?.length ?? 0,
           language: player.language ?? DEFAULT_PLAYER_LANGUAGE,
           mergedColumns: player.mergedColumns ?? [],
           number: player.number ?? index + 1,
+          turnPotionUsage: {
+            ...player.turnPotionUsage,
+            boardPotionUsedThisTurn: Boolean(
+              player.turnPotionUsage?.boardPotionUsedThisTurn
+            ),
+          },
         };
 
         return applyLightGreenHealthBonus(
@@ -908,21 +931,42 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
-  const consumePlayerPotion = (playerId, potionIndex) => {
+  const consumePlayerPotion = (playerId, potionIndex, context) => {
     setGameSetup((currentSetup) => {
       const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[potionIndex];
+      const activeBattle = currentSetup.activeBattle;
+      const isBoardUse =
+        context === 'board' &&
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+      const isBattleUse =
+        context === 'battle' &&
+        activeBattle?.phase === 'active' &&
+        activeBattle.playerId === playerId &&
+        activeBattle.currentBattleActor !== 'enemy' &&
+        !activeBattle.isResolvingTurn &&
+        !activeBattle.playerPotionUsedThisTurn;
 
       if (
         !player ||
         !Number.isInteger(potionIndex) ||
         potionIndex < 0 ||
-        potionIndex >= player.potions.length
+        potionIndex >= player.potions.length ||
+        !canUsePotionInContext(potion, context) ||
+        (!isBoardUse && !isBattleUse)
       ) {
         return currentSetup;
       }
 
       return {
         ...currentSetup,
+        activeBattle: isBattleUse
+          ? {
+              ...activeBattle,
+              playerPotionUsedThisTurn: true,
+            }
+          : activeBattle,
         players: currentSetup.players.map((currentPlayer) =>
           currentPlayer.id === playerId
             ? {
@@ -930,6 +974,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 potions: currentPlayer.potions.filter(
                   (_, index) => index !== potionIndex
                 ),
+                ...(isBoardUse
+                  ? {
+                      turnPotionUsage: {
+                        ...currentPlayer.turnPotionUsage,
+                        boardPotionUsedThisTurn: true,
+                      },
+                    }
+                  : {}),
               }
             : currentPlayer
         ),
@@ -1002,6 +1054,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           playerId,
           playerNextCharged: null,
           playerNextPurpleBuffs: null,
+          playerPotionUsedThisTurn: false,
           playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
         },
       };
@@ -1187,6 +1240,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       }
 
       const passedFreezeCheck = diceResult % 2 === 0;
+      const nextBattleActor = isPlayerActor ? 'enemy' : 'player';
 
       return {
         ...currentSetup,
@@ -1196,7 +1250,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           ...(passedFreezeCheck
             ? {}
             : {
-                currentBattleActor: isPlayerActor ? 'enemy' : 'player',
+                currentBattleActor: nextBattleActor,
                 enemyGuard: isPlayerActor ? 0 : activeBattle.enemyGuard,
                 isResolvingTurn: false,
                 pendingEffects: [],
@@ -1205,6 +1259,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 [nextChargedKey]: null,
                 [nextPurpleBuffsKey]: null,
                 [purpleBuffsKey]: [0, 0, 0, 0, 0, 0],
+                ...(nextBattleActor === 'player'
+                  ? { playerPotionUsedThisTurn: false }
+                  : {}),
               }),
         },
       };
@@ -1224,19 +1281,25 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         : 'enemyNextPurpleBuffs';
       const purpleBuffsKey = isPlayerActor ? 'playerPurpleBuffs' : 'enemyPurpleBuffs';
       const nextChargedKey = isPlayerActor ? 'playerNextCharged' : 'enemyNextCharged';
+      const nextBattleActor =
+        currentSetup.activeBattle.currentBattleActor === 'enemy'
+          ? 'player'
+          : 'enemy';
 
       return {
         ...currentSetup,
         activeBattle: {
           ...currentSetup.activeBattle,
-          currentBattleActor:
-            currentSetup.activeBattle.currentBattleActor === 'enemy' ? 'player' : 'enemy',
+          currentBattleActor: nextBattleActor,
           isResolvingTurn: false,
           pendingEffects: [],
           [chargedKey]: currentSetup.activeBattle[nextChargedKey] ?? false,
           [nextChargedKey]: null,
           [nextPurpleBuffsKey]: null,
           [purpleBuffsKey]: currentSetup.activeBattle[nextPurpleBuffsKey] ?? [0, 0, 0, 0, 0, 0],
+          ...(nextBattleActor === 'player'
+            ? { playerPotionUsedThisTurn: false }
+            : {}),
         },
       };
     });

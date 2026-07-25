@@ -566,7 +566,9 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
     expect(screen.queryByRole('dialog', { name: /use potion confirmation/i })).not.toBeInTheDocument();
-    expect(within(potionSection).getAllByRole('button', { name: 'Use' })).toHaveLength(2);
+    within(potionSection).getAllByRole('button', { name: 'Use' }).forEach(
+      (button) => expect(button).toBeEnabled()
+    );
 
     fireEvent.click(within(potionSection).getAllByRole('button', { name: 'Use' })[1]);
     fireEvent.click(
@@ -577,7 +579,62 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     expect(within(potionSection).getByText('1/3')).toBeInTheDocument();
     expect(within(potionSection).getAllByRole('button', { name: 'Use' })).toHaveLength(1);
+    expect(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    ).toBeDisabled();
     expect(initialGameSetup.players[0].currentHealth).toBe(100);
+  });
+
+  test('shows one localized Active Potion beneath Potions only when state exists', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'roll-choice'
+    );
+
+    const { unmount } = render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const potionSection = screen.getByRole('region', { name: 'Potions' });
+    const activeSection = screen.getByRole('region', { name: 'Active Potion' });
+
+    expect(
+      potionSection.compareDocumentPosition(activeSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(within(activeSection).getByText('Roll Choice')).toBeInTheDocument();
+    expect(activeSection.querySelector('ul, li')).toBeNull();
+
+    unmount();
+
+    const japaneseSetup = createCommittedGameplaySetup();
+    japaneseSetup.players[0].language = 'jp';
+    japaneseSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'roll-choice'
+    );
+
+    render(
+      <GameSetupProvider initialGameSetup={japaneseSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(
+      screen.getByRole('region', {
+        name: '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
+      })
+    ).toBeInTheDocument();
+  });
+
+  test('hides Active Potion when the current player has no active potion', () => {
+    renderGameplayPage();
+
+    expect(
+      screen.queryByRole('region', { name: 'Active Potion' })
+    ).not.toBeInTheDocument();
   });
 
   test('shows Battle and Mini potions on the board without Use controls', () => {

@@ -15,6 +15,7 @@ const GAMEPLAY_TRANSLATIONS = {
 
 const POTION_USAGE_TRANSLATIONS = {
   en: {
+    activePotionTitle: 'Active Potion',
     confirmUse: (potionName) => `Are you sure you want to use ${potionName}?`,
     descriptionTitle: 'Potion Description',
     no: 'No',
@@ -22,6 +23,8 @@ const POTION_USAGE_TRANSLATIONS = {
     yes: 'Yes',
   },
   jp: {
+    activePotionTitle:
+      '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
     confirmUse: (potionName) =>
       `${potionName}\u3092\u4f7f\u7528\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f`,
     descriptionTitle:

@@ -79,3 +79,24 @@
   justify-content: center;
   margin-top: auto;
 }
+
+.active-potion-section {
+  width: 300px;
+  box-sizing: border-box;
+  background: #5a351f;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.active-potion-title {
+  text-align: center;
+  font-weight: bold;
+  margin: 0 0 10px;
+}
+
+.active-potion-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

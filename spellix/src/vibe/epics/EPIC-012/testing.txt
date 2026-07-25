@@ -44,3 +44,55 @@ Automated Test Limitations
 Manual Testing Still Needed
 
 * Run the eight-step browser regression above to verify real visual alignment, modal imagery and colours, turn timing, Japanese rendering, and console output.
+
+---
+
+Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player two Board-usable potions, trigger one, and choose No.
+   Expected: The modal closes, both potions remain, and both Use buttons stay enabled.
+2. Trigger one Board-usable potion again and choose Yes.
+   Expected: Exactly that potion is removed and every remaining Board/Both Use button is visible but disabled.
+3. Enter Battle during the same Board turn with two Battle-usable potions.
+   Expected: Board usage remains locked, but Battle/Both Use buttons are available because the limits are independent.
+4. Cancel one Battle potion confirmation, then confirm another.
+   Expected: Cancelling changes nothing; confirming removes the selected potion and disables all remaining Battle/Both Use buttons without disabling the dice.
+5. Advance through the enemy Battle turn and return to the player.
+   Expected: Battle potion Use buttons remain unavailable during the enemy turn and become enabled on the next player Battle turn.
+6. Repeat the Battle return with a frozen enemy failing its freeze check.
+   Expected: Returning control to the player also resets the Battle potion limit.
+7. Finish the Board turn, let every other player take a turn, and return to the original player.
+   Expected: That player's Board potion limit resets only when the new Board turn begins.
+8. Start with no `activePotion` on the current player.
+   Expected: No Active Potion section or empty spacing appears beneath Potions.
+9. Start with one `activePotion`, then repeat with an English and Japanese player.
+   Expected: The darker brown Active Potion section appears beneath Potions, shows one horizontally centred named PotionIcon, and uses `Active Potion` or `発動中のポーション` with the correct font class.
+10. Inspect the new potion UI and browser console throughout the flow.
+    Expected: Disabled controls do not open modals or consume potions, no new `ul` or `li` appears, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature with 8 intended failures, 2 passing checks, and 73 unrelated skipped tests across the initial focused state, component, page, and translation coverage.
+* The broader potion, player setup, context, and translation regression passes 11 suites and 81 tests.
+* Coverage proves Board and Battle central enforcement, confirmed-use locking, duplicate-safe removal, normal Board reset, normal Battle reset, freeze-driven Battle reset, Board/Battle independence, Both potion handling, disabled controls, exact translations, Active Potion visibility/localization, darker-brown/centred styles, and no-list markup.
+* The focused Gameplay and Battle integration regression passes 2 suites and all 7 potion scenarios; 49 unrelated page tests were skipped by the name filter.
+* The full Gameplay and Battle suites pass 49 of 56 tests. The 7 failures are the same pre-existing stale assertions documented under Feature-001 for old spell-warning copy, removed dice-result copy, and image sizing.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, reset transitions, button behavior, DOM order, classes, and markup but cannot visually inspect the real darker-brown section or browser console.
+* No potion-specific rule currently moves a potion into `activePotion`; this feature verifies rendering from normalized player state without inventing an activation rule.
+* Actual potion effects and Mini potion triggers remain intentionally unimplemented.
+
+Manual Testing Still Needed
+
+* Run the ten-step browser regression above to verify real turn timing, visible disabled states, Active Potion alignment/colour, Japanese rendering, and console output.

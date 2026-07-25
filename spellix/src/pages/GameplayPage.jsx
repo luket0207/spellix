@@ -14,6 +14,7 @@ import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup'
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import PotionList from '../features/potions/PotionList';
+import ActivePotionSection from '../features/potions/ActivePotionSection';
 import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
@@ -104,7 +105,8 @@ function GameplayPage() {
     if (pendingPotionUse) {
       consumePlayerPotion(
         pendingPotionUse.playerId,
-        pendingPotionUse.potionIndex
+        pendingPotionUse.potionIndex,
+        'board'
       );
     }
 
@@ -460,6 +462,9 @@ function GameplayPage() {
 
         <PotionList
           context="board"
+          disabled={Boolean(
+            currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn
+          )}
           language={currentLanguage}
           languageClassName={languageClassName}
           onUsePotion={(potion, potionIndex) =>
@@ -472,6 +477,12 @@ function GameplayPage() {
           potions={currentPlayer?.potions ?? []}
           title={gameplayTranslations.potions}
           useText={potionUsageTranslations.use}
+        />
+        <ActivePotionSection
+          activePotion={currentPlayer?.activePotion}
+          language={currentLanguage}
+          languageClassName={languageClassName}
+          title={potionUsageTranslations.activePotionTitle}
         />
       </section>
 

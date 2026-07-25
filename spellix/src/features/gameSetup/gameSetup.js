@@ -62,6 +62,9 @@ export function createPlayers(playerCount, existingPlayers = []) {
     const gender = existingPlayer?.gender ?? DEFAULT_PLAYER_GENDER;
 
     const player = {
+      activePotion: existingPlayer?.activePotion
+        ? { ...existingPlayer.activePotion }
+        : null,
       id: playerId,
       number: index + 1,
       anywhereMode: existingPlayer?.anywhereMode ?? false,
@@ -86,6 +89,12 @@ export function createPlayers(playerCount, existingPlayers = []) {
         ? cloneSpellSlots(existingPlayer.spellSlots)
         : createInitialSpellSlots(),
       hasCommittedInitialSpells: existingPlayer?.hasCommittedInitialSpells ?? false,
+      turnPotionUsage: {
+        ...existingPlayer?.turnPotionUsage,
+        boardPotionUsedThisTurn: Boolean(
+          existingPlayer?.turnPotionUsage?.boardPotionUsedThisTurn
+        ),
+      },
     };
 
     return applyLightGreenHealthBonus(player, player.spellSlots);

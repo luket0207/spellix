@@ -537,3 +537,430 @@ Testing Checkpoints
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Status
+
+* done
+
+Completion Notes
+
+* Added a per-player Board-turn usage flag that is set only after confirmation and resets only when that player later begins a new Board turn.
+* Added a per-battle player-turn usage flag that is set only after confirmation, stays locked through the enemy turn, and resets when Battle returns to the player through either normal advancement or a failed enemy freeze check.
+* Enforced availability, actor, turn, and usage locks in the shared consumption action as well as disabling the existing Board and Battle Use buttons.
+* Kept Board and Battle usage independent; entering Battle does not change the Board flag, and Battle usage does not change Board state.
+* Added normalized `activePotion` player state and a hidden-by-default Active Potion section beneath Potions using the existing PotionIcon, translated name, and language font classes.
+* Used the feature-specified darker brown Active Potion background and kept all new potion markup free of `ul` and `li`.
+* Active Potion is display-only in this feature because later potion-specific features define which potion becomes active and when; no potion effects, Mini triggers, routes, reward logic, inventory limits, or unrelated UI changes were added.
+
+Related Feature
+
+* Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-011 Feature-005: Replace potion data with revamped source-of-truth potion table
+* EPIC-011 Bug-012: Update Bridge Builder, Good Decisions, and Cave Runner potion availability to Mini
+
+Goal
+
+* Limit potion usage so players can only use one potion per relevant turn context.
+* Add a new hidden-by-default Active Potion section beneath the current gameplay potion section.
+* Keep board, battle, and future mini-game potion usage limits separate.
+* Preserve the trigger and confirmation flow from Feature-001.
+* Do not implement individual potion effects in this feature.
+
+Scope
+
+* Add one-potion-per-board-turn limit.
+* Add one-potion-per-battle-turn limit.
+* Keep board potion usage and battle potion usage independent.
+* Add disabled state for unavailable potion Use buttons.
+* Add Active Potion section to gameplay UI.
+* Style Active Potion section in darker brown than the normal potion section.
+* Show active potion using the potion component with name included.
+* Hide Active Potion section when empty.
+* Preserve Mini potion implementation for later features.
+
+Potion Usage Limit Summary
+
+```txt id="48f81g"
+Board: 1 potion per board turn.
+Battle: 1 potion per battle turn.
+Mini: not implemented yet.
+```
+
+* These limits are separate.
+* Using a board potion should not disable battle potions.
+* Using a battle potion should not disable board potions on a future board turn.
+* Mini-game potion limits will be handled later.
+
+Board Potion Limit Requirement
+
+* A player can use only one board-usable potion per board turn.
+* Board-usable potions are:
+
+  * `Board`
+  * `Both`
+* Once the player successfully uses one board potion:
+
+  * all other board potion Use buttons should become disabled for the rest of that board turn.
+* This should include:
+
+  * other `Board` potions.
+  * other `Both` potions shown in the board UI.
+* Potions that are not board-usable should still be displayed without active Use buttons, as defined in Feature-001.
+
+Board Limit Reset Requirement
+
+* The board potion usage limit should reset when that player’s next board turn begins.
+* It should not reset merely because a modal opens or closes.
+* It should not reset because the player enters a battle during the same board turn.
+* It should reset when the turn properly advances and later returns to that player.
+
+Battle Potion Limit Requirement
+
+* A player can use only one battle-usable potion per battle turn.
+* Battle-usable potions are:
+
+  * `Battle`
+  * `Both`
+* Once the player successfully uses one battle potion:
+
+  * all other battle potion Use buttons should become disabled until the next battle turn.
+* This should include:
+
+  * other `Battle` potions.
+  * other `Both` potions shown in the battle UI.
+* Battle potion buttons should also remain unavailable during enemy/opponent turns.
+
+Battle Limit Reset Requirement
+
+* The battle potion usage limit should reset on the player’s next battle turn.
+* If the battle alternates between player and enemy/opponent turns:
+
+  * using a potion on the player’s battle turn disables further battle potion use for that turn only.
+  * on the player’s next battle turn, battle potion use becomes available again.
+* Do not reset the battle potion limit during the same battle turn.
+
+Board And Battle Independence Requirement
+
+* Board and battle potion usage limits must be independent.
+* If a player uses a potion on the board and then encounters a battle in the same turn:
+
+  * battle potions should still be available in the battle.
+  * battle potion usage should follow battle rules.
+  * the player can still use one battle potion on their battle turn.
+* Using a board potion should not disable battle potion buttons.
+* Using a battle potion should not retroactively disable board potion logic except through normal turn progression.
+
+Example
+
+```txt id="bbjoi7"
+Player uses Smokescreen on the board.
+Board potion use is now locked for the rest of that board turn.
+
+The player then enters a battle during the same turn.
+Battle potion use is still available.
+The player may use one Battle or Both potion during their battle turn.
+```
+
+Mini Potion Requirement
+
+* Mini potion use limits are not implemented in this feature.
+* Mini potions remain out of scope.
+* Do not add Mini potion buttons.
+* Do not add Mini potion trigger logic.
+* Do not let the board potion limit or battle potion limit accidentally consume Mini potion state.
+* Future mini-game potion features may add their own usage limit.
+
+Potion Confirmation Interaction
+
+* A potion should count as used only after the player confirms Yes in the use confirmation modal.
+* If the player clicks Use and then chooses No:
+
+  * do not remove the potion.
+  * do not mark a potion as used for that context.
+  * do not disable other potions.
+* If the player clicks Use and then chooses Yes:
+
+  * remove or move the potion according to the relevant implementation.
+  * mark the relevant context as having used a potion this turn.
+  * disable the remaining potion buttons for that context.
+
+Disabled Button Requirement
+
+* Once a potion has been used in the relevant context, remaining Use buttons should become disabled.
+* Disabled buttons should remain visually clear.
+* They should not open the confirmation modal.
+* They should not consume a potion.
+* They should not apply any future potion effect.
+* Use the existing Button disabled styling where possible.
+
+Suggested State Direction
+
+```js id="v9q7wy"
+player.turnPotionUsage = {
+  boardPotionUsedThisTurn: false,
+  battlePotionUsedThisBattleTurn: false
+};
+```
+
+* Exact state shape can vary.
+* The important requirement is that board and battle usage are tracked separately.
+
+Suggested Helper Direction
+
+```js id="gak71o"
+function canTriggerPotion({ potion, context, usageState, isPlayerBattleTurn }) {
+  if (context === "board") {
+    return canUsePotionInContext(potion, "board") && !usageState.boardPotionUsedThisTurn;
+  }
+
+  if (context === "battle") {
+    return (
+      canUsePotionInContext(potion, "battle") &&
+      isPlayerBattleTurn &&
+      !usageState.battlePotionUsedThisBattleTurn
+    );
+  }
+
+  return false;
+}
+```
+
+* Exact implementation can vary.
+* Reuse the context availability helper from Feature-001 where possible.
+
+Active Potion Section Requirement
+
+* Add a new section to the gameplay UI beneath the current potions section.
+* The section title should be:
+
+  * English: `Active Potion`
+  * Japanese: `発動中のポーション`
+* The title is singular because there should only be one active potion at a time.
+* The section should be hidden by default.
+* As soon as there is one potion in the active potion state, the section should become visible.
+* Doing anything else with this section is out of scope.
+
+Active Potion Visibility Requirement
+
+* If there is no active potion:
+
+  * do not show the section.
+  * do not reserve awkward empty space unless needed for existing layout stability.
+* If there is an active potion:
+
+  * show the section.
+  * show the title.
+  * show the active potion horizontally centred.
+* There should only be one active potion displayed at a time.
+
+Active Potion Display Requirement
+
+* The active potion should use the existing potion component.
+* The potion name should be included.
+* The potion should be horizontally centred inside the Active Potion section.
+* The section should support English and Japanese potion names through the existing potion component.
+
+Active Potion Styling Requirement
+
+* The Active Potion section should be visually distinct from the normal potions section.
+* It should use a darker brown colour than the current potions section.
+* It should still feel consistent with the existing gameplay UI.
+* The title should use the correct language font.
+* The title should be centred unless the existing gameplay UI section style strongly suggests otherwise.
+
+Suggested structure:
+
+```jsx id="qnl36j"
+{activePotion ? (
+  <div className="active-potion-section">
+    <div className={`active-potion-title ${languageClass}`}>
+      {activePotionTitle}
+    </div>
+
+    <div className="active-potion-content">
+      <Potion potion={activePotion} showName={true} />
+    </div>
+  </div>
+) : null}
+```
+
+Suggested CSS direction:
+
+```css id="rd8sl7"
+.active-potion-section {
+  background: #5a351f;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.active-potion-title {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.active-potion-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+* Exact colour can vary.
+* The important requirement is that it is darker brown than the current potions section.
+
+When Potions Enter Active Potion Section
+
+* This feature does not define which potions move to Active Potion.
+* Potion-specific implementation features will define when a potion is placed there.
+* For now, the UI should support showing a potion there if the active potion state exists.
+* Do not invent active behaviour for individual potions in this feature.
+
+Potion Consumption Rule
+
+* Potions should normally be consumed once they have carried out their purpose.
+* Potions should also normally be consumed once they have been moved to the Active Potion section.
+* Special exceptions can be defined by later potion-specific features.
+* Unless a later feature explicitly says otherwise:
+
+  * using a potion should remove it from the player’s potion slots.
+  * moving a potion to Active Potion should also remove it from the player’s potion slots.
+* Do not duplicate a potion by leaving it in the potion slot and also showing it as active.
+
+Both Potion Requirement
+
+* `Both` potions follow the limit of the context they are used in.
+* If used from the board:
+
+  * it counts as the player’s one board potion for that board turn.
+  * it does not count as the player’s battle potion.
+* If used from battle:
+
+  * it counts as the player’s one battle potion for that battle turn.
+  * it does not count as the player’s board potion.
+
+Layout Requirement
+
+* Board potion cards should remain aligned after buttons become disabled.
+* Battle potion cards should remain aligned after buttons become disabled.
+* Disabled buttons should still occupy the same space as enabled buttons.
+* The Active Potion section should not break the existing gameplay UI layout.
+* The Active Potion section should sit beneath the current potions section.
+
+Translation Requirement
+
+* Add or reuse translations:
+
+```txt id="d42v7f"
+Active Potion	発動中のポーション
+```
+
+* Reuse Feature-001 translations for:
+
+  * Use / 使用する
+  * confirmation modal text
+  * Potion Description / ポーションの説明
+  * Yes / はい
+  * No / いいえ
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with CSS grid or flex layouts.
+* This applies to:
+
+  * potion cards.
+  * battle potion display.
+  * Active Potion section.
+  * any newly touched potion UI.
+
+Expected Behaviour
+
+* Player can use one board potion per board turn.
+* After confirming a board potion, all other board potion Use buttons are disabled.
+* Cancelling a board potion confirmation does not disable anything.
+* Board potion usage does not disable battle potion usage.
+* Player can use one battle potion per battle turn.
+* After confirming a battle potion, all other battle potion Use buttons are disabled until the next battle turn.
+* Cancelling a battle potion confirmation does not disable anything.
+* Battle potion usage resets on the player’s next battle turn.
+* Board potion usage resets on the player’s next board turn.
+* A Both potion used on the board counts only as board usage.
+* A Both potion used in battle counts only as battle usage.
+* Mini potion limits are not implemented.
+* Active Potion section is hidden when empty.
+* Active Potion section appears when an active potion exists.
+* Active Potion section appears beneath the normal potions section.
+* Active Potion section is darker brown than the normal potions section.
+* Active Potion title displays in English.
+* Active Potion title displays in Japanese.
+* Active potion is horizontally centred.
+* Active potion uses the potion component with its name included.
+* Potions are consumed when used or moved to active unless a later feature says otherwise.
+
+Out Of Scope
+
+* No actual potion effects.
+* No Mini potion trigger implementation.
+* No River Mini Game potion use.
+* No Cave Mini Game potion use.
+* No Decision mini-game potion use.
+* No rules for which potions become active.
+* No active potion effect resolution.
+* No changes to potion reward generation.
+* No changes to potion inventory size.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* Feature-001 potion trigger buttons and confirmation modal already exist or are being implemented.
+* Player potion slots already exist.
+* The game can track per-player board-turn state.
+* Battle logic can track per-player battle-turn state.
+* A future feature will define potion-specific active behaviour.
+* Only one active potion is expected at a time.
+
+Stop Point
+
+* Stop once board and battle potion usage limits are enforced separately, potion Use buttons disable correctly after confirmed use, and the hidden-by-default Active Potion gameplay section displays a centred named potion when active.
+
+Testing Checkpoints
+
+* Give a player two Board potions.
+* Use one Board potion and confirm Yes.
+* Confirm the used potion is removed.
+* Confirm the remaining Board potion Use button is disabled.
+* Repeat but choose No and confirm no buttons are disabled.
+* Confirm board potion usage resets on the player’s next board turn.
+* Give a player two Battle potions.
+* Use one Battle potion and confirm Yes.
+* Confirm the used potion is removed.
+* Confirm the remaining Battle potion Use button is disabled.
+* Confirm battle potion usage resets on the player’s next battle turn.
+* Confirm battle potion Use buttons are disabled during enemy/opponent turns.
+* Use a Board potion, then enter battle on the same board turn.
+* Confirm Battle potions are still available in battle.
+* Use a Both potion from the board.
+* Confirm it counts as board potion usage only.
+* Use a Both potion from battle.
+* Confirm it counts as battle potion usage only.
+* Confirm Mini potions remain out of scope.
+* Confirm board potion cards remain aligned with disabled buttons.
+* Confirm battle potion cards remain aligned with disabled buttons.
+* Confirm Active Potion section is hidden when there is no active potion.
+* Add one potion to active potion state.
+* Confirm Active Potion section appears beneath the normal potions section.
+* Confirm Active Potion section title says `Active Potion` in English.
+* Confirm Active Potion section title says `発動中のポーション` in Japanese.
+* Confirm Active Potion section is darker brown than the normal potions section.
+* Confirm active potion is horizontally centred.
+* Confirm active potion uses the potion component with name included.
+* Confirm no potion is duplicated between potion slots and Active Potion.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

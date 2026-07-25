@@ -1,11 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { GameSetupProvider, useGameSetup } from '../gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../gameSetup/gameSetup';
+import { POTION_DEFINITIONS } from '../../data/potions';
 
-const rollChoice = { id: 'roll-choice', name: 'Roll Choice' };
-const smallHeal = { id: 'small-heal', name: 'Small Heal' };
-const iceBeam = { id: 'ice-beam', name: 'Ice Beam' };
-const heal = { id: 'heal', name: 'Heal' };
+const rollChoice = POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice');
+const smallHeal = POTION_DEFINITIONS.find(({ id }) => id === 'small-heal');
+const iceBeam = POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam');
+const heal = POTION_DEFINITIONS.find(({ id }) => id === 'heal');
 
 function PotionCapacityProbe() {
   const {
@@ -30,7 +31,10 @@ function PotionCapacityProbe() {
       <button type="button" onClick={() => resolvePendingPotionGrant(1)}>
         Replace Second
       </button>
-      <button type="button" onClick={() => consumePlayerPotion('player-1', 1)}>
+      <button
+        type="button"
+        onClick={() => consumePlayerPotion('player-1', 1, 'board')}
+      >
         Use Player 1 Second
       </button>
       <p>{`Player 1 potions: ${gameSetup.players[0].potions.map(({ id }) => id).join(',') || 'none'}`}</p>
@@ -46,6 +50,7 @@ function createPotionSetup(playerOnePotions = [], playerTwoPotions = []) {
 
   gameSetup.players[0].potions = playerOnePotions;
   gameSetup.players[1].potions = playerTwoPotions;
+  gameSetup.turnOrder = ['player-1', 'player-2'];
 
   return gameSetup;
 }

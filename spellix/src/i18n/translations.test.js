@@ -138,6 +138,7 @@ describe('gameplay translations', () => {
       'Are you sure you want to use Roll Choice?'
     );
     expect(english).toMatchObject({
+      activePotionTitle: 'Active Potion',
       descriptionTitle: 'Potion Description',
       no: 'No',
       use: 'Use',
@@ -147,6 +148,8 @@ describe('gameplay translations', () => {
       '\u51fa\u76ee\u9078\u629e\u3092\u4f7f\u7528\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f'
     );
     expect(japanese).toMatchObject({
+      activePotionTitle:
+        '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
       descriptionTitle: '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
       no: '\u3044\u3044\u3048',
       use: '\u4f7f\u7528\u3059\u308b',

@@ -124,6 +124,24 @@ describe('PotionList', () => {
     expect(onUsePotion).toHaveBeenCalledWith(potions[2], 2);
   });
 
+  test('keeps every eligible Use button visible but disabled when usage is locked', () => {
+    render(
+      <PotionList
+        context="board"
+        disabled
+        onUsePotion={jest.fn()}
+        potions={[
+          POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+          POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+        ]}
+      />
+    );
+
+    screen.getAllByRole('button', { name: 'Use' }).forEach((button) => {
+      expect(button).toBeDisabled();
+    });
+  });
+
   test('mirrors the committed spell display styling without scrollbars', () => {
     const componentSource = readFileSync(`${__dirname}/PotionList.jsx`, 'utf8');
     const stylesheet = readFileSync(`${__dirname}/PotionList.css`, 'utf8');
