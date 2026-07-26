@@ -410,7 +410,19 @@ Feature-003: Implement Copy and Paste potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added a localized Copy and Paste modal after the existing Board potion confirmation, while leaving the potion in its slot until a token choice successfully resolves.
+* An empty token bag now shows the required English or Japanese `larger-text` message and OK action without consuming the potion or locking Board potion usage.
+* A non-empty token bag is listed vertically with reusable Token components, localized Duplicate buttons, `div` rows, and no `ul` or `li`.
+* Selecting a token with available bag space creates a separate normal token instance using the existing player/type ID sequence, adds it to the bag, consumes the potion, and locks Board potion usage.
+* A full bag stays in the same modal flow and shows the new duplicate plus every existing token as the required discard choices.
+* Discarding the new duplicate leaves the bag unchanged, while discarding an existing token replaces exactly that token; both successful decisions consume the potion and lock Board potion usage.
+* Copy and Paste cannot bypass its choices through the generic potion-consumption action and never enters Active Potion.
+* Duplicates do not inherit starting-token `protected` or `source` metadata, preserving the existing rule that only original starting tokens are permanently protected.
+* No token capacity, rarity, effects, Spell Token Assignment, route, or unrelated token UI behavior was changed.
 
 Related Feature
 
@@ -599,7 +611,15 @@ Feature-004: Implement Starting Charge potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Starting Charge now uses the existing confirmed Board potion action to leave the player's potion slots, lock Board potion usage for the turn, and appear in the existing Active Potion section.
+* Starting a battle for that player during the same Board turn removes Starting Charge from Active Potion and initializes the existing `playerCharged` battle flag.
+* Reused the existing all-column Yellow charge behavior, including its battle display, Red/Blue spell bonus, and automatic expiry when the player's first battle turn advances.
+* Ending the Board turn without starting a battle removes Starting Charge from Active Potion without returning the consumed potion.
+* Other Active Potion entries, Charge token uses, battle encounter selection, Board movement, and unrelated UI behavior were not changed.
 
 Related Feature
 
@@ -705,7 +725,17 @@ Feature-005: Implement Tokensmith potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added the localized Tokensmith modal flow after the existing Board potion confirmation without consuming or locking the potion before a successful token move.
+* Full token bags and players with no committed spell tokens now receive the required `larger-text` message and OK action while Tokensmith remains in its slot.
+* Reused the committed-spell table through an optional interactive mode that hides empty columns and renders every committed token instance as its own clickable control without changing the normal consolidated display.
+* Added the required selected-token Yes/No confirmation; No returns to token selection and Yes moves that exact token identity back to the bag as uncommitted.
+* The successful move, Tokensmith consumption, Board usage lock, unseen-token notification, and Light Green health recalculation occur in one validated GameSetup transaction.
+* Grey tokens that would leave another effective column over capacity are rejected with a clear localized modal and no state change.
+* Tokensmith never enters Active Potion, and no token capacity, rearranging, duplication, deletion, merge, route, or unrelated spell UI behavior was changed.
 
 Related Feature
 
@@ -890,7 +920,16 @@ Feature-006: Implement Redo potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added a session-only Redo mode after the existing Board potion confirmation; Redo is consumed immediately, Board potion usage locks, the normal Spells modal opens, and Active Potion remains empty.
+* Committed spell-token controls become draggable only during that Redo session, while normal Spells visits continue to keep committed tokens disabled.
+* Extended the existing draft movement helper with an explicit Redo override covering same-column, cross-column, slot-to-bag, and bag-to-slot movement without bypassing merged-column or capacity rules.
+* Save continues through the existing confirmation and White merge flow, recommits every placed token, recalculates Light Green health and Grey capacity, and exits Redo mode.
+* Cancel continues through the existing unchanged-draft or confirmation flow, discards the draft, preserves the consumed potion, restores normal committed-token locking, and exits Redo mode.
+* Added the exact English and Japanese Redo warning in the existing `spells-starting-warning` location without adding styling, routes, redesigns, or unrelated behavior.
 
 Related Feature
 
@@ -1033,7 +1072,17 @@ Feature-007: Implement Spellbound and Heavy Weight potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added a reusable localized OtherPlayerChooser modal that excludes the casting player, shows every other player image with its own Choose button, uses `larger-text`, and contains no list markup.
+* Spellbound and Heavy Weight now remain unconsumed through confirmation and are consumed only when another player is selected.
+* The selected target stores the pending potion effect without an immediate Active Potion or gameplay change.
+* The pending effect activates through the existing turn transition when the target's next Board turn begins, appears with its name in Active Potion, disables all Board potion Use controls, and clears when that turn ends.
+* Heavy Weight preserves the original die face while displaying the exact localized halved result sentence and uses `Math.ceil(originalRoll / 2)` for Board movement.
+* Generic potion consumption rejects these target-selection potions so they cannot bypass the required chooser flow.
+* Battle and Mini potion blocking, stacking rules, reward generation, routes, and unrelated player-chooser or Active Potion styling were not changed.
 
 Related Feature
 
@@ -1955,6 +2004,581 @@ Testing Checkpoints
 * Confirm Buy and Sell is consumed.
 * Confirm Buy and Sell does not enter Active Potion.
 * Confirm all token types can appear with equal chance.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-012: Implement Cauldron potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Cauldron potion.
+* Cauldron generates 3 random potions for the player to choose from.
+* The player chooses 1 potion.
+* The chosen potion replaces Cauldron in the player’s potion slots.
+* Once the player has triggered Cauldron, they cannot cancel out of the choice.
+
+Behaviour Summary
+
+```txt id="sq0p2q"
+Cauldron: pick one of 3 random potions to gain.
+```
+
+Trigger Requirement
+
+* Cauldron is a Board potion.
+* It should be triggered from the gameplay potion section using the standard Use button and confirmation modal.
+* After the player confirms that they want to use Cauldron:
+
+  * open the Cauldron choice modal.
+  * generate 3 random potion choices.
+  * do not allow the player to cancel the modal.
+* Cauldron should not go into the Active Potion section.
+
+Random Potion Generation Requirement
+
+* Generate exactly 3 random potions.
+* All potions should have an equal chance of appearing.
+* Potion rarity should not affect the selection chance.
+* Common and Rare potions should be equally eligible.
+* The 3 generated potions must all be different.
+* Do not allow duplicate potion choices.
+
+Suggested generation direction:
+
+```js id="te03hr"
+const firstPotion = getRandomPotionFromAllPotions();
+const secondPotion = getRandomPotionExcluding([firstPotion.id]);
+const thirdPotion = getRandomPotionExcluding([firstPotion.id, secondPotion.id]);
+```
+
+* Exact implementation can vary.
+* The important requirements are:
+
+  * 3 potion choices.
+  * equal chance.
+  * no rarity weighting.
+  * no duplicate choices.
+
+Potion Pool Requirement
+
+* Use the current EPIC-012 source-of-truth potion table.
+* Do not include deprecated potions.
+* Do not include duplicate potion records.
+* If the game has categories for potion generation, Cauldron should use the full valid potion list unless a later feature restricts it.
+* Cauldron itself may appear as one of the choices unless explicitly excluded by later rules.
+* Mini, Board, Battle, and Both potions are all eligible unless later rules say otherwise.
+
+Choice Modal Requirement
+
+* The 3 potion choices should appear in a modal.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * no `ul` or `li`.
+* The potions should be horizontally stacked.
+* Each potion should use the existing potion component.
+* Each potion should have a Choose button underneath it.
+
+Choose button text:
+
+```txt id="zd1bjx"
+Choose
+```
+
+Japanese:
+
+```txt id="uk21tv"
+選ぶ
+```
+
+Expected layout:
+
+```txt id="iie7t5"
+[ Potion ]   [ Potion ]   [ Potion ]
+[ Choose ]   [ Choose ]   [ Choose ]
+```
+
+Suggested Structure
+
+```jsx id="l4d9cn"
+<div className="cauldron-choice-list">
+  {potionChoices.map((potion) => (
+    <div className="cauldron-choice-card" key={potion.id}>
+      <Potion potion={potion} showName={true} />
+
+      <Button onClick={() => chooseCauldronPotion(potion)}>
+        {chooseText}
+      </Button>
+    </div>
+  ))}
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="j1pvo9"
+.cauldron-choice-list {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.cauldron-choice-card {
+  display: grid;
+  grid-template-rows: 1fr 42px;
+  justify-items: center;
+  align-items: end;
+  text-align: center;
+  gap: 10px;
+}
+```
+
+* Exact class names and sizes can vary.
+* The important requirement is that the potions are horizontally stacked and the Choose buttons are centred underneath them.
+
+No Cancel Requirement
+
+* Once the player has confirmed that they want to use Cauldron, they cannot cancel out of the potion choice.
+* The Cauldron choice modal should not have:
+
+  * Cancel button.
+  * close X button.
+  * click-outside-to-close behaviour.
+  * escape-key close behaviour, if that would let the player avoid choosing.
+* The player must choose one of the 3 potions.
+
+Potion Replacement Requirement
+
+* When the player chooses a potion:
+
+  * replace the Cauldron potion in the player’s potion slots with the chosen potion.
+* The chosen potion should occupy the same slot that Cauldron occupied.
+* Do not add the chosen potion to a new slot.
+* Do not leave Cauldron in the potion slot.
+* Do not duplicate the chosen potion elsewhere.
+
+Important Consumption Detail
+
+* Cauldron is not simply removed and then separately granted.
+* It should be replaced by the chosen potion.
+* This avoids creating an empty slot or accidentally triggering the full-potion-slot replacement flow.
+* If the shared trigger flow removes Cauldron before the choice is made, keep track of the original slot index so the chosen potion can be placed back into that slot.
+
+Suggested state:
+
+```js id="iafsjb"
+cauldronChoiceState = {
+  playerId,
+  originalPotionSlotIndex,
+  choices: [potionA, potionB, potionC]
+};
+```
+
+Choice Resolution Requirement
+
+* After the player chooses a potion:
+
+  * place the chosen potion into Cauldron’s original slot.
+  * close the Cauldron modal.
+  * continue play.
+* The board one-potion-per-turn limit should count Cauldron as used once the Cauldron flow has successfully produced a replacement potion.
+* The chosen potion should not be immediately triggered.
+* If the chosen potion is Board or Both, it should still not be usable again on the same board turn if the board potion limit has already been used by Cauldron.
+
+Translation Requirement
+
+* Use existing potion name and description translations from the potion data.
+* Use the existing Choose translation:
+
+```txt id="qem3z3"
+Choose	選ぶ
+```
+
+* If a heading is added to the modal, suggested text is:
+
+```txt id="a6dsvb"
+Choose a potion
+```
+
+Japanese:
+
+```txt id="gvwpdw"
+ポーションを選んでください。
+```
+
+* If no heading is needed, this is optional.
+* Any heading should use `larger-text`.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with grid or flex layouts.
+
+Expected Behaviour
+
+* Cauldron opens a modal with 3 random potion choices.
+* All potion choices have equal chance to appear.
+* Rarity does not affect the selection chance.
+* All 3 potion choices are different.
+* Potion choices are horizontally stacked.
+* Each potion has a Choose button underneath.
+* The player cannot cancel out after triggering Cauldron.
+* Choosing a potion replaces Cauldron in the same potion slot.
+* Cauldron is not placed into Active Potion.
+* The chosen potion is not immediately used.
+* The board one-potion-per-turn limit still applies after Cauldron resolves.
+
+Out Of Scope
+
+* No weighted rarity generation.
+* No option to cancel after triggering.
+* No active potion behaviour.
+* No immediate use of the chosen potion.
+* No changes to potion slot count.
+* No unrelated potion UI redesign.
+* No changes to the general potion reward generation system unless needed to share safe random-potion helpers.
+
+Testing Checkpoints
+
+* Use Cauldron from the board.
+* Confirm the standard use confirmation appears first.
+* Confirm choosing No keeps Cauldron in the potion slot.
+* Confirm choosing Yes opens the Cauldron choice modal.
+* Confirm the Cauldron choice modal shows exactly 3 potions.
+* Confirm all 3 potion choices are different.
+* Confirm potions are horizontally stacked.
+* Confirm each potion has a Choose button underneath.
+* Confirm the Choose button displays in English.
+* Confirm the Choose button displays in Japanese.
+* Confirm the modal cannot be cancelled after Cauldron is triggered.
+* Confirm clicking outside the modal does not close it.
+* Confirm pressing Escape does not close it, if Escape closing exists elsewhere.
+* Choose one potion.
+* Confirm the chosen potion replaces Cauldron in the same potion slot.
+* Confirm Cauldron is no longer in that slot.
+* Confirm the chosen potion is not immediately triggered.
+* Confirm Cauldron does not enter Active Potion.
+* Confirm the board potion use limit is used after Cauldron resolves.
+* Confirm rarity does not weight the 3 choices.
+* Confirm deprecated potions cannot appear.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-013: Implement Storm Master potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+* EPIC-013 Feature-008: Implement Double Dice and Triple Dice potion behaviour
+* EPIC-013 Feature-010: Implement Devine Chance potion behaviour
+
+Goal
+
+* Implement the behaviour of Storm Master.
+* Storm Master depends on the casting player’s board dice roll for this turn.
+* When cast, it moves into the Active Potion section.
+* If the caster rolls even, all other players are prevented from moving until the caster’s next turn.
+* If the caster rolls odd, the caster is prevented from moving and their turn ends immediately.
+* Storm Master is removed from Active Potion after the caster’s roll resolves.
+
+Behaviour Summary
+
+```txt id="vq55xf"
+Storm Master:
+Roll the dice for your turn.
+
+If even:
+All other players cannot move until the caster’s next turn.
+
+If odd:
+The caster cannot move this turn and their turn ends immediately.
+```
+
+Activation Requirement
+
+* Storm Master is a Board potion.
+* It should be triggered from the gameplay potion section using the standard Use button and confirmation modal.
+* After the player confirms that they want to use Storm Master:
+
+  * consume it from the player’s potion slots.
+  * move it into the casting player’s Active Potion section.
+  * mark Storm Master as pending until the casting player rolls the board dice.
+* Storm Master should remain in Active Potion until the casting player’s board roll resolves.
+
+Caster Roll Requirement
+
+* Storm Master uses the casting player’s normal board dice roll for that turn.
+* Do not roll a separate dice for the potion.
+* The same dice roll should determine:
+
+  * Storm Master’s even/odd result.
+  * whether the casting player can move.
+  * the movement value if the roll is even.
+* Once this roll has happened, Storm Master is removed from the casting player’s Active Potion section.
+
+Even Roll Requirement
+
+* If the casting player’s roll is even:
+
+  * Storm Master affects all other players.
+  * The casting player continues their turn normally using the dice roll.
+  * Every other player becomes fixed in place.
+  * This effect lasts until the casting player’s next turn.
+* “Fixed in place” means:
+
+  * affected players still take their turns.
+  * affected players still roll the dice.
+  * affected players may still cast potions on their turns.
+  * affected players cannot move after rolling.
+  * their turn advances after the storm message is acknowledged.
+
+Storm Duration Requirement
+
+* If the caster rolls even, the storm effect should last for one full round.
+* It begins after the casting player’s Storm Master roll resolves.
+* It affects every other player once.
+* It ends when it becomes the original casting player’s turn again.
+* The original casting player should not be affected by their own even-roll storm.
+
+Suggested state:
+
+```js id="rgh4bj"
+stormMasterEffect = {
+  casterPlayerId: castingPlayer.id,
+  affectedPlayerIds: players
+    .filter((player) => player.id !== castingPlayer.id)
+    .map((player) => player.id),
+  expiresWhenTurnReturnsToPlayerId: castingPlayer.id
+};
+```
+
+* Exact implementation can vary.
+* The important requirement is that all other players are blocked from movement until the caster’s next turn.
+
+Affected Player Turn Requirement
+
+* When an affected player takes their turn:
+
+  * they may still use allowed board potions before rolling, unless another effect disables them.
+  * they must still roll the dice.
+  * the dice roll should still happen because it may trigger potions or other roll-dependent effects.
+  * after the dice roll resolves, they must not be allowed to move.
+* Instead of showing the normal movement result, show this message:
+
+```txt id="633xp7"
+The storm prevents you from moving
+```
+
+* Japanese:
+
+```txt id="7z8mns"
+嵐のせいで移動できません。
+```
+
+* After the player acknowledges the message, their turn ends and the game moves to the next player.
+
+Affected Player Movement Requirement
+
+* The affected player must not be shown valid movement highlights.
+* The affected player must not be able to choose a destination.
+* The affected player must remain on their current square.
+* Their turn should advance normally after the storm message.
+
+Odd Roll Requirement
+
+* If the casting player’s Storm Master roll is odd:
+
+  * show a modal stating:
+
+```txt id="qfpnkm"
+The storm targeted you
+```
+
+* Japanese:
+
+```txt id="zhsud4"
+嵐の標的になりました。
+```
+
+* The casting player’s turn ends immediately.
+* The casting player cannot move.
+* Other players are unaffected.
+* Do not create a lasting storm effect.
+* Storm Master is removed from Active Potion after this result.
+
+Odd Roll Modal Requirement
+
+* The odd-roll result modal should:
+
+  * use the wooden modal background.
+  * use yellow text.
+  * use the correct language font.
+  * use `larger-text` for the result sentence.
+  * have a centred Continue or OK button.
+  * not use `ul` or `li`.
+
+Even Roll Message Modal Requirement
+
+* The affected-player no-movement message should:
+
+  * use the wooden modal background.
+  * use yellow text.
+  * use the correct language font.
+  * use `larger-text` for the message.
+  * have a centred Continue or OK button.
+  * not use `ul` or `li`.
+
+Active Potion Expiry Requirement
+
+* Storm Master is removed from the caster’s Active Potion section immediately after the caster’s dice roll resolves.
+* If the roll is even:
+
+  * the ongoing storm effect remains in game state.
+  * the potion itself is no longer shown in the caster’s Active Potion section.
+* If the roll is odd:
+
+  * no ongoing storm effect remains.
+  * the potion is removed from Active Potion.
+* Do not keep Storm Master visible after the caster’s roll has resolved.
+
+Interaction With Roll-Dependent Potions
+
+* A storm-blocked player still rolls their dice.
+* That roll can still be used by any active potion or effect that depends on their roll.
+* Examples:
+
+  * Devine Chance should still be able to resolve from that roll.
+  * Troublemaker should still be able to resolve from that roll.
+  * Roll Choice should still be able to force that roll if active.
+* After those roll-dependent effects are resolved, movement is still blocked by Storm Master.
+
+Interaction With Double Dice And Triple Dice
+
+* If the Storm Master caster has Double Dice or Triple Dice active, use the final board roll result after dice are totalled to determine even or odd.
+* Example:
+
+  * Double Dice rolls 2 and 4.
+  * total is 6.
+  * Storm Master result is even.
+* If a storm-blocked player has Double Dice or Triple Dice active:
+
+  * they still roll the correct number of dice.
+  * roll-dependent effects can still use the result.
+  * they still cannot move afterward.
+
+Interaction With Heavy Weight
+
+* If Heavy Weight affects the Storm Master caster, use the final movement dice result after Heavy Weight has been applied to determine Storm Master even/odd.
+* Example:
+
+  * original roll is 5.
+  * Heavy Weight halves it to 3.
+  * Storm Master result is odd.
+* If a storm-blocked player is also affected by Heavy Weight:
+
+  * they still roll and resolve Heavy Weight.
+  * they still cannot move because the storm prevents movement.
+
+Turn Change Requirement
+
+* Normal next-turn modal rules still apply.
+* When Storm Master causes a player’s turn to end without movement:
+
+  * advance to the next player normally.
+  * show the next-turn modal as required by global turn-change rules.
+* Do not skip the next-turn modal.
+
+Expected Behaviour
+
+* Storm Master moves to Active Potion when cast.
+* Storm Master waits for the caster’s board dice roll.
+* If the caster rolls even, all other players are fixed in place until the caster’s next turn.
+* If the caster rolls even, the caster continues movement normally.
+* If the caster rolls odd, the caster sees `The storm targeted you`.
+* If the caster rolls odd, the caster cannot move and their turn ends immediately.
+* Storm Master is removed from Active Potion after the caster’s roll resolves.
+* Storm-blocked players still roll dice.
+* Storm-blocked players may still cast potions on their turns.
+* Storm-blocked players do not move after rolling.
+* Storm-blocked players see `The storm prevents you from moving`.
+* The storm effect ends when it becomes the original caster’s turn again.
+* All relevant text displays correctly in English and Japanese.
+
+Out Of Scope
+
+* No changes to potion trigger confirmation modal.
+* No changes to one-potion-per-turn limits.
+* No changes to board movement rules except storm movement blocking.
+* No changes to battle behaviour.
+* No Mini potion interaction.
+* No changes to player targeting.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* Storm Master affects board movement only.
+* Storm Master does not prevent affected players from using potions unless another effect does.
+* The caster’s even/odd result should be based on the final board roll value used for movement.
+* Affected players still complete a normal turn sequence except movement selection is skipped.
+
+Stop Point
+
+* Stop once Storm Master can be cast, moves to Active Potion, resolves from the caster’s board roll, blocks the correct players from moving when even, blocks the caster when odd, displays the required modals, and expires correctly.
+
+Testing Checkpoints
+
+* Use Storm Master from the board.
+* Confirm it is removed from potion slots.
+* Confirm it appears in Active Potion.
+* Roll an even number.
+* Confirm Storm Master is removed from Active Potion.
+* Confirm the caster can move normally using the roll.
+* Advance to the next player.
+* Confirm the next player can still roll.
+* Confirm the next player cannot move after rolling.
+* Confirm the message says `The storm prevents you from moving`.
+* Confirm the Japanese message says `嵐のせいで移動できません。`
+* Confirm the blocked player remains on the same square.
+* Confirm the turn advances after the message.
+* Confirm all other players are blocked once.
+* Confirm the storm ends when it becomes the original caster’s turn again.
+* Use Storm Master again.
+* Roll an odd number.
+* Confirm the modal says `The storm targeted you`.
+* Confirm the Japanese modal says `嵐の標的になりました。`
+* Confirm the caster cannot move.
+* Confirm the caster’s turn ends immediately.
+* Confirm other players are unaffected after an odd result.
+* Confirm roll-dependent potion effects still resolve for storm-blocked players.
+* Confirm Double Dice and Triple Dice totals can be used for Storm Master even/odd checks.
+* Confirm Heavy Weight interaction uses the final roll value.
+* Confirm next-turn modal still appears after storm-forced turn endings.
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.

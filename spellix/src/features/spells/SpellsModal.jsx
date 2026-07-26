@@ -14,6 +14,7 @@ function SpellsModal({
   draftTokenBag,
   isForcedSetup,
   isOpen,
+  isRedoMode = false,
   onCancel,
   onSave,
   isSaveDisabled = false,
@@ -66,7 +67,7 @@ function SpellsModal({
                 </p>
               ) : (
                 <p className={`spells-starting-warning ${languageClassName}`}>
-                  {translations.spellsInfo}
+                  {isRedoMode ? translations.redoWarning : translations.spellsInfo}
                 </p>
               )}
               {validationMessage ? (
@@ -85,6 +86,7 @@ function SpellsModal({
             )}
           </div>
           <SpellTokenAssignment
+            allowCommittedTokenMovement={isRedoMode}
             language={currentLanguage}
             mergedColumns={currentPlayer.mergedColumns}
             onTokenDrop={onTokenDrop}

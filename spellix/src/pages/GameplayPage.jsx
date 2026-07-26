@@ -15,10 +15,21 @@ import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import PotionList from '../features/potions/PotionList';
 import ActivePotionSection from '../features/potions/ActivePotionSection';
+import HeavyWeightDiceResult from '../features/potions/HeavyWeightDiceResult';
 import HealingPotionAnimation from '../features/potions/HealingPotionAnimation';
 import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
 import RollChoiceModal from '../features/potions/RollChoiceModal';
+import CopyPasteModal from '../features/potions/CopyPasteModal';
+import OtherPlayerChooser from '../features/potions/OtherPlayerChooser';
+import TokensmithModal from '../features/potions/TokensmithModal';
+import { createCopyPasteDuplicate } from '../features/potions/copyPaste';
 import { isHealingPotion } from '../features/potions/potionUsage';
+import {
+  blocksBoardPotionUse,
+  getHeavyWeightBoardRoll,
+  isTargetPlayerPotion,
+} from '../features/potions/targetPlayerPotions';
+import { canAddTokenToBag } from '../features/debug/tokenBagAdmin';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
 import SpellsModal from '../features/spells/SpellsModal';
@@ -60,6 +71,9 @@ function GameplayPage() {
     setPlayerPosition,
     updatePlayerSpells,
     consumePlayerPotion,
+    resolveCopyPastePotion,
+    resolveTargetPlayerPotion,
+    resolveTokensmithPotion,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
   const [draftSpellSlots, setDraftSpellSlots] = useState([]);
@@ -67,12 +81,18 @@ function GameplayPage() {
   const [highlightedNodeIds, setHighlightedNodeIds] = useState([]);
   const [showDiceModal, setShowDiceModal] = useState(false);
   const [showSpellsModal, setShowSpellsModal] = useState(false);
+  const [isRedoMode, setIsRedoMode] = useState(false);
   const [showSpellCancelConfirmation, setShowSpellCancelConfirmation] = useState(false);
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [mergeSaveDraft, setMergeSaveDraft] = useState(null);
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
+  const [pendingCopyPasteUse, setPendingCopyPasteUse] = useState(null);
+  const [pendingCopyPasteDuplicate, setPendingCopyPasteDuplicate] = useState(null);
   const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
+  const [pendingTargetPlayerPotionUse, setPendingTargetPlayerPotionUse] =
+    useState(null);
+  const [pendingTokensmithUse, setPendingTokensmithUse] = useState(null);
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
@@ -99,8 +119,14 @@ function GameplayPage() {
     spellSlots: draftSpellSlots,
     tokenBag: draftTokenBag,
   });
+  const validationSpellSlots = isRedoMode
+    ? createCommittedSpellData({
+        spellSlots: draftSpellSlots,
+        tokenBag: draftTokenBag,
+      }).spellSlots
+    : draftSpellSlots;
   const overCapacityColumns = getOverCapacityColumnNumbers(
-    draftSpellSlots,
+    validationSpellSlots,
     currentPlayer?.mergedColumns
   );
   const capacityValidationMessage =
@@ -110,11 +136,43 @@ function GameplayPage() {
   const isSpellSaveDisabled = isForcedSpellSetup
     ? !isStartingSetupComplete || overCapacityColumns.length > 0
     : !hasUnsavedSpellChanges || overCapacityColumns.length > 0;
+  const isHeavyWeightActive = currentPlayer?.activePotion?.id === 'heavy-weight';
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
       if (pendingPotionUse.potion.id === 'roll-choice') {
         setPendingRollChoiceUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
+      if (pendingPotionUse.potion.id === 'copy-and-paste') {
+        setPendingCopyPasteUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
+      if (pendingPotionUse.potion.id === 'tokensmith') {
+        setPendingTokensmithUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
+      if (isTargetPlayerPotion(pendingPotionUse.potion)) {
+        setPendingTargetPlayerPotionUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
+      if (pendingPotionUse.potion.id === 'redo') {
+        consumePlayerPotion(
+          pendingPotionUse.playerId,
+          pendingPotionUse.potionIndex,
+          'board'
+        );
+        markPlayerTokenBagSeen(pendingPotionUse.playerId);
+        setIsRedoMode(true);
+        setShowSpellsModal(true);
         setPendingPotionUse(null);
         return;
       }
@@ -144,6 +202,84 @@ function GameplayPage() {
     }
 
     setPendingRollChoiceUse(null);
+  };
+
+  const closeCopyPasteModal = () => {
+    setPendingCopyPasteUse(null);
+    setPendingCopyPasteDuplicate(null);
+  };
+
+  const handleDuplicateToken = (token) => {
+    if (!pendingCopyPasteUse || !currentPlayer) {
+      return;
+    }
+
+    if (canAddTokenToBag(currentPlayer.tokenBag)) {
+      resolveCopyPastePotion(
+        pendingCopyPasteUse.playerId,
+        pendingCopyPasteUse.potionIndex,
+        token.id
+      );
+      closeCopyPasteModal();
+      return;
+    }
+
+    setPendingCopyPasteDuplicate({
+      sourceTokenId: token.id,
+      token: createCopyPasteDuplicate(currentPlayer, token),
+    });
+  };
+
+  const handleDiscardCopyPasteDuplicate = () => {
+    if (!pendingCopyPasteUse || !pendingCopyPasteDuplicate) {
+      return;
+    }
+
+    resolveCopyPastePotion(
+      pendingCopyPasteUse.playerId,
+      pendingCopyPasteUse.potionIndex,
+      pendingCopyPasteDuplicate.sourceTokenId,
+      { discardDuplicate: true }
+    );
+    closeCopyPasteModal();
+  };
+
+  const handleReplaceTokenWithDuplicate = (token) => {
+    if (!pendingCopyPasteUse || !pendingCopyPasteDuplicate) {
+      return;
+    }
+
+    resolveCopyPastePotion(
+      pendingCopyPasteUse.playerId,
+      pendingCopyPasteUse.potionIndex,
+      pendingCopyPasteDuplicate.sourceTokenId,
+      { replacedTokenId: token.id }
+    );
+    closeCopyPasteModal();
+  };
+
+  const handleConfirmTokensmith = (tokenId) => {
+    if (pendingTokensmithUse) {
+      resolveTokensmithPotion(
+        pendingTokensmithUse.playerId,
+        pendingTokensmithUse.potionIndex,
+        tokenId
+      );
+    }
+
+    setPendingTokensmithUse(null);
+  };
+
+  const handleChooseTargetPlayer = (targetPlayer) => {
+    if (pendingTargetPlayerPotionUse) {
+      resolveTargetPlayerPotion(
+        pendingTargetPlayerPotionUse.playerId,
+        pendingTargetPlayerPotionUse.potionIndex,
+        targetPlayer.id
+      );
+    }
+
+    setPendingTargetPlayerPotionUse(null);
   };
 
   useEffect(() => {
@@ -204,13 +340,18 @@ function GameplayPage() {
     }
 
     markPlayerTokenBagSeen(currentPlayer.id);
+    setIsRedoMode(false);
     setShowSpellsModal(true);
   };
 
-  const handleDiceRollComplete = (diceRoll) => {
+  const handleDiceRollComplete = (originalDiceRoll) => {
     if (!currentPlayer) {
       return;
     }
+
+    const diceRoll = isHeavyWeightActive
+      ? getHeavyWeightBoardRoll(originalDiceRoll)
+      : originalDiceRoll;
 
     setCurrentDiceRoll(diceRoll);
 
@@ -274,6 +415,7 @@ function GameplayPage() {
 
   const handleSpellTokenDrop = (tokenId, destinationId) => {
     const movementResult = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: isRedoMode,
       destinationId,
       mergedColumns: currentPlayer.mergedColumns,
       spellSlots: draftSpellSlots,
@@ -297,6 +439,7 @@ function GameplayPage() {
 
     if (!hasUnsavedSpellChanges) {
       setShowSpellsModal(false);
+      setIsRedoMode(false);
       return;
     }
 
@@ -362,6 +505,7 @@ function GameplayPage() {
     setShowSpellSaveConfirmation(false);
     setMergeSaveDraft(null);
     setShowSpellsModal(false);
+    setIsRedoMode(false);
     setSpellValidationMessage('');
   };
 
@@ -411,6 +555,7 @@ function GameplayPage() {
   const handleConfirmSpellCancel = () => {
     setShowSpellCancelConfirmation(false);
     setShowSpellsModal(false);
+    setIsRedoMode(false);
     setSpellValidationMessage('');
   };
 
@@ -522,7 +667,8 @@ function GameplayPage() {
         <PotionList
           context="board"
           disabled={Boolean(
-            currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn
+            currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
+              blocksBoardPotionUse(currentPlayer?.activePotion)
           )}
           language={currentLanguage}
           languageClassName={languageClassName}
@@ -557,6 +703,32 @@ function GameplayPage() {
         language={currentLanguage}
         onSelect={handleSelectRollChoice}
       />
+      <CopyPasteModal
+        duplicateToken={pendingCopyPasteDuplicate?.token}
+        isOpen={Boolean(pendingCopyPasteUse)}
+        language={currentLanguage}
+        onClose={closeCopyPasteModal}
+        onDiscardDuplicate={handleDiscardCopyPasteDuplicate}
+        onDuplicate={handleDuplicateToken}
+        onReplaceToken={handleReplaceTokenWithDuplicate}
+        tokenBag={currentPlayer?.tokenBag ?? []}
+      />
+      <TokensmithModal
+        isOpen={Boolean(pendingTokensmithUse)}
+        language={currentLanguage}
+        mergedColumns={currentPlayer?.mergedColumns ?? []}
+        onClose={() => setPendingTokensmithUse(null)}
+        onConfirm={handleConfirmTokensmith}
+        spellSlots={currentPlayer?.spellSlots ?? []}
+        tokenBag={currentPlayer?.tokenBag ?? []}
+      />
+      <OtherPlayerChooser
+        currentPlayerId={currentPlayer?.id ?? ''}
+        isOpen={Boolean(pendingTargetPlayerPotionUse)}
+        language={currentLanguage}
+        onChoosePlayer={handleChooseTargetPlayer}
+        players={gameSetup.players}
+      />
 
       <SpellsModal
         currentPlayer={currentPlayer}
@@ -564,6 +736,7 @@ function GameplayPage() {
         draftTokenBag={draftTokenBag}
         isForcedSetup={isForcedSpellSetup}
         isOpen={showSpellsModal}
+        isRedoMode={isRedoMode}
         onCancel={handleSpellCancelRequest}
         onSave={handleSpellSaveRequest}
         isSaveDisabled={isSpellSaveDisabled}
@@ -644,6 +817,16 @@ function GameplayPage() {
           mode="temporary"
           onRollComplete={handleDiceRollComplete}
           onSequenceComplete={handleDiceSequenceComplete}
+          resultDurationExtensionMs={isHeavyWeightActive ? 1000 : 0}
+          resultText={
+            isHeavyWeightActive
+              ? (originalRoll) =>
+                  <HeavyWeightDiceResult
+                    language={currentLanguage}
+                    roll={getHeavyWeightBoardRoll(originalRoll)}
+                  />
+              : null
+          }
         />
       </Modal>
 

@@ -87,3 +87,425 @@ Automated Test Limitations
 Manual Testing Still Needed
 
 * Run the eight-step browser regression above to visually confirm both localized modal layouts, Active Potion number placement, live dice timing, and console output.
+
+---
+
+Feature-003: Implement Copy and Paste potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Copy and Paste with an empty token bag, click Use, and accept the normal confirmation.
+   Expected: The required localized `larger-text` cannot-use message appears; Copy and Paste remains in its potion slot and Board potion usage remains unlocked after OK closes the modal.
+2. Give the player one token and repeat the confirmation.
+   Expected: The modal lists horizontal `div` options, with a Token component above its centred localized Duplicate button, wrapping when needed, and no `ul` or `li`.
+3. Click Duplicate while the bag has fewer than five tokens.
+   Expected: A separate normal token instance of the selected type is added with a unique ID, Copy and Paste is consumed, Board potion usage locks, the modal closes, and no Active Potion appears.
+4. Fill the token bag to five tokens, use Copy and Paste, and choose a token.
+   Expected: The same modal flow shows the new duplicate and all five existing tokens with localized discard actions.
+5. Choose `Discard this new token`.
+   Expected: The five existing bag tokens remain unchanged, Copy and Paste is consumed, Board potion usage locks, and the modal closes.
+6. Repeat the full-bag flow and choose `Discard this token and keep the duplicate` for a different existing token.
+   Expected: Exactly that existing token is replaced by the selected duplicate, bag size stays five, the duplicate has a unique ID, and the potion is consumed.
+7. Duplicate a Red or Blue starting token that still carries protected starting metadata.
+   Expected: The duplicate behaves as a normal gained token and does not inherit permanent starting-token protection.
+8. Repeat the modal checks with English and Japanese players while inspecting the browser console.
+   Expected: All required text and token names use the current language and font class, with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution failed the intended Copy and Paste suites because the duplicate helper, modal, context resolver, delayed consumption, and Gameplay handoff did not yet exist.
+* The final focused regression passes 4 suites and 14 feature tests for empty-bag non-consumption, exact English/Japanese copy, `larger-text`, horizontal wrapping `div` options, vertical Token/button pairing, no list markup, unique normal token creation, available-space addition, required full-bag decisions, exact replacement, one-use locking, and no Active Potion.
+* The complete potion regression passes 15 suites and 83 tests across Copy and Paste, healing, Roll Choice, potion capacity, context availability, confirmation, inventory indexes, Board/Battle lists, one-potion-per-turn limits, and Active Potion behavior.
+* Five shared localization, token-ID, game-setup, context, and death-protection suites pass all 43 tests.
+* The focused Gameplay integration and adjusted duplicate-inventory confirmation regression pass all 5 selected tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* The full Gameplay suite currently has six unrelated baseline failures for pre-existing spell-warning, dice-result, and player-image style assertions; all Copy and Paste Gameplay tests pass.
+* JSDOM verifies state, exact copy, language classes, component markup, controls, CSS direction, token IDs, transaction timing, consumption, and Active Potion absence but cannot visually inspect the wooden modal, rendered row alignment, or live browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to visually confirm both localized modal phases, token/button alignment, and live console output.
+
+---
+
+Feature-004: Implement Starting Charge potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Starting Charge, click Use, and accept the existing confirmation.
+   Expected: Starting Charge is removed from the potion slots, Board potion usage locks, and Starting Charge appears in Active Potion.
+2. Start a battle during that same Board turn.
+   Expected: Starting Charge disappears from Active Potion and all six player spell columns begin the first player battle turn charged.
+3. Roll a Red or Blue spell column during that first battle turn.
+   Expected: The existing all-column charge bonus applies just as it does for a Charge token.
+4. Finish the player's first battle turn.
+   Expected: The player charge expires and no player spell column remains charged on later turns.
+5. In a separate Board turn, use Starting Charge and end the turn without entering battle.
+   Expected: Starting Charge disappears from Active Potion, remains consumed, and does not charge a later battle.
+6. Repeat the activation and expiry flows while inspecting the browser console.
+   Expected: Existing potion confirmation, Active Potion display, Battle layout, and Charge token behavior remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature with 2 focused failures because Starting Charge was consumed without entering Active Potion.
+* The final focused Starting Charge regression passes both complete lifecycle tests for Board activation, potion consumption, Active Potion display, same-turn battle transfer, first battle-turn expiry, and no-battle turn-end loss.
+* The complete potion regression passes 16 suites and all 86 tests.
+* The complete shared GameSetup context suite passes all 16 tests, including existing Yellow charge creation, use limits, and expiry behavior.
+* The focused Battle regression confirms all six columns display the charged state, combine correctly with Purple, affect the player turn, and clear after that turn.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state transitions, component visibility, all-column classes, battle effects, and expiry but cannot visually inspect the rendered Active Potion or live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm live Board-to-Battle timing, charged-column visuals, and console output.
+
+---
+
+Feature-005: Implement Tokensmith potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Tokensmith with a full token bag, click Use, and accept the existing confirmation.
+   Expected: The localized free-slot message appears in `larger-text`; OK closes it, Tokensmith remains, and Board potion usage stays unlocked.
+2. Repeat with token-bag space but no committed spell tokens.
+   Expected: The localized no-assigned-tokens message appears and the potion remains unused.
+3. Repeat with token-bag space and committed tokens in multiple columns.
+   Expected: The instruction and only filled committed columns appear; every individual token instance is clickable, including duplicate types.
+4. Select one token and click No in the selected-token confirmation.
+   Expected: The exact selected token is shown and No returns to the unchanged token-selection modal.
+5. Select that token again and click Yes.
+   Expected: Its exact ID and metadata move from its spell column to the token bag as uncommitted, Tokensmith is consumed, Board potion usage locks, the Spells `New` badge appears, and Active Potion remains empty.
+6. Move a committed Light Green token.
+   Expected: Max/current health recalculate with the existing Light Green rules and current health does not exceed the reduced maximum.
+7. Try to move a Grey token whose removal would leave an adjacent effective column over capacity.
+   Expected: A clear localized invalid-state modal appears, no token or potion moves, and Board potion usage stays unlocked.
+8. Repeat the full-bag, selection, confirmation, and invalid-state flows with a Japanese player while inspecting the browser console.
+   Expected: Exact Japanese copy and font classes appear, normal committed-spell display remains unchanged outside Tokensmith, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution failed across all 4 focused helper, modal, context, and Gameplay suites because the Tokensmith helper/component/resolver and delayed Gameplay handoff did not exist.
+* The final helper, modal, and context regression passes 3 suites and all 9 tests for exact identity, metadata preservation, uncommitting, full/no-token failures, filled-column filtering, individual duplicate-type controls, Yes/No flow, exact English/Japanese copy, Grey-capacity rejection, Light Green health, consumption, usage locking, notification, and Active Potion absence.
+* The focused Gameplay integration passes the complete confirmation, selection, No, retry, Yes, exact-token move, delayed consumption, usage lock, and modal-close flow.
+* The final combined potion, committed-spell, and localization regression passes 21 suites and all 120 tests.
+* The shared GameSetup and non-battle spell-effect regressions pass 2 suites and all 38 tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, exact text, language classes, controls, table filtering, token identity, health/capacity rules, and modal transitions but cannot visually inspect the rendered table/modal or live browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to confirm real table interaction, Japanese rendering, health display timing, and console output.
+
+---
+
+Feature-006: Implement Redo potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Redo, click Use, and accept the existing confirmation.
+   Expected: Redo is consumed, Board potion usage locks, the normal Spells modal opens, and Active Potion remains empty.
+2. Inspect the warning in English, then repeat with a Japanese player.
+   Expected: The exact localized Redo warning occupies the existing `spells-starting-warning` location and the normal warning is not duplicated.
+3. Move committed tokens within one column, between columns, and from a spell column to the token bag.
+   Expected: Every committed token is movable for this session, each move preserves token identity, assigned tokens continue supplying normal spell effects, and tokens returned to the bag become uncommitted.
+4. Move a bag token into a spell column and try full or removed merged columns.
+   Expected: Normal bag movement works, while existing effective capacity and merged-column restrictions still block invalid drops.
+5. Save a valid arrangement through the existing confirmation and any White merge confirmation.
+   Expected: The arrangement is stored, all placed tokens are committed and fixed again, and Light Green, Grey, and White effects use the final committed arrangement.
+6. Open Spells normally after saving.
+   Expected: The Redo warning is gone and committed-token controls are disabled again.
+7. Use Redo again, make a change, and confirm Cancel.
+   Expected: The saved arrangement is restored, Redo mode exits, and the already-consumed potion is not returned.
+8. Repeat save and cancel around merged columns while inspecting the browser console.
+   Expected: Existing confirmations and merged restrictions remain intact with no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature across all 4 focused suites because Redo handoff, warning replacement, committed-token movement, and session cleanup did not exist.
+* The final Redo-only regression passes 4 suites and all 6 tests for consumption, Board usage locking, Active Potion absence, modal opening, exact English/Japanese warnings, one-warning rendering, temporary control enablement, same-column/cross-column/slot-bag movement, bag return, Grey-capacity preservation, recommitment, cancel cleanup, and permanent lock restoration.
+* The complete spell helper and assignment suites pass all tests.
+* The broader four-suite spell and Gameplay run passes 69 of 77 tests; the 8 remaining failures are pre-existing assertions for older starting-warning copy, dice-result text, and player-image size/alignment rather than Redo behavior.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, controls, exact localized text, movement helpers, commitment flags, potion lifecycle, and modal transitions but cannot visually inspect pointer dragging, rendered warning placement, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to confirm real pointer dragging, merged-column presentation, both localized layouts, effect timing, and console output.
+
+---
+
+Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Spellbound, click Use, and accept the existing confirmation.
+   Expected: The localized other-player chooser opens, the caster is absent, every other player image has a Choose button beneath it, and the potion remains unconsumed.
+2. Choose another player.
+   Expected: Spellbound is consumed, Board potion usage locks for the caster, and the target has no immediate Active Potion or restriction.
+3. Advance to the target's next Board turn.
+   Expected: Spellbound appears with its name in Active Potion and every Board potion Use button is disabled.
+4. Complete the affected turn.
+   Expected: Spellbound clears from Active Potion and does not affect the target's later turns.
+5. Repeat the targeting flow with Heavy Weight, then advance to the target's turn.
+   Expected: Heavy Weight appears in Active Potion and Board potion Use buttons are disabled.
+6. Force original rolls 1 through 6 in separate affected turns.
+   Expected: The die face remains the original value, while the displayed/movement values are respectively 1, 1, 2, 2, 3, and 3.
+7. Inspect a Heavy Weight result in English and Japanese.
+   Expected: The exact localized sentence displays with the final halved value, and movement highlights use that same value.
+8. Finish the Heavy Weight turn and repeat both targeting flows while inspecting the browser console.
+   Expected: Heavy Weight expires, later turns roll normally, existing Battle/Mini potion behavior is unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature across all 6 focused suites with 7 intended failures for the absent chooser, helper, resolver, localized result hook, and Gameplay handoff.
+* The final focused Feature-007 regression passes 6 suites and all 15 selected tests for chooser structure, caster exclusion, exact English/Japanese copy, delayed consumption, pending state, activation, Board blocking, all six Heavy Weight conversions, final movement, result text, invalid self-target rejection, and turn-end expiry.
+* The shared GameSetup regressions pass 2 suites and all 22 tests, including player normalization and existing turn transitions.
+* The broader affected regression passes 24 of 27 suites and 194 of 204 tests; the 10 remaining failures are pre-existing assertions for older spell-warning copy and legacy `Dice result:` text rather than Spellbound or Heavy Weight behavior.
+* The isolated Battle regression passes 33 of 34 tests; its one remaining failure is the same pre-existing legacy dice-result text assertion, while all Battle potion behavior passes.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, exact localized copy, controls, images, modal markup, dice values, movement highlights, consumption timing, blocking, and expiry but cannot visually inspect the wooden modal, rendered player alignment, dice animation, or live browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to confirm both localized chooser layouts, live dice presentation, movement, effect timing, and console output.
+
+---
+
+Bug-001: Copy and Paste duplicate token items should stack horizontally with buttons underneath
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open Copy and Paste with multiple tokens in the current player token bag.
+   Expected: Token options sit next to each other horizontally rather than forming one vertical list.
+2. Inspect each token option.
+   Expected: Its Token component appears above its own Duplicate button, and the button is centred relative to that token.
+3. Fill the token bag and choose a token to duplicate.
+   Expected: The full-bag discard options use the same horizontal option layout without changing either discard outcome.
+4. Repeat with enough options to exceed the available modal width and with a Japanese player.
+   Expected: Options wrap cleanly, every `\u8907\u88fd` button stays under its token, and no `ul` or `li` appears.
+5. Select the second token and complete both available-space and full-bag flows while inspecting the browser console.
+   Expected: The selected token is still the one duplicated, potion consumption remains unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-001 with 3 focused failures for the missing option structure and incorrect flex directions.
+* The final CopyPasteModal suite passes all 4 tests for horizontal wrapping, vertical Token/button order, centred options, correct English/Japanese actions, full-bag options, callback pairing, and no list markup.
+* All 4 focused Copy and Paste Gameplay integration tests pass for empty bag, available space, discard-new, and replace-existing flows.
+* The complete potion regression passes 15 suites and 83 tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify DOM order, class structure, flex directions, wrapping, alignment declarations, callbacks, and state outcomes but cannot visually inspect rendered wrapping or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm horizontal alignment, centred buttons, wrapping, Japanese rendering, and live console output.
+
+---
+
+Bug-002: Copy and Paste token selection modal needs a Cancel button
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player Copy and Paste, another eligible Board potion, and at least one bag token; accept the Copy and Paste confirmation.
+   Expected: A normal-width `Cancel` button is centred at the bottom beneath the token options.
+2. Click Cancel before choosing a token.
+   Expected: The modal closes, the token bag is unchanged, both potions remain, Board potion usage stays unlocked, and both eligible Use buttons remain enabled.
+3. Reopen Copy and Paste and complete a duplication with bag space.
+   Expected: Copy and Paste is consumed only after Duplicate is selected, the new token is added, and Board potion usage then locks.
+4. Fill the token bag, select a token to duplicate, and inspect the discard phase.
+   Expected: The same centred Cancel button remains available at the bottom; cancelling closes the modal without consuming the potion or replacing any token.
+5. Repeat the non-empty modal in Japanese.
+   Expected: The bottom button displays `\u30ad\u30e3\u30f3\u30bb\u30eb` with the Japanese language class.
+6. Repeat cancellation and successful retry while inspecting the browser console.
+   Expected: Modal state resets cleanly, all existing duplication outcomes still work, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-002 with the intended component and Gameplay failures because no Cancel action existed.
+* The final CopyPasteModal suite passes all 5 tests for bottom placement, centred-row CSS, normal Button use, non-full-width behavior, exact English/Japanese text, both token-selection phases, and unchanged no-token behavior.
+* All 5 focused Copy and Paste Gameplay integration tests pass, including cancellation with unchanged token bag, unchanged potion count, unlocked Board usage, enabled alternate potion, successful retry, and all previous duplication outcomes.
+* The complete potion regression passes 15 suites and 84 tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies bottom DOM order, language classes, button classes, state preservation, enabled controls, successful retry, and existing outcomes but cannot visually inspect rendered centring/width or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to visually confirm button placement and width, both modal phases, Japanese rendering, and live console output.
+
+---
+
+Bug-003: Heavy Weight dice roll message should use mixed font sizes and stay visible longer
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Use Heavy Weight on another player and advance to that player's affected Board turn.
+   Expected: Existing targeting, Active Potion display, and Board potion blocking remain unchanged.
+2. Roll the dice and inspect the result.
+   Expected: The final halved number uses the normal dice result size, while the explanation after the dash uses `14px`.
+3. Repeat with an English player and a Japanese player.
+   Expected: The exact localized explanation appears with the matching language font and retains the existing result colour.
+4. Wait through the normal 1.5-second temporary result phase.
+   Expected: The Heavy Weight dice result remains visible for one additional second and closes after 2.5 seconds total.
+5. Roll normally on an unaffected turn.
+   Expected: The normal dice result still closes after the existing 1.5-second result phase with no added delay.
+6. Complete the affected movement while inspecting the browser console.
+   Expected: Movement still uses the rounded-up halved result, the effect expires normally, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-003 across all 3 focused suites for the missing split renderer, missing typography rules, and ignored timing extension.
+* The final bug-specific regression passes all 6 tests for separate number/message markup, inherited number sizing, exact `14px` explanation sizing, exact English/Japanese text and language classes, the additional 1000ms Heavy Weight duration, unchanged normal duration, preserved original die face, halved movement, and normal effect expiry.
+* The complete affected regression passes 7 suites and all 18 selected Heavy Weight, Spellbound, chooser, pending-effect, localization, dice timing, and Gameplay tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify exact text, classes, font-size declarations, timers, dice state, movement highlights, and effect expiry but cannot visually compare rendered font sizes, colour, animation timing, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to visually confirm mixed typography, both language fonts, the extra visible second, normal timing, and live console output.
+
+---
+
+Bug-004: Heavy Weight dice roll result and explanation should be split into separate paragraph tags
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Use Heavy Weight on another player and advance to the affected player's Board turn.
+   Expected: Existing targeting, Active Potion display, and Board potion blocking remain unchanged.
+2. Roll the dice and inspect the Heavy Weight result.
+   Expected: The final halved number appears in its own paragraph and the explanation appears in a separate paragraph underneath it.
+3. Inspect the result text and sizing.
+   Expected: There is no dash, the number retains the normal dice-result size, and the explanation uses `16px`.
+4. Repeat with an English player and a Japanese player.
+   Expected: The exact localized explanation uses the matching language font in the separate lower paragraph.
+5. Wait for the result to close, then roll normally on an unaffected turn.
+   Expected: Heavy Weight retains the extra one-second duration from Bug-003, while the normal dice result keeps its original timing and paragraph.
+6. Complete the affected movement while inspecting the browser console.
+   Expected: Movement still uses the rounded-up halved result, the effect expires normally, the DOM produces no nesting warning, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-004 across all 3 focused suites with 5 failures for inline spans, the dash, the old `14px` rule, and the invalid custom-result paragraph container.
+* The final focused regression passes all 5 tests for sibling paragraph markup, a valid custom-result `div`, no dash, inherited number sizing, exact `16px` explanation sizing, exact English/Japanese text and classes, preserved original die face/movement, and the Bug-003 timer.
+* The complete affected regression passes 7 suites and all 18 selected Heavy Weight, Spellbound, chooser, pending-effect, localization, normal-timing, and Gameplay tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify tag names, sibling structure, exact text, absence of the dash, classes, font-size declarations, timers, movement, and expiry but cannot visually inspect vertical placement, rendered font sizing, colour, animation timing, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to visually confirm the two-line presentation, both language fonts, retained timing, normal-result presentation, and live console output.
+
+---
+
+Bug-005: Heavy Weight dice result number and explanation should be centred
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Use Heavy Weight on another player, advance to the affected Board turn, and roll the dice.
+   Expected: The final halved number is centred on its own line and the explanation is centred beneath it.
+2. Inspect both result elements.
+   Expected: Both are separate full-width paragraph tags inside the centred Heavy Weight result wrapper.
+3. Repeat with an English player and a Japanese player.
+   Expected: Both localized explanations remain centred with the correct language font and existing result colour.
+4. Wait for the Heavy Weight result to close, then roll normally on an unaffected turn.
+   Expected: Heavy Weight retains the extra one-second duration, while normal dice presentation and timing are unchanged.
+5. Complete the affected movement while inspecting the browser console.
+   Expected: Movement uses the rounded-up halved value, the effect expires normally, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-005 across both focused suites with 4 failures for the missing scoped wrapper and missing wrapper/paragraph centring rules.
+* The final focused regression passes 2 suites and all 4 tests for wrapper markup, centred column flex alignment, centred full-width paragraphs, separate paragraph tags, exact English/Japanese text and classes, `16px` preservation, movement, expiry, and retained timing.
+* The complete affected regression passes 7 suites and all 19 selected Heavy Weight, Spellbound, chooser, pending-effect, localization, normal-timing, and Gameplay tests.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify wrapper/paragraph structure, flex and text alignment declarations, widths, exact text, classes, timers, movement, and expiry but cannot visually inspect rendered centring, fonts, colour, animation timing, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm both centred lines, both language fonts, retained timing, normal-result presentation, and live console output.

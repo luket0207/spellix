@@ -11,7 +11,11 @@ function createDraftSpellSlots() {
   }));
 }
 
-function renderSpellsModal({ isForcedSetup = true, language = 'en' } = {}) {
+function renderSpellsModal({
+  isForcedSetup = true,
+  isRedoMode = false,
+  language = 'en',
+} = {}) {
   return render(
     <SpellsModal
       currentPlayer={{
@@ -26,6 +30,7 @@ function renderSpellsModal({ isForcedSetup = true, language = 'en' } = {}) {
         { id: 'blue-1', type: 'blue', committed: false },
       ]}
       isForcedSetup={isForcedSetup}
+      isRedoMode={isRedoMode}
       isOpen
       onCancel={jest.fn()}
       onSave={jest.fn()}
@@ -112,6 +117,36 @@ describe('SpellsModal layout', () => {
     expect(screen.queryByText(/^Starting Tokens$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
+  });
+
+  test.each([
+    [
+      'en',
+      'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.',
+    ],
+    [
+      'jp',
+      '\u30c8\u30fc\u30af\u30f3\u306f\u597d\u304d\u306a\u3060\u3051\u4e26\u3079\u66ff\u3048\u308b\u3053\u3068\u304c\u3067\u304d\u307e\u3059\u304c\u3001\u914d\u7f6e\u3092\u78ba\u5b9a\u3059\u308b\u3068\u518d\u3073\u56fa\u5b9a\u3055\u308c\u307e\u3059\u3002',
+    ],
+  ])('replaces the normal warning with the Redo warning in %s', (language, warning) => {
+    renderSpellsModal({
+      isForcedSetup: false,
+      isRedoMode: true,
+      language,
+    });
+
+    const displayedWarning = screen.getByText(warning);
+
+    expect(displayedWarning).toHaveClass(
+      'spells-starting-warning',
+      `language-${language}`
+    );
+    expect(document.querySelectorAll('.spells-starting-warning')).toHaveLength(1);
+    expect(
+      screen.queryByText(
+        'Drag and drop tokens from your token bag into spell slots to assign them. Once you have committed your tokens, they cannot be moved again.'
+      )
+    ).not.toBeInTheDocument();
   });
 
   test('uses Japanese modal copy and font class for a Japanese player', () => {

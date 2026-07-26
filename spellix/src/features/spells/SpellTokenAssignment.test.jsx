@@ -284,6 +284,24 @@ describe('SpellTokenAssignment', () => {
     expect(onTokenBagTokenClick).not.toHaveBeenCalled();
   });
 
+  test('temporarily enables committed spell tokens in Redo mode', () => {
+    render(
+      <SpellTokenAssignment
+        allowCommittedTokenMovement
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[]}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: /moveable blue token/i })
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: /committed blue token/i })
+    ).not.toBeInTheDocument();
+  });
+
   test('renders the glowing reward token box, instruction, and Trash area only in reward mode', () => {
     render(
       <SpellTokenAssignment

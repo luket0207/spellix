@@ -1,0 +1,23 @@
+.copy-paste-token-list {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin: 90px 0;
+}
+
+.copy-paste-token-option {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: flex-start;
+  text-align: center;
+}
+
+.copy-paste-cancel-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}

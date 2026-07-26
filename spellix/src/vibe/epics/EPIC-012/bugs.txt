@@ -171,3 +171,198 @@ Testing Required
 * Confirm the darker brown section background remains unchanged.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-003: Spells button New notification should reappear whenever token bag count increases
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions from an explicitly cleared notification state for successful Copy and Paste additions, cancellation, empty-bag failure, full-bag discard, and same-count replacement.
+* Reproduced the bug with 3 focused failures because Copy and Paste increased the token bag count without restoring the unseen-token notification.
+
+Final Fix
+
+* Centralized token-bag notification handling in the shared GameSetup state setter so every player token-bag count increase sets `hasUnseenTokenBagTokens` to true regardless of the update source.
+* Preserved the existing clear behavior for an empty token bag and explicit notification state for updates that do not increase the count.
+* Confirmed successful Copy and Paste additions restore the badge after a prior clear, while cancellation, failure, discard, and same-count replacement do not create a false notification.
+* Preserved the existing Spells-open clear behavior, reward logic, token capacity, text, layout, and styling.
+
+Related Feature
+
+* Feature-004: Replace Spells button token notification with New / 新規 badge
+* EPIC-013 Feature-003: Implement Copy and Paste potion behaviour
+
+Bug Summary
+
+* The `New` notification on the Spells button is not reappearing correctly.
+* It should appear whenever the player’s token bag count increases and the player has not opened the Spells modal since that increase.
+* A token added through Copy and Paste did not cause the `New` notification to appear.
+* This is incorrect.
+
+Expected Behaviour
+
+* Whenever a player gains a token in their token bag, the Spells button should show:
+
+```txt id="uio5p9"
+New
+```
+
+* Japanese:
+
+```txt id="i12juv"
+新規
+```
+
+* This should happen whenever the token bag count goes up.
+* It should not matter where the token came from.
+
+Examples of valid triggers:
+
+```txt id="m7e7ur"
+Copy and Paste potion adds a duplicated token.
+Buy and Sell potion adds a chosen token.
+Loot Chest adds a token.
+Cave reward adds a token.
+Battle reward adds a token.
+Any future reward or potion adds a token to the token bag.
+```
+
+Core Rule
+
+* The notification should mean:
+
+```txt id="psosgi"
+The token bag has gained at least one token since the player last opened the Spells modal.
+```
+
+* It should not only depend on whether the token bag currently has tokens.
+* It should not only trigger from specific reward systems.
+* It should trigger from any token bag count increase.
+
+Required Fix
+
+* Track the previous token bag count.
+* If the new token bag count is greater than the previous token bag count:
+
+  * set the player’s unseen-token notification state to true.
+* This should happen for all token bag additions, including potion results.
+
+Suggested Direction
+
+```js id="mm70yf"
+if (nextTokenBag.length > previousTokenBag.length) {
+  setHasUnseenTokenBagTokens(playerId, true);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that count increases always re-enable the `New` notification unless the player immediately opens the Spells modal.
+
+Preferred Implementation Direction
+
+* Prefer handling this in a shared token-bag update helper.
+* Any code path that adds a token to the token bag should pass through the same notification logic.
+* Avoid manually remembering to set the badge in every potion and reward feature if a central helper can do it.
+
+Suggested helper:
+
+```js id="nvnyhr"
+function addTokenToBag(playerId, token) {
+  updatePlayer(playerId, (player) => ({
+    ...player,
+    tokenBag: [...player.tokenBag, token],
+    hasUnseenTokenBagTokens: true
+  }));
+}
+```
+
+Clear Conditions
+
+* Preserve the existing clear conditions from Feature-004.
+* The notification should disappear when either:
+
+  * the player opens the Spells modal.
+  * the player has no tokens in their token bag.
+
+Suggested visibility check:
+
+```js id="t0qgs2"
+const showSpellsNewBadge =
+  player.hasUnseenTokenBagTokens && player.tokenBag.length > 0;
+```
+
+Copy and Paste Requirement
+
+* When Copy and Paste successfully duplicates a token and adds it to the player’s token bag:
+
+  * the token bag count increases.
+  * the `New` notification should appear.
+* This should happen even if the player had previously cleared the notification by opening the Spells modal.
+* If Copy and Paste is cancelled or fails:
+
+  * do not show the notification unless a token was actually added.
+
+Full-Bag Replacement Requirement
+
+* If Copy and Paste replaces an existing token because the token bag is full:
+
+  * the token bag count may not increase.
+  * in that case, this bug does not require the `New` notification to appear.
+* This bug specifically applies when the token bag count goes up.
+* A later feature can decide whether replacing a token should also count as unseen.
+
+Expected Behaviour After Fix
+
+* Player gains a token from Copy and Paste and the `New` notification appears.
+* Player opens the Spells modal and the notification disappears.
+* Player later gains another token and the notification appears again.
+* The notification appears for any token bag count increase.
+* The notification disappears if the token bag becomes empty.
+* The notification does not appear after a failed or cancelled potion that adds no token.
+
+Out Of Scope
+
+* No changes to Copy and Paste duplication logic.
+* No changes to token bag capacity.
+* No changes to token reward generation.
+* No changes to Spells modal layout.
+* No changes to badge text.
+* No changes to badge styling except what is needed to show/hide correctly.
+* No unrelated gameplay UI redesign.
+
+Suspected Cause
+
+* The badge state is probably only set by specific reward paths.
+* Copy and Paste may add a token directly to the token bag without marking the token as unseen.
+* The fix should centralise token-bag-add notification behaviour or compare token bag count changes.
+
+Testing Required
+
+* Clear the `New` notification by opening the Spells modal.
+* Use Copy and Paste to add a token while there is space in the token bag.
+* Confirm the token bag count increases.
+* Confirm the `New` notification appears on the Spells button.
+* Open the Spells modal.
+* Confirm the `New` notification disappears.
+* Add another token through Copy and Paste.
+* Confirm the `New` notification appears again.
+* Add a token through Loot Chest.
+* Confirm the `New` notification appears.
+* Add a token through Cave reward.
+* Confirm the `New` notification appears.
+* Add a token through Battle reward.
+* Confirm the `New` notification appears.
+* Cancel Copy and Paste before duplicating.
+* Confirm the `New` notification does not appear.
+* Fail Copy and Paste because the token bag is empty.
+* Confirm the `New` notification does not appear.
+* Empty the token bag.
+* Confirm the `New` notification disappears.
+* Confirm Japanese badge still displays `新規`.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

@@ -3,6 +3,8 @@ import CommittedSpellSlotList from '../../components/spells/CommittedSpellSlotLi
 function CommittedSpellSlots({
   language,
   mergedColumns = [],
+  onTokenClick = null,
+  showOnlyFilledSlots = false,
   spellSlots,
   title = 'Spells',
   titleClassName = '',
@@ -11,6 +13,8 @@ function CommittedSpellSlots({
     <CommittedSpellSlotList
       language={language}
       mergedColumns={mergedColumns}
+      onTokenClick={onTokenClick}
+      showOnlyFilledSlots={showOnlyFilledSlots}
       spellSlots={spellSlots}
       title={title}
       titleClassName={titleClassName}

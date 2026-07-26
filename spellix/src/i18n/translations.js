@@ -2,16 +2,25 @@ import { DEFAULT_PLAYER_LANGUAGE, PLAYER_LANGUAGES } from '../features/gameSetup
 
 const GAMEPLAY_TRANSLATIONS = {
   en: {
+    heavyWeightDiceResult: (roll) =>
+      `${roll} - Dice roll is halved because you are weighed down.`,
     potions: 'Potions',
     rollDice: 'Roll Dice',
     spells: 'Spells',
     spellsNew: 'New',
+    targetPlayerChoose: 'Choose',
+    targetPlayerPrompt: 'Choose a player to target',
   },
   jp: {
+    heavyWeightDiceResult: (roll) =>
+      `${roll} - \u91cd\u3057\u3092\u304b\u3051\u3089\u308c\u3066\u3044\u308b\u305f\u3081\u3001\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u304c\u534a\u5206\u306b\u306a\u308a\u307e\u3059\u3002`,
     potions: 'ポーション',
     rollDice: 'サイコロを振る',
     spells: '呪文',
     spellsNew: '新規',
+    targetPlayerChoose: '\u9078\u3076',
+    targetPlayerPrompt:
+      '\u5bfe\u8c61\u306b\u3059\u308b\u30d7\u30ec\u30a4\u30e4\u30fc\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002',
   },
 };
 
@@ -19,9 +28,24 @@ const POTION_USAGE_TRANSLATIONS = {
   en: {
     activePotionTitle: 'Active Potion',
     confirmUse: (potionName) => `Are you sure you want to use ${potionName}?`,
+    copyPasteCancel: 'Cancel',
+    copyPasteDiscardDuplicate: 'Discard this new token',
+    copyPasteDiscardExisting: 'Discard this token and keep the duplicate',
+    copyPasteDuplicate: 'Duplicate',
+    copyPasteEmptyBag:
+      'You have no tokens in your token bag, so this potion cannot be used. The potion was added back to your potion slots.',
     descriptionTitle: 'Potion Description',
     no: 'No',
     rollChoiceQuestion: 'What do you want the next roll of the dice to be?',
+    tokensmithConfirmation:
+      'Are you sure you want to move this token back to your token bag?',
+    tokensmithFullBag:
+      'This potion can only be used when you have at least 1 free slot in your token bag.',
+    tokensmithInstruction: 'Click a token to move it back to your token bag',
+    tokensmithInvalidSpellState:
+      'This token cannot be moved because another spell column would exceed its capacity.',
+    tokensmithNoAssignedTokens:
+      'You have no assigned tokens to move back to your token bag.',
     use: 'Use',
     yes: 'Yes',
   },
@@ -30,11 +54,29 @@ const POTION_USAGE_TRANSLATIONS = {
       '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
     confirmUse: (potionName) =>
       `${potionName}\u3092\u4f7f\u7528\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f`,
+    copyPasteCancel: '\u30ad\u30e3\u30f3\u30bb\u30eb',
+    copyPasteDiscardDuplicate:
+      '\u3053\u306e\u65b0\u3057\u3044\u30c8\u30fc\u30af\u30f3\u3092\u6368\u3066\u308b',
+    copyPasteDiscardExisting:
+      '\u3053\u306e\u30c8\u30fc\u30af\u30f3\u3092\u6368\u3066\u3066\u8907\u88fd\u30c8\u30fc\u30af\u30f3\u3092\u6b8b\u3059',
+    copyPasteDuplicate: '\u8907\u88fd',
+    copyPasteEmptyBag:
+      '\u30c8\u30fc\u30af\u30f3\u30d0\u30c3\u30b0\u306b\u30c8\u30fc\u30af\u30f3\u304c\u306a\u3044\u305f\u3081\u3001\u3053\u306e\u30dd\u30fc\u30b7\u30e7\u30f3\u306f\u4f7f\u7528\u3067\u304d\u307e\u305b\u3093\u3002\u30dd\u30fc\u30b7\u30e7\u30f3\u306f\u30dd\u30fc\u30b7\u30e7\u30f3\u30b9\u30ed\u30c3\u30c8\u306b\u623b\u3055\u308c\u307e\u3057\u305f\u3002',
     descriptionTitle:
       '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
     no: '\u3044\u3044\u3048',
     rollChoiceQuestion:
       '\u6b21\u306e\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u3092\u3044\u304f\u3064\u306b\u3057\u307e\u3059\u304b\uff1f',
+    tokensmithConfirmation:
+      '\u3053\u306e\u30c8\u30fc\u30af\u30f3\u3092\u30c8\u30fc\u30af\u30f3\u30d0\u30c3\u30b0\u306b\u623b\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f',
+    tokensmithFullBag:
+      '\u3053\u306e\u30dd\u30fc\u30b7\u30e7\u30f3\u306f\u3001\u30c8\u30fc\u30af\u30f3\u30d0\u30c3\u30b0\u306b\u7a7a\u304d\u30b9\u30ed\u30c3\u30c8\u304c1\u3064\u4ee5\u4e0a\u3042\u308b\u5834\u5408\u306b\u306e\u307f\u4f7f\u7528\u3067\u304d\u307e\u3059\u3002',
+    tokensmithInstruction:
+      '\u30c8\u30fc\u30af\u30f3\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u3001\u30c8\u30fc\u30af\u30f3\u30d0\u30c3\u30b0\u306b\u623b\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+    tokensmithInvalidSpellState:
+      '\u3053\u306e\u30c8\u30fc\u30af\u30f3\u3092\u623b\u3059\u3068\u30b9\u30da\u30eb\u5217\u306e\u5bb9\u91cf\u3092\u8d85\u3048\u308b\u305f\u3081\u3001\u79fb\u52d5\u3067\u304d\u307e\u305b\u3093\u3002',
+    tokensmithNoAssignedTokens:
+      '\u30c8\u30fc\u30af\u30f3\u30d0\u30c3\u30b0\u306b\u623b\u305b\u308b\u914d\u7f6e\u6e08\u307f\u30c8\u30fc\u30af\u30f3\u304c\u3042\u308a\u307e\u305b\u3093\u3002',
     use: '\u4f7f\u7528\u3059\u308b',
     yes: '\u306f\u3044',
   },
@@ -226,6 +268,8 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     placedInSpellSlot: (slotNumber) => `Placed in spell slot ${slotNumber}`,
     placedInTokenBag: 'Placed in token bag',
     rewardAddedTo: (location) => `Reward added to ${location}`,
+    redoWarning:
+      'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.',
     save: 'Save',
     saveConfirmation:
       'Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.',
@@ -261,6 +305,8 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     placedInSpellSlot: (slotNumber) => `呪文スロット${slotNumber}に配置`,
     placedInTokenBag: 'トークンバッグに配置',
     rewardAddedTo: (location) => `報酬を${location}に追加しました`,
+    redoWarning:
+      '\u30c8\u30fc\u30af\u30f3\u306f\u597d\u304d\u306a\u3060\u3051\u4e26\u3079\u66ff\u3048\u308b\u3053\u3068\u304c\u3067\u304d\u307e\u3059\u304c\u3001\u914d\u7f6e\u3092\u78ba\u5b9a\u3059\u308b\u3068\u518d\u3073\u56fa\u5b9a\u3055\u308c\u307e\u3059\u3002',
     save: '保存',
     saveConfirmation:
       'これらの呪文スロットにトークンを確定しますか？保存後は、ポーションを使用しない限り変更できません。',

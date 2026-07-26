@@ -1,0 +1,664 @@
+---
+
+Bug-001: Copy and Paste duplicate token items should stack horizontally with buttons underneath
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions for horizontal token options, Token-above-button DOM order, centred vertical option layout, wrapping, Japanese Duplicate text, correct token callbacks, and no `ul` or `li`.
+* Reproduced the bug with 3 focused failures because the option class did not exist, the outer list used `flex-direction: column`, and each token/button pair used a horizontal row.
+
+Final Fix
+
+* Changed each Copy and Paste token choice from a horizontal row to a vertically stacked `copy-paste-token-option`.
+* Changed the outer `copy-paste-token-list` to a centred horizontal flex layout that wraps when needed.
+* Centred each token and its button while preserving the existing Token component, localized button text, callback pairing, full-bag options, and list-free markup.
+* No Copy and Paste state, duplication, capacity, replacement, consumption, or Active Potion behavior was changed.
+
+Related Feature
+
+* Feature-003: Implement Copy and Paste potion behaviour
+
+Bug Summary
+
+* The items inside the `copy-paste-token-list` element are not laid out correctly.
+* The token choices should be horizontally stacked.
+* Each Duplicate button should be centred underneath the token it represents.
+* The Duplicate button should not sit directly to the right of the token.
+
+Expected Behaviour
+
+* The `copy-paste-token-list` should display token options horizontally.
+* Each token option should behave like a small vertical card.
+* Inside each card:
+
+  * the token component appears at the top.
+  * the Duplicate button appears underneath.
+  * the Duplicate button is centred relative to that token.
+* Multiple token options should sit next to each other horizontally.
+
+Expected layout:
+
+```txt id="w3cqg6"
+[ Token ]   [ Token ]   [ Token ]
+[Duplicate] [Duplicate] [Duplicate]
+```
+
+Required Fix
+
+* Update the Copy and Paste token selection modal layout.
+* The outer `copy-paste-token-list` should use a horizontal flex or grid layout.
+* Each token option should be its own vertically stacked item.
+* Do not place the button directly to the right of the token.
+
+Suggested Structure
+
+```jsx id="xw24gy"
+<div className="copy-paste-token-list">
+  {tokenBag.map((token) => (
+    <div className="copy-paste-token-option" key={token.instanceId}>
+      <TokenIcon token={token} showName={true} />
+
+      <Button onClick={() => duplicateToken(token)}>
+        {duplicateText}
+      </Button>
+    </div>
+  ))}
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="rt4h8v"
+.copy-paste-token-list {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.copy-paste-token-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: center;
+}
+```
+
+* Exact class names and spacing can vary.
+* The important requirement is:
+
+  * token options stack horizontally.
+  * each individual token and Duplicate button stack vertically.
+  * the button is centred underneath its own token.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to Copy and Paste potion logic.
+* No changes to token duplication rules.
+* No changes to full-bag replacement behaviour.
+* No changes to token bag capacity.
+* No changes to potion consumption timing.
+* No unrelated modal redesign.
+
+Testing Required
+
+* Open the Copy and Paste token selection modal.
+* Confirm token options are horizontally stacked.
+* Confirm each Duplicate button is underneath its own token.
+* Confirm each Duplicate button is centred.
+* Confirm the layout wraps cleanly if there are many tokens.
+* Confirm Duplicate still duplicates the correct token.
+* Confirm Japanese `複製` button text still displays correctly.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-002: Copy and Paste token selection modal needs a Cancel button
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first component assertions for a localized normal-width Cancel button at the centred modal bottom in both token-selection phases.
+* Added a red-first Gameplay transaction test that cancels with another Board potion present, verifies no inventory or usage changes, then reopens Copy and Paste and completes duplication.
+* Reproduced the bug with the intended focused failures because the non-empty Copy and Paste modal rendered only token action buttons and no cancel content or layout.
+
+Final Fix
+
+* Added a localized Cancel button using the existing Button component and existing Copy and Paste close handler.
+* Placed the button in a centred bottom row after the token options without making it full width.
+* The Cancel action clears only the pending local Copy and Paste modal state, so no token is duplicated, no potion is consumed, Board potion usage remains unlocked, and other eligible Use buttons remain enabled.
+* The same Cancel action is available during initial token selection and the full-bag discard phase.
+* The no-token error modal, successful duplication, full-bag replacement, capacity, potion data, and consumption rules were not changed.
+
+Related Feature
+
+* Feature-003: Implement Copy and Paste potion behaviour
+
+Bug Summary
+
+* The Copy and Paste token selection modal currently does not give the player a way to exit safely.
+* The `copy-paste-token-list` modal should include a Cancel button.
+* This should allow the player to close the modal without using the potion.
+
+Expected Behaviour
+
+* When the player opens the Copy and Paste token selection modal, there should be a Cancel button.
+* Clicking Cancel should:
+
+  * close the modal.
+  * not duplicate any token.
+  * not consume the Copy and Paste potion.
+  * not remove the potion from the player’s potion slots.
+  * not mark the board potion as used for this turn.
+  * not disable other board potion Use buttons.
+
+Required Fix
+
+* Add a Cancel button to the Copy and Paste token selection modal.
+* Button text:
+
+```txt id="gk9l28"
+Cancel
+```
+
+* Japanese:
+
+```txt id="z8nhfk"
+キャンセル
+```
+
+* The Cancel button should sit at the bottom of the modal.
+* It should be centred.
+* It should use the normal Button component.
+* It should not be full width.
+
+Suggested Structure
+
+```jsx id="nll6ax"
+<div className="copy-paste-token-modal-content">
+  <div className="copy-paste-token-list">
+    {tokenBag.map((token) => (
+      <div className="copy-paste-token-option" key={token.instanceId}>
+        <TokenIcon token={token} showName={true} />
+
+        <Button onClick={() => duplicateToken(token)}>
+          {duplicateText}
+        </Button>
+      </div>
+    ))}
+  </div>
+
+  <div className="copy-paste-cancel-row">
+    <Button onClick={handleCancelCopyPaste}>
+      {cancelText}
+    </Button>
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="mqu7ul"
+.copy-paste-cancel-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+```
+
+Potion Consumption Requirement
+
+* Copy and Paste should only be consumed once the player has successfully resolved the duplication flow.
+* Cancelling from the token selection modal is not a successful use.
+* Therefore, the potion should remain in the player’s potion slots.
+
+Board Potion Limit Requirement
+
+* Cancelling should not count as using a board potion.
+* If the player cancels:
+
+  * `boardPotionUsedThisTurn` should remain false.
+  * other board potion Use buttons should remain enabled.
+* The board potion use limit should only lock after a successful Copy and Paste resolution.
+
+Out Of Scope
+
+* No changes to token duplication logic.
+* No changes to full-bag replacement logic.
+* No changes to token bag capacity.
+* No changes to the no-token error modal.
+* No changes to potion data.
+* No unrelated Copy and Paste modal redesign.
+
+Testing Required
+
+* Open the Copy and Paste token selection modal.
+* Confirm a Cancel button is visible.
+* Confirm the Cancel button is centred at the bottom.
+* Confirm the Cancel button displays `Cancel` in English.
+* Confirm the Cancel button displays `キャンセル` in Japanese.
+* Click Cancel.
+* Confirm the modal closes.
+* Confirm no token is duplicated.
+* Confirm Copy and Paste remains in the player’s potion slots.
+* Confirm board potion use is not locked.
+* Confirm other board potion Use buttons remain enabled.
+* Reopen Copy and Paste and complete duplication.
+* Confirm the potion is consumed only after successful duplication.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-003: Heavy Weight dice roll message should use mixed font sizes and stay visible longer
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first component assertions for separate number/message spans, inherited number sizing, exact `14px` explanation sizing, and English/Japanese language classes.
+* Added red-first DiceRoll and Gameplay timing assertions for one additional Heavy Weight result second while preserving the existing normal result duration.
+* Reproduced the bug across all 3 focused suites because no mixed-size renderer existed, the result was one same-size string, and DiceRoll ignored the requested duration extension.
+
+Final Fix
+
+* Added a feature-local HeavyWeightDiceResult component that reuses the existing localized Heavy Weight result copy while rendering the final number and explanation as separate spans.
+* The final number explicitly inherits the existing dice result size, while only the explanation uses `14px` and the active English or Japanese language class.
+* Added an optional DiceRoll result-duration extension with a zero default, preserving all normal Board and Battle timing.
+* Gameplay passes a 1000ms extension only while Heavy Weight is active, so its result remains visible for one additional second.
+* Heavy Weight calculation, target selection, movement value, Spellbound, Board potion blocking, dice animation, and unrelated dice presentation were not changed.
+
+Related Feature
+
+* Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+
+Bug Summary
+
+* When Heavy Weight changes the dice roll component text, the whole message currently appears at the same size.
+* The dice result number should remain the normal dice result text size.
+* The explanatory sentence after the dash should be smaller.
+* The dice roll component should also remain visible for 1 extra second so the player has enough time to read the Heavy Weight message.
+
+Affected Text
+
+English:
+
+```txt id="yvt91k"
+X - Dice roll is halved because you are weighed down.
+```
+
+Japanese:
+
+```txt id="5vr76m"
+X - 重しをかけられているため、サイコロの出目が半分になります。
+```
+
+* `X` is the final halved dice result.
+* The `X` should keep the normal dice roll result text size.
+* The sentence after `-` should use `14px`.
+
+Required Styling Behaviour
+
+* The dice result number should remain visually consistent with normal dice roll results.
+* The explanatory text after the dash should be smaller:
+
+```css id="f3c2bp"
+font-size: 14px;
+```
+
+* This applies to both English and Japanese.
+* The explanatory text should still use the correct language font.
+* The explanatory text should remain readable and yellow if the dice roll result text is normally yellow.
+
+Suggested Structure
+
+```jsx id="wq13t2"
+<div className="dice-result-heavy-weight">
+  <span className="dice-result-number">
+    {halvedRoll}
+  </span>
+
+  <span className={`dice-result-heavy-weight-message ${languageClass}`}>
+    {heavyWeightMessage}
+  </span>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="dqns7c"
+.dice-result-number {
+  font-size: inherit;
+}
+
+.dice-result-heavy-weight-message {
+  font-size: 14px;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that only the explanatory sentence is reduced to `14px`.
+
+Timing Requirement
+
+* When the Heavy Weight dice result message is shown, the dice roll component should take 1 extra second to disappear.
+* This gives the player more time to read the explanation.
+* This extra delay should only apply when the Heavy Weight message is being displayed.
+* Normal dice roll result timing should remain unchanged.
+
+Expected Behaviour
+
+* Heavy Weight roll result displays the final halved number at the normal dice result size.
+* The sentence after the dash displays at `14px`.
+* English text uses the correct English font.
+* Japanese text uses the correct Japanese font.
+* The dice roll component remains visible for 1 extra second when this message appears.
+* Normal dice roll messages are not delayed unless Heavy Weight applies.
+
+Out Of Scope
+
+* No changes to Heavy Weight roll calculation.
+* No changes to Heavy Weight target selection.
+* No changes to Spellbound.
+* No changes to board potion disabling.
+* No changes to dice animation itself.
+* No unrelated dice roll UI redesign.
+
+Testing Required
+
+* Use Heavy Weight on another player.
+* Advance to the affected player’s turn.
+* Roll the dice.
+* Confirm the displayed result is the halved result.
+* Confirm the `X` number uses the normal dice result text size.
+* Confirm the explanation after the dash is `14px`.
+* Confirm English text displays correctly.
+* Confirm Japanese text displays correctly.
+* Confirm the dice roll component remains visible for 1 extra second.
+* Confirm normal dice roll results do not have the extra delay.
+* Confirm the affected player moves using the halved result.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-004: Heavy Weight dice roll result and explanation should be split into separate paragraph tags
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions that the final number and localized explanation are sibling `p` elements, contain no dash, and use inherited and `16px` font sizes respectively.
+* Added red-first DiceRoll and Gameplay assertions that custom block result content uses a valid `div` container while preserving the Bug-003 extra-second timing.
+* Reproduced the bug across all 3 focused suites with 5 failures for span markup, the same-line dash, the previous `14px` rule, and an invalid nested-paragraph custom result container.
+
+Final Fix
+
+* Reused the existing HeavyWeightDiceResult component and changed its number and explanation from inline spans to separate paragraph elements.
+* Removed the displayed dash while preserving the existing exact localized explanation text and English/Japanese language classes.
+* Kept the number at the inherited normal dice-result size, changed the explanation to `16px`, and applied only the requested paragraph margins.
+* DiceRoll now uses a neutral `div` result container only for custom result content, preventing invalid paragraph nesting while leaving normal numeric results in their existing paragraph.
+* Preserved the Bug-003 1000ms extension, normal result timing, Heavy Weight calculation and movement, targeting, Spellbound, Board potion blocking, and dice animation.
+
+Related Feature
+
+* Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+* Bug-003: Heavy Weight dice roll message should use mixed font sizes and stay visible longer
+
+Bug Summary
+
+* The Heavy Weight dice roll message still does not look right visually.
+* The result number and explanation should no longer sit on the same line.
+* The dice result number should be placed in its own `<p>` tag.
+* The explanation should be placed in a separate `<p>` tag underneath it.
+* The explanation text should use `16px`, not `14px`.
+
+Affected Text
+
+English explanation:
+
+```txt id="4jwx2m"
+Dice roll is halved because you are weighed down.
+```
+
+Japanese explanation:
+
+```txt id="cza3ok"
+重しをかけられているため、サイコロの出目が半分になります。
+```
+
+* The `X -` format should be replaced.
+* Instead of:
+
+```txt id="lefc2s"
+X - Dice roll is halved because you are weighed down.
+```
+
+* Display:
+
+```txt id="fn2bvs"
+X
+
+Dice roll is halved because you are weighed down.
+```
+
+Required Structure
+
+* The final halved dice result should be in its own `<p>` tag.
+* The explanation should be in a separate `<p>` tag beneath it.
+* Do not put the number and explanation in the same paragraph.
+* Do not use a dash between the number and the explanation.
+
+Suggested Structure
+
+```jsx id="nmy9e4"
+<div className="dice-result-heavy-weight">
+  <p className="dice-result-heavy-weight-number">
+    {halvedRoll}
+  </p>
+
+  <p className={`dice-result-heavy-weight-message ${languageClass}`}>
+    {heavyWeightMessage}
+  </p>
+</div>
+```
+
+Styling Requirement
+
+* The number should keep the normal dice result text size.
+* The explanation should use:
+
+```css id="rwoswc"
+font-size: 16px;
+```
+
+* This replaces the previous `14px` requirement from Bug-003.
+* The explanation should still use the correct language font.
+* The explanation should still use the normal dice result colour/styling where appropriate.
+
+Suggested CSS Direction
+
+```css id="qq12nz"
+.dice-result-heavy-weight-number {
+  font-size: inherit;
+  margin: 0;
+}
+
+.dice-result-heavy-weight-message {
+  font-size: 16px;
+  margin: 6px 0 0;
+}
+```
+
+Timing Requirement
+
+* Preserve the Bug-003 timing requirement.
+* When the Heavy Weight message is displayed, the dice roll component should still remain visible for 1 extra second.
+* Normal dice result timing should remain unchanged.
+
+Expected Behaviour
+
+* Heavy Weight dice roll result displays the final halved number on its own line.
+* The explanation appears on a new line beneath the number.
+* There is no dash between the number and explanation.
+* The number keeps the normal dice result text size.
+* The explanation uses `16px`.
+* English explanation displays correctly.
+* Japanese explanation displays correctly.
+* The dice roll component remains visible for 1 extra second when this message appears.
+
+Out Of Scope
+
+* No changes to Heavy Weight roll calculation.
+* No changes to Heavy Weight target selection.
+* No changes to Spellbound.
+* No changes to board potion disabling.
+* No changes to dice animation.
+* No unrelated dice roll UI redesign.
+
+Testing Required
+
+* Use Heavy Weight on another player.
+* Advance to the affected player’s turn.
+* Roll the dice.
+* Confirm the displayed result is the halved result.
+* Confirm the result number appears in its own `<p>` tag.
+* Confirm the explanation appears in a separate `<p>` tag below the number.
+* Confirm there is no dash between the number and explanation.
+* Confirm the result number keeps the normal dice result size.
+* Confirm the explanation is `16px`.
+* Confirm English text displays correctly.
+* Confirm Japanese text displays correctly.
+* Confirm the dice roll component remains visible for 1 extra second.
+* Confirm normal dice roll results are unchanged.
+* Confirm the affected player moves using the halved result.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-005: Heavy Weight dice result number and explanation should be centred
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions for a dedicated Heavy Weight result wrapper, explicit centred flex alignment, and centred full-width number/explanation paragraphs.
+* Added a red-first Gameplay assertion that the rendered localized explanation is inside the scoped centred wrapper.
+* Reproduced the bug across both focused suites with 4 failures because the paragraphs were direct children of the generic result container and no Heavy Weight centring rules existed.
+
+Final Fix
+
+* Reused the existing HeavyWeightDiceResult component and wrapped its two Bug-004 paragraphs in one feature-scoped result container.
+* Centred the wrapper with the requested column flex alignment and explicitly centred both full-width paragraph elements.
+* Preserved the separate paragraph structure, inherited number size, `16px` explanation, English/Japanese language classes, and existing result colour inheritance.
+* Preserved the extra 1000ms display duration, normal dice timing, Heavy Weight calculation and movement, targeting, Spellbound, Board potion blocking, and dice animation.
+* No shared DiceRoll or Gameplay logic required changes for this fix.
+
+Related Feature
+
+* Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+* Bug-003: Heavy Weight dice roll message should use mixed font sizes and stay visible longer
+* Bug-004: Heavy Weight dice roll result and explanation should be split into separate paragraph tags
+
+Bug Summary
+
+* The Heavy Weight dice roll result format is now close, but the number and explanation are left aligned.
+* Both the result number and the explanatory sentence should be centred.
+
+Expected Behaviour
+
+* When Heavy Weight affects a dice roll, the dice roll component should display:
+
+  * the halved result number centred on its own line.
+  * the explanation centred beneath it.
+* The explanation should still use `16px`.
+* The dice roll component should still remain visible for 1 extra second.
+
+Required Fix
+
+* Centre-align the Heavy Weight dice result wrapper and both paragraph tags.
+* Ensure the paragraph elements do not inherit unwanted left alignment from the dice roll component.
+
+Suggested Structure
+
+```jsx id="1ng5os"
+<div className="dice-result-heavy-weight">
+  <p className="dice-result-heavy-weight-number">
+    {halvedRoll}
+  </p>
+
+  <p className={`dice-result-heavy-weight-message ${languageClass}`}>
+    {heavyWeightMessage}
+  </p>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="t5ckql"
+.dice-result-heavy-weight {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dice-result-heavy-weight-number,
+.dice-result-heavy-weight-message {
+  text-align: center;
+  width: 100%;
+}
+
+.dice-result-heavy-weight-message {
+  font-size: 16px;
+}
+```
+
+Out Of Scope
+
+* No changes to Heavy Weight roll calculation.
+* No changes to the split paragraph structure from Bug-004.
+* No changes to the 1 extra second display timing.
+* No changes to Spellbound.
+* No unrelated dice roll UI redesign.
+
+Testing Required
+
+* Use Heavy Weight on another player.
+* Advance to the affected player’s turn.
+* Roll the dice.
+* Confirm the halved result number is centred.
+* Confirm the explanation sentence is centred.
+* Confirm the number remains in its own `<p>` tag.
+* Confirm the explanation remains in its own `<p>` tag.
+* Confirm the explanation remains `16px`.
+* Confirm the dice roll component remains visible for 1 extra second.
+* Confirm English text is centred.
+* Confirm Japanese text is centred.
+* Confirm normal dice roll results are unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

@@ -88,6 +88,8 @@ export function createPlayers(playerCount, existingPlayers = []) {
       nextForcedRoll: existingPlayer?.nextForcedRoll
         ? { ...existingPlayer.nextForcedRoll }
         : null,
+      pendingPotionEffects:
+        existingPlayer?.pendingPotionEffects?.map((effect) => ({ ...effect })) ?? [],
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),

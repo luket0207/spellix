@@ -70,6 +70,7 @@ function findTokenLocation(tokenId, tokenBag, spellSlots) {
 }
 
 export function moveSpellTokenInDraft({
+  allowCommittedTokenMovement = false,
   destinationId,
   mergedColumns = [],
   spellSlots,
@@ -100,7 +101,11 @@ export function moveSpellTokenInDraft({
   const nextSpellSlots = cloneSpellSlots(spellSlots);
   const location = findTokenLocation(tokenId, nextTokenBag, nextSpellSlots);
 
-  if (!location || location.token.committed || location.containerId === destinationId) {
+  if (
+    !location ||
+    (location.token.committed && !allowCommittedTokenMovement) ||
+    (location.containerId === destinationId && !allowCommittedTokenMovement)
+  ) {
     return {
       didMove: false,
       spellSlots,
@@ -121,6 +126,28 @@ export function moveSpellTokenInDraft({
     };
   }
 
+  if (location.containerId === destinationId) {
+    if (destinationId === TOKEN_BAG_DROP_ZONE_ID) {
+      return {
+        didMove: false,
+        spellSlots,
+        tokenBag,
+      };
+    }
+
+    const [tokenToMove] = destinationSlot.tokens.splice(location.tokenIndex, 1);
+    destinationSlot.tokens.push({
+      ...tokenToMove,
+      committed: true,
+    });
+
+    return {
+      didMove: true,
+      spellSlots: nextSpellSlots,
+      tokenBag: nextTokenBag,
+    };
+  }
+
   const destinationSlotIndex = destinationSlot
     ? nextSpellSlots.findIndex(({ id }) => id === destinationSlot.id)
     : -1;
@@ -137,7 +164,12 @@ export function moveSpellTokenInDraft({
     };
   }
 
-  const tokenToMove = { ...location.token, committed: false };
+  const tokenToMove = {
+    ...location.token,
+    committed:
+      allowCommittedTokenMovement &&
+      destinationId !== TOKEN_BAG_DROP_ZONE_ID,
+  };
 
   if (location.containerId === TOKEN_BAG_DROP_ZONE_ID) {
     nextTokenBag.splice(location.tokenIndex, 1);

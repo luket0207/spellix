@@ -119,6 +119,34 @@ function renderGameplayPage() {
   );
 }
 
+function PlayerPotionStateProbe() {
+  const { currentPlayer } = useGameSetup();
+
+  return (
+    <div>
+      <p>{`Test token bag: ${currentPlayer.tokenBag.map(({ id }) => id).join(',') || 'empty'}`}</p>
+      <p>{`Test board potion used: ${currentPlayer.turnPotionUsage?.boardPotionUsedThisTurn ?? false}`}</p>
+      <p>{`Test active potion: ${currentPlayer.activePotion?.id ?? 'none'}`}</p>
+    </div>
+  );
+}
+
+function TargetPotionStateProbe() {
+  const { gameSetup } = useGameSetup();
+
+  return (
+    <div>
+      {gameSetup.players.map((player) => (
+        <p key={player.id}>
+          {`${player.id} target effect: pending=${
+            player.pendingPotionEffects?.map(({ potionId }) => potionId).join(',') || 'none'
+          }; active=${player.activePotion?.id ?? 'none'}`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function getSpellsNewBadge() {
   return screen.queryByLabelText(/new token bag tokens available/i);
 }
@@ -593,7 +621,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
   test('confirms Board potion use and removes only the selected duplicate', () => {
     const initialGameSetup = createCommittedGameplaySetup();
     const boardPotion = POTION_DEFINITIONS.find(
-      ({ id }) => id === 'copy-and-paste'
+      ({ id }) => id === 'small-heal'
     );
 
     initialGameSetup.players[0].potions = [boardPotion, boardPotion];
@@ -615,7 +643,9 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     });
 
     expect(
-      within(confirmation).getByText('Are you sure you want to use Copy and Paste?')
+      within(confirmation).getByText(
+        `Are you sure you want to use ${boardPotion.name}?`
+      )
     ).toHaveClass('larger-text', 'language-en');
     expect(within(confirmation).getByText('Potion Description')).toBeInTheDocument();
     expect(
@@ -641,6 +671,568 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       within(potionSection).getByRole('button', { name: 'Use' })
     ).toBeDisabled();
     expect(initialGameSetup.players[0].currentHealth).toBe(100);
+  });
+
+  test('returns Copy and Paste to its slot when the token bag is empty', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+    ];
+    initialGameSetup.players[0].hasUnseenTokenBagTokens = false;
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const modal = screen.getByRole('dialog', { name: 'Copy and Paste' });
+
+    expect(
+      within(modal).getByText(
+        'You have no tokens in your token bag, so this potion cannot be used. The potion was added back to your potion slots.'
+      )
+    ).toHaveClass('larger-text');
+    expect(screen.getByText('Test token bag: empty')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('1/3')
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'OK' }));
+    expect(screen.queryByRole('dialog', { name: 'Copy and Paste' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+  });
+
+  test('cancels Copy and Paste without changing tokens, potions, or Board usage', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+      POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+    ];
+    initialGameSetup.players[0].hasUnseenTokenBagTokens = false;
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'player-1-red-3', type: 'red' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    const potionSection = screen.getByRole('region', { name: 'Potions' });
+
+    fireEvent.click(
+      within(potionSection).getAllByRole('button', { name: 'Use' })[0]
+    );
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Copy and Paste' })).getByRole(
+        'button',
+        { name: 'Cancel' }
+      )
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Copy and Paste' })).not.toBeInTheDocument();
+    expect(screen.getByText('Test token bag: player-1-red-3')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+    expect(within(potionSection).getByText('2/3')).toBeInTheDocument();
+    within(potionSection).getAllByRole('button', { name: 'Use' }).forEach(
+      (button) => expect(button).toBeEnabled()
+    );
+
+    fireEvent.click(
+      within(potionSection).getAllByRole('button', { name: 'Use' })[0]
+    );
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Copy and Paste' })).getByRole(
+        'button',
+        { name: 'Duplicate' }
+      )
+    );
+
+    expect(
+      screen.getByText('Test token bag: player-1-red-3,player-1-red-6')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).toHaveTextContent('New');
+    expect(within(potionSection).getByText('1/3')).toBeInTheDocument();
+    expect(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    ).toBeDisabled();
+  });
+
+  test('duplicates a selected token with Copy and Paste when the bag has space', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+    ];
+    initialGameSetup.players[0].hasUnseenTokenBagTokens = false;
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'player-1-red-3', type: 'red' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Copy and Paste' })).getByRole(
+        'button',
+        { name: 'Duplicate' }
+      )
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Copy and Paste' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Test token bag: player-1-red-3,player-1-red-6')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).toHaveTextContent('New');
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
+  });
+
+  test('keeps a full bag unchanged when the new Copy and Paste token is discarded', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const tokenBag = [
+      { committed: false, id: 'player-1-red-1', type: 'red' },
+      { committed: false, id: 'player-1-blue-1', type: 'blue' },
+      { committed: false, id: 'player-1-green-1', type: 'green' },
+      { committed: false, id: 'player-1-orange-1', type: 'orange' },
+      { committed: false, id: 'player-1-purple-1', type: 'purple' },
+    ];
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+    ];
+    initialGameSetup.players[0].hasUnseenTokenBagTokens = false;
+    initialGameSetup.players[0].tokenBag = tokenBag;
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Copy and Paste' })).getAllByRole(
+        'button',
+        { name: 'Duplicate' }
+      )[0]
+    );
+
+    const discardModal = screen.getByRole('dialog', { name: 'Copy and Paste' });
+
+    expect(within(discardModal).getByRole('img', { name: 'red token duplicate' })).toBeInTheDocument();
+    fireEvent.click(
+      within(discardModal).getByRole('button', { name: 'Discard this new token' })
+    );
+
+    expect(
+      screen.getByText(`Test token bag: ${tokenBag.map(({ id }) => id).join(',')}`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
+  });
+
+  test('replaces a selected full-bag token with the Copy and Paste duplicate', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'copy-and-paste'),
+    ];
+    initialGameSetup.players[0].hasUnseenTokenBagTokens = false;
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'player-1-red-1', type: 'red' },
+      { committed: false, id: 'player-1-blue-1', type: 'blue' },
+      { committed: false, id: 'player-1-green-1', type: 'green' },
+      { committed: false, id: 'player-1-orange-1', type: 'orange' },
+      { committed: false, id: 'player-1-purple-1', type: 'purple' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Copy and Paste' })).getAllByRole(
+        'button',
+        { name: 'Duplicate' }
+      )[0]
+    );
+
+    const blueTokenOption = screen
+      .getByRole('img', { name: 'blue token' })
+      .closest('.copy-paste-token-option');
+
+    fireEvent.click(
+      within(blueTokenOption).getByRole('button', {
+        name: 'Discard this token and keep the duplicate',
+      })
+    );
+
+    expect(
+      screen.getByText(
+        'Test token bag: player-1-red-1,player-1-red-6,player-1-green-1,player-1-orange-1,player-1-purple-1'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+  });
+
+  test('moves a confirmed committed token with Tokensmith only after its modal flow', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'tokensmith'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const tokenButton = within(
+      screen.getByRole('dialog', { name: 'Tokensmith' })
+    ).getByRole('button', {
+      name: /select red token player-1-red-1 in slot 1/i,
+    });
+    fireEvent.click(tokenButton);
+
+    let confirmation = screen.getByRole('dialog', {
+      name: 'Tokensmith confirmation',
+    });
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'No' })
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Tokensmith' })).toBeInTheDocument();
+    expect(screen.getByText('Test token bag: empty')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Tokensmith' })).getByRole(
+        'button',
+        {
+          name: /select red token player-1-red-1 in slot 1/i,
+        }
+      )
+    );
+    confirmation = screen.getByRole('dialog', {
+      name: 'Tokensmith confirmation',
+    });
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Tokensmith' })).not.toBeInTheDocument();
+    expect(screen.getByText('Test token bag: player-1-red-1')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
+  });
+
+  test('consumes Redo, opens movable committed spells, and restores normal locking after cancel', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'redo'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    let spellsDialog = screen.getByRole('dialog', { name: 'Spells' });
+
+    expect(
+      within(spellsDialog).getByText(
+        'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.'
+      )
+    ).toHaveClass('spells-starting-warning');
+    within(spellsDialog)
+      .getAllByRole('button', { name: /moveable red token/i })
+      .forEach((button) => expect(button).toBeEnabled());
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(spellsDialog).getByRole('button', { name: 'Cancel' })
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Spells' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Spells' }));
+    spellsDialog = screen.getByRole('dialog', { name: 'Spells' });
+
+    within(spellsDialog)
+      .getAllByRole('button', { name: /committed red token/i })
+      .forEach((button) => expect(button).toBeDisabled());
+    expect(
+      within(spellsDialog).queryByText(
+        'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.'
+      )
+    ).not.toBeInTheDocument();
+  });
+
+  test('targets another player with Spellbound and blocks Board potions only for that next turn', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'spellbound'),
+    ];
+    initialGameSetup.players[1].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <TargetPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const chooser = screen.getByRole('dialog', {
+      name: 'Choose a player to target',
+    });
+
+    expect(within(chooser).queryByRole('group', {
+      name: 'Player 1 option',
+    })).not.toBeInTheDocument();
+    fireEvent.click(
+      within(
+        within(chooser).getByRole('group', { name: 'Player 2 option' })
+      ).getByRole('button', { name: 'Choose' })
+    );
+
+    expect(
+      screen.getByText(
+        'player-2 target effect: pending=spellbound; active=none'
+      )
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole('region', {
+      name: 'Potions',
+    })).getByText('0/3')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Move to square 1, 28',
+    }));
+
+    expect(
+      screen.getByText(
+        'player-2 target effect: pending=none; active=spellbound'
+      )
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole('region', {
+      name: 'Active Potion',
+    })).getByText('Spellbound')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Move to square 1, 28',
+    }));
+
+    expect(
+      screen.getByText(
+        'player-2 target effect: pending=none; active=none'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('halves a Heavy Weight target board roll, movement, and result text', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'heavy-weight'),
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <TargetPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(
+      within(
+        screen.getByRole('group', { name: 'Player 2 option' })
+      ).getByRole('button', { name: 'Choose' })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Move to square 1, 28',
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+
+    jest.spyOn(Math, 'random').mockReturnValue(0.8);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('img', { name: 'Dice face 5' })).toBeInTheDocument();
+    expect(
+      screen.getByText('3', {
+        selector: '.heavy-weight-dice-result-number',
+      })
+    ).toHaveClass('heavy-weight-dice-result-number');
+    expect(
+      screen.getByText('3', {
+        selector: '.heavy-weight-dice-result-number',
+      }).tagName
+    ).toBe('P');
+    const heavyWeightMessage = screen
+      .getByRole('dialog', { name: 'Dice result' })
+      .querySelector('.heavy-weight-dice-result-message');
+
+    expect(heavyWeightMessage).toHaveClass(
+      'heavy-weight-dice-result-message',
+      'language-en'
+    );
+    expect(heavyWeightMessage).toHaveTextContent(
+      'Dice roll is halved because you are weighed down.'
+    );
+    expect(heavyWeightMessage).not.toHaveTextContent('-');
+    expect(heavyWeightMessage.tagName).toBe('P');
+    expect(heavyWeightMessage.parentElement.tagName).toBe('DIV');
+    expect(heavyWeightMessage.parentElement).toHaveClass(
+      'heavy-weight-dice-result'
+    );
+    expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { x: 1, y: 29 },
+      3,
+      { blockedNodeIds: [] }
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Dice result' })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(999);
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Dice result' })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Dice result' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Move to square 1, 28',
+    }));
+
+    expect(
+      screen.getByText(
+        'player-2 target effect: pending=none; active=none'
+      )
+    ).toBeInTheDocument();
   });
 
   test('heals with Small Heal and animates the potion over the board player image', () => {

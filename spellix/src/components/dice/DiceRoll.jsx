@@ -30,6 +30,8 @@ function DiceRoll({
   onRollComplete,
   onRollStart,
   onSequenceComplete,
+  resultDurationExtensionMs = 0,
+  resultText = null,
   rollButtonClassName = '',
   rollButtonLabel = 'Roll Dice',
 }) {
@@ -86,9 +88,9 @@ function DiceRoll({
         phaseRef.current = 'rest';
         setPhase('rest');
         onSequenceCompleteRef.current?.(result);
-      }, resultDuration);
+      }, resultDuration + resultDurationExtensionMs);
     }, rollDuration);
-  }, [mode]);
+  }, [mode, resultDurationExtensionMs]);
 
   useEffect(() => {
     if (mode === 'temporary') {
@@ -149,13 +151,23 @@ function DiceRoll({
         </div>
       </div>
 
-      <p
-        aria-hidden={!isResultVisible}
-        aria-live="polite"
-        className={`dice-roll-result dice-roll-result--${isResultVisible ? 'visible' : 'hidden'}`}
-      >
-        {`${faceValue}`}
-      </p>
+      {resultText ? (
+        <div
+          aria-hidden={!isResultVisible}
+          aria-live="polite"
+          className={`dice-roll-result dice-roll-result--${isResultVisible ? 'visible' : 'hidden'}`}
+        >
+          {resultText(faceValue)}
+        </div>
+      ) : (
+        <p
+          aria-hidden={!isResultVisible}
+          aria-live="polite"
+          className={`dice-roll-result dice-roll-result--${isResultVisible ? 'visible' : 'hidden'}`}
+        >
+          {`${faceValue}`}
+        </p>
+      )}
 
       {mode === 'persistent' ? (
         <Button

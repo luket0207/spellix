@@ -132,6 +132,80 @@ test('temporary mode auto-rolls once and reports completion after the result pha
   expect(onSequenceComplete).toHaveBeenCalledWith(4);
 });
 
+test('temporary mode supports effect-specific result text without changing the rolled face', () => {
+  const onSequenceComplete = jest.fn();
+  jest.spyOn(Math, 'random').mockReturnValue(0.8);
+
+  render(
+    <DiceRoll
+      mode="temporary"
+      onSequenceComplete={onSequenceComplete}
+      resultDurationExtensionMs={1000}
+      resultText={(roll) => (
+        <>
+          <p data-testid="effect-result-number">{Math.ceil(roll / 2)}</p>
+          <p>Dice roll is halved because you are weighed down.</p>
+        </>
+      )}
+    />
+  );
+
+  act(() => {
+    jest.advanceTimersByTime(TEMPORARY_ROLL_DURATION_MS);
+  });
+
+  expect(screen.getByRole('img', { name: /dice face 5/i })).toBeInTheDocument();
+  expect(screen.getByTestId('effect-result-number').parentElement.tagName).toBe(
+    'DIV'
+  );
+  expect(screen.getByTestId('effect-result-number').parentElement).toHaveClass(
+    'dice-roll-result--visible'
+  );
+
+  act(() => {
+    jest.advanceTimersByTime(TEMPORARY_RESULT_DURATION_MS);
+  });
+
+  expect(onSequenceComplete).not.toHaveBeenCalled();
+
+  act(() => {
+    jest.advanceTimersByTime(999);
+  });
+
+  expect(onSequenceComplete).not.toHaveBeenCalled();
+
+  act(() => {
+    jest.advanceTimersByTime(1);
+  });
+
+  expect(onSequenceComplete).toHaveBeenCalledWith(5);
+});
+
+test('temporary mode keeps its normal result duration without an extension', () => {
+  const onSequenceComplete = jest.fn();
+
+  render(
+    <DiceRoll
+      mode="temporary"
+      onSequenceComplete={onSequenceComplete}
+    />
+  );
+
+  act(() => {
+    jest.advanceTimersByTime(
+      TEMPORARY_ROLL_DURATION_MS + TEMPORARY_RESULT_DURATION_MS - 1
+    );
+  });
+
+  expect(onSequenceComplete).not.toHaveBeenCalled();
+
+  act(() => {
+    jest.advanceTimersByTime(1);
+  });
+
+  expect(onSequenceComplete).toHaveBeenCalledTimes(1);
+});
+
 test('persistent mode respects an external disabled state', () => {
   const onRollComplete = jest.fn();
   const { rerender } = render(

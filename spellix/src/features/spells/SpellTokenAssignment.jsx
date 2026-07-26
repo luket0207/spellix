@@ -27,12 +27,20 @@ import {
 } from './nonBattleSpellEffects';
 import './spells.css';
 
-function DraggableSpellToken({ ariaLabel, language, onClick, showName = false, token }) {
+function DraggableSpellToken({
+  allowCommittedTokenMovement = false,
+  ariaLabel,
+  language,
+  onClick,
+  showName = false,
+  token,
+}) {
   const tokenDescriptionId = useId();
+  const isMovementDisabled = token.committed && !allowCommittedTokenMovement;
   const { attributes, isDragging, listeners, setNodeRef, transform } = useDraggable({
     data: { token },
     id: token.id,
-    disabled: token.committed,
+    disabled: isMovementDisabled,
   });
   const style = transform
     ? {
@@ -53,10 +61,10 @@ function DraggableSpellToken({ ariaLabel, language, onClick, showName = false, t
       {...listeners}
       aria-describedby={describedBy || undefined}
       aria-label={
-        ariaLabel ?? `${token.committed ? 'Committed' : 'Moveable'} ${token.type} token`
+        ariaLabel ?? `${isMovementDisabled ? 'Committed' : 'Moveable'} ${token.type} token`
       }
       className="spell-token-button"
-      disabled={token.committed}
+      disabled={isMovementDisabled}
       onClick={onClick}
       ref={setNodeRef}
       style={{
@@ -94,6 +102,7 @@ function TokenDropZone({ children, id, label }) {
 }
 
 function SpellTokenAssignment({
+  allowCommittedTokenMovement = false,
   isRewardTokenStagedInBag = false,
   isRewardTokenStagedForDiscard = false,
   language,
@@ -238,6 +247,7 @@ function SpellTokenAssignment({
                       {displayedTokens.length > 0 ? (
                         displayedTokens.map((token) => (
                           <DraggableSpellToken
+                            allowCommittedTokenMovement={allowCommittedTokenMovement}
                             ariaLabel={
                               token.id === rewardToken?.id
                                 ? `New reward ${token.type} token`
@@ -265,6 +275,7 @@ function SpellTokenAssignment({
             {displayedTokenBag.length > 0 ? (
               displayedTokenBag.map((token) => (
                 <DraggableSpellToken
+                  allowCommittedTokenMovement={allowCommittedTokenMovement}
                   ariaLabel={
                     token.id === rewardToken?.id
                       ? `New reward ${token.type} token`

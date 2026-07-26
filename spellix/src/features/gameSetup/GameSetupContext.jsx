@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { POTION_DEFINITIONS } from '../../data/potions';
 import {
   clampPlayerCount,
   cloneSpellSlots,
@@ -24,6 +25,9 @@ import {
   applyHealingPotionEffect,
   canUsePotionInContext,
 } from '../potions/potionUsage';
+import { createCopyPasteDuplicate } from '../potions/copyPaste';
+import { isTargetPlayerPotion } from '../potions/targetPlayerPotions';
+import { createTokensmithMove } from '../potions/tokensmith';
 import { generateBattleRewardChoices } from '../rewards/rewardItems';
 import {
   createCavePotionRewardAssignment,
@@ -53,6 +57,38 @@ import {
 
 const GameSetupContext = createContext(null);
 
+function clearStartingCharge(player) {
+  return player?.activePotion?.id === 'starting-charge'
+    ? { ...player, activePotion: null }
+    : player;
+}
+
+function clearBoardTurnPotion(player) {
+  return ['heavy-weight', 'spellbound', 'starting-charge'].includes(
+    player?.activePotion?.id
+  )
+    ? { ...player, activePotion: null }
+    : player;
+}
+
+function activatePendingTargetPlayerPotion(player) {
+  const [pendingEffect, ...remainingEffects] = player.pendingPotionEffects ?? [];
+
+  if (!pendingEffect) {
+    return player;
+  }
+
+  const potion = POTION_DEFINITIONS.find(({ id }) => id === pendingEffect.potionId);
+
+  return {
+    ...player,
+    activePotion: potion
+      ? { ...potion, sourcePlayerId: pendingEffect.sourcePlayerId }
+      : player.activePotion,
+    pendingPotionEffects: remainingEffects,
+  };
+}
+
 function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
   const currentPlayerId = currentSetup.turnOrder[currentSetup.currentTurnIndex] ?? null;
   const nextPlayerId = currentSetup.turnOrder[nextTurnIndex] ?? null;
@@ -67,17 +103,24 @@ function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
     ...currentSetup,
     currentTurnIndex: nextTurnIndex,
     players: didPlayerChange
-      ? currentSetup.players.map((player) =>
-          player.id === nextPlayerId
+      ? currentSetup.players.map((player) => {
+          const playerWithExpiredPotion =
+            player.id === currentPlayerId ? clearBoardTurnPotion(player) : player;
+          const nextPlayer =
+            playerWithExpiredPotion.id === nextPlayerId
+              ? activatePendingTargetPlayerPotion(playerWithExpiredPotion)
+              : playerWithExpiredPotion;
+
+          return nextPlayer.id === nextPlayerId
             ? {
-                ...player,
+                ...nextPlayer,
                 turnPotionUsage: {
-                  ...player.turnPotionUsage,
+                  ...nextPlayer.turnPotionUsage,
                   boardPotionUsedThisTurn: false,
                 },
               }
-            : player
-        )
+            : nextPlayer;
+        })
       : currentSetup.players,
     pendingNextTurnModal:
       didPlayerChange
@@ -337,8 +380,45 @@ function createWonBattleSetup(currentSetup, activeBattle) {
   };
 }
 
+function applyTokenBagNotificationChanges(currentSetup, nextSetup) {
+  if (!nextSetup || nextSetup === currentSetup) {
+    return nextSetup;
+  }
+
+  let didChangeNotification = false;
+  const previousPlayers = new Map(
+    currentSetup.players.map((player) => [player.id, player])
+  );
+  const players = nextSetup.players.map((player) => {
+    const previousPlayer = previousPlayers.get(player.id);
+
+    if (!previousPlayer) {
+      return player;
+    }
+
+    const previousCount = previousPlayer.tokenBag?.length ?? 0;
+    const nextCount = player.tokenBag?.length ?? 0;
+    const hasUnseenTokenBagTokens =
+      nextCount > previousCount
+        ? true
+        : nextCount === 0
+          ? false
+          : player.hasUnseenTokenBagTokens;
+
+    if (hasUnseenTokenBagTokens === player.hasUnseenTokenBagTokens) {
+      return player;
+    }
+
+    didChangeNotification = true;
+
+    return { ...player, hasUnseenTokenBagTokens };
+  });
+
+  return didChangeNotification ? { ...nextSetup, players } : nextSetup;
+}
+
 export function GameSetupProvider({ children, initialGameSetup = null }) {
-  const [gameSetup, setGameSetup] = useState(() => {
+  const [gameSetup, setGameSetupState] = useState(() => {
     const setup = initialGameSetup ?? createInitialGameSetup();
 
     return {
@@ -360,6 +440,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             ? { ...player.nextForcedRoll }
             : null,
           number: player.number ?? index + 1,
+          pendingPotionEffects:
+            player.pendingPotionEffects?.map((effect) => ({ ...effect })) ?? [],
           turnPotionUsage: {
             ...player.turnPotionUsage,
             boardPotionUsedThisTurn: Boolean(
@@ -375,6 +457,16 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       }),
     };
   });
+  const setGameSetup = (setupUpdate) => {
+    setGameSetupState((currentSetup) => {
+      const nextSetup =
+        typeof setupUpdate === 'function'
+          ? setupUpdate(currentSetup)
+          : setupUpdate;
+
+      return applyTokenBagNotificationChanges(currentSetup, nextSetup);
+    });
+  };
 
   const setPlayerCount = (playerCount) => {
     setGameSetup((currentSetup) => {
@@ -976,7 +1068,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const player = currentSetup.players.find(({ id }) => id === playerId);
       const potion = player?.potions[potionIndex];
       const activeBattle = currentSetup.activeBattle;
+      const isCopyPaste = potion?.id === 'copy-and-paste';
       const isRollChoice = potion?.id === 'roll-choice';
+      const isStartingCharge = potion?.id === 'starting-charge';
+      const isTargetingPotion = isTargetPlayerPotion(potion);
+      const isTokensmith = potion?.id === 'tokensmith';
       const forcedRollValue = options.forcedRollValue;
       const hasValidForcedRollValue =
         Number.isInteger(forcedRollValue) &&
@@ -1000,6 +1096,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         potionIndex < 0 ||
         potionIndex >= player.potions.length ||
         !canUsePotionInContext(potion, context) ||
+        isCopyPaste ||
+        isTargetingPotion ||
+        isTokensmith ||
         (isRollChoice && !hasValidForcedRollValue) ||
         (!isBoardUse && !isBattleUse)
       ) {
@@ -1021,7 +1120,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 activePotion:
                   isRollChoice && isBoardUse
                     ? { ...potion, chosenRoll: forcedRollValue }
-                    : currentPlayer.activePotion,
+                    : isStartingCharge && isBoardUse
+                      ? { ...potion }
+                      : currentPlayer.activePotion,
                 nextForcedRoll: isRollChoice
                   ? {
                       sourcePotionId: potion.id,
@@ -1041,6 +1142,190 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                     }
                   : {}),
               }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveTargetPlayerPotion = (playerId, potionIndex, targetPlayerId) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const targetPlayer = currentSetup.players.find(
+        ({ id }) => id === targetPlayerId
+      );
+      const potion = player?.potions[potionIndex];
+      const canUseBoardPotion =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+
+      if (
+        !player ||
+        !targetPlayer ||
+        playerId === targetPlayerId ||
+        !Number.isInteger(potionIndex) ||
+        potionIndex < 0 ||
+        potionIndex >= player.potions.length ||
+        !isTargetPlayerPotion(potion) ||
+        !canUsePotionInContext(potion, 'board') ||
+        !canUseBoardPotion
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) => {
+          if (currentPlayer.id === playerId) {
+            return {
+              ...currentPlayer,
+              potions: currentPlayer.potions.filter(
+                (_, index) => index !== potionIndex
+              ),
+              turnPotionUsage: {
+                ...currentPlayer.turnPotionUsage,
+                boardPotionUsedThisTurn: true,
+              },
+            };
+          }
+
+          if (currentPlayer.id === targetPlayerId) {
+            return {
+              ...currentPlayer,
+              pendingPotionEffects: [
+                ...(currentPlayer.pendingPotionEffects ?? []),
+                {
+                  potionId: potion.id,
+                  sourcePlayerId: playerId,
+                },
+              ],
+            };
+          }
+
+          return currentPlayer;
+        }),
+      };
+    });
+  };
+
+  const resolveCopyPastePotion = (
+    playerId,
+    potionIndex,
+    sourceTokenId,
+    resolution = {}
+  ) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[potionIndex];
+      const sourceToken = player?.tokenBag.find(({ id }) => id === sourceTokenId);
+      const isBoardUse =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+
+      if (
+        !player ||
+        !Number.isInteger(potionIndex) ||
+        potionIndex < 0 ||
+        potionIndex >= player.potions.length ||
+        potion?.id !== 'copy-and-paste' ||
+        !sourceToken ||
+        !canUsePotionInContext(potion, 'board') ||
+        !isBoardUse
+      ) {
+        return currentSetup;
+      }
+
+      const hasSpace = canAddTokenToBag(player.tokenBag);
+      const discardsDuplicate = resolution.discardDuplicate === true;
+      const replacesExisting = player.tokenBag.some(
+        ({ id }) => id === resolution.replacedTokenId
+      );
+
+      if (!hasSpace && !discardsDuplicate && !replacesExisting) {
+        return currentSetup;
+      }
+
+      const duplicateToken = createCopyPasteDuplicate(player, sourceToken);
+      const nextTokenBag = hasSpace
+        ? addTokenToBag(player.tokenBag, duplicateToken)
+        : discardsDuplicate
+          ? cloneTokenBag(player.tokenBag)
+          : replaceTokenInBag(
+              player.tokenBag,
+              resolution.replacedTokenId,
+              duplicateToken
+            );
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                potions: currentPlayer.potions.filter(
+                  (_, index) => index !== potionIndex
+                ),
+                tokenBag: nextTokenBag,
+                turnPotionUsage: {
+                  ...currentPlayer.turnPotionUsage,
+                  boardPotionUsedThisTurn: true,
+                },
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveTokensmithPotion = (playerId, potionIndex, tokenId) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[potionIndex];
+      const isBoardUse =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+
+      if (
+        !player ||
+        !Number.isInteger(potionIndex) ||
+        potionIndex < 0 ||
+        potionIndex >= player.potions.length ||
+        potion?.id !== 'tokensmith' ||
+        !canUsePotionInContext(potion, 'board') ||
+        !isBoardUse
+      ) {
+        return currentSetup;
+      }
+
+      const move = createTokensmithMove({
+        mergedColumns: player.mergedColumns,
+        spellSlots: player.spellSlots,
+        tokenBag: player.tokenBag,
+        tokenId,
+      });
+
+      if (move.status !== 'moved') {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? applyLightGreenHealthBonus(
+                {
+                  ...currentPlayer,
+                  potions: currentPlayer.potions.filter(
+                    (_, index) => index !== potionIndex
+                  ),
+                  tokenBag: move.tokenBag,
+                  turnPotionUsage: {
+                    ...currentPlayer.turnPotionUsage,
+                    boardPotionUsedThisTurn: true,
+                  },
+                },
+                move.spellSlots
+              )
             : currentPlayer
         ),
       };
@@ -1111,6 +1396,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
     setGameSetup((currentSetup) => {
       const player = currentSetup.players.find(({ id }) => id === playerId);
+      const hasStartingCharge =
+        player?.activePotion?.id === 'starting-charge';
 
       return {
         ...currentSetup,
@@ -1133,7 +1420,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           pendingEffects: [],
           phase: 'active',
           playerChargeUses: createTokenUses(player?.spellSlots, 'yellow'),
-          playerCharged: false,
+          playerCharged: hasStartingCharge,
           playerFreezeUses: createTokenUses(player?.spellSlots, 'light-blue'),
           playerFrozen: false,
           playerGuard: 0,
@@ -1143,6 +1430,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           playerPotionUsedThisTurn: false,
           playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
         },
+        players: hasStartingCharge
+          ? currentSetup.players.map((currentPlayer) =>
+              currentPlayer.id === playerId
+                ? clearStartingCharge(currentPlayer)
+                : currentPlayer
+            )
+          : currentSetup.players,
       };
     });
   };
@@ -1760,6 +2054,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,
         resolvePendingPotionGrant,
+        resolveCopyPastePotion,
+        resolveTargetPlayerPotion,
+        resolveTokensmithPotion,
         resolveSelectedPotionReward,
         finalizeBattleEffects,
         resetGame,

@@ -7,7 +7,7 @@ import {
 import { createInitialGameSetup } from '../gameSetup/gameSetup';
 
 const boardPotion = POTION_DEFINITIONS.find(
-  ({ id }) => id === 'copy-and-paste'
+  ({ id }) => id === 'metal-detector'
 );
 const battlePotion = POTION_DEFINITIONS.find(
   ({ id }) => id === 'first-aid'

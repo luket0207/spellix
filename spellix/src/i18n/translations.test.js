@@ -113,17 +113,30 @@ describe('gameplay translations', () => {
 
   test('returns the exact English and Japanese gameplay labels', () => {
     expect(getGameplayTranslations('en')).toEqual({
+      heavyWeightDiceResult: expect.any(Function),
       potions: 'Potions',
       rollDice: 'Roll Dice',
       spells: 'Spells',
       spellsNew: 'New',
+      targetPlayerChoose: 'Choose',
+      targetPlayerPrompt: 'Choose a player to target',
     });
     expect(getGameplayTranslations('jp')).toEqual({
+      heavyWeightDiceResult: expect.any(Function),
       potions: 'ポーション',
       rollDice: 'サイコロを振る',
       spells: '呪文',
       spellsNew: '新規',
+      targetPlayerChoose: '\u9078\u3076',
+      targetPlayerPrompt:
+        '\u5bfe\u8c61\u306b\u3059\u308b\u30d7\u30ec\u30a4\u30e4\u30fc\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002',
     });
+    expect(getGameplayTranslations('en').heavyWeightDiceResult(3)).toBe(
+      '3 - Dice roll is halved because you are weighed down.'
+    );
+    expect(getGameplayTranslations('jp').heavyWeightDiceResult(3)).toBe(
+      '3 - \u91cd\u3057\u3092\u304b\u3051\u3089\u308c\u3066\u3044\u308b\u305f\u3081\u3001\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u304c\u534a\u5206\u306b\u306a\u308a\u307e\u3059\u3002'
+    );
   });
 
   test('falls back to English for missing or invalid player languages', () => {

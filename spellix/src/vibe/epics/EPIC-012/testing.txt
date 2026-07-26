@@ -262,3 +262,45 @@ Automated Test Limitations
 Manual Testing Still Needed
 
 * Run the five-step browser regression above to visually confirm English/Japanese text, tooltip and Roll Choice number colours, unchanged icon colours, and console output.
+
+---
+
+Bug-003: Spells button New notification should reappear whenever token bag count increases
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open Spells to clear the current player’s `New` badge, then use Copy and Paste while the token bag has space.
+   Expected: The duplicated token increases the bag count and `New` reappears.
+2. Open Spells again, close it, and add another token.
+   Expected: The cleared notification is restored for the later count increase.
+3. Cancel Copy and Paste, then try it with an empty token bag.
+   Expected: No token is added and no `New` badge appears.
+4. Use Copy and Paste with a full bag, first discarding the duplicate and then replacing an existing token.
+   Expected: The bag count does not increase and this bug does not require a new badge.
+5. Add a token through Loot Chest, Cave reward, and Battle reward after clearing the badge each time.
+   Expected: Every count increase displays `New`.
+6. Empty the token bag and repeat the successful-add check with a Japanese player.
+   Expected: The empty bag hides the badge and the later addition displays `新規`.
+
+Automated Tests Completed
+
+* Red-first reproduction produced 3 focused failures because the successful Copy and Paste additions did not restore the unseen-token state; cancellation, failure, discard, and same-count replacement already stayed clear.
+* The focused GameSetup and Gameplay Copy and Paste regression passes 2 suites and all 7 selected tests.
+* The Gameplay badge and Copy and Paste regression passes 10 tests, including repeated clear/add behavior, empty-bag clearing, localization, cancellation, successful addition, discard, and replacement.
+* The complete potion regression passes 15 suites and all 84 tests.
+* The shared GameSetup, reward-state, and Loot Chest suites pass; the broader mini-game run retains 3 previously documented stale Cave assertions unrelated to token-bag notification state.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state transitions, badge visibility, localization, and interaction outcomes but cannot visually inspect the browser-rendered badge or console output.
+* The 3 stale Cave assertions in the broader mini-game suite remain outside this bug’s notification scope.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to confirm real interaction timing, all reward sources, Japanese rendering, and console output.

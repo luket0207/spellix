@@ -1,0 +1,22 @@
+.heavy-weight-dice-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.heavy-weight-dice-result-number,
+.heavy-weight-dice-result-message {
+  text-align: center;
+  width: 100%;
+}
+
+.heavy-weight-dice-result-number {
+  font-size: inherit;
+  margin: 0;
+}
+
+.heavy-weight-dice-result-message {
+  font-size: 16px;
+  margin: 6px 0 0;
+}

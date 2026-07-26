@@ -180,6 +180,124 @@ describe('spellSetup helpers', () => {
     expect(returnedState.spellSlots[0].tokens).toHaveLength(0);
   });
 
+  test('moves committed tokens only when Redo mode allows it and recommits them on save', () => {
+    const [player] = createPlayers(1);
+    const committedToken = {
+      ...player.tokenBag[0],
+      committed: true,
+    };
+    const spellSlots = player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens: index === 0 ? [committedToken] : [],
+    }));
+    const normalMove = moveSpellTokenInDraft({
+      destinationId: spellSlots[1].id,
+      spellSlots,
+      tokenBag: player.tokenBag.slice(1),
+      tokenId: committedToken.id,
+    });
+
+    expect(normalMove.didMove).toBe(false);
+
+    const redoMove = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: spellSlots[1].id,
+      spellSlots,
+      tokenBag: player.tokenBag.slice(1),
+      tokenId: committedToken.id,
+    });
+
+    expect(redoMove.didMove).toBe(true);
+    expect(redoMove.spellSlots[0].tokens).toEqual([]);
+    expect(redoMove.spellSlots[1].tokens).toEqual([
+      expect.objectContaining({
+        committed: true,
+        id: committedToken.id,
+      }),
+    ]);
+
+    const returnedToBag = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: TOKEN_BAG_DROP_ZONE_ID,
+      spellSlots,
+      tokenBag: player.tokenBag.slice(1),
+      tokenId: committedToken.id,
+    });
+
+    expect(returnedToBag.didMove).toBe(true);
+    expect(returnedToBag.tokenBag).toContainEqual(
+      expect.objectContaining({
+        committed: false,
+        id: committedToken.id,
+      })
+    );
+
+    const movedBackToSlots = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: spellSlots[2].id,
+      spellSlots: returnedToBag.spellSlots,
+      tokenBag: returnedToBag.tokenBag,
+      tokenId: committedToken.id,
+    });
+    const movedWithinColumn = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: spellSlots[0].id,
+      spellSlots,
+      tokenBag: player.tokenBag.slice(1),
+      tokenId: committedToken.id,
+    });
+
+    expect(movedBackToSlots.didMove).toBe(true);
+    expect(movedBackToSlots.spellSlots[2].tokens[0].id).toBe(committedToken.id);
+    expect(movedWithinColumn.didMove).toBe(true);
+    expect(movedWithinColumn.spellSlots[0].tokens[0]).toEqual(
+      expect.objectContaining({
+        committed: true,
+        id: committedToken.id,
+      })
+    );
+
+    const committedState = createCommittedSpellData(redoMove);
+
+    expect(committedState.spellSlots[1].tokens[0].committed).toBe(true);
+  });
+
+  test('keeps moved Redo tokens active for Grey capacity while assigned', () => {
+    const [player] = createPlayers(1);
+    const spellSlots = player.spellSlots.map((slot) => ({
+      ...slot,
+      tokens: [],
+    }));
+    spellSlots[0].tokens = Array.from({ length: 5 }, (_, index) => ({
+      committed: true,
+      id: `filled-red-${index + 1}`,
+      type: 'red',
+    }));
+    spellSlots[1].tokens = [{
+      committed: true,
+      id: 'redo-grey',
+      type: 'grey',
+    }];
+    const movedGrey = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: spellSlots[1].id,
+      spellSlots,
+      tokenBag: player.tokenBag,
+      tokenId: 'redo-grey',
+    });
+    const addedWithGreyCapacity = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: spellSlots[0].id,
+      spellSlots: movedGrey.spellSlots,
+      tokenBag: movedGrey.tokenBag,
+      tokenId: player.tokenBag[0].id,
+    });
+
+    expect(movedGrey.spellSlots[1].tokens[0].committed).toBe(true);
+    expect(addedWithGreyCapacity.didMove).toBe(true);
+    expect(addedWithGreyCapacity.spellSlots[0].tokens).toHaveLength(6);
+  });
+
   test('does not report draft changes when the spell state is unchanged', () => {
     const [player] = createPlayers(1);
 

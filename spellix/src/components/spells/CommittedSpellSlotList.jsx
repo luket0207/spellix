@@ -25,7 +25,9 @@ function CommittedSpellSlotList({
   language,
   lightBlueUses = null,
   mergedColumns = [],
+  onTokenClick = null,
   purpleBuffs = [],
+  showOnlyFilledSlots = false,
   spellSlots,
   title = 'Spells',
   titleClassName = '',
@@ -63,6 +65,13 @@ function CommittedSpellSlotList({
             (displayedColumn) => purpleBuffs[displayedColumn - 1] > 0
           );
 
+          if (
+            showOnlyFilledSlots &&
+            !(activeSlot.tokens ?? []).some((token) => token.committed)
+          ) {
+            return null;
+          }
+
           return (
             <li
               data-column-span={merge ? '2' : '1'}
@@ -85,7 +94,26 @@ function CommittedSpellSlotList({
                   {activeSlot.displayLabel ? (
                     <span className="committed-spell-slot-text">{activeSlot.displayLabel}</span>
                   ) : null}
-                  {consolidatedTokens.map(({ count, tokenType }) => {
+                  {onTokenClick
+                    ? (activeSlot.tokens ?? [])
+                        .filter((token) => token.committed)
+                        .map((token) => (
+                          <button
+                            aria-label={`Select ${token.type} token ${token.id} in slot ${slotLabel}`}
+                            key={token.id}
+                            type="button"
+                            onClick={() => onTokenClick(token)}
+                          >
+                            <Token
+                              ariaLabel={`${token.type} token in slot ${slotLabel}`}
+                              committed
+                              focusable={false}
+                              language={language}
+                              tokenType={token.type}
+                            />
+                          </button>
+                        ))
+                    : consolidatedTokens.map(({ count, tokenType }) => {
                     const uses =
                       tokenType === 'light-blue'
                         ? lightBlueUses
@@ -108,7 +136,7 @@ function CommittedSpellSlotList({
                         tokenType={tokenType}
                       />
                     );
-                  })}
+                    })}
                 </div>
               </div>
             </li>
