@@ -123,6 +123,8 @@ function GameStateSnapshot() {
       <p>{`Battle phase: ${activeBattle?.phase ?? 'none'}`}</p>
       <p>{`Stored level: ${activeBattle?.level ?? 'none'}`}</p>
       <p>{`Player 1 health: ${playerOne.currentHealth}`}</p>
+      <p>{`Player 1 next forced roll: ${playerOne.nextForcedRoll?.value ?? 'none'}`}</p>
+      <p>{`Player 1 active potion: ${playerOne.activePotion?.id ?? 'none'}`}</p>
       <p>{`Player 1 spell tokens: ${playerOneSpellTokenIds || 'none'}`}</p>
       <p>{`Player 1 position: ${gameSetup.players[0].position.x},${gameSetup.players[0].position.y}`}</p>
       <p>{`Player 1 potions: ${playerOne.potions.map(({ id }) => id).join(',') || 'none'}`}</p>
@@ -301,11 +303,23 @@ describe('BattlePage flows', () => {
     expect(within(confirmation).getByText(/First Aid/)).toHaveClass('larger-text');
     fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
 
+    const healingAnimation = screen.getByLabelText('Healing potion animation');
+    const battlePlayerImage = screen.getByRole('img', {
+      name: 'Battle player piece',
+    });
+
+    expect(screen.getByText('Battle player health: 60')).toBeInTheDocument();
+    expect(healingAnimation).toHaveAttribute('data-icon', 'flask');
+    expect(healingAnimation).toHaveClass('healing-potion-animation');
+    expect(healingAnimation.parentElement).toContainElement(battlePlayerImage);
     expect(screen.getByText('Player 1 potions: roll-choice,copy-and-paste,bridge-builder')).toBeInTheDocument();
     expect(within(potionSection).queryByText('First Aid')).not.toBeInTheDocument();
     expect(
       within(potionSection).getByRole('button', { name: 'Use' })
     ).toBeDisabled();
+
+    fireEvent.animationEnd(healingAnimation);
+    expect(screen.queryByLabelText('Healing potion animation')).not.toBeInTheDocument();
 
     fireEvent.click(
       within(potionSection).getByRole('button', { name: 'Use' })
@@ -358,6 +372,51 @@ describe('BattlePage flows', () => {
     within(potionSection).getAllByRole('button', { name: 'Use' }).forEach(
       (button) => expect(button).toBeEnabled()
     );
+  });
+
+  test('activates Roll Choice in battle and forces the next player roll once', () => {
+    const setup = createBattleSetup();
+    const randomSpy = jest.spyOn(Math, 'random');
+
+    setup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+    ];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const choiceModal = screen.getByRole('dialog', { name: 'Roll Choice' });
+
+    expect(screen.getByText('Player 1 potions: roll-choice')).toBeInTheDocument();
+    fireEvent.click(within(choiceModal).getByRole('button', { name: '2' }));
+
+    expect(screen.getByText('Player 1 potions: none')).toBeInTheDocument();
+    expect(screen.getByText('Player 1 next forced roll: 2')).toBeInTheDocument();
+    expect(screen.getByText('Player 1 active potion: none')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toHaveClass(
+      'dice-roll-cube--face-2'
+    );
+    expect(randomSpy).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByRole('img', { name: /dice face 2/i })).toBeInTheDocument();
+    expect(screen.getByText('Player 1 next forced roll: none')).toBeInTheDocument();
+    expect(randomSpy).not.toHaveBeenCalled();
   });
 
   test('disables battle potion Use controls outside the player turn', () => {

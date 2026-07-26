@@ -42,9 +42,9 @@ export const POTION_DEFINITIONS = [
   {
     availability: 'Board',
     colour: 'orange',
-    description: 'Duplicate any common token in your token pouch',
+    description: 'Duplicate any token in your token pouch',
     id: 'copy-and-paste',
-    japaneseDescription: 'トークンポーチにある好きなコモントークンを1個複製する。',
+    japaneseDescription: 'トークンポーチにある好きなトークンを1個複製する。',
     japaneseName: 'コピー＆ペースト',
     name: 'Copy and Paste',
     rarity: 'Common',
@@ -84,9 +84,9 @@ export const POTION_DEFINITIONS = [
   {
     availability: 'Board',
     colour: 'yellow',
-    description: 'You can rearrange your tokens as much as you like this turn.',
+    description: 'Get one chance to rearrange your tokens.',
     id: 'redo',
-    japaneseDescription: 'このターン中、トークンを好きなだけ並べ替えることができる。',
+    japaneseDescription: 'トークンを一度だけ並べ替えることができる。',
     japaneseName: 'やり直し',
     name: 'Redo',
     rarity: 'Rare',
@@ -113,12 +113,24 @@ export const POTION_DEFINITIONS = [
   },
   {
     availability: 'Board',
+    colour: 'green',
+    description:
+      'Choose another player, they may not use potions in their next turn.',
+    id: 'spellbound',
+    japaneseDescription:
+      '他のプレイヤーを1人選んでください。そのプレイヤーは次のターンにポーションを使用できません。',
+    japaneseName: '呪縛',
+    name: 'Spellbound',
+    rarity: 'Common',
+  },
+  {
+    availability: 'Board',
     colour: 'blue',
     description:
-      'The nearest player to you (chosen randomly if there are two or more players of equal distance) will have their dice roll halved (rounded up) next turn.',
+      'Choose another player, they may not use potions in their next turn, and their dice roll will be halved (rounded up).',
     id: 'heavy-weight',
     japaneseDescription:
-      '自分に最も近いプレイヤー（同じ距離に2人以上いる場合はランダムに選ばれる）は、次のターンのサイコロの出目が半分になる（端数切り上げ）。',
+      '他のプレイヤーを1人選んでください。そのプレイヤーは次のターンにポーションを使用できず、サイコロの出目が半分になります（端数切り上げ）。',
     japaneseName: 'ヘビーウェイト',
     name: 'Heavy Weight',
     rarity: 'Rare',
@@ -151,10 +163,10 @@ export const POTION_DEFINITIONS = [
     availability: 'Board',
     colour: 'orange',
     description:
-      'Discard four tokens from your token pouch. Get a choice of 2 random tokens and pick one to gain.',
+      'Discard 3 tokens from your token pouch. Get a choice of 2 random tokens and pick one to gain.',
     id: 'buy-and-sell',
     japaneseDescription:
-      'トークンポーチからトークンを4個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。',
+      'トークンポーチからトークンを3個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。',
     japaneseName: '売買',
     name: 'Buy and Sell',
     rarity: 'Rare',
@@ -173,10 +185,10 @@ export const POTION_DEFINITIONS = [
     availability: 'Board',
     colour: 'red',
     description:
-      'Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on), if odd you may not move this turn and your turn is over.',
+      'Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on) and they cannot use board potions, if odd you may not move this turn and your turn is over.',
     id: 'storm-master',
     japaneseDescription:
-      'このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまる。奇数なら、自分はこのターン移動できず、そのままターンを終了する。',
+      'このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまらなければならない。また、ボード用ポーションも使用できない。出目が奇数なら、自分はこのターン移動できず、そのままターンを終了する。',
     japaneseName: '嵐の支配者',
     name: 'Storm Master',
     rarity: 'Rare',
@@ -190,6 +202,16 @@ export const POTION_DEFINITIONS = [
     japaneseName: 'ダブルダイス',
     name: 'Double Dice',
     rarity: 'Common',
+  },
+  {
+    availability: 'Board',
+    colour: 'red',
+    description: 'Roll 3 dice this turn.',
+    id: 'triple-dice',
+    japaneseDescription: 'このターンはサイコロを3個振る。',
+    japaneseName: 'トリプルダイス',
+    name: 'Triple Dice',
+    rarity: 'Rare',
   },
   {
     availability: 'Mini',

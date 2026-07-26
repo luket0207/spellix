@@ -40,6 +40,13 @@
   justify-content: center;
 }
 
+.gameplay-current-player-image {
+  align-self: center;
+  display: inline-flex;
+  position: relative;
+  width: fit-content;
+}
+
 .gameplay-current-player-piece {
   align-self: flex-start;
   width: auto;
@@ -58,19 +65,21 @@
   align-items: center;
   background: #C6CC0C;
   border: 2px solid #302419;
-  border-radius: 50%;
+  border-radius: 999px;
   box-sizing: border-box;
   color: #302419;
   display: flex;
+  font-size: 12px;
   font-weight: 700;
-  height: 22px;
+  min-height: 22px;
+  min-width: 34px;
   justify-content: center;
   line-height: 1;
+  padding: 3px 6px;
   pointer-events: none;
   position: absolute;
   right: -8px;
   top: -8px;
-  width: 22px;
   z-index: 1;
 }
 

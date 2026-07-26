@@ -327,6 +327,10 @@ describe('DebugModal', () => {
     ).map(({ value }) => value);
 
     expect(potionOptionIds).toEqual(POTION_DEFINITIONS.map(({ id }) => id));
+    expect(potionOptionIds).toHaveLength(28);
+    expect(potionOptionIds).toEqual(
+      expect.arrayContaining(['spellbound', 'triple-dice'])
+    );
     expect(potionOptionIds).not.toEqual(
       expect.arrayContaining(['teleport-to-feature', 'gambeller'])
     );

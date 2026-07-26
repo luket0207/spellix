@@ -1,0 +1,1960 @@
+---
+
+Feature-001: Implement Small Heal, Heal, and First Aid potion behaviour
+
+Status
+
+* done
+
+Completion Notes
+
+* Added healing effects for Small Heal at 30%, Heal at 60%, and First Aid at 50% of the player’s current max health.
+* Rounded each heal amount to the nearest multiple of 5 and clamped final current health to max health, including max-health increases from committed Light Green tokens.
+* Applied healing atomically in the existing confirmed potion-consumption action, so each potion is removed from its slot, respects its existing Board/Battle availability and one-use limit, and never enters Active Potion.
+* Added one green Font Awesome flask animation over the current player image on the Board and the battle player image in Battle.
+* The animation grows from the image centre to its width, shakes three times, fades out, and removes itself after its specified 1.5-second animation.
+* No confirmation modal, turn-limit, enemy health, damage, Light Green token, route, or unrelated UI behavior was changed.
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour for the first three healing potions:
+
+  * Small Heal
+  * Heal
+  * First Aid
+* These potions restore health to the player who uses them.
+* They differ only by availability and healing percentage.
+
+Potion Behaviour Summary
+
+```txt id="0dyf6u"
+Small Heal: recover 30% HP, usable from Board or Battle.
+Heal: recover 60% HP, usable from Board or Battle.
+First Aid: recover 50% HP, usable from Battle only.
+```
+
+Healing Calculation Requirement
+
+* Healing is calculated as a percentage of the player’s full health value.
+* The result must be rounded to the nearest multiple of 5.
+* The player’s current health then increases by that rounded amount.
+* The player can never be healed above their full health.
+
+Suggested helper:
+
+```js id="8p35ee"
+function roundToNearestFive(value) {
+  return Math.round(value / 5) * 5;
+}
+
+function getPotionHealAmount(maxHealth, percentage) {
+  return roundToNearestFive(maxHealth * percentage);
+}
+```
+
+Example 1
+
+```txt id="kum7bl"
+Player health: 25 / 110
+Potion: Heal
+Heal percentage: 60%
+
+60% of 110 = 66
+66 rounds to nearest multiple of 5 = 65
+
+New health: 90 / 110
+```
+
+Example 2
+
+```txt id="wqqllj"
+Player health: 40 / 115
+Potion: Small Heal
+Heal percentage: 30%
+
+30% of 115 = 34.5
+34.5 rounds to nearest multiple of 5 = 35
+
+New health: 75 / 115
+```
+
+Example 3
+
+```txt id="y1dbrn"
+Player health: 80 / 100
+Potion: Heal
+Heal percentage: 60%
+
+60% of 100 = 60
+New health would be 140 / 100
+Clamp to full health.
+
+Final health: 100 / 100
+```
+
+Health Clamp Requirement
+
+* Healing must never increase current health beyond max health.
+* Use the player’s current full health value, including any Light Green token max-health increases.
+* The final current health should be:
+
+```js id="md0fak"
+Math.min(currentHealth + healAmount, maxHealth)
+```
+
+Potion Consumption Requirement
+
+* These potions are consumed when used.
+* They should be removed from the player’s potion slots after the normal use confirmation flow.
+* These potions never need to go into the Active Potion section.
+* They do not persist after use.
+
+Healing Animation Requirement
+
+* When a healing potion is successfully used, show a green potion bottle animation over the player’s image.
+* Use the same Font Awesome potion icon already used for potions.
+* The icon should be green.
+* The animation should take 1.5 seconds total.
+
+Board Animation Placement
+
+* If the potion is used on the board:
+
+  * show the green potion bottle over the player image at the top of the gameplay UI.
+
+Battle Animation Placement
+
+* If the potion is used in battle:
+
+  * show the green potion bottle over the player’s battle image.
+
+Animation Behaviour
+
+* The potion bottle should:
+
+  * start from the centre of the player image.
+  * grow outward from the centre.
+  * expand until it matches the width of the player image.
+  * shake 3 times.
+  * fade out.
+* Total animation duration: 1.5 seconds.
+
+Suggested CSS direction:
+
+```css id="uqahhc"
+.heal-potion-animation {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 1;
+  animation: healPotionBottle 1.5s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes healPotionBottle {
+  0% {
+    width: 0;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+
+  30% {
+    width: 100%;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  45% {
+    transform: translate(-53%, -50%) scale(1);
+  }
+
+  60% {
+    transform: translate(-47%, -50%) scale(1);
+  }
+
+  75% {
+    transform: translate(-52%, -50%) scale(1);
+  }
+
+  100% {
+    width: 100%;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+```
+
+* Exact class names can vary.
+* The important requirements are growth, 3 shakes, fade out, and 1.5 second total duration.
+
+Expected Behaviour
+
+* Small Heal restores 30% of max health, rounded to nearest 5.
+* Heal restores 60% of max health, rounded to nearest 5.
+* First Aid restores 50% of max health, rounded to nearest 5.
+* Healing uses the player’s current max health.
+* Healing cannot exceed max health.
+* Healing potions are consumed immediately after use.
+* Healing potions do not enter Active Potion.
+* Board healing shows the animation over the top UI player image.
+* Battle healing shows the animation over the battle player image.
+* The animation uses a green potion bottle icon.
+* The animation lasts 1.5 seconds.
+
+Out Of Scope
+
+* No changes to potion trigger confirmation modal.
+* No changes to one-potion-per-turn limits.
+* No changes to enemy healing.
+* No changes to damage logic.
+* No changes to Light Green token behaviour.
+* No unrelated battle or board UI redesign.
+
+Testing Checkpoints
+
+* Confirm Small Heal heals 30% of max HP rounded to nearest 5.
+* Confirm Heal heals 60% of max HP rounded to nearest 5.
+* Confirm First Aid heals 50% of max HP rounded to nearest 5.
+* Confirm 25/110 using Heal becomes 90/110.
+* Confirm 40/115 using Small Heal becomes 75/115.
+* Confirm 80/100 using Heal becomes 100/100.
+* Confirm healing uses max health after Light Green token bonuses.
+* Confirm potion is consumed after use.
+* Confirm potion does not enter Active Potion.
+* Confirm board animation appears over the gameplay UI player image.
+* Confirm battle animation appears over the battle player image.
+* Confirm animation grows from centre, shakes 3 times, and fades out.
+* Confirm animation lasts 1.5 seconds.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Implement Roll Choice potion behaviour
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the localized Roll Choice modal after the existing use confirmation, with the required `larger-text` question and six global Button choices in two rows of three.
+* Delayed Roll Choice consumption and the one-potion-per-turn lock until a valid value from 1 through 6 is selected.
+* Stored one shared `nextForcedRoll` value on the player so the next player dice roll can be forced in either Board or Battle context.
+* Added a non-immediate forced result input to the existing DiceRoll component, preserving the existing random and debug forced-request paths.
+* Board activation moves Roll Choice to Active Potion with the chosen number over the PotionIcon in the English font; Battle activation does not create Board Active Potion state.
+* The forced value and any Board Roll Choice Active Potion are removed as soon as the one forced roll resolves, so later rolls return to normal random generation.
+* The choice modal has no separate cancel control; confirmation does not consume or lock the potion, and successful number selection completes activation.
+* No normal dice odds, multi-dice potions, battle damage, board movement rules, routes, or unrelated Active Potion styling were changed.
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Goal
+
+* Implement the behaviour of the Roll Choice potion.
+* When used, the player chooses the next dice roll value.
+* The next time that player rolls the dice, either on the board or in battle, the dice result is forced to the chosen number.
+* If activated from the board, Roll Choice should appear in the Active Potion section until the forced roll happens.
+
+Roll Choice Modal Requirement
+
+* After the normal potion-use confirmation is accepted, show a Roll Choice modal.
+* The modal should ask:
+
+```txt id="kta5y5"
+What do you want the next roll of the dice to be?
+```
+
+* Japanese:
+
+```txt id="y3zvcq"
+次のサイコロの出目をいくつにしますか？
+```
+
+* The question must use the `larger-text` class.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * no `ul` or `li`.
+
+Dice Choice Buttons
+
+* Below the question, show 6 buttons.
+* The buttons should be arranged in 2 rows of 3.
+* Each button represents one dice result:
+
+  * 1
+  * 2
+  * 3
+  * 4
+  * 5
+  * 6
+
+Suggested layout:
+
+```txt id="pu8skd"
+[1] [2] [3]
+[4] [5] [6]
+```
+
+* Use the global Button component.
+* Buttons should be evenly sized and centred.
+
+Forced Roll Requirement
+
+* When the player chooses a number, store that number as their next forced dice roll.
+* The next time that player rolls the dice:
+
+  * on the board, or
+  * in battle,
+    the dice result must be the chosen number.
+* After the forced roll happens, clear the forced roll state.
+* The forced roll should apply only once.
+
+Suggested state:
+
+```js id="m9ycwz"
+player.nextForcedRoll = {
+  value: 4,
+  sourcePotionId: "roll-choice",
+  usedFrom: "board"
+};
+```
+
+Board Active Potion Requirement
+
+* If Roll Choice is activated from the board screen:
+
+  * place it in the Active Potion section after the player chooses the dice number.
+  * show the potion using the potion component.
+  * overlay the chosen number on top of the potion icon.
+  * use the English font for the number.
+* The Active Potion entry should remain visible until the forced dice roll happens.
+* As soon as the forced dice roll is used, remove Roll Choice from Active Potion.
+
+Battle Usage Requirement
+
+* Roll Choice can also be used in battle because its availability is `Both`.
+* If used in battle:
+
+  * the player still chooses the forced number.
+  * the next dice roll by that player is forced.
+* If the forced roll is used immediately in battle, it may not need to appear in the board Active Potion section.
+* Do not show board Active Potion state unless the potion was activated from the board.
+
+Potion Consumption Requirement
+
+* Roll Choice should be consumed once it has been successfully activated and the chosen number has been stored.
+* It should be removed from potion slots according to EPIC-012 rules.
+* If the player cancels before choosing a number, do not consume the potion unless the existing confirmation flow already consumed it.
+* Prefer consuming only after the player has completed the dice-choice selection, so a modal close/cancel does not waste the potion.
+
+Expected Behaviour
+
+* Roll Choice opens a dice-choice modal after use confirmation.
+* The modal question uses `larger-text`.
+* The modal displays 6 buttons in 2 rows of 3.
+* Clicking a number stores that number as the player’s next forced dice roll.
+* The forced roll applies to the next board dice roll or battle dice roll by that player.
+* The forced roll is used once only.
+* Roll Choice used from board appears in Active Potion.
+* The chosen number appears on top of the Active Potion potion icon.
+* The chosen number uses the English font.
+* Roll Choice is removed from Active Potion after the forced roll happens.
+
+Out Of Scope
+
+* No changes to normal dice odds.
+* No changes to Double Dice or Triple Dice.
+* No changes to battle damage logic except using the forced roll result.
+* No changes to board movement rules except using the forced roll result.
+* No unrelated Active Potion redesign.
+
+Testing Checkpoints
+
+* Use Roll Choice from the board.
+* Choose dice result 4.
+* Confirm Roll Choice appears in Active Potion with 4 over the icon.
+* Roll the dice on the board.
+* Confirm the roll is 4.
+* Confirm Roll Choice is removed from Active Potion after the roll.
+* Confirm the next roll after that is random again.
+* Use Roll Choice from battle.
+* Choose dice result 2.
+* Roll in battle.
+* Confirm the roll is 2.
+* Confirm the forced roll clears after use.
+* Confirm all 6 number buttons work.
+* Confirm the modal question displays in English.
+* Confirm the modal question displays in Japanese.
+* Confirm the question uses `larger-text`.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Implement Copy and Paste potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Copy and Paste potion.
+* The potion duplicates a token from the player’s token bag.
+* The player chooses which token to duplicate.
+* If the token bag is full, the player chooses which token to discard or may discard the newly duplicated token.
+* This potion is consumed only when it can actually be used.
+
+Pre-Use Token Bag Check
+
+* Before the potion is removed from the player’s potion slots, check whether the player has any tokens in their token bag.
+* If the player has no tokens in their token bag, the potion cannot be used.
+* Show a modal with this English text:
+
+```txt id="mcyes2"
+You have no tokens in your token bag, so this potion cannot be used. The potion was added back to your potion slots.
+```
+
+* Japanese:
+
+```txt id="sqc2m3"
+トークンバッグにトークンがないため、このポーションは使用できません。ポーションはポーションスロットに戻されました。
+```
+
+* All of this modal text should use the `larger-text` class.
+* The potion should not be consumed.
+* Clicking OK closes the modal.
+
+Important Consumption Rule
+
+* Copy and Paste should not be removed from the player’s potion slots until the potion can actually proceed.
+* If the player has no tokens in their token bag:
+
+  * do not consume the potion.
+  * do not mark it as successfully used.
+  * do not trigger the board one-potion-per-turn lock.
+* If the current shared trigger flow removes the potion before this check, add logic to return it safely to the potion slots.
+
+Token Selection Modal Requirement
+
+* If the player has at least one token in their token bag, show a modal listing those tokens vertically.
+* Do not use `ul` or `li`.
+* Use `div` rows.
+* Each row should show:
+
+  * the Token component on the left.
+  * a Duplicate button directly to the right.
+* Button text:
+
+  * English: `Duplicate`
+  * Japanese: `複製`
+
+Suggested structure:
+
+```jsx id="8410b9"
+<div className="copy-paste-token-list">
+  {tokenBag.map((token) => (
+    <div className="copy-paste-token-row" key={token.instanceId}>
+      <TokenIcon token={token} showName={true} />
+      <Button onClick={() => duplicateToken(token)}>
+        {duplicateText}
+      </Button>
+    </div>
+  ))}
+</div>
+```
+
+Duplicate With Space Requirement
+
+* When the player clicks Duplicate:
+
+  * create a duplicate of that token.
+  * if the token bag has space, add the duplicate to the token bag.
+  * consume the potion.
+  * close the modal.
+* The duplicated token should behave like a normal token instance.
+* It should not share the same instance id as the original.
+
+Duplicate With Full Bag Requirement
+
+* If there is not enough space in the token bag:
+
+  * keep the player in the same modal flow.
+  * ask which token they want to discard.
+  * The player may discard:
+
+    * the newly duplicated token, meaning nothing is added.
+    * any existing token in the token bag, replacing it with the newly duplicated token.
+* This must all happen within the same modal flow.
+* Do not send the player to the full Spell Token Assignment screen.
+
+Discard Choice Requirement
+
+* Show the duplicated token clearly.
+* Show existing token bag tokens as discard choices.
+* Do not use `ul` or `li`.
+* Each discard option should use the token component and a button.
+* Include an option to discard the newly duplicated token.
+
+Suggested labels:
+
+```txt id="hyd78g"
+Discard this new token
+Discard this token and keep the duplicate
+```
+
+Japanese may be added as:
+
+```txt id="2eji1f"
+この新しいトークンを捨てる
+このトークンを捨てて複製トークンを残す
+```
+
+Potion Consumption Requirement
+
+* Copy and Paste is consumed when a duplicate choice successfully resolves.
+* It should be consumed if:
+
+  * the duplicated token is added to the token bag.
+  * an existing token is discarded and replaced with the duplicated token.
+  * the player chooses to discard the newly duplicated token after seeing the full-bag replacement choices.
+* It should not be consumed if:
+
+  * the player has no token in their token bag at the initial check.
+  * the player cancels before choosing a token, if cancel is supported.
+
+Active Potion Requirement
+
+* Copy and Paste never needs to go into the Active Potion section.
+* It should be consumed when used.
+
+Expected Behaviour
+
+* Copy and Paste checks token bag contents before being consumed.
+* If token bag is empty, an error modal appears and the potion is not consumed.
+* If token bag has tokens, a vertical token list appears.
+* Each token row has the token component on the left and Duplicate button on the right.
+* Clicking Duplicate adds a duplicate if there is space.
+* If the bag is full, the player chooses what to discard within the same modal.
+* The player can discard the newly duplicated token.
+* The player can discard an existing token and keep the duplicate.
+* The potion does not enter Active Potion.
+* No `ul` or `li` is used.
+
+Out Of Scope
+
+* No changes to token bag capacity.
+* No changes to token rarity.
+* No changes to token effects.
+* No changes to Spell Token Assignment.
+* No unrelated token UI redesign.
+
+Testing Checkpoints
+
+* Use Copy and Paste with an empty token bag.
+* Confirm the cannot-use modal appears.
+* Confirm the modal text uses `larger-text`.
+* Confirm the potion is not consumed.
+* Confirm board potion usage is not locked after failed use.
+* Use Copy and Paste with one token in the token bag.
+* Confirm the token selection modal appears.
+* Confirm token rows are vertical.
+* Confirm each row uses the token component and Duplicate button.
+* Click Duplicate when there is bag space.
+* Confirm a new token instance is added.
+* Confirm the potion is consumed.
+* Fill the token bag.
+* Use Copy and Paste and select a token.
+* Confirm the full-bag discard choice appears in the same modal.
+* Choose to discard the newly duplicated token.
+* Confirm token bag remains valid and potion is consumed.
+* Repeat and discard an existing token.
+* Confirm the duplicate replaces the selected existing token.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Implement Starting Charge potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Starting Charge potion.
+* When used, it becomes active for the current board turn.
+* If the player encounters a battle that turn, all their spell columns start charged on their first turn in battle.
+* The effect lasts only for the player’s first battle turn.
+* If the player does not encounter a battle before their board turn ends, the potion is lost.
+
+Activation Requirement
+
+* When Starting Charge is successfully used from the board:
+
+  * remove it from the player’s potion slots.
+  * place it in the Active Potion section.
+  * mark the player as having Starting Charge active for the current board turn.
+
+Active Potion Requirement
+
+* Starting Charge should appear in the Active Potion section.
+* It should remain there until either:
+
+  * the player encounters a battle, or
+  * the player’s board turn ends.
+* If the player encounters a battle:
+
+  * remove Starting Charge from Active Potion when its effect is applied or when the battle begins.
+* If the player’s turn ends without entering battle:
+
+  * remove Starting Charge from Active Potion.
+  * the potion is still consumed.
+
+Battle Start Requirement
+
+* If Starting Charge is active and the player encounters a battle during that same turn:
+
+  * on the player’s first turn in that battle, all spell columns should be charged.
+* This should behave just as if a Charge token had been played in battle.
+* The charge should apply to all columns.
+* The charge should last only for the first turn in the battle.
+* The charge should expire at the end of that turn.
+
+No Battle Requirement
+
+* If the player does not encounter battle before the board turn ends:
+
+  * the potion has no effect.
+  * remove it from Active Potion.
+  * do not return it to potion slots.
+
+Suggested state:
+
+```js id="m1pgkf"
+player.activePotion = {
+  potionId: "starting-charge",
+  expiresOn: "battle-start-or-turn-end"
+};
+
+player.pendingStartingCharge = true;
+```
+
+Expected Behaviour
+
+* Starting Charge is consumed when used.
+* Starting Charge appears in Active Potion.
+* Starting Charge stays active until battle starts or the player’s turn ends.
+* If battle starts, all player columns are charged on their first battle turn.
+* The charge expires after that first battle turn.
+* If no battle starts, the potion is lost at turn end.
+* Starting Charge does not return to potion slots.
+
+Out Of Scope
+
+* No changes to Charge token behaviour itself.
+* No changes to battle encounter probability.
+* No changes to board movement.
+* No changes to other active potions.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Use Starting Charge from the board.
+* Confirm it is removed from potion slots.
+* Confirm it appears in Active Potion.
+* Enter battle on the same turn.
+* Confirm all columns are charged on the player’s first battle turn.
+* Confirm the charge expires after that turn.
+* Confirm Starting Charge is removed from Active Potion.
+* Use Starting Charge and end the turn without battle.
+* Confirm it is removed from Active Potion.
+* Confirm it is not returned to potion slots.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Implement Tokensmith potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+* EPIC-011 Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Goal
+
+* Implement the behaviour of the Tokensmith potion.
+* Tokensmith moves one assigned spell token back into the player’s token bag.
+* It can only be used if the player has at least one free slot in their token bag.
+* The player chooses a token from their committed spell columns.
+* The selected token is confirmed, then moved back to the token bag.
+
+Pre-Use Free Slot Check
+
+* Before Tokensmith can be triggered successfully, check whether the player has room for one new token in their token bag.
+* If there is not at least one free slot, show a modal.
+* English:
+
+```txt id="evol9v"
+This potion can only be used when you have at least 1 free slot in your token bag.
+```
+
+* Japanese:
+
+```txt id="v5gqf7"
+このポーションは、トークンバッグに空きスロットが1つ以上ある場合にのみ使用できます。
+```
+
+* The text should use the `larger-text` class.
+* The modal should have an OK button.
+* Clicking OK closes the modal.
+* The potion is not consumed.
+
+Important Consumption Rule
+
+* Tokensmith should not be consumed if the token bag has no free slot.
+* If the current shared potion trigger removes it too early, return it safely to the potion slots.
+* Do not mark the board potion as used if this pre-use check fails.
+
+Token Selection Modal Requirement
+
+* If Tokensmith is triggered successfully, show a modal.
+* English instruction:
+
+```txt id="u8s2x3"
+Click a token to move it back to your token bag
+```
+
+* Japanese instruction:
+
+```txt id="79bl8b"
+トークンをクリックして、トークンバッグに戻してください。
+```
+
+* The instruction should use the `larger-text` class unless the modal becomes too visually crowded.
+* Below the instruction, display the spells table component showing only columns where tokens have been placed.
+* This should not be the whole Spell Token Assignment component.
+* Only the committed spell columns and their placed tokens are needed.
+
+Clickable Token Requirement
+
+* Every assigned token displayed in the spells table should be clickable.
+* Clicking a token should open a confirmation modal.
+* The clicked token should remain selected while the confirmation modal is open.
+
+Confirmation Modal Requirement
+
+* After clicking a token, ask:
+
+```txt id="rrjmvk"
+Are you sure you want to move this token back to your token bag?
+```
+
+* Japanese:
+
+```txt id="y7p37e"
+このトークンをトークンバッグに戻してもよろしいですか？
+```
+
+* The question should use the `larger-text` class.
+* Show the selected token component below the question.
+* Show Yes and No buttons.
+
+Button behaviour:
+
+```txt id="t0xx7o"
+No: return to the clickable tokens modal.
+Yes: move the selected token from its spell column back to the token bag.
+```
+
+Token Move Requirement
+
+* If Yes is clicked:
+
+  * remove the selected token from its committed spell column.
+  * add that exact token instance to the token bag.
+  * consume the Tokensmith potion.
+  * close the modal flow.
+* The token should preserve its identity and data.
+* After removing the token, recalculate any affected non-battle token effects:
+
+  * Light Green max/current health if applicable.
+  * Grey committed capacity effects if applicable.
+  * merged-column state only if later rules require it.
+* If moving the token would create an invalid committed spell state, handle safely and show a clear modal rather than crashing.
+
+No Assigned Tokens Requirement
+
+* If the player has no assigned spell tokens, Tokensmith should not be useful.
+* Show a modal explaining that there are no assigned tokens to move.
+* Suggested English:
+
+```txt id="u6enpa"
+You have no assigned tokens to move back to your token bag.
+```
+
+* Suggested Japanese:
+
+```txt id="qhcnno"
+トークンバッグに戻せる配置済みトークンがありません。
+```
+
+* The potion should not be consumed.
+
+Active Potion Requirement
+
+* Tokensmith never needs to go into the Active Potion section.
+* It should be consumed only after a token is successfully moved.
+
+Expected Behaviour
+
+* Tokensmith checks for one free token bag slot before use.
+* If the token bag is full, a `larger-text` modal appears and the potion is not consumed.
+* If there is space, the player sees committed spell columns with clickable tokens.
+* Clicking a token opens a confirmation modal.
+* The confirmation modal shows the selected token.
+* Clicking No returns to token selection.
+* Clicking Yes moves the token back to the token bag.
+* Tokensmith is consumed after successful movement.
+* Tokensmith does not enter Active Potion.
+
+Out Of Scope
+
+* No full Spell Token Assignment UI.
+* No token rearranging.
+* No token duplication.
+* No token deletion.
+* No changes to token bag capacity.
+* No unrelated committed spells redesign.
+
+Testing Checkpoints
+
+* Use Tokensmith with a full token bag.
+* Confirm the free-slot error modal appears.
+* Confirm the text uses `larger-text`.
+* Confirm the potion is not consumed.
+* Confirm board potion usage is not locked after failed use.
+* Use Tokensmith with one free token bag slot.
+* Confirm the clickable committed token modal appears.
+* Confirm only committed spell columns are shown.
+* Confirm each assigned token is clickable.
+* Click a token.
+* Confirm the confirmation modal appears.
+* Confirm the selected token is shown.
+* Click No.
+* Confirm the UI returns to clickable token selection.
+* Click the token again and click Yes.
+* Confirm the token is removed from its spell column.
+* Confirm the token is added to the token bag.
+* Confirm Tokensmith is consumed.
+* Confirm Tokensmith does not enter Active Potion.
+* Confirm Light Green and Grey effects recalculate if those tokens are moved.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Implement Redo potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+* EPIC-010 Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+* EPIC-011 Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Goal
+
+* Implement the behaviour of the Redo potion.
+* Redo allows the player to rearrange their committed spell tokens as much as they want until they recommit them.
+* When Redo is triggered, take the player to the normal Spells modal.
+* Temporarily treat all committed spells as movable.
+* Once the player commits the new arrangement, the tokens become fixed again.
+
+Behaviour Summary
+
+```txt id="f5cw5v"
+Redo lets the player temporarily uncommit their spell tokens, rearrange them freely, and recommit them.
+```
+
+Trigger Requirement
+
+* Redo is a Board potion.
+* It should be triggered from the gameplay potion section using the standard Use button and confirmation modal.
+* After the player confirms that they want to use Redo:
+
+  * consume the potion.
+  * open the Spells modal.
+  * enable Redo mode for that Spells modal session.
+
+Redo Mode Requirement
+
+* In Redo mode, all of the player’s committed spell tokens should temporarily become movable.
+* The player should be able to:
+
+  * move tokens within the same column.
+  * move tokens between different columns.
+  * move tokens from committed spell columns back to the token bag.
+  * move tokens from the token bag into spell columns.
+  * rearrange tokens as much as the normal spell rules allow.
+* This should last only until the player commits or cancels the modal session.
+
+Warning Text Requirement
+
+* In Redo mode, replace the normal `spells-starting-warning` sentence with:
+
+```txt id="fhacnk"
+Rearrange your tokens as much as you like, but when you commit them, they become fixed again.
+```
+
+* Japanese:
+
+```txt id="dh5p6l"
+トークンは好きなだけ並べ替えることができますが、配置を確定すると再び固定されます。
+```
+
+* The replacement warning should appear in the same location as the existing warning.
+* Use the same styling as the existing warning unless another feature says otherwise.
+* Do not show both the normal warning and the Redo warning at the same time.
+
+Commit Behaviour
+
+* Existing commit behaviour should remain the same.
+* Existing confirmation modals should remain the same unless Redo requires already-established White merge confirmation handling.
+* When the player commits:
+
+  * save the new token arrangement.
+  * all committed tokens become fixed again.
+  * exit Redo mode.
+* Non-battle token effects should recalculate after commit:
+
+  * Light Green health changes.
+  * Grey capacity changes.
+  * White merge behaviour if valid.
+  * merged-column restrictions.
+* Redo does not permanently make committed tokens movable.
+
+Cancel Behaviour
+
+* Existing cancel behaviour should remain the same.
+* If the player cancels the Spells modal:
+
+  * discard the temporary Redo arrangement.
+  * restore the previous committed spell state.
+  * exit Redo mode.
+* Redo potion itself has already been consumed once successfully triggered unless a later rule says otherwise.
+
+Potion Consumption Requirement
+
+* Redo never needs to go into the Active Potion section.
+* It should be consumed when successfully used.
+* Do not return Redo to potion slots after the player opens the Redo Spells modal.
+
+Expected Behaviour
+
+* Redo opens the Spells modal after use confirmation.
+* Committed tokens become temporarily movable.
+* Player can rearrange tokens freely until recommit.
+* Redo warning replaces the normal `spells-starting-warning`.
+* Existing save, cancel, and confirmation modal behaviour remains intact.
+* After commit, tokens become fixed again.
+* Redo does not enter Active Potion.
+* Redo is consumed when used.
+
+Out Of Scope
+
+* No permanent change to committed token locking rules.
+* No changes to token effects except normal recalculation after commit.
+* No changes to spell slot capacity rules.
+* No changes to potion trigger confirmation modal.
+* No unrelated Spells modal redesign.
+
+Testing Checkpoints
+
+* Use Redo from the board.
+* Confirm Redo is consumed.
+* Confirm the Spells modal opens.
+* Confirm committed tokens can be moved.
+* Confirm committed tokens can move between columns.
+* Confirm token bag tokens still work normally.
+* Confirm the Redo warning appears in English.
+* Confirm the Redo warning appears in Japanese.
+* Confirm the normal starting warning is replaced, not duplicated.
+* Commit the changes.
+* Confirm the new arrangement is saved.
+* Confirm tokens become fixed again after commit.
+* Use Redo again and cancel.
+* Confirm the previous committed arrangement is restored.
+* Confirm existing confirmation modals still work.
+* Confirm Light Green, Grey, and White effects recalculate correctly after commit.
+* Confirm Redo does not enter Active Potion.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of Spellbound and Heavy Weight.
+* Both potions target another player.
+* The targeted player cannot trigger board potions on their next turn.
+* Heavy Weight also halves the targeted player’s board dice roll, rounded up.
+* Create a reusable `otherPlayerChooser` component for choosing another player.
+
+Behaviour Summary
+
+```txt id="9zkfrv"
+Spellbound: choose another player. On their next turn, they cannot use board potions.
+
+Heavy Weight: choose another player. On their next turn, they cannot use board potions and their dice roll is halved, rounded up.
+```
+
+Reusable Component Requirement
+
+* Create a reusable component called:
+
+```txt id="83ysbm"
+otherPlayerChooser
+```
+
+* This component will be used by these potions and later features.
+* It should display all other players except the player who triggered the potion.
+* It should not include the casting player.
+* Each option should show:
+
+  * the other player’s image.
+  * a Choose button beneath the image.
+
+Prompt Text Requirement
+
+* The chooser modal should display:
+
+```txt id="4ihoxg"
+Choose a player to target
+```
+
+* Japanese:
+
+```txt id="gd5ea1"
+対象にするプレイヤーを選んでください。
+```
+
+* The prompt should use the `larger-text` class.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * bottom-centred buttons where relevant.
+  * no `ul` or `li`.
+
+Choose Button Text
+
+```txt id="iy8sfg"
+Choose	選ぶ
+```
+
+Suggested Component Shape
+
+```jsx id="u6f9xf"
+<OtherPlayerChooser
+  players={players}
+  currentPlayerId={currentPlayer.id}
+  language={language}
+  onChoosePlayer={handleChooseTarget}
+/>
+```
+
+Suggested layout:
+
+```txt id="drxe9d"
+Choose a player to target
+
+[Player image] [Player image] [Player image]
+[Choose]       [Choose]       [Choose]
+```
+
+Target Storage Requirement
+
+* When a player is chosen, nothing happens immediately to the chosen player.
+* Store the pending effect until that chosen player’s next board turn.
+* The casting player’s potion is consumed when the target is chosen.
+* The effect must survive turn changes until the chosen player’s affected turn begins.
+
+Suggested state:
+
+```js id="kc7jo2"
+targetPlayer.pendingPotionEffects.push({
+  potionId: "spellbound",
+  sourcePlayerId: castingPlayer.id,
+  appliesOnNextBoardTurn: true
+});
+```
+
+* Exact implementation can vary.
+* The important requirement is that the chosen player is remembered until their next turn.
+
+Active Potion Requirement For Target Player
+
+* When it becomes the chosen player’s next turn, show the relevant potion in that player’s Active Potion section.
+* The Active Potion section should show:
+
+  * Spellbound if targeted by Spellbound.
+  * Heavy Weight if targeted by Heavy Weight.
+* The potion should use the potion component with name included.
+* It should remain active only for that affected turn.
+* It should be removed once that player has taken their turn.
+
+Board Potion Disable Requirement
+
+* While the chosen player is affected by Spellbound or Heavy Weight:
+
+  * they may not trigger board potions.
+  * all board potion Use buttons should be disabled.
+* This affects only board potion triggers.
+* It should not necessarily disable battle potion usage unless a later feature explicitly says so.
+* This restriction lasts only for the chosen player’s affected board turn.
+
+Heavy Weight Dice Requirement
+
+* Heavy Weight adds a dice-roll penalty.
+* During the affected player’s board turn, their board dice roll is halved and rounded up.
+
+Conversion table:
+
+```txt id="rp2e6u"
+Original roll 1 -> final move 1
+Original roll 2 -> final move 1
+Original roll 3 -> final move 2
+Original roll 4 -> final move 2
+Original roll 5 -> final move 3
+Original roll 6 -> final move 3
+```
+
+Suggested calculation:
+
+```js id="88bp7d"
+const finalRoll = Math.ceil(originalRoll / 2);
+```
+
+Dice Result Text Requirement
+
+* When Heavy Weight affects a roll, the dice result should show:
+
+```txt id="2r2zdw"
+X - Dice roll is halved because you are weighed down.
+```
+
+* Japanese:
+
+```txt id="1ejgaw"
+X - 重しをかけられているため、サイコロの出目が半分になります。
+```
+
+* `X` should be the final halved result.
+* The player should move according to `X`, not the original roll.
+* If the original roll is 5:
+
+  * final result is 3.
+  * display should show:
+
+```txt id="418oxe"
+3 - Dice roll is halved because you are weighed down.
+```
+
+Effect Expiry Requirement
+
+* Spellbound expires when the affected player’s board turn ends.
+* Heavy Weight expires when the affected player’s board turn ends.
+* Remove the potion from Active Potion at the end of that affected turn.
+* Do not affect future turns.
+
+Expected Behaviour
+
+* Spellbound opens `otherPlayerChooser`.
+* Heavy Weight opens `otherPlayerChooser`.
+* The casting player is excluded from the choices.
+* Choosing a player consumes the casting player’s potion.
+* Nothing happens immediately to the target.
+* On the target’s next turn, the potion appears in their Active Potion section.
+* Spellbound disables board potion Use buttons for that target’s turn.
+* Heavy Weight disables board potion Use buttons for that target’s turn.
+* Heavy Weight also halves the board dice result rounded up.
+* Heavy Weight displays the special dice result text.
+* Effects expire after the target takes that turn.
+
+Out Of Scope
+
+* No battle potion blocking unless later specified.
+* No Mini potion blocking unless later specified.
+* No stacking rules for multiple pending Spellbound/Heavy Weight effects unless naturally supported.
+* No changes to potion reward generation.
+* No unrelated player chooser redesign.
+
+Testing Checkpoints
+
+* Use Spellbound.
+* Confirm the other player chooser opens.
+* Confirm the casting player is not listed.
+* Choose another player.
+* Confirm Spellbound is consumed.
+* Confirm no immediate effect happens to the chosen player.
+* Advance to the chosen player’s next turn.
+* Confirm Spellbound appears in Active Potion.
+* Confirm board potion Use buttons are disabled.
+* Confirm the effect expires after the turn.
+* Use Heavy Weight.
+* Choose another player.
+* Confirm Heavy Weight is consumed.
+* Advance to the chosen player’s next turn.
+* Confirm Heavy Weight appears in Active Potion.
+* Confirm board potion Use buttons are disabled.
+* Roll 1 and confirm final result remains 1.
+* Roll 2 and confirm final result becomes 1.
+* Roll 3 and confirm final result becomes 2.
+* Roll 4 and confirm final result becomes 2.
+* Roll 5 and confirm final result becomes 3.
+* Roll 6 and confirm final result becomes 3.
+* Confirm Heavy Weight dice text appears in English.
+* Confirm Heavy Weight dice text appears in Japanese.
+* Confirm the player moves using the halved result.
+* Confirm Heavy Weight expires after the affected turn.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-008: Implement Double Dice and Triple Dice potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of Double Dice and Triple Dice.
+* These potions affect the player’s next board dice roll this turn.
+* Double Dice rolls two dice and adds the results together.
+* Triple Dice rolls three dice and adds the results together.
+* The dice should be shown as multiple dice roll components stacked horizontally.
+
+Behaviour Summary
+
+```txt id="6p6g8y"
+Double Dice: roll 2 dice this board turn and move by their total.
+Triple Dice: roll 3 dice this board turn and move by their total.
+```
+
+Activation Requirement
+
+* When Double Dice is triggered:
+
+  * consume it from the player’s potion slots.
+  * move it into the Active Potion section.
+  * mark the player’s next board roll as a two-dice roll.
+* When Triple Dice is triggered:
+
+  * consume it from the player’s potion slots.
+  * move it into the Active Potion section.
+  * mark the player’s next board roll as a three-dice roll.
+
+Active Potion Requirement
+
+* Double Dice should appear in Active Potion after being used.
+* Triple Dice should appear in Active Potion after being used.
+* The potion should remain there until the board dice roll has resolved.
+* After the roll resolves, remove it from Active Potion.
+* The effect lasts only for that board turn.
+
+Dice Display Requirement
+
+* Use the existing dice roll component.
+* For Double Dice:
+
+  * display 2 dice roll components.
+  * stack them horizontally next to each other.
+  * roll them simultaneously.
+* For Triple Dice:
+
+  * display 3 dice roll components.
+  * stack them horizontally next to each other.
+  * roll them simultaneously.
+
+Suggested layout:
+
+```txt id="fq93sg"
+Double Dice:
+[Dice] [Dice]
+
+Triple Dice:
+[Dice] [Dice] [Dice]
+```
+
+Roll Total Requirement
+
+* The player’s movement result is the total of all dice rolled.
+* Examples:
+
+  * Double Dice rolls 3 and 5, player moves 8.
+  * Triple Dice rolls 4, 5, and 6, player moves 15.
+* Use one board turn.
+* Do not ask the player to roll again after the first multi-dice roll.
+
+Interaction With Roll Choice
+
+* If Roll Choice is active at the same time, use a clear deterministic rule.
+* Suggested rule:
+
+  * Roll Choice controls the first die only.
+  * remaining dice roll randomly.
+* If another feature later specifies a different interaction, follow the later feature.
+* Do not crash if both effects are present.
+
+Interaction With Heavy Weight
+
+* If Heavy Weight affects the player and Double/Triple Dice is also active, use a clear deterministic rule.
+* Suggested rule:
+
+  * roll all dice.
+  * add the total.
+  * halve the total and round up.
+* This preserves Heavy Weight as a penalty to the actual movement result.
+* If another feature later specifies a different interaction, follow the later feature.
+
+Effect Expiry Requirement
+
+* Double Dice expires after the board roll has resolved.
+* Triple Dice expires after the board roll has resolved.
+* If the player’s turn ends without rolling for any reason, clear the active potion at turn end unless a later feature says otherwise.
+* After expiry, the player’s next board turn should use one die again.
+
+Expected Behaviour
+
+* Double Dice moves to Active Potion when used.
+* Triple Dice moves to Active Potion when used.
+* Double Dice displays two dice components horizontally.
+* Triple Dice displays three dice components horizontally.
+* Dice roll simultaneously.
+* Results are added together.
+* Player moves by the total.
+* The potion is removed from Active Potion after the roll.
+* Next turn returns to normal one-die rolling.
+
+Out Of Scope
+
+* No changes to battle dice.
+* No changes to dice animation other than repeating components.
+* No changes to board movement rules beyond movement amount.
+* No unrelated Active Potion redesign.
+
+Testing Checkpoints
+
+* Use Double Dice from the board.
+* Confirm it appears in Active Potion.
+* Roll the dice.
+* Confirm two dice components appear horizontally.
+* Confirm both dice roll simultaneously.
+* Confirm the movement value is the sum of both dice.
+* Confirm Double Dice is removed from Active Potion after the roll.
+* Confirm the next board turn uses one die.
+* Use Triple Dice from the board.
+* Confirm it appears in Active Potion.
+* Roll the dice.
+* Confirm three dice components appear horizontally.
+* Confirm all three dice roll simultaneously.
+* Confirm the movement value is the sum of all three dice.
+* Confirm 4 + 5 + 6 results in 15 movement.
+* Confirm Triple Dice is removed from Active Potion after the roll.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-009: Implement Troublemaker potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* Feature-007: Implement Spellbound and Heavy Weight potion behaviour
+* EPIC-007 Feature-001: Add death token punishment and respawn result screen
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Goal
+
+* Implement the behaviour of Troublemaker.
+* The casting player chooses another player.
+* The potion becomes active until the casting player rolls for their board turn.
+* The same dice roll is then used for both:
+
+  * Troublemaker even/odd result.
+  * normal board movement.
+* If the roll is even, the chosen player loses a token.
+* If the roll is odd, the casting player loses a token.
+* After token loss is resolved, the casting player continues their turn using that same roll result.
+
+Behaviour Summary
+
+```txt id="zlu1t5"
+Choose another player and roll the dice for your turn.
+If even, the chosen player loses 1 token.
+If odd, you lose 1 token.
+Then continue movement using the same dice roll.
+```
+
+Target Selection Requirement
+
+* Troublemaker should use `otherPlayerChooser`.
+* The casting player should not be included in the choices.
+* Once a target is chosen:
+
+  * consume Troublemaker from the player’s potion slots.
+  * move Troublemaker into the casting player’s Active Potion section.
+  * store the chosen target player.
+* The potion remains active until the casting player rolls for their turn.
+
+Dice Roll Requirement
+
+* Only one dice roll should occur.
+* The same dice result should determine:
+
+  * whether the caster or target loses a token.
+  * how many spaces the casting player can move.
+* Do not roll once for Troublemaker and again for movement.
+* After the token-loss modal is resolved, continue to the movement-selection step using the existing dice result.
+
+Even / Odd Requirement
+
+* If the roll is even:
+
+  * the chosen player loses a token.
+* If the roll is odd:
+
+  * the casting player loses a token.
+
+Token Loss Rules
+
+* Use the same rules as token loss when dying.
+* Starting tokens should not be removed.
+* Black tokens should be chosen first.
+* If there are no eligible Black tokens, choose a random eligible token.
+* If the selected player has no eligible tokens to lose, handle safely with a clear modal or no-token result.
+* Do not crash if no eligible token exists.
+
+Token Loss Modal Requirement
+
+* After the token is selected and removed, show a modal.
+* The modal should include:
+
+  * the player image of the player who lost the token, centred at the top.
+  * the sentence:
+
+```txt id="1dk04g"
+You lost this token
+```
+
+* Japanese:
+
+```txt id="xhmij8"
+このトークンを失いました。
+```
+
+* Below the sentence, show the token component for the token that was lost.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * `larger-text` for the main sentence if consistent with text-only result modals.
+  * no `ul` or `li`.
+* The modal should have a Continue or OK button.
+
+Active Potion Expiry Requirement
+
+* Troublemaker should remain in Active Potion until the dice roll and token removal have resolved.
+* After the token-loss result is handled:
+
+  * remove Troublemaker from Active Potion.
+  * continue the caster’s movement using the same dice roll.
+
+Expected Behaviour
+
+* Troublemaker uses `otherPlayerChooser`.
+* Caster chooses another player.
+* Troublemaker moves to Active Potion.
+* Caster rolls once.
+* If the roll is even, the chosen player loses a token.
+* If the roll is odd, the caster loses a token.
+* Token loss follows death-token-loss rules.
+* Token loss result appears in a modal.
+* The caster then moves using the same dice result.
+* Troublemaker is removed from Active Potion after resolving.
+
+Out Of Scope
+
+* No changes to death token-loss rules.
+* No changes to board movement rules except sequencing.
+* No changes to battle behaviour.
+* No unrelated token-loss modal redesign.
+
+Testing Checkpoints
+
+* Use Troublemaker.
+* Confirm `otherPlayerChooser` opens.
+* Choose another player.
+* Confirm Troublemaker is consumed from potion slots.
+* Confirm Troublemaker appears in Active Potion.
+* Roll an even number.
+* Confirm the chosen player loses a token.
+* Roll an odd number.
+* Confirm the casting player loses a token.
+* Confirm starting tokens are never removed.
+* Confirm Black tokens are selected first.
+* Confirm random eligible token is selected if no Black token exists.
+* Confirm token loss modal shows the correct player image.
+* Confirm token loss modal shows `You lost this token`.
+* Confirm token loss modal shows the lost token component.
+* Confirm Japanese text displays correctly.
+* Confirm the caster moves using the same dice roll.
+* Confirm no second dice roll occurs.
+* Confirm Troublemaker is removed from Active Potion after resolving.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-010: Implement Devine Chance potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of Devine Chance.
+* The potion uses the casting player’s next board dice roll.
+* If the roll is even, the casting player recovers to full HP.
+* If the roll is odd, every other player recovers to full HP.
+* The same dice roll is then used for normal movement.
+
+Behaviour Summary
+
+```txt id="5kpc2q"
+Roll the dice for your turn.
+If even, you heal to full HP.
+If odd, everyone else heals to full HP.
+Then continue movement using the same dice roll.
+```
+
+Activation Requirement
+
+* When Devine Chance is used:
+
+  * consume it from the player’s potion slots.
+  * move it into the casting player’s Active Potion section.
+  * mark it as pending until that player rolls the board dice.
+* It remains active until the dice roll resolves.
+
+Dice Roll Requirement
+
+* Only one dice roll should occur.
+* The same dice result should determine:
+
+  * Devine Chance even/odd healing result.
+  * the movement amount for the casting player.
+* Do not roll separately for the potion.
+* After the healing result modal, continue movement using the same dice roll.
+
+Even Result Requirement
+
+* If the dice roll is even:
+
+  * the casting player recovers all health.
+* Example:
+
+```txt id="zz3wzn"
+Caster health: 40 / 110
+Even roll result
+Caster health becomes 110 / 110
+```
+
+Odd Result Requirement
+
+* If the dice roll is odd:
+
+  * every player except the casting player recovers all health.
+* Example:
+
+```txt id="r6bius"
+Blue casts Devine Chance.
+Blue: 50 / 100
+Red: 50 / 100
+Green: 50 / 100
+
+Odd roll result:
+Blue remains 50 / 100.
+Red becomes 100 / 100.
+Green becomes 100 / 100.
+```
+
+Result Modal Requirement
+
+* Before the casting player is allowed to move, display a result modal.
+* If the caster healed, show:
+
+```txt id="dmk52w"
+You recovered all your health
+```
+
+* Japanese:
+
+```txt id="zi8grs"
+HPが全回復しました。
+```
+
+* If everyone else healed, show:
+
+```txt id="n1n2t9"
+You helped everyone else recover
+```
+
+* Japanese:
+
+```txt id="b8mkww"
+他の全員のHPを回復させました。
+```
+
+* The result text should use `larger-text`.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct language font.
+  * centred button.
+  * no `ul` or `li`.
+
+Active Potion Expiry Requirement
+
+* Remove Devine Chance from Active Potion after the dice roll and healing result have resolved.
+* The player then continues movement using the same dice roll.
+
+Expected Behaviour
+
+* Devine Chance moves to Active Potion when used.
+* The player rolls once.
+* Even roll fully heals the casting player.
+* Odd roll fully heals all other players.
+* Result modal appears before movement.
+* The caster then moves using the same dice result.
+* Devine Chance is removed from Active Potion after resolving.
+
+Out Of Scope
+
+* No partial healing.
+* No battle use.
+* No changes to max health calculations.
+* No changes to Light Green health effects.
+* No unrelated healing animation unless reused from healing potions later.
+
+Testing Checkpoints
+
+* Use Devine Chance.
+* Confirm it appears in Active Potion.
+* Roll an even number.
+* Confirm the caster heals to full HP.
+* Confirm the modal says `You recovered all your health`.
+* Confirm movement uses the same dice roll.
+* Use Devine Chance again.
+* Roll an odd number.
+* Confirm all other players heal to full HP.
+* Confirm the caster does not heal.
+* Confirm the modal says `You helped everyone else recover`.
+* Confirm Japanese result text displays correctly.
+* Confirm Devine Chance is removed from Active Potion after resolving.
+* Confirm no second dice roll occurs.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-011: Implement Buy and Sell potion behaviour
+
+Status
+
+* not started
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of Buy and Sell.
+* The casting player discards 3 tokens from their token bag.
+* They then choose 1 of 2 random tokens to gain.
+* The two offered tokens must be different.
+* All token types have an equal chance of appearing, whether Common or Rare.
+* The potion is only consumed after the discard and reward choice resolves successfully.
+
+Pre-Use Token Count Check
+
+* Before Buy and Sell can proceed, check whether the casting player has at least 3 tokens in their token bag.
+* If they have fewer than 3 tokens, show a modal.
+* English:
+
+```txt id="xzyioh"
+You do not have enough tokens in your token bag to cast this potion
+```
+
+* Japanese:
+
+```txt id="xo04st"
+トークンバッグのトークンが足りないため、このポーションは使用できません。
+```
+
+* The text should use `larger-text`.
+* The modal should have an OK button.
+* If this modal appears:
+
+  * nothing happens.
+  * the potion is not consumed.
+  * the board potion usage limit should not be locked.
+
+Discard Selection Modal Requirement
+
+* If the player has at least 3 tokens in their token bag, show a discard modal.
+* English instruction:
+
+```txt id="mcdqa3"
+Discard 3 tokens from your token bag to receive a new token
+```
+
+* Japanese:
+
+```txt id="9k673q"
+トークンバッグからトークンを3個捨てて、新しいトークンを1個獲得してください。
+```
+
+* The instruction should use `larger-text`.
+* Display the player’s token bag tokens.
+* The player must be able to multi-select exactly 3 tokens.
+* Do not use `ul` or `li`; use div-based grid/flex layouts.
+* Selected tokens should be visually clear.
+
+Cancel Requirement
+
+* The player may click Cancel while choosing tokens to discard.
+* If Cancel is clicked:
+
+  * close the modal.
+  * do not discard any tokens.
+  * do not consume the potion.
+  * do not lock board potion usage.
+
+Discard Button Requirement
+
+* The Discard button should be disabled until exactly 3 tokens are selected.
+* Once exactly 3 tokens are selected, the Discard button becomes active.
+* Clicking Discard:
+
+  * removes the selected 3 tokens from the token bag.
+  * opens the reward choice step.
+
+Suggested button text:
+
+```txt id="qv4msa"
+Discard	捨てる
+Cancel	キャンセル
+```
+
+Reward Choice Requirement
+
+* After discarding 3 tokens, show a choice of 2 random tokens.
+* Each token should use the token component.
+* Each token should have a Choose button underneath.
+* Button text:
+
+```txt id="1nxdex"
+Choose	選ぶ
+```
+
+* The two random tokens must be different.
+* Do not offer two of the same token.
+* All tokens should have an equal chance of appearing.
+* Do not weight by rarity for this reward choice.
+* Common and Rare tokens are equally eligible.
+
+Suggested generation direction:
+
+```js id="dxhb32"
+const firstToken = getRandomTokenFromAllTokens();
+const secondToken = getRandomTokenFromAllTokensExcluding(firstToken.id);
+```
+
+Reward Add Requirement
+
+* When the player chooses one of the two offered tokens:
+
+  * add that token to the player’s token bag.
+  * show success text in the same modal.
+* English:
+
+```txt id="aiatyi"
+The token was added to your token bag
+```
+
+* Japanese:
+
+```txt id="wnsx9k"
+トークンがトークンバッグに追加されました。
+```
+
+* Because 3 tokens were discarded first, there should be space for the new token.
+* The gained token should be a new token instance.
+
+Potion Consumption Requirement
+
+* Buy and Sell is consumed only after the chosen new token has been added to the token bag.
+* It should not go into Active Potion.
+* It should not be consumed if:
+
+  * the player has fewer than 3 tokens.
+  * the player cancels during discard selection.
+* It should be consumed if:
+
+  * 3 tokens were discarded.
+  * a reward token was chosen.
+  * the reward token was added.
+
+Flow Summary
+
+```txt id="mp3fji"
+Use Buy and Sell
+→ check token bag has at least 3 tokens
+→ if not, show error and stop
+→ if yes, choose 3 tokens to discard
+→ player may cancel
+→ discard selected 3 tokens
+→ show 2 different random token choices
+→ player chooses 1
+→ add chosen token to token bag
+→ show success text
+→ consume potion
+→ continue play
+```
+
+Expected Behaviour
+
+* Buy and Sell checks for at least 3 token-bag tokens before use.
+* If not enough tokens, a `larger-text` modal appears and the potion is not consumed.
+* If enough tokens, player can select exactly 3 tokens.
+* Discard button is disabled until exactly 3 tokens are selected.
+* Cancel stops the flow without consuming the potion.
+* Discard removes the selected 3 tokens.
+* Two different random token options appear.
+* All tokens have equal chance to appear.
+* Player chooses one token.
+* Chosen token is added to token bag.
+* Success text appears in the same modal.
+* Potion is consumed after the token is added.
+* Buy and Sell does not enter Active Potion.
+
+Out Of Scope
+
+* No rarity weighting.
+* No choosing more or fewer than 3 discarded tokens.
+* No potion rewards.
+* No Active Potion behaviour.
+* No unrelated token bag redesign.
+* No changes to token bag capacity.
+
+Testing Checkpoints
+
+* Use Buy and Sell with fewer than 3 tokens in the token bag.
+* Confirm the not-enough-tokens modal appears.
+* Confirm the modal text uses `larger-text`.
+* Confirm the potion is not consumed.
+* Confirm board potion usage is not locked.
+* Use Buy and Sell with exactly 3 tokens.
+* Confirm discard selection modal appears.
+* Select 1 token and confirm Discard is disabled.
+* Select 2 tokens and confirm Discard is disabled.
+* Select 3 tokens and confirm Discard becomes active.
+* Click Cancel and confirm no tokens are discarded.
+* Confirm the potion is not consumed after Cancel.
+* Repeat and click Discard.
+* Confirm selected 3 tokens are removed.
+* Confirm two random reward tokens are shown.
+* Confirm the two reward tokens are different.
+* Confirm each reward token has a Choose button.
+* Choose one token.
+* Confirm the chosen token is added to token bag.
+* Confirm success text appears in English.
+* Confirm success text appears in Japanese.
+* Confirm Buy and Sell is consumed.
+* Confirm Buy and Sell does not enter Active Potion.
+* Confirm all token types can appear with equal chance.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

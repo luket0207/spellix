@@ -116,11 +116,13 @@ describe('gameplay translations', () => {
       potions: 'Potions',
       rollDice: 'Roll Dice',
       spells: 'Spells',
+      spellsNew: 'New',
     });
     expect(getGameplayTranslations('jp')).toEqual({
       potions: 'ポーション',
       rollDice: 'サイコロを振る',
       spells: '呪文',
+      spellsNew: '新規',
     });
   });
 
@@ -141,6 +143,7 @@ describe('gameplay translations', () => {
       activePotionTitle: 'Active Potion',
       descriptionTitle: 'Potion Description',
       no: 'No',
+      rollChoiceQuestion: 'What do you want the next roll of the dice to be?',
       use: 'Use',
       yes: 'Yes',
     });
@@ -152,6 +155,8 @@ describe('gameplay translations', () => {
         '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
       descriptionTitle: '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
       no: '\u3044\u3044\u3048',
+      rollChoiceQuestion:
+        '\u6b21\u306e\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u3092\u3044\u304f\u3064\u306b\u3057\u307e\u3059\u304b\uff1f',
       use: '\u4f7f\u7528\u3059\u308b',
       yes: '\u306f\u3044',
     });

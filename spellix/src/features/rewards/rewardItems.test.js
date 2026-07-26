@@ -135,6 +135,37 @@ describe('rewardItems', () => {
     }
   );
 
+  test('includes the new potions only in their matching Board reward pools', () => {
+    const commonBoardIds = selectEveryItem(
+      REWARD_CATEGORIES.COMMON_POTION,
+      getExpectedPotionIds('Common', 'Board').length,
+      'Board'
+    ).map(({ item }) => item.id);
+    const rareBoardIds = selectEveryItem(
+      REWARD_CATEGORIES.RARE_POTION,
+      getExpectedPotionIds('Rare', 'Board').length,
+      'Board'
+    ).map(({ item }) => item.id);
+    const battleIds = [
+      ...selectEveryItem(
+        REWARD_CATEGORIES.COMMON_POTION,
+        getExpectedPotionIds('Common', 'Battle').length,
+        'Battle'
+      ),
+      ...selectEveryItem(
+        REWARD_CATEGORIES.RARE_POTION,
+        getExpectedPotionIds('Rare', 'Battle').length,
+        'Battle'
+      ),
+    ].map(({ item }) => item.id);
+
+    expect(commonBoardIds).toContain('spellbound');
+    expect(rareBoardIds).toContain('triple-dice');
+    expect(battleIds).not.toEqual(
+      expect.arrayContaining(['spellbound', 'triple-dice'])
+    );
+  });
+
   test('keeps board-only potions out of generated battle choices', () => {
     const choices = generateBattleRewardChoices(4, () => 0.9999);
     const potionChoices = choices.filter(({ itemType }) => itemType === 'potion');

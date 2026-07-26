@@ -119,8 +119,8 @@ function renderGameplayPage() {
   );
 }
 
-function getSpellsNotification() {
-  return screen.queryByLabelText(/uncommitted tokens available/i);
+function getSpellsNewBadge() {
+  return screen.queryByLabelText(/new token bag tokens available/i);
 }
 
 function TokenBagStateControls() {
@@ -172,7 +172,7 @@ test('renders the decorative magical night sky only as gameplay background conte
 });
 
 describe('GameplayPage spell modal unsaved change behavior', () => {
-  test('shows the Spells notification only for current-player token bag tokens', () => {
+  test('shows the localized New badge only for unseen current-player token bag tokens', () => {
     const emptyBagSetup = createCommittedGameplaySetup();
 
     const { unmount: unmountEmptyBag } = render(
@@ -181,7 +181,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(getSpellsNotification()).not.toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
     unmountEmptyBag();
 
     const oneTokenSetup = createCommittedGameplaySetup();
@@ -193,7 +193,9 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(screen.getByLabelText(/uncommitted tokens available/i)).toHaveTextContent('!');
+    expect(getSpellsNewBadge()).toHaveTextContent('New');
+    expect(getSpellsNewBadge()).toHaveClass('language-en');
+    expect(getSpellsNewBadge()).not.toHaveTextContent('!');
     unmountOneTokenBag();
 
     const multipleTokenSetup = createCommittedGameplaySetup();
@@ -208,10 +210,10 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(screen.getAllByLabelText(/uncommitted tokens available/i)).toHaveLength(1);
+    expect(screen.getAllByLabelText(/new token bag tokens available/i)).toHaveLength(1);
   });
 
-  test('updates the Spells notification with the active player and preserves button behavior', () => {
+  test('clears the badge when Spells opens and keeps it cleared after cancel and turn changes', () => {
     const initialGameSetup = createCommittedGameplaySetup();
 
     initialGameSetup.players[0].tokenBag = [
@@ -225,27 +227,29 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(getSpellsNotification()).toBeInTheDocument();
+    expect(getSpellsNewBadge()).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^spells$/i }));
     expect(screen.getByRole('dialog', { name: /spells/i })).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
     finishDiceSequence();
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
 
-    expect(getSpellsNotification()).not.toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
     finishDiceSequence();
     fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
 
-    expect(getSpellsNotification()).toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
   });
 
-  test('updates the Spells notification when bag tokens are committed, gained, or removed', () => {
+  test('re-shows the badge for a later token and hides it when the bag becomes empty', () => {
     const initialGameSetup = createCommittedGameplaySetup();
     initialGameSetup.players[0].tokenBag = [
       { committed: false, id: 'uncommitted-token', type: 'red' },
@@ -258,26 +262,78 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(getSpellsNotification()).toBeInTheDocument();
+    expect(getSpellsNewBadge()).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /commit bag token/i }));
-    expect(getSpellsNotification()).not.toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /gain bag token/i }));
-    expect(getSpellsNotification()).toBeInTheDocument();
+    expect(getSpellsNewBadge()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^spells$/i }));
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /remove bag tokens/i }));
-    expect(getSpellsNotification()).not.toBeInTheDocument();
+    expect(getSpellsNewBadge()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /gain bag token/i }));
+    expect(getSpellsNewBadge()).toBeInTheDocument();
   });
 
-  test('positions a non-blocking notification over only the gameplay Spells button', () => {
+  test('shows the Japanese badge and falls back to English for an invalid language', () => {
+    const japaneseSetup = createCommittedGameplaySetup();
+    japaneseSetup.players[0].language = 'jp';
+    japaneseSetup.players[0].tokenBag = [
+      { committed: false, id: 'jp-token', type: 'red' },
+    ];
+
+    const { unmount } = render(
+      <GameSetupProvider initialGameSetup={japaneseSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(getSpellsNewBadge()).toHaveTextContent('新規');
+    expect(getSpellsNewBadge()).toHaveClass('language-jp');
+    unmount();
+
+    const fallbackSetup = createCommittedGameplaySetup();
+    fallbackSetup.players[0].language = 'invalid';
+    fallbackSetup.players[0].tokenBag = [
+      { committed: false, id: 'fallback-token', type: 'red' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={fallbackSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(getSpellsNewBadge()).toHaveTextContent('New');
+    expect(getSpellsNewBadge()).toHaveClass('language-en');
+  });
+
+  test('positions a compact non-blocking badge over only the gameplay Spells button', () => {
+    const globalStylesheet = readFileSync(`${__dirname}/../index.css`, 'utf8');
     const stylesheet = readFileSync(`${__dirname}/GameplayPage.css`, 'utf8');
 
+    expect(globalStylesheet).toMatch(
+      /\.language-en\s*{[^}]*font-family:\s*'Unkempt',\s*cursive;/s
+    );
+    expect(globalStylesheet).toMatch(
+      /\.language-jp\s*{[^}]*font-family:\s*'Noto Serif JP',\s*serif;/s
+    );
     expect(stylesheet).toMatch(/\.spells-button-wrapper\s*{[^}]*position:\s*relative;/s);
     expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*position:\s*absolute;/s);
     expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*top:\s*-8px;/s);
     expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*right:\s*-8px;/s);
     expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*pointer-events:\s*none;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*min-width:\s*34px;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*padding:\s*3px 6px;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*border-radius:\s*999px;/s);
+    expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*font-size:\s*12px;/s);
 
     const initialGameSetup = createCommittedGameplaySetup();
     initialGameSetup.players[0].tokenBag = [
@@ -290,10 +346,12 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    expect(screen.getByLabelText(/uncommitted tokens available/i)).toHaveClass(
+    expect(getSpellsNewBadge()).toHaveClass(
       'spells-button-notification'
     );
     expect(screen.getAllByText('Spells')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /^spells$/i })).toBeEnabled();
+    expect(document.querySelector('.spells-button-wrapper ul, .spells-button-wrapper li')).toBeNull();
   });
 
   test.each([0, 1, 6])(
@@ -583,6 +641,111 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       within(potionSection).getByRole('button', { name: 'Use' })
     ).toBeDisabled();
     expect(initialGameSetup.players[0].currentHealth).toBe(100);
+  });
+
+  test('heals with Small Heal and animates the potion over the board player image', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const smallHeal = POTION_DEFINITIONS.find(({ id }) => id === 'small-heal');
+
+    initialGameSetup.players[0] = {
+      ...initialGameSetup.players[0],
+      currentHealth: 40,
+      maxHealth: 115,
+      potions: [smallHeal],
+      spellSlots: initialGameSetup.players[0].spellSlots.map((slot, index) =>
+        index === 2
+          ? {
+              ...slot,
+              tokens: [1, 2, 3].map((number) => ({
+                committed: true,
+                id: `light-green-${number}`,
+                type: 'light-green',
+              })),
+            }
+          : slot
+      ),
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const animation = screen.getByLabelText('Healing potion animation');
+    const playerImage = screen.getByRole('img', { name: 'Current player piece' });
+
+    expect(screen.getByText('75 / 115')).toBeInTheDocument();
+    expect(animation).toHaveAttribute('data-icon', 'flask');
+    expect(animation).toHaveClass('healing-potion-animation');
+    expect(animation.parentElement).toContainElement(playerImage);
+
+    fireEvent.animationEnd(animation);
+    expect(screen.queryByLabelText('Healing potion animation')).not.toBeInTheDocument();
+  });
+
+  test('activates Roll Choice on the board and forces one roll before clearing it', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const rollChoice = POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice');
+    const randomSpy = jest.spyOn(Math, 'random');
+
+    initialGameSetup.players[0].potions = [rollChoice];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const choiceModal = screen.getByRole('dialog', { name: 'Roll Choice' });
+
+    expect(within(choiceModal).getAllByRole('button')).toHaveLength(6);
+    expect(within(screen.getByRole('region', { name: 'Potions' })).getByText('1/3')).toBeInTheDocument();
+    fireEvent.click(within(choiceModal).getByRole('button', { name: '4' }));
+
+    const activePotion = screen.getByRole('region', { name: 'Active Potion' });
+
+    expect(within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')).toBeInTheDocument();
+    expect(within(activePotion).getByText('Roll Choice')).toBeInTheDocument();
+    expect(within(activePotion).getByLabelText('Chosen roll 4')).toHaveClass(
+      'language-en'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toHaveClass(
+      'dice-roll-cube--face-4'
+    );
+    expect(randomSpy).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('img', { name: /dice face 4/i })).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      4,
+      { blockedNodeIds: [] }
+    );
+    expect(
+      screen.queryByRole('region', { name: 'Active Potion' })
+    ).not.toBeInTheDocument();
   });
 
   test('shows one localized Active Potion beneath Potions only when state exists', () => {

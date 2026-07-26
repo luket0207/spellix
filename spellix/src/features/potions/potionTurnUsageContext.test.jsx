@@ -12,7 +12,7 @@ const boardPotion = POTION_DEFINITIONS.find(
 const battlePotion = POTION_DEFINITIONS.find(
   ({ id }) => id === 'first-aid'
 );
-const bothPotion = POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice');
+const bothPotion = POTION_DEFINITIONS.find(({ id }) => id === 'small-heal');
 
 function PotionTurnUsageProbe() {
   const {
@@ -98,11 +98,11 @@ describe('potion turn usage context', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
-    expect(screen.getByText('Potions: roll-choice')).toBeInTheDocument();
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
     expect(screen.getByText('Board used: true')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
-    expect(screen.getByText('Potions: roll-choice')).toBeInTheDocument();
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Advance Board' }));
     expect(screen.getByText('Board used: true')).toBeInTheDocument();
@@ -127,17 +127,17 @@ describe('potion turn usage context', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Battle' }));
-    expect(screen.getByText('Potions: roll-choice')).toBeInTheDocument();
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
     expect(screen.getByText('Battle used: true')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Battle' }));
-    expect(screen.getByText('Potions: roll-choice')).toBeInTheDocument();
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Advance Battle' }));
     expect(screen.getByText('Battle actor: enemy')).toBeInTheDocument();
     expect(screen.getByText('Battle used: true')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Consume Battle' }));
-    expect(screen.getByText('Potions: roll-choice')).toBeInTheDocument();
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Advance Battle' }));
     expect(screen.getByText('Battle actor: player')).toBeInTheDocument();

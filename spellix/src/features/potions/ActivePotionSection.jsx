@@ -15,7 +15,21 @@ function ActivePotionSection({
     <section aria-label={title} className="active-potion-section">
       <h2 className={`active-potion-title ${languageClassName}`}>{title}</h2>
       <div className="active-potion-content">
-        <PotionIcon language={language} potion={activePotion} />
+        <PotionIcon
+          iconOverlay={
+            activePotion.id === 'roll-choice' &&
+            Number.isInteger(activePotion.chosenRoll) ? (
+              <span
+                aria-label={`Chosen roll ${activePotion.chosenRoll}`}
+                className="active-potion-chosen-roll language-en"
+              >
+                {activePotion.chosenRoll}
+              </span>
+            ) : null
+          }
+          language={language}
+          potion={activePotion}
+        />
       </div>
     </section>
   );

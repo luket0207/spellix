@@ -5,11 +5,13 @@ const GAMEPLAY_TRANSLATIONS = {
     potions: 'Potions',
     rollDice: 'Roll Dice',
     spells: 'Spells',
+    spellsNew: 'New',
   },
   jp: {
     potions: 'ポーション',
     rollDice: 'サイコロを振る',
     spells: '呪文',
+    spellsNew: '新規',
   },
 };
 
@@ -19,6 +21,7 @@ const POTION_USAGE_TRANSLATIONS = {
     confirmUse: (potionName) => `Are you sure you want to use ${potionName}?`,
     descriptionTitle: 'Potion Description',
     no: 'No',
+    rollChoiceQuestion: 'What do you want the next roll of the dice to be?',
     use: 'Use',
     yes: 'Yes',
   },
@@ -30,6 +33,8 @@ const POTION_USAGE_TRANSLATIONS = {
     descriptionTitle:
       '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
     no: '\u3044\u3044\u3048',
+    rollChoiceQuestion:
+      '\u6b21\u306e\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u3092\u3044\u304f\u3064\u306b\u3057\u307e\u3059\u304b\uff1f',
     use: '\u4f7f\u7528\u3059\u308b',
     yes: '\u306f\u3044',
   },

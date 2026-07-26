@@ -4,7 +4,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getPotionDescription, getPotionName } from '../../data/potions';
 import './potionIcon.css';
 
-function PotionIcon({ focusable = true, language = 'en', potion, showName = true }) {
+function PotionIcon({
+  focusable = true,
+  iconOverlay = null,
+  language = 'en',
+  potion,
+  showName = true,
+}) {
   const descriptionId = useId();
   const activeLanguage = language === 'jp' ? 'jp' : 'en';
   const description = getPotionDescription(potion, activeLanguage);
@@ -18,8 +24,12 @@ function PotionIcon({ focusable = true, language = 'en', potion, showName = true
       role="group"
       tabIndex={focusable ? 0 : undefined}
     >
-      <span aria-hidden="true" className="potion-icon-flask potion-icon-flask--glow">
+      <span
+        aria-hidden={iconOverlay ? undefined : 'true'}
+        className="potion-icon-flask potion-icon-flask--glow"
+      >
         <FontAwesomeIcon icon={faFlask} />
+        {iconOverlay}
       </span>
       {showName ? (
         <span className={`potion-icon-name language-${activeLanguage}`}>{name}</span>

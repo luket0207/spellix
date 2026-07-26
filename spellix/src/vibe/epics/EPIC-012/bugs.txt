@@ -1,1 +1,173 @@
+---
 
+Bug-001: Spells button New notification should use correct fonts and 12px font size
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions for the exact English and Japanese badge text, normalized language classes, established global font mappings, and exact `12px` badge font size.
+* Reproduced the bug with 3 focused failures: both language classes were absent and the badge CSS had no `font-size: 12px`.
+
+Final Fix
+
+* Reused the existing normalized `language-en` / `language-jp` class on the Spells notification badge.
+* Added exactly `font-size: 12px` to the existing badge rule.
+* Preserved all badge text, visibility, clearing, positioning, and token-bag behavior.
+
+Related Feature
+
+* EPIC-012 Feature-004: Replace Spells button token notification with New / 新規 badge
+
+Bug Summary
+
+* The `New` / `新規` notification on the Spells button needs a small styling correction.
+* It should use the correct language font.
+* It should have a font size of exactly `12px`.
+
+Expected Behaviour
+
+* English notification text:
+
+```txt id="2y6lez"
+New
+```
+
+* Japanese notification text:
+
+```txt id="xgu02y"
+新規
+```
+
+* English should use the game’s English font.
+* Japanese should use the game’s Japanese font.
+* The badge text should have:
+
+```css id="rstpva"
+font-size: 12px;
+```
+
+Required Fix
+
+* Update the Spells button notification badge styling so it applies:
+
+  * correct English font when the player language is English.
+  * correct Japanese font when the player language is Japanese.
+  * `font-size: 12px`.
+
+Suggested CSS Direction
+
+```css id="g6cl62"
+.spells-new-badge {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.spells-new-badge.english {
+  font-family: var(--english-font);
+}
+
+.spells-new-badge.japanese {
+  font-family: var(--japanese-font);
+}
+```
+
+* Exact class names can vary.
+* Use the project’s existing font variables or language classes where possible.
+
+Out Of Scope
+
+* No changes to when the notification appears.
+* No changes to when the notification clears.
+* No changes to Spells modal behaviour.
+* No changes to token bag behaviour.
+* No changes to the notification text.
+* No unrelated Spells button redesign.
+
+Testing Required
+
+* Confirm the English badge says `New`.
+* Confirm the Japanese badge says `新規`.
+* Confirm English uses the correct English font.
+* Confirm Japanese uses the correct Japanese font.
+* Confirm the badge text is `12px`.
+* Confirm the badge still appears when a token is added to the token bag.
+* Confirm the badge still clears when the Spells modal is opened.
+* Confirm the badge still clears when the token bag is empty.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-002: Active Potion section text should be yellow
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added a red-first stylesheet assertion for the missing `#F5FA00` Active Potion section text colour while preserving the existing `#5a351f` background.
+* Reproduced the bug with one focused failure because `active-potion-section` had no text colour.
+* Audited nested potion text and found that the tooltip had an explicit black colour and the Roll Choice number inherited the flask icon colour.
+
+Final Fix
+
+* Added exactly `color: #F5FA00` to the existing `active-potion-section` rule.
+* Made the active potion name and tooltip inherit the section colour.
+* Applied the same yellow directly to the Roll Choice number so the flask icon keeps its own potion colour.
+* Preserved the darker brown background, layout, icons, potion behavior, consumption, and trigger rules.
+
+Related Feature
+
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Bug Summary
+
+* The fonts within the `active-potion-section` element are not using the correct colour.
+* All text inside this section should be yellow.
+
+Expected Behaviour
+
+* Any text inside `active-potion-section` should use the game’s yellow modal/UI text colour.
+* This includes:
+
+  * `Active Potion`
+  * `発動中のポーション`
+  * potion name text
+  * any future text added inside the section
+
+Required Fix
+
+* Update the CSS for `active-potion-section` so text inside it is yellow.
+
+Suggested CSS Direction
+
+```css id="n13dh4"
+.active-potion-section {
+  color: #F5FA00;
+}
+```
+
+* If potion component text has its own colour styling, ensure it inherits or is overridden correctly inside the Active Potion section.
+
+Out Of Scope
+
+* No changes to Active Potion behaviour.
+* No changes to potion consumption.
+* No changes to potion trigger rules.
+* No changes to Active Potion layout.
+* No changes to potion icons.
+* No unrelated gameplay UI redesign.
+
+Testing Required
+
+* Confirm `Active Potion` displays in yellow.
+* Confirm `発動中のポーション` displays in yellow.
+* Confirm the active potion name displays in yellow.
+* Confirm all text inside `active-potion-section` is yellow.
+* Confirm the darker brown section background remains unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

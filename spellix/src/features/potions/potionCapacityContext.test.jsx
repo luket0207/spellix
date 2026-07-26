@@ -124,7 +124,7 @@ describe('potion capacity context integration', () => {
   test('uses only the selected potion instance when duplicate ids exist', () => {
     render(
       <GameSetupProvider
-        initialGameSetup={createPotionSetup([rollChoice, rollChoice, iceBeam])}
+        initialGameSetup={createPotionSetup([smallHeal, smallHeal, iceBeam])}
       >
         <PotionCapacityProbe />
       </GameSetupProvider>
@@ -132,7 +132,7 @@ describe('potion capacity context integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /use player 1 second/i }));
 
-    expect(screen.getByText('Player 1 potions: roll-choice,ice-beam')).toBeInTheDocument();
+    expect(screen.getByText('Player 1 potions: small-heal,ice-beam')).toBeInTheDocument();
     expect(screen.getByText('Player 2 potions: none')).toBeInTheDocument();
   });
 });

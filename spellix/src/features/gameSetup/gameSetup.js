@@ -75,6 +75,9 @@ export function createPlayers(playerCount, existingPlayers = []) {
       currentHealth: existingPlayer?.currentHealth ?? 100,
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
+      hasUnseenTokenBagTokens:
+        existingPlayer?.hasUnseenTokenBagTokens ??
+        (existingPlayer ? Boolean(existingPlayer.tokenBag?.length) : true),
       language: existingPlayer?.language ?? DEFAULT_PLAYER_LANGUAGE,
       maxHealth: existingPlayer?.maxHealth ?? 100,
       mergedColumns:
@@ -82,6 +85,9 @@ export function createPlayers(playerCount, existingPlayers = []) {
           ...merge,
           columns: [...merge.columns],
         })) ?? [],
+      nextForcedRoll: existingPlayer?.nextForcedRoll
+        ? { ...existingPlayer.nextForcedRoll }
+        : null,
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),

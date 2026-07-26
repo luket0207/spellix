@@ -96,3 +96,169 @@ Automated Test Limitations
 Manual Testing Still Needed
 
 * Run the ten-step browser regression above to verify real turn timing, visible disabled states, Active Potion alignment/colour, Japanese rendering, and console output.
+
+---
+
+Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Open any English potion display or debug grant control and inspect the complete potion catalog.
+   Expected: Exactly 28 unique potions are available in the specified order, including Spellbound and Triple Dice, with no deprecated entries.
+2. Repeat with a Japanese player and inspect Copy and Paste, Redo, Spellbound, Heavy Weight, Buy and Sell, Storm Master, and Triple Dice.
+   Expected: Their Japanese names and descriptions exactly match the Feature-003 table and no translation is missing.
+3. Give the current player Spellbound and Triple Dice on the gameplay board.
+   Expected: Both display with Board Use controls; Spellbound is green and Triple Dice is red.
+4. Enter Battle while the player owns Spellbound, Triple Dice, Battle, Both, and Mini potions.
+   Expected: Spellbound, Triple Dice, and Mini potions are excluded; Battle and Both potions remain available under the existing rules.
+5. Generate Common and Rare Board potion rewards repeatedly or inspect the reward pools.
+   Expected: Spellbound is in the Common Board pool, Triple Dice is in the Rare Board pool, and neither enters Battle-only generation.
+6. Inspect Mini-aware rewards and normal Board/Battle rewards.
+   Expected: Bridge Builder, Good Decisions, and Cave Runner remain available only to Mini-aware contexts.
+7. Confirm one Board or Battle potion, then try another in the same context turn.
+   Expected: The existing one-potion-per-turn limit still consumes only the confirmed potion and disables further eligible use.
+8. Inspect the browser console throughout these flows.
+   Expected: No missing-record, translation, colour, duplicate-key, or other console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution produced 3 intended failures and 35 passing tests because the old catalog still had 26 records, lacked Spellbound and Triple Dice, and retained the previous descriptions.
+* The exact-table test verifies all 28 records in order across id, English and Japanese names, availability, rarity, English and Japanese descriptions, and colour, plus uniqueness and deprecated-id exclusion.
+* Board/Battle list regressions verify Spellbound and Triple Dice expose Board Use controls with their source colours and remain excluded from the Battle potion section.
+* Reward and debug regressions verify Spellbound and Triple Dice enter their matching Board rarity pools, stay out of Battle pools, and appear in the 28-option admin grant selector.
+* The final potion consumer regression passes 12 suites and 92 tests across data, icon rendering, Board/Battle lists, confirmation, active display, use limits, capacity, rewards, and debug grants.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies exact data, filtering, rendered controls, state, and classes but cannot visually inspect real-browser colours or console output.
+* Individual potion effects remain intentionally unimplemented and were not inferred from the new descriptions.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to verify real rendering, reward behavior, turn timing, Japanese text, and console output.
+
+---
+
+Feature-004: Replace Spells button token notification with New / 新規 badge
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Add a token to the current English player’s empty token bag through a battle reward.
+   Expected: A compact `New` badge appears over the Spells button, the old `!` is absent, and the button remains clickable without moving.
+2. Open the Spells modal, then cancel without saving.
+   Expected: The badge disappears immediately when the modal opens and remains hidden after cancellation while the existing bag token remains.
+3. Add another token to that player’s token bag.
+   Expected: The `New` badge appears again.
+4. Assign or remove every token until the saved token bag is empty.
+   Expected: The badge is hidden regardless of its previous unseen state.
+5. Repeat the flow with a Japanese player and then a player with an invalid language value.
+   Expected: Japanese shows `新規`; an invalid language falls back to `New`.
+6. Add a token to the bag from Cave, Loot Chest, and the debug token tool.
+   Expected: Each source marks the target player’s bag as unseen and shows the badge when that player is current.
+7. Change turns between players with different seen/unseen bag states.
+   Expected: Each player sees only their own badge state; a previously acknowledged badge does not reappear from a turn change.
+8. Inspect the Spells button area and browser console throughout.
+   Expected: The badge does not block the button or cause layout movement, no `ul` or `li` was introduced, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution failed all 6 selected suites because the player flag, translations, reward marking, modal acknowledgement, localized badge markup, and text-safe CSS did not exist; the broad run also surfaced unrelated pre-existing stale page and mini-game assertions.
+* The final centralized regression passes 5 suites and 49 tests across player creation/normalization, game setup context behavior, exact translations, battle/Cave reward assignment, and Loot Chest assignment.
+* The final isolated Gameplay regression passes all 5 Feature-004 scenarios for exact English/Japanese/fallback text, no `!`, modal-open clearing, cancel persistence, later reappearance, empty-bag hiding, per-player turn behavior, text-safe positioning, clickability, and no-list markup.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* The full Gameplay and mini-game suites retain unrelated stale assertions documented by earlier features; this feature’s scenarios were isolated and pass.
+* JSDOM verifies state, text, markup, classes, and button behavior but cannot visually inspect real-browser badge overlap, layout movement, or console output.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to verify real rendering, each live reward route, per-player timing, and console output.
+
+---
+
+Bug-001: Spells button New notification should use correct fonts and 12px font size
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give an English player an unseen token-bag token and inspect the Spells badge.
+   Expected: The badge says `New`, uses the game’s English font, and its text is `12px`.
+2. Repeat with a Japanese player.
+   Expected: The badge says `新規`, uses the game’s Japanese font, and its text is `12px`.
+3. Open the Spells modal and then cancel it.
+   Expected: The badge clears immediately and stays cleared; the font fix does not change acknowledgement behavior.
+4. Add another token, then empty the token bag.
+   Expected: The badge reappears for the new token and disappears when the bag becomes empty.
+5. Inspect the browser console.
+   Expected: No font, class, or rendering errors occur.
+
+Automated Tests Completed
+
+* Red-first reproduction produced 3 focused failures for the missing English class, missing Japanese class, and missing `12px` declaration.
+* The final isolated Gameplay regression passes all 5 badge scenarios, covering exact copy, English/Japanese/fallback classes, established font mappings, exact font size, unchanged show/clear behavior, clickability, and no-list markup.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies exact classes and stylesheet declarations but cannot visually inspect the rendered fonts or browser console.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm both fonts and console output.
+
+---
+
+Bug-002: Active Potion section text should be yellow
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Show an English Active Potion section on the gameplay board.
+   Expected: `Active Potion` and the potion name display in `#F5FA00`.
+2. Repeat with a Japanese player.
+   Expected: `ç™ºå‹•ä¸­ã®ãƒãƒ¼ã‚·ãƒ§ãƒ³` and the Japanese potion name display in the same yellow.
+3. Activate Roll Choice from the Board and choose a number.
+   Expected: The chosen number is yellow while the flask retains its potion-specific icon colour.
+4. Inspect or focus the active potion tooltip.
+   Expected: Tooltip text also uses the section’s yellow text colour.
+5. Inspect the Active Potion section and browser console.
+   Expected: The darker brown background, layout, behavior, and icons remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* Red-first reproduction produced one focused failure because the existing Active Potion section rule had no `#F5FA00` text colour.
+* The final focused regression passes 2 suites and all 7 Active Potion scenarios, covering English/Japanese content, the exact yellow declaration, potion-name and tooltip inheritance, Roll Choice number colour, unchanged darker brown background, unchanged layout, and Board integration.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify exact declarations, selectors, content, classes, and unchanged structure but cannot visually inspect rendered colour or browser console output.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm English/Japanese text, tooltip and Roll Choice number colours, unchanged icon colours, and console output.

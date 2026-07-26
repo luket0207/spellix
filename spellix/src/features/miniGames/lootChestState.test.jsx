@@ -43,6 +43,7 @@ const LOOT_POTION = {
 function createSetup({ fullPotions = false } = {}) {
   const players = createPlayers(2).map((player) => ({
     ...player,
+    hasUnseenTokenBagTokens: false,
     potions: fullPotions && player.id === 'player-1'
       ? [
           { id: 'potion-1', name: 'One' },
@@ -70,6 +71,7 @@ function LootChestStateProbe() {
   const {
     activatePendingCaveTokenReward,
     activeBattle,
+    addSelectedRewardTokenToBag,
     claimLootChestReward,
     completeMiniGame,
     continueCaveRewardResolution,
@@ -94,6 +96,7 @@ function LootChestStateProbe() {
       <p>{`Cave token status: ${miniGameResult?.caveRewardGrant?.token?.status ?? 'none'}`}</p>
       <p>{`Resolution stage: ${miniGameResult?.caveRewardResolution?.stage ?? 'none'}`}</p>
       <p>{`Potions: ${playerOne?.potions.map(({ id }) => id).join(',') || 'none'}`}</p>
+      <p>{`Unseen bag tokens: ${playerOne?.hasUnseenTokenBagTokens ? 'yes' : 'no'}`}</p>
       <p>{`Next turn: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
       <button type="button" onClick={() => startMiniGame('river', 'player-1')}>
         Start River
@@ -152,6 +155,9 @@ function LootChestStateProbe() {
       <button type="button" onClick={discardSelectedRewardToken}>
         Discard Active Token
       </button>
+      <button type="button" onClick={addSelectedRewardTokenToBag}>
+        Add Active Token To Bag
+      </button>
       <button type="button" onClick={activatePendingCaveTokenReward}>
         Activate Cave Token
       </button>
@@ -197,6 +203,18 @@ test('adds an available loot potion and preserves River same-player return', () 
 
   expect(screen.getByText('Current: player-1')).toBeInTheDocument();
   expect(screen.getByText('Next turn: clear')).toBeInTheDocument();
+});
+
+test('marks a Loot Chest token added to the bag as unseen', () => {
+  renderProbe();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Start River' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Win River' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Claim Loot Token' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Active Token To Bag' }));
+
+  expect(screen.getByText('Loot status: resolved')).toBeInTheDocument();
+  expect(screen.getByText('Unseen bag tokens: yes')).toBeInTheDocument();
 });
 
 test('uses the existing full-potion assignment and replacement flow', () => {

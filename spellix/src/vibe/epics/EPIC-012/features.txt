@@ -964,3 +964,705 @@ Testing Checkpoints
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Status
+
+* done
+
+Completion Notes
+
+* Replaced the centralized potion source of truth with the exact 28-record table, preserving the specified order, stable ids, English and Japanese names/descriptions, availability, rarity, and colours.
+* Added Spellbound as a Board Common Green potion and Triple Dice as a Board Rare Red potion.
+* Updated the Copy and Paste, Redo, Heavy Weight, Buy and Sell, and Storm Master descriptions exactly as specified in both languages.
+* Preserved the `Devine Chance` spelling and kept Bridge Builder, Good Decisions, and Cave Runner available only to Mini-aware contexts.
+* Existing Board/Battle trigger controls, reward pools, potion displays, and debug grants consume the centralized table, so the new records and metadata flow through without duplicated fixture data.
+* No potion effects, routes, trigger redesign, usage-limit changes, inventory changes, reward sequencing, dependencies, styling, or unrelated refactors were added.
+
+Related Feature
+
+* EPIC-011 Feature-005: Replace potion data with revamped source-of-truth potion table
+* EPIC-011 Bug-012: Update Bridge Builder, Good Decisions, and Cave Runner potion availability to Mini
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+
+Goal
+
+* Update the potion data again using the new table in this feature.
+* Treat this table as the newest source of truth for all potion data.
+* Remove any potion that is not listed here.
+* Update any changed potion names, Japanese names, availability values, rarities, descriptions, Japanese descriptions, or colours.
+* Preserve existing potion trigger functionality and potion-use limits unless the new data naturally changes where potions appear.
+
+Scope
+
+* Replace the current potion dataset with the table in this feature.
+* Update English potion names.
+* Update Japanese potion names.
+* Update Battle/Board/Mini availability.
+* Update rarity.
+* Update English descriptions.
+* Update Japanese descriptions.
+* Update potion colours.
+* Add new potions from this table.
+* Remove deprecated potions not in this table.
+* Ensure board, battle, both, and mini availability logic reads from this updated data.
+* Do not implement individual potion effects in this feature.
+
+Core Rule
+
+* This table supersedes all previous potion source-of-truth tables.
+* The safest implementation is to delete the existing potion data and replace it with this table.
+* The final potion dataset must exactly match this feature.
+* Any potion not listed here should not exist in the game.
+* Any potion listed here should exist exactly as described here.
+
+Potion Source Of Truth
+
+```txt id="4nxxqw"
+Name	Japanese Name	Battle/Board	Rarity	Description	Japanese Description	Colour
+Roll Choice	出目選択	Both	Rare	Choose the next roll of the dice	次に振るサイコロの出目を選ぶ。	Blue
+Small Heal	小回復	Both	Common	Recover 30% HP	HPを30％回復する。	Green
+Heal	回復	Both	Rare	Recover 60% HP	HPを60％回復する。	Green
+First Aid	応急処置	Battle	Common	Recover 50% HP	HPを50％回復する。	Green
+Copy and Paste	コピー＆ペースト	Board	Common	Duplicate any token in your token pouch	トークンポーチにある好きなトークンを1個複製する。	Orange
+Metal Detector	金属探知機	Board	Rare	Find loot wherever you land this turn.	このターンは、どのマスに止まっても戦利品を発見する。	Yellow
+Starting Charge	初期チャージ	Board	Common	If you encounter a battle this turn, all your slots are charged on your first turn in battle	このターンにバトルが発生した場合、バトルの最初のターンにすべてのスロットがチャージされる。	Orange
+Tokensmith	トークン職人	Board	Common	Remove a token from a slot and put it into your token pouch	スロットからトークンを1個取り外し、トークンポーチに入れる。	Grey
+Redo	やり直し	Board	Rare	Get one chance to rearrange your tokens.	トークンを一度だけ並べ替えることができる。	Yellow
+Ice Beam	アイスビーム	Battle	Common	Freeze your opponent	対戦相手を凍結させる。	Light Blue
+Charger	チャージャー	Battle	Common	Charge your attacks next turn	次のターンの攻撃をチャージする。	Yellow
+Spellbound	呪縛	Board	Common	Choose another player, they may not use potions in their next turn.	他のプレイヤーを1人選んでください。そのプレイヤーは次のターンにポーションを使用できません。	Green
+Heavy Weight	ヘビーウェイト	Board	Rare	Choose another player, they may not use potions in their next turn, and their dice roll will be halved (rounded up).	他のプレイヤーを1人選んでください。そのプレイヤーは次のターンにポーションを使用できず、サイコロの出目が半分になります（端数切り上げ）。	Blue
+Troublemaker	トラブルメーカー	Board	Rare	Choose any other player and roll the dice for your turn. If even they lose 1 token, if odd you lose a token.	他のプレイヤーを1人選び、このターンのサイコロを振る。出目が偶数ならそのプレイヤーはトークンを1個失い、奇数なら自分がトークンを1個失う。	Purple
+Devine Chance	神の好機	Board	Common	Roll the dice for your turn. If even you heal to full HP. If odd everyone else does.	このターンのサイコロを振る。出目が偶数なら、自分のHPが全回復する。奇数なら、自分以外のすべてのプレイヤーのHPが全回復する。	Green
+Buy and Sell	売買	Board	Rare	Discard 3 tokens from your token pouch. Get a choice of 2 random tokens and pick one to gain.	トークンポーチからトークンを3個捨てる。ランダムに選ばれた2個のトークンから1個を選んで獲得する。	Orange
+Cauldron	大釜	Board	Common	Pick one of 3 potions to gain.	3つのポーションから1つを選んで獲得する。	Red
+Storm Master	嵐の支配者	Board	Rare	Roll the dice for your turn. If even all others players cannot move on their next turn (they must repeat the square they are currently on) and they cannot use board potions, if odd you may not move this turn and your turn is over.	このターンのサイコロを振る。出目が偶数なら、自分以外のすべてのプレイヤーは次のターンに移動できず、現在いるマスにとどまらなければならない。また、ボード用ポーションも使用できない。出目が奇数なら、自分はこのターン移動できず、そのままターンを終了する。	Red
+Double Dice	ダブルダイス	Board	Common	Roll 2 dice this turn.	このターンはサイコロを2個振る。	Blue
+Triple Dice	トリプルダイス	Board	Rare	Roll 3 dice this turn.	このターンはサイコロを3個振る。	Red
+Bridge Builder	橋職人	Mini	Common	Auto win a River Mini Game	川のミニゲームに自動的に勝利する。	Light Blue
+Good Decisions	賢明な選択	Mini	Common	Remove any forfeits from a decision	選択によって受けるペナルティをすべて無効にする。	Orange
+Cave Runner	洞窟ランナー	Mini	Common	Escape a cave encounter with no damage but lose any prizes you had.	ダメージを受けずに洞窟での遭遇から脱出する。ただし、それまでに獲得した報酬はすべて失う。	Grey
+Smokescreen	煙幕	Board	Common	You will not encounter a battle this turn.	このターンはバトルが発生しない。	Grey
+Cosmic Intervention	宇宙の介入	Battle	Common	Deal 10 damage to your opponent	対戦相手に10ダメージを与える。	Red
+Shields Down	シールドダウン	Battle	Common	Remove all guard from your opponent this turn	このターン、対戦相手のガードをすべて取り除く。	Blue
+Thaw	解凍	Battle	Common	Auto unfreeze yourself	自分の凍結状態を自動的に解除する。	Orange
+SOS	SOS	Board	Common	Teleport to the field village	フィールドの村にテレポートする。	Light Blue
+```
+
+Expected Final Potion Count
+
+* The final potion list should contain exactly 28 potions.
+
+Final Potion List
+
+```txt id="n7b48s"
+Roll Choice
+Small Heal
+Heal
+First Aid
+Copy and Paste
+Metal Detector
+Starting Charge
+Tokensmith
+Redo
+Ice Beam
+Charger
+Spellbound
+Heavy Weight
+Troublemaker
+Devine Chance
+Buy and Sell
+Cauldron
+Storm Master
+Double Dice
+Triple Dice
+Bridge Builder
+Good Decisions
+Cave Runner
+Smokescreen
+Cosmic Intervention
+Shields Down
+Thaw
+SOS
+```
+
+Important Changes From Previous Potion Table
+
+* `Copy and Paste` description has changed:
+
+  * old: duplicate any common token.
+  * new: duplicate any token.
+* `Redo` description has changed:
+
+  * old: rearrange tokens as much as you like this turn.
+  * new: get one chance to rearrange your tokens.
+* `Spellbound` has been added.
+* `Heavy Weight` description has changed:
+
+  * now targets a chosen player.
+  * target may not use potions next turn.
+  * target’s dice roll is halved, rounded up.
+* `Buy and Sell` now discards 3 tokens instead of 4.
+* `Storm Master` now also prevents other players from using board potions on their next turn when the roll is even.
+* `Triple Dice` has been added.
+* `Bridge Builder`, `Good Decisions`, and `Cave Runner` remain `Mini`.
+* The table in this feature is now the newest source of truth.
+
+Data Shape Requirement
+
+* Each potion should have at least:
+
+  * stable id.
+  * English name.
+  * Japanese name.
+  * availability.
+  * rarity.
+  * English description.
+  * Japanese description.
+  * colour.
+
+Supported availability values:
+
+```txt id="vp5kji"
+Board
+Battle
+Both
+Mini
+```
+
+Supported rarity values:
+
+```txt id="ue4zll"
+Common
+Rare
+```
+
+Supported colour values:
+
+```txt id="q09cmj"
+Blue
+Green
+Orange
+Yellow
+Grey
+Light Blue
+Purple
+Red
+```
+
+Suggested Data Shape
+
+```js id="avpil0"
+{
+  id: "spellbound",
+  name: {
+    en: "Spellbound",
+    jp: "呪縛"
+  },
+  availability: "Board",
+  rarity: "Common",
+  description: {
+    en: "Choose another player, they may not use potions in their next turn.",
+    jp: "他のプレイヤーを1人選んでください。そのプレイヤーは次のターンにポーションを使用できません。"
+  },
+  colour: "Green"
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that all potion displays, generation pools, and trigger logic read from this updated data.
+
+Replacement Requirement
+
+* Replace the current potion dataset with the table in this feature.
+* Do not patch only some visible text while leaving old metadata behind.
+* Remove any potion not listed in this feature.
+* Add any potion listed here that does not currently exist.
+* Update any changed potion record exactly.
+* Ensure there are no duplicate potion entries.
+
+Deprecated Potion Requirement
+
+* Any potion that existed previously but is not in this table should be removed from:
+
+  * potion data files.
+  * potion inventory displays.
+  * reward generation pools.
+  * board potion trigger lists.
+  * battle potion trigger lists.
+  * mini potion filters.
+  * debug controls.
+  * translation maps.
+  * any test or fixture potion lists.
+* Deprecated potions should not appear from:
+
+  * Loot Chest.
+  * Cave rewards.
+  * debug buttons.
+  * potion selection modals.
+  * player starting data.
+  * any random generation helper.
+
+Availability Requirement
+
+* Availability must come directly from the `Battle/Board` field.
+* Do not infer availability from potion name or description.
+* `Board` potions:
+
+  * can appear in board-usable contexts.
+  * should not appear in battle potion section.
+* `Battle` potions:
+
+  * can appear in battle-usable contexts.
+  * should not have a board Use button.
+* `Both` potions:
+
+  * can be usable from board and battle contexts.
+* `Mini` potions:
+
+  * remain out of scope for normal board and battle triggering.
+  * should not appear in battle potion section.
+  * should appear on the board potion display if owned, but without a board Use button, unless a later Mini-specific feature says otherwise.
+
+EPIC-012 Trigger Interaction Requirement
+
+* Feature-001 and Feature-002 should automatically respect this updated potion data.
+* Board Use buttons should appear for:
+
+  * `Board`
+  * `Both`
+* Battle potion section should show:
+
+  * `Battle`
+  * `Both`
+* Mini potions should remain hidden from battle and unusable on the board.
+* Board and battle one-potion-per-turn limits from Feature-002 should continue to work with the updated dataset.
+* `Spellbound` and `Triple Dice` should follow their availability values:
+
+  * Spellbound: Board.
+  * Triple Dice: Board.
+
+Functionality Preservation Requirement
+
+* This feature is a potion data update.
+* Do not implement individual potion effects here.
+* Existing potion effect logic should continue to work if already implemented.
+* If old behaviour is tied to old names or ids, remap it carefully to the correct updated potion.
+* If a new potion does not have implemented behaviour yet, it may exist in the data and UI without effect implementation until a later feature.
+* Do not change the confirmation modal, one-potion-per-turn limit, or Active Potion section except as needed to display the updated data.
+
+Translation Requirement
+
+* Use the Japanese names and Japanese descriptions exactly as provided.
+* Do not auto-translate these strings.
+* English UI should show English name and English description.
+* Japanese UI should show Japanese name and Japanese description.
+* If language is missing or invalid, fall back to English.
+* Preserve punctuation and Japanese full stops exactly where provided.
+
+Spelling Requirement
+
+* Preserve potion names exactly as provided.
+* In particular, keep:
+
+```txt id="bkr7t1"
+Devine Chance
+```
+
+* Do not silently correct it to `Divine Chance`.
+
+Reward Generation Requirement
+
+* Potion reward generation should use only this updated table.
+* Common potion rewards should only use potions marked `Common`.
+* Rare potion rewards should only use potions marked `Rare`.
+* Board reward contexts should use Board/Both/Mini only if the specific reward logic allows those categories.
+* Battle reward contexts should use Battle/Both only.
+* Mini potions should only appear in Mini-aware reward or encounter contexts unless another feature explicitly includes them elsewhere.
+* Loot Chest and Cave reward systems should use this updated data without changing their reward sequence.
+
+Debug Tool Requirement
+
+* Debug potion tools should use this updated table.
+* Add debug access for:
+
+  * Spellbound.
+  * Triple Dice.
+* Remove debug access for any potion not in this table.
+* Update displayed text for changed potions.
+* Preserve existing debug behaviour.
+
+Potion Component Requirement
+
+* Potion components should display the updated:
+
+  * name.
+  * Japanese name.
+  * description.
+  * Japanese description.
+  * colour.
+  * rarity if shown.
+  * availability if shown.
+* Any colour-coded potion UI should use the updated colour field.
+* If `Light Blue` already exists as a style, reuse it.
+* If any colour mapping is missing, add a safe mapping rather than allowing an unstyled potion.
+
+Expected Behaviour
+
+* The final potion dataset contains exactly 28 potions.
+* Every potion in this feature exists in the game.
+* No potion outside this feature exists in the game.
+* Potion names match exactly.
+* Japanese potion names match exactly.
+* Potion descriptions match exactly.
+* Japanese potion descriptions match exactly.
+* Rarity values match exactly.
+* Availability values match exactly.
+* Colour values match exactly.
+* Copy and Paste can now say it duplicates any token.
+* Redo now says it gives one chance to rearrange tokens.
+* Spellbound exists as a Board Common Green potion.
+* Heavy Weight uses the new choose-player / no-potion / half-roll text.
+* Buy and Sell says discard 3 tokens.
+* Storm Master includes the board-potion restriction in its text.
+* Triple Dice exists as a Board Rare Red potion.
+* Bridge Builder, Good Decisions, and Cave Runner are Mini potions.
+* Feature-001 trigger UI reads the updated availability values.
+* Feature-002 potion usage limits still work.
+* Existing implemented potion functionality is not redesigned.
+
+Out Of Scope
+
+* No individual potion effect implementation.
+* No changes to potion slot count.
+* No changes to potion replacement modal logic.
+* No changes to potion trigger confirmation modal.
+* No changes to one-potion-per-turn limits.
+* No changes to Active Potion behaviour.
+* No changes to Cave reward ordering.
+* No changes to Loot Chest reward ordering.
+* No unrelated potion UI redesign.
+* No `ul` or `li` elements in any newly touched UI.
+
+Assumptions
+
+* Potion data is centralised or can be centralised.
+* The game can safely replace the existing potion dataset.
+* Some potion effects may be implemented later in this epic.
+* Some old potion functionality may currently be keyed by name and may need remapping to stable ids.
+* The table in this feature is the current authority over EPIC-011 Feature-005 and EPIC-011 Bug-012.
+
+Stop Point
+
+* Stop once the game’s potion dataset exactly matches the table in this feature, all removed potions are gone, all changed text/data is updated, and the existing board/battle trigger systems consume the new data correctly.
+
+Testing Checkpoints
+
+* Confirm the final potion list contains exactly 28 potions.
+* Confirm every potion in this feature exists in the game.
+* Confirm no potion outside this feature exists in the game.
+* Confirm Roll Choice data is correct.
+* Confirm Small Heal data is correct.
+* Confirm Heal data is correct.
+* Confirm First Aid data is correct.
+* Confirm Copy and Paste says `Duplicate any token in your token pouch`.
+* Confirm Copy and Paste Japanese description matches the table.
+* Confirm Metal Detector data is correct.
+* Confirm Starting Charge data is correct.
+* Confirm Tokensmith data is correct.
+* Confirm Redo says `Get one chance to rearrange your tokens.`
+* Confirm Redo Japanese description matches the table.
+* Confirm Ice Beam data is correct.
+* Confirm Charger data is correct.
+* Confirm Spellbound exists.
+* Confirm Spellbound data is correct.
+* Confirm Heavy Weight uses the new description.
+* Confirm Heavy Weight Japanese description matches the table.
+* Confirm Troublemaker data is correct.
+* Confirm Devine Chance spelling is preserved.
+* Confirm Buy and Sell says discard 3 tokens.
+* Confirm Buy and Sell Japanese description matches the table.
+* Confirm Cauldron data is correct.
+* Confirm Storm Master includes the board potion restriction.
+* Confirm Storm Master Japanese description matches the table.
+* Confirm Double Dice data is correct.
+* Confirm Triple Dice exists.
+* Confirm Triple Dice data is correct.
+* Confirm Bridge Builder availability is Mini.
+* Confirm Good Decisions availability is Mini.
+* Confirm Cave Runner availability is Mini.
+* Confirm Smokescreen data is correct.
+* Confirm Cosmic Intervention data is correct.
+* Confirm Shields Down data is correct.
+* Confirm Thaw data is correct.
+* Confirm SOS data is correct.
+* Confirm English names display correctly.
+* Confirm Japanese names display correctly.
+* Confirm English descriptions display correctly.
+* Confirm Japanese descriptions display correctly.
+* Confirm rarity values match the table.
+* Confirm availability values match the table.
+* Confirm colour values match the table.
+* Confirm Board potions get board Use buttons.
+* Confirm Both potions get board and battle Use buttons.
+* Confirm Battle potions appear in the battle potion section.
+* Confirm Mini potions do not appear in the battle potion section.
+* Confirm Mini potions do not get board Use buttons.
+* Confirm Common potion generation uses the updated Common pool.
+* Confirm Rare potion generation uses the updated Rare pool.
+* Confirm debug tools use the updated potion table.
+* Confirm deprecated potions cannot be generated.
+* Confirm there are no missing translation errors.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Replace Spells button token notification with New / 新規 badge
+
+Status
+
+* done
+
+Completion Notes
+
+* Replaced the Spells button `!` notification with the exact localized `New` / `新規` badge text and English fallback.
+* Added a per-player `hasUnseenTokenBagTokens` flag that is preserved during player normalization and set when a saved token bag gains or replaces a token.
+* Added one shared context action that clears the unseen flag as soon as the player opens the Spells modal, including forced initial setup.
+* Badge visibility now requires both the unseen flag and a non-empty token bag, so empty bags always hide it while opening and cancelling the modal keeps it cleared until a later token is added.
+* Battle, Cave, Loot Chest, debug, and spell-save token bag paths use the existing centralized state updates and therefore share the same unseen behavior.
+* Preserved the existing absolute badge position and colours, changing only its fixed circle dimensions to compact text-safe dimensions; no `ul` or `li` elements were added.
+* No token mechanics, assignment rules, spell capacity, reward generation, modal layout, committed spell display, potion notifications, routes, dependencies, or unrelated UI were changed.
+
+Related Feature
+
+* EPIC-003 Feature-002: Add player spell slots and token assignment
+* EPIC-010 Feature-015: Redesign Spell Token Assignment as a generic modal-based reward assignment screen
+* EPIC-011 Feature-004: Implement non-battle token effects for Light Green, White, and Grey tokens
+
+Goal
+
+* Replace the current `!` notification on the Spells button with a clearer text badge.
+* The notification should tell the player they have new tokens in their token bag.
+* The badge should display:
+
+  * English: `New`
+  * Japanese: `新規`
+* The notification should clear when the player has no tokens in their token bag.
+* The notification should also clear when the player opens the Spells modal and sees the token bag.
+
+Scope
+
+* Update the Spells button notification text.
+* Preserve the existing trigger condition for showing the notification when tokens are added to the token bag.
+* Add clear behaviour when the token bag becomes empty.
+* Add clear behaviour when the Spells modal is opened.
+* Support English and Japanese.
+* Preserve existing Spells modal behaviour.
+
+Current Behaviour
+
+* A `!` appears over or near the Spells button when the player has tokens in their token bag.
+* This tells the player there is something new to check.
+* The visual is useful, but the `!` should now be replaced with text.
+
+Required New Behaviour
+
+* Replace the `!` notification with:
+
+```txt id="uq50rm"
+New
+```
+
+in English.
+
+* Replace the `!` notification with:
+
+```txt id="cqgtdn"
+新規
+```
+
+in Japanese.
+
+* The notification should still appear in the same general position over or near the Spells button.
+* It should still be visually obvious.
+* It should not block the player from clicking the Spells button.
+
+Notification Show Requirement
+
+* The notification should appear when a token is added to the player’s token bag.
+* This should use the same trigger logic as the current `!` notification.
+* Examples:
+
+  * token gained from Cave reward.
+  * token gained from Loot Chest.
+  * token gained from battle reward.
+  * token gained from any potion or future reward mechanic.
+* If the token is added to the token bag, the player should see the `New` / `新規` notification on the Spells button.
+
+Notification Clear Requirement
+
+* The notification should be removed under either of the following conditions:
+
+```txt id="a3uf8i"
+1. The player has no tokens in their token bag.
+2. The player opens the Spells modal.
+```
+
+* Either condition is enough to clear the notification.
+* Both should be implemented.
+
+Clear When Token Bag Is Empty
+
+* If the player has no tokens in their token bag, the notification should not be visible.
+* This should be true even if the notification was previously set.
+* Example:
+
+  * player gains a token and sees `New`.
+  * player later removes or assigns all tokens from the token bag.
+  * token bag count becomes 0.
+  * `New` notification disappears.
+
+Clear When Spells Modal Opens
+
+* When the player opens the Spells modal, the notification should be removed.
+* This represents the player seeing the new tokens in the token bag.
+* The notification should clear as soon as the modal is opened.
+* The player does not need to save, commit, or move tokens for the notification to clear.
+* If the player opens the modal and then cancels/closes it, the notification should remain cleared unless a new token is added later.
+
+Important Distinction
+
+* The notification is not simply “token bag has tokens”.
+* It means “new tokens have been added and the player has not opened the Spells modal since then”.
+* However, the notification must also never show if the token bag is empty.
+
+Suggested State Direction
+
+```js id="e08itz"
+player.hasUnseenTokenBagTokens = true;
+```
+
+* Set this to `true` when a token is added to the token bag.
+* Set this to `false` when the player opens the Spells modal.
+* Also force the badge hidden when token bag length is `0`.
+
+Suggested Visibility Check
+
+```js id="almgzb"
+const showSpellsNewBadge =
+  player.hasUnseenTokenBagTokens && player.tokenBag.length > 0;
+```
+
+* Exact implementation can vary.
+* The important requirement is that both clear conditions are respected.
+
+Translation Requirement
+
+* Add or reuse translation strings:
+
+```txt id="e96qb0"
+New	新規
+```
+
+* Use the current player’s language setting where relevant.
+* If language is missing or invalid, fall back to English.
+
+Styling Requirement
+
+* The badge should remain compact.
+* It should be readable in both English and Japanese.
+* It should fit over or near the Spells button without covering the button label.
+* It should feel like a notification badge.
+* It should not cause the Spells button layout to jump.
+* It should work on the current mobile-first layout.
+
+Suggested CSS Direction
+
+```css id="tquuvn"
+.spells-new-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 34px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: bold;
+  pointer-events: none;
+}
+```
+
+* Exact class names, colours, and sizes can vary.
+* The important requirement is that the badge shows `New` / `新規` clearly and does not affect layout.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use simple `div` or `span` elements for the badge.
+
+Expected Behaviour
+
+* The Spells button no longer shows `!`.
+* The Spells button shows `New` in English.
+* The Spells button shows `新規` in Japanese.
+* The badge appears when a token is added to the token bag.
+* The badge disappears when the player has no tokens in their token bag.
+* The badge disappears when the player opens the Spells modal.
+* Opening the Spells modal clears the badge even if the player does not commit changes.
+* Closing or cancelling the Spells modal does not re-show the badge.
+* A later newly added token shows the badge again.
+* The badge does not block the Spells button.
+* The Spells button layout does not jump.
+
+Out Of Scope
+
+* No changes to token bag mechanics.
+* No changes to token assignment rules.
+* No changes to spell slot capacity.
+* No changes to reward generation.
+* No changes to Spells modal layout.
+* No changes to committed spell display.
+* No changes to potion notifications.
+* No unrelated gameplay UI redesign.
+
+Assumptions
+
+* The game already has logic that determines when the current `!` notification appears.
+* Token bag state is tracked per player.
+* The Spells modal open handler can clear notification state.
+* Token rewards from different systems all eventually call a shared token-bag add helper, or can be updated to mark the badge as unseen.
+
+Stop Point
+
+* Stop once the Spells button uses `New` / `新規` instead of `!`, appears when tokens are added to the token bag, and clears when the token bag is empty or the Spells modal is opened.
+
+Testing Checkpoints
+
+* Add a token to the current player’s token bag.
+* Confirm the Spells button shows `New` in English.
+* Switch to Japanese.
+* Confirm the Spells button shows `新規`.
+* Confirm the old `!` no longer appears.
+* Open the Spells modal.
+* Confirm the badge disappears immediately.
+* Close the Spells modal without saving.
+* Confirm the badge stays hidden.
+* Add another token to the token bag.
+* Confirm the badge appears again.
+* Remove or assign all tokens from the token bag.
+* Confirm the badge disappears when token bag count reaches 0.
+* Confirm the badge does not appear when the token bag is empty.
+* Confirm the badge does not block clicking the Spells button.
+* Confirm the Spells button layout does not jump when the badge appears or disappears.
+* Confirm token rewards from Cave can trigger the badge.
+* Confirm token rewards from Loot Chest can trigger the badge.
+* Confirm token rewards from battle can trigger the badge.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.

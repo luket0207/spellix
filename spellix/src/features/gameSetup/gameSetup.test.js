@@ -34,6 +34,7 @@ describe('game setup player piece selection foundation', () => {
       ])
     );
     expect(players[0].tokenBag.every((token) => token.protected)).toBe(true);
+    expect(players[0].hasUnseenTokenBagTokens).toBe(true);
   });
 
   test('maps boy and girl selections to the expected piece filenames', () => {
@@ -61,5 +62,15 @@ describe('game setup player piece selection foundation', () => {
 
     expect(recreatedPlayers[0].language).toBe('jp');
     expect(recreatedPlayers[1].language).toBe('en');
+  });
+
+  test('preserves whether each player has unseen token bag additions', () => {
+    const existingPlayers = createPlayers(2);
+    existingPlayers[0].hasUnseenTokenBagTokens = false;
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].hasUnseenTokenBagTokens).toBe(false);
+    expect(recreatedPlayers[1].hasUnseenTokenBagTokens).toBe(true);
   });
 });

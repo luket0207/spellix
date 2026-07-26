@@ -84,6 +84,7 @@
   width: 300px;
   box-sizing: border-box;
   background: #5a351f;
+  color: #F5FA00;
   border-radius: 10px;
   padding: 12px;
   margin-top: 12px;
@@ -99,4 +100,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.active-potion-section .potion-icon-name,
+.active-potion-section .potion-icon-tooltip {
+  color: inherit;
+}
+
+.active-potion-section .active-potion-chosen-roll {
+  color: #F5FA00;
+}
+
+.active-potion-chosen-roll {
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #F5FA00;
 }

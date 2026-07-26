@@ -24,6 +24,7 @@ function DiceRoll({
   autoRoll = false,
   autoRollRequestId = 0,
   disabled = false,
+  forcedResult = null,
   forcedRollRequest = null,
   mode = 'persistent',
   onRollComplete,
@@ -39,11 +40,13 @@ function DiceRoll({
   const resultTimeoutRef = useRef(null);
   const rollTimeoutRef = useRef(null);
   const disabledRef = useRef(disabled);
+  const forcedResultRef = useRef(forcedResult);
   const onRollCompleteRef = useRef(onRollComplete);
   const onRollStartRef = useRef(onRollStart);
   const onSequenceCompleteRef = useRef(onSequenceComplete);
 
   disabledRef.current = disabled;
+  forcedResultRef.current = forcedResult;
   onRollCompleteRef.current = onRollComplete;
   onRollStartRef.current = onRollStart;
   onSequenceCompleteRef.current = onSequenceComplete;
@@ -89,7 +92,7 @@ function DiceRoll({
 
   useEffect(() => {
     if (mode === 'temporary') {
-      startRoll();
+      startRoll(false, forcedResultRef.current);
     }
 
     return () => {
@@ -159,7 +162,7 @@ function DiceRoll({
           className={rollButtonClassName}
           disabled={disabled || phase !== 'rest'}
           type="button"
-          onClick={() => startRoll()}
+          onClick={() => startRoll(false, forcedResultRef.current)}
         >
           {rollButtonLabel}
         </Button>

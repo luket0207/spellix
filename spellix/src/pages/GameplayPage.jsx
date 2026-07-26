@@ -15,7 +15,10 @@ import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import PotionList from '../features/potions/PotionList';
 import ActivePotionSection from '../features/potions/ActivePotionSection';
+import HealingPotionAnimation from '../features/potions/HealingPotionAnimation';
 import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
+import RollChoiceModal from '../features/potions/RollChoiceModal';
+import { isHealingPotion } from '../features/potions/potionUsage';
 import CommittedSpellSlots from '../features/spells/CommittedSpellSlots';
 import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmationModal';
 import SpellsModal from '../features/spells/SpellsModal';
@@ -44,12 +47,14 @@ import './GameplayPage.css';
 function GameplayPage() {
   const {
     advanceTurn,
+    clearPlayerForcedRoll,
     currentPlayer,
     dismissMiniGameReturnNotice,
     dismissNextTurnModal,
     gameSetup,
     initializeBoard,
     initializeTurnOrder,
+    markPlayerTokenBagSeen,
     miniGameReturnNotice,
     pendingNextTurnModal,
     setPlayerPosition,
@@ -67,6 +72,8 @@ function GameplayPage() {
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [mergeSaveDraft, setMergeSaveDraft] = useState(null);
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
+  const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
+  const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
   const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
@@ -75,7 +82,10 @@ function GameplayPage() {
   const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
-  const showSpellsNotification = Boolean(currentPlayer?.tokenBag?.length);
+  const showSpellsNotification = Boolean(
+    currentPlayer?.hasUnseenTokenBagTokens &&
+      currentPlayer.tokenBag?.length
+  );
   const hasUnsavedSpellChanges = Boolean(
     currentPlayer &&
       hasDraftSpellChanges({
@@ -103,14 +113,37 @@ function GameplayPage() {
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
+      if (pendingPotionUse.potion.id === 'roll-choice') {
+        setPendingRollChoiceUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
       consumePlayerPotion(
         pendingPotionUse.playerId,
         pendingPotionUse.potionIndex,
         'board'
       );
+
+      if (isHealingPotion(pendingPotionUse.potion)) {
+        setShowHealingPotionAnimation(true);
+      }
     }
 
     setPendingPotionUse(null);
+  };
+
+  const handleSelectRollChoice = (value) => {
+    if (pendingRollChoiceUse) {
+      consumePlayerPotion(
+        pendingRollChoiceUse.playerId,
+        pendingRollChoiceUse.potionIndex,
+        'board',
+        { forcedRollValue: value }
+      );
+    }
+
+    setPendingRollChoiceUse(null);
   };
 
   useEffect(() => {
@@ -127,9 +160,15 @@ function GameplayPage() {
 
   useEffect(() => {
     if (currentPlayer && isForcedSpellSetup && !pendingNextTurnModal) {
+      markPlayerTokenBagSeen(currentPlayer.id);
       setShowSpellsModal(true);
     }
-  }, [currentPlayer, isForcedSpellSetup, pendingNextTurnModal]);
+  }, [
+    currentPlayer,
+    isForcedSpellSetup,
+    markPlayerTokenBagSeen,
+    pendingNextTurnModal,
+  ]);
 
   useEffect(() => {
     if (!showSpellsModal || !currentPlayer) {
@@ -159,12 +198,25 @@ function GameplayPage() {
     setShowDiceModal(true);
   };
 
+  const handleOpenSpellsModal = () => {
+    if (!currentPlayer) {
+      return;
+    }
+
+    markPlayerTokenBagSeen(currentPlayer.id);
+    setShowSpellsModal(true);
+  };
+
   const handleDiceRollComplete = (diceRoll) => {
     if (!currentPlayer) {
       return;
     }
 
     setCurrentDiceRoll(diceRoll);
+
+    if (currentPlayer.nextForcedRoll) {
+      clearPlayerForcedRoll(currentPlayer.id);
+    }
 
     if (currentPlayer.anywhereMode) {
       setHighlightedNodeIds(getAnywhereModeHighlightedNodeIds(gameSetup.board, currentPlayer.position));
@@ -397,16 +449,23 @@ function GameplayPage() {
       <section aria-label="Gameplay panel" className="gameplay-sidebar">
         {currentPlayer ? (
           <div className="gameplay-current-player-summary">
-            {renderPlayerPiece({
-              ariaLabel: 'Current player piece',
-              className: 'gameplay-current-player-piece',
-              height: '150px',
-              player: currentPlayer,
-              style: {
-                alignSelf: 'center',
-                width: 'auto',
-              },
-            })}
+            <div className="gameplay-current-player-image">
+              {renderPlayerPiece({
+                ariaLabel: 'Current player piece',
+                className: 'gameplay-current-player-piece',
+                height: '150px',
+                player: currentPlayer,
+                style: {
+                  alignSelf: 'center',
+                  width: 'auto',
+                },
+              })}
+              {showHealingPotionAnimation ? (
+                <HealingPotionAnimation
+                  onAnimationEnd={() => setShowHealingPotionAnimation(false)}
+                />
+              ) : null}
+            </div>
             <HealthBar
               currentHealth={currentPlayer.currentHealth}
               maxHealth={currentPlayer.maxHealth}
@@ -436,16 +495,16 @@ function GameplayPage() {
             className={languageClassName}
             disabled={!currentPlayer || showDiceModal || showSpellsModal || pendingNextTurnModal}
             type="button"
-            onClick={() => setShowSpellsModal(true)}
+            onClick={handleOpenSpellsModal}
           >
             {gameplayTranslations.spells}
           </Button>
           {showSpellsNotification ? (
             <span
-              aria-label="Uncommitted tokens available"
-              className="spells-button-notification"
+              aria-label="New token bag tokens available"
+              className={`spells-button-notification ${languageClassName}`}
             >
-              !
+              {gameplayTranslations.spellsNew}
             </span>
           ) : null}
         </div>
@@ -492,6 +551,11 @@ function GameplayPage() {
         onCancel={() => setPendingPotionUse(null)}
         onConfirm={handleConfirmPotionUse}
         potion={pendingPotionUse?.potion}
+      />
+      <RollChoiceModal
+        isOpen={Boolean(pendingRollChoiceUse)}
+        language={currentLanguage}
+        onSelect={handleSelectRollChoice}
       />
 
       <SpellsModal
@@ -576,6 +640,7 @@ function GameplayPage() {
       >
         {currentPlayer?.anywhereMode ? <p>Anywhere Mode</p> : null}
         <DiceRoll
+          forcedResult={currentPlayer?.nextForcedRoll?.value ?? null}
           mode="temporary"
           onRollComplete={handleDiceRollComplete}
           onSequenceComplete={handleDiceSequenceComplete}

@@ -124,6 +124,27 @@ describe('PotionList', () => {
     expect(onUsePotion).toHaveBeenCalledWith(potions[2], 2);
   });
 
+  test('shows Board Use controls and source colours for Spellbound and Triple Dice', () => {
+    render(
+      <PotionList
+        context="board"
+        onUsePotion={jest.fn()}
+        potions={[
+          POTION_DEFINITIONS.find(({ id }) => id === 'spellbound'),
+          POTION_DEFINITIONS.find(({ id }) => id === 'triple-dice'),
+        ]}
+      />
+    );
+
+    expect(screen.getAllByRole('button', { name: 'Use' })).toHaveLength(2);
+    expect(
+      screen.getByRole('group', { name: /spellbound potion/i })
+    ).toHaveClass('potion-icon--green');
+    expect(
+      screen.getByRole('group', { name: /triple dice potion/i })
+    ).toHaveClass('potion-icon--red');
+  });
+
   test('keeps every eligible Use button visible but disabled when usage is locked', () => {
     render(
       <PotionList

@@ -60,6 +60,20 @@ describe('BattlePotionList', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  test('keeps Spellbound and Triple Dice out of the Battle potion section', () => {
+    const { container } = render(
+      <BattlePotionList
+        onUsePotion={jest.fn()}
+        potions={[
+          POTION_DEFINITIONS.find(({ id }) => id === 'spellbound'),
+          POTION_DEFINITIONS.find(({ id }) => id === 'triple-dice'),
+        ]}
+      />
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   test('keeps cards aligned and avoids list markup', () => {
     const componentSource = readFileSync(
       `${__dirname}/BattlePotionList.jsx`,

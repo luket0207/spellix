@@ -20,7 +20,10 @@ import {
   replaceTokenInBag,
 } from '../debug/tokenBagAdmin';
 import { gainPotion, resolvePendingPotion } from '../potions/potionCapacity';
-import { canUsePotionInContext } from '../potions/potionUsage';
+import {
+  applyHealingPotionEffect,
+  canUsePotionInContext,
+} from '../potions/potionUsage';
 import { generateBattleRewardChoices } from '../rewards/rewardItems';
 import {
   createCavePotionRewardAssignment,
@@ -348,8 +351,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           baseMaxHealth: player.baseMaxHealth ?? player.maxHealth ?? 100,
           columnMergesUsed:
             player.columnMergesUsed ?? player.mergedColumns?.length ?? 0,
+          hasUnseenTokenBagTokens:
+            player.hasUnseenTokenBagTokens ??
+            Boolean(player.tokenBag?.length),
           language: player.language ?? DEFAULT_PLAYER_LANGUAGE,
           mergedColumns: player.mergedColumns ?? [],
+          nextForcedRoll: player.nextForcedRoll
+            ? { ...player.nextForcedRoll }
+            : null,
           number: player.number ?? index + 1,
           turnPotionUsage: {
             ...player.turnPotionUsage,
@@ -883,17 +892,27 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         player.id === playerId
           ? (() => {
               const spellSlots = cloneSpellSlots(nextSpellData.spellSlots);
+              const tokenBag = cloneTokenBag(nextSpellData.tokenBag);
+              const savedTokenIds = new Set(
+                player.tokenBag.map(({ id }) => id)
+              );
+              const gainedToken = tokenBag.some(
+                ({ id }) => !savedTokenIds.has(id)
+              );
               const nextPlayer = {
                 ...player,
                 columnMergesUsed:
                   nextSpellData.columnMergesUsed ?? player.columnMergesUsed ?? 0,
                 hasCommittedInitialSpells:
                   nextSpellData.hasCommittedInitialSpells ?? player.hasCommittedInitialSpells,
+                hasUnseenTokenBagTokens:
+                  tokenBag.length > 0 &&
+                  (gainedToken || player.hasUnseenTokenBagTokens),
                 mergedColumns: (nextSpellData.mergedColumns ?? player.mergedColumns ?? []).map(
                   (merge) => ({ ...merge, columns: [...merge.columns] })
                 ),
                 spellSlots,
-                tokenBag: cloneTokenBag(nextSpellData.tokenBag),
+                tokenBag,
               };
 
               return applyLightGreenHealthBonus(nextPlayer, spellSlots);
@@ -901,6 +920,27 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           : player
       ),
     }));
+  };
+
+  const markPlayerTokenBagSeen = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(
+        (currentPlayer) => currentPlayer.id === playerId
+      );
+
+      if (!player?.hasUnseenTokenBagTokens) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? { ...currentPlayer, hasUnseenTokenBagTokens: false }
+            : currentPlayer
+        ),
+      };
+    });
   };
 
   const grantPotionToPlayer = (playerId, newPotion) => {
@@ -931,11 +971,17 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
-  const consumePlayerPotion = (playerId, potionIndex, context) => {
+  const consumePlayerPotion = (playerId, potionIndex, context, options = {}) => {
     setGameSetup((currentSetup) => {
       const player = currentSetup.players.find(({ id }) => id === playerId);
       const potion = player?.potions[potionIndex];
       const activeBattle = currentSetup.activeBattle;
+      const isRollChoice = potion?.id === 'roll-choice';
+      const forcedRollValue = options.forcedRollValue;
+      const hasValidForcedRollValue =
+        Number.isInteger(forcedRollValue) &&
+        forcedRollValue >= 1 &&
+        forcedRollValue <= 6;
       const isBoardUse =
         context === 'board' &&
         currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
@@ -954,6 +1000,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         potionIndex < 0 ||
         potionIndex >= player.potions.length ||
         !canUsePotionInContext(potion, context) ||
+        (isRollChoice && !hasValidForcedRollValue) ||
         (!isBoardUse && !isBattleUse)
       ) {
         return currentSetup;
@@ -970,7 +1017,18 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         players: currentSetup.players.map((currentPlayer) =>
           currentPlayer.id === playerId
             ? {
-                ...currentPlayer,
+                ...applyHealingPotionEffect(currentPlayer, potion),
+                activePotion:
+                  isRollChoice && isBoardUse
+                    ? { ...potion, chosenRoll: forcedRollValue }
+                    : currentPlayer.activePotion,
+                nextForcedRoll: isRollChoice
+                  ? {
+                      sourcePotionId: potion.id,
+                      usedFrom: context,
+                      value: forcedRollValue,
+                    }
+                  : currentPlayer.nextForcedRoll,
                 potions: currentPlayer.potions.filter(
                   (_, index) => index !== potionIndex
                 ),
@@ -982,6 +1040,34 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                       },
                     }
                   : {}),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const clearPlayerForcedRoll = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(
+        (currentPlayer) => currentPlayer.id === playerId
+      );
+
+      if (!player?.nextForcedRoll) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                activePotion:
+                  currentPlayer.activePotion?.id === 'roll-choice'
+                    ? null
+                    : currentPlayer.activePotion,
+                nextForcedRoll: null,
               }
             : currentPlayer
         ),
@@ -1494,6 +1580,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           currentPlayer.id === player.id && nextToken
             ? {
                 ...currentPlayer,
+                hasUnseenTokenBagTokens: true,
                 tokenBag:
                   destination === 'tokenBag'
                     ? addTokenToBag(currentPlayer.tokenBag, nextToken)
@@ -1654,6 +1741,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         applyBattleEffect,
         applyBattleDiceResult,
         clearActiveBattle,
+        clearPlayerForcedRoll,
         claimLootChestReward,
         continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
@@ -1667,6 +1755,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         initializeTurnOrder,
         miniGameResult: gameSetup.miniGameResult ?? null,
         miniGameReturnNotice: gameSetup.miniGameReturnNotice ?? null,
+        markPlayerTokenBagSeen,
         pendingNextTurnModal: gameSetup.pendingNextTurnModal ?? false,
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,

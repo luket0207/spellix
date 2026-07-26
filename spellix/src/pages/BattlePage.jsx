@@ -14,7 +14,10 @@ import { getFirstStartAreaPosition } from '../features/gameBoard/board';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import BattlePotionList from '../features/potions/BattlePotionList';
+import HealingPotionAnimation from '../features/potions/HealingPotionAnimation';
 import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
+import RollChoiceModal from '../features/potions/RollChoiceModal';
+import { isHealingPotion } from '../features/potions/potionUsage';
 import {
   getBattleLossMessage,
   getBattleTitle,
@@ -92,6 +95,7 @@ function BattlePage() {
     battleEnemy,
     battlePlayer,
     clearActiveBattle,
+    clearPlayerForcedRoll,
     finalizeBattleEffects,
     gameSetup,
     resolveBattleFreezeCheck,
@@ -113,6 +117,8 @@ function BattlePage() {
   const [pendingEnemyAttackAfterFreeze, setPendingEnemyAttackAfterFreeze] = useState(false);
   const [showLoseModal, setShowLoseModal] = useState(false);
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
+  const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
+  const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const hasBattleContext = Boolean(activeBattle && battleEnemy && battlePlayer);
   const isActiveBattle = Boolean(activeBattle?.phase === 'active' && battlePlayer);
   const [showTurnModal, setShowTurnModal] = useState(isActiveBattle);
@@ -288,6 +294,10 @@ function BattlePage() {
     setIsBattleDiceRolling(false);
     lastDiceRollRef.current = result;
 
+    if (isPlayerTurn && battlePlayer.nextForcedRoll) {
+      clearPlayerForcedRoll(battlePlayer.id);
+    }
+
     if (isFreezeCheck) {
       resolveBattleFreezeCheck(result);
 
@@ -319,14 +329,37 @@ function BattlePage() {
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
+      if (pendingPotionUse.potion.id === 'roll-choice') {
+        setPendingRollChoiceUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
       consumePlayerPotion(
         battlePlayer.id,
         pendingPotionUse.potionIndex,
         'battle'
       );
+
+      if (isHealingPotion(pendingPotionUse.potion)) {
+        setShowHealingPotionAnimation(true);
+      }
     }
 
     setPendingPotionUse(null);
+  };
+
+  const handleSelectRollChoice = (value) => {
+    if (pendingRollChoiceUse) {
+      consumePlayerPotion(
+        battlePlayer.id,
+        pendingRollChoiceUse.potionIndex,
+        'battle',
+        { forcedRollValue: value }
+      );
+    }
+
+    setPendingRollChoiceUse(null);
   };
 
   return (
@@ -385,6 +418,11 @@ function BattlePage() {
             ) : (
               <p aria-label="Battle player piece">{battlePlayer.colour}</p>
             )}
+            {showHealingPotionAnimation ? (
+              <HealingPotionAnimation
+                onAnimationEnd={() => setShowHealingPotionAnimation(false)}
+              />
+            ) : null}
           </BattleActorImage>
           <HealthBar currentHealth={battlePlayer.currentHealth} maxHealth={battlePlayer.maxHealth} />
           <CommittedSpellSlotList
@@ -459,6 +497,7 @@ function BattlePage() {
           autoRoll={shouldAutoRollEnemy}
           autoRollRequestId={enemyAutoRollRequestId}
           disabled={isBattleDiceDisabled}
+          forcedResult={isPlayerTurn ? battlePlayer.nextForcedRoll?.value ?? null : null}
           forcedRollRequest={forcedRollRequest}
           mode="persistent"
           onRollComplete={handleDiceRollComplete}
@@ -475,6 +514,11 @@ function BattlePage() {
         onCancel={() => setPendingPotionUse(null)}
         onConfirm={handleConfirmPotionUse}
         potion={pendingPotionUse?.potion}
+      />
+      <RollChoiceModal
+        isOpen={Boolean(pendingRollChoiceUse)}
+        language={currentLanguage}
+        onSelect={handleSelectRollChoice}
       />
 
       {/* DEBUG ONLY: Floating battle debug controls. Remove before production. */}

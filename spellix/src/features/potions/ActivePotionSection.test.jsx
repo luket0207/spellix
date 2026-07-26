@@ -54,4 +54,35 @@ describe('ActivePotionSection', () => {
       /\.active-potion-content\s*{[^}]*display:\s*flex;[^}]*justify-content:\s*center;[^}]*align-items:\s*center;/s
     );
   });
+
+  test('uses yellow for all Active Potion text without changing its background', () => {
+    const stylesheet = readFileSync(`${__dirname}/PotionList.css`, 'utf8');
+    const sectionRule = stylesheet.match(
+      /\.active-potion-section\s*\{([^}]*)\}/
+    )?.[1];
+
+    expect(sectionRule).toMatch(/background:\s*#5a351f/);
+    expect(sectionRule).toMatch(/color:\s*#F5FA00/);
+    expect(stylesheet).toMatch(
+      /\.active-potion-section \.potion-icon-name,\s*\.active-potion-section \.potion-icon-tooltip\s*\{[^}]*color:\s*inherit;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.active-potion-section \.active-potion-chosen-roll\s*\{[^}]*color:\s*#F5FA00;/s
+    );
+  });
+
+  test('overlays a Roll Choice value using the English font', () => {
+    render(
+      <ActivePotionSection
+        activePotion={{ ...activePotion, chosenRoll: 4 }}
+        title="Active Potion"
+      />
+    );
+
+    const chosenRoll = screen.getByLabelText('Chosen roll 4');
+
+    expect(chosenRoll).toHaveTextContent('4');
+    expect(chosenRoll).toHaveClass('active-potion-chosen-roll', 'language-en');
+    expect(chosenRoll.parentElement).toHaveClass('potion-icon-flask');
+  });
 });

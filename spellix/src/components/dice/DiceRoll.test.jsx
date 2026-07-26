@@ -223,3 +223,35 @@ test('persistent mode animates each requested forced result without using random
   expect(onRollComplete).toHaveBeenCalledTimes(6);
   expect(randomSpy).not.toHaveBeenCalled();
 });
+
+test('persistent forcedResult waits for a click and the following roll is random again', () => {
+  const onRollComplete = jest.fn();
+  const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+  const { rerender } = render(
+    <DiceRoll forcedResult={4} mode="persistent" onRollComplete={onRollComplete} />
+  );
+  const rollButton = screen.getByRole('button', { name: /roll dice/i });
+
+  expect(screen.getByRole('img', { name: /dice face 1/i })).toBeInTheDocument();
+  expect(randomSpy).not.toHaveBeenCalled();
+
+  fireEvent.click(rollButton);
+  expect(screen.getByRole('img', { name: /dice rolling/i })).toHaveClass(
+    'dice-roll-cube--face-4'
+  );
+  expect(randomSpy).not.toHaveBeenCalled();
+
+  act(() => {
+    jest.advanceTimersByTime(PERSISTENT_ROLL_DURATION_MS + PERSISTENT_RESULT_DURATION_MS);
+  });
+  expect(onRollComplete).toHaveBeenLastCalledWith(4);
+
+  rerender(<DiceRoll forcedResult={null} mode="persistent" onRollComplete={onRollComplete} />);
+  fireEvent.click(rollButton);
+  act(() => {
+    jest.advanceTimersByTime(PERSISTENT_ROLL_DURATION_MS);
+  });
+
+  expect(randomSpy).toHaveBeenCalledTimes(1);
+  expect(onRollComplete).toHaveBeenLastCalledWith(1);
+});

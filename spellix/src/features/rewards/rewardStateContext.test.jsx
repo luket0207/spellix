@@ -16,7 +16,11 @@ function createBattleSetup(activeBattleOverrides = {}) {
       playerId: 'player-1',
       ...activeBattleOverrides,
     },
-    players: initialSetup.players.map((player) => ({ ...player, tokenBag: [] })),
+    players: initialSetup.players.map((player) => ({
+      ...player,
+      hasUnseenTokenBagTokens: false,
+      tokenBag: [],
+    })),
   };
 }
 
@@ -86,6 +90,7 @@ function RewardStateProbe() {
       <p>{`Reward destination: ${activeBattle?.rewardResolution?.destination ?? 'none'}`}</p>
       <p>{`Player potions: ${gameSetup.players[0].potions.map(({ name }) => name).join(',') || 'empty'}`}</p>
       <p>{`Player token bag: ${gameSetup.players[0].tokenBag.map(({ id }) => id).join(',') || 'empty'}`}</p>
+      <p>{`Unseen bag tokens: ${gameSetup.players[0].hasUnseenTokenBagTokens ? 'yes' : 'no'}`}</p>
       <p>{`Player spell tokens: ${gameSetup.players[0].spellSlots.flatMap(({ tokens }) => tokens).map(({ committed, id }) => `${id}:${committed}`).join(',') || 'empty'}`}</p>
       <pre data-testid="reward-choices">{JSON.stringify(activeBattle?.rewardChoices ?? [])}</pre>
     </div>
@@ -142,6 +147,7 @@ describe('battle reward state', () => {
 
     expect(screen.getByText('Reward destination: tokenBag')).toBeInTheDocument();
     expect(screen.getByText('Player token bag: player-1-red-1')).toBeInTheDocument();
+    expect(screen.getByText('Unseen bag tokens: yes')).toBeInTheDocument();
   });
 
   test('does not generate reward choices when a battle is lost', () => {
@@ -158,6 +164,33 @@ describe('battle reward state', () => {
     expect(screen.getByText('Phase: lost')).toBeInTheDocument();
     expect(screen.getByTestId('reward-choices')).toHaveTextContent('[]');
     expect(randomSpy).not.toHaveBeenCalled();
+  });
+
+  test('marks Cave tokens assigned to the shared token bag as unseen', () => {
+    const setup = createBattleSetup({
+      phase: 'reward',
+      rewardChoices: [
+        {
+          category: 'Common Token',
+          id: 'reward-choice-1',
+          item: { label: 'Red', rarity: 'Common', type: 'red' },
+          itemType: 'token',
+        },
+      ],
+      selectedRewardChoiceId: 'reward-choice-1',
+      source: 'cave',
+    });
+
+    render(
+      <GameSetupProvider initialGameSetup={setup}>
+        <RewardStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add reward token to bag/i }));
+
+    expect(screen.getByText('Reward destination: tokenBag')).toBeInTheDocument();
+    expect(screen.getByText('Unseen bag tokens: yes')).toBeInTheDocument();
   });
 
   test('stores reward choices when combat resolution detects a win', () => {
@@ -211,6 +244,7 @@ describe('battle reward state', () => {
         'Player token bag: player-1-red-1,player-1-blue-2,player-1-blue-3,player-1-blue-4,player-1-blue-5'
       )
     ).toBeInTheDocument();
+    expect(screen.getByText('Unseen bag tokens: yes')).toBeInTheDocument();
   });
 
   test('commits one selected reward token to a valid spell slot only once', () => {
