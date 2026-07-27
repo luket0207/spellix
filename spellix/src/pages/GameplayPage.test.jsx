@@ -127,6 +127,8 @@ function PlayerPotionStateProbe() {
       <p>{`Test token bag: ${currentPlayer.tokenBag.map(({ id }) => id).join(',') || 'empty'}`}</p>
       <p>{`Test board potion used: ${currentPlayer.turnPotionUsage?.boardPotionUsedThisTurn ?? false}`}</p>
       <p>{`Test active potion: ${currentPlayer.activePotion?.id ?? 'none'}`}</p>
+      <p>{`Test next board dice: ${currentPlayer.nextBoardDiceCount ?? 1}`}</p>
+      <p>{`Test forced roll: ${currentPlayer.nextForcedRoll?.value ?? 'none'}`}</p>
     </div>
   );
 }
@@ -141,6 +143,62 @@ function TargetPotionStateProbe() {
           {`${player.id} target effect: pending=${
             player.pendingPotionEffects?.map(({ potionId }) => potionId).join(',') || 'none'
           }; active=${player.activePotion?.id ?? 'none'}`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function TroublemakerStateProbe() {
+  const { gameSetup } = useGameSetup();
+
+  return (
+    <div>
+      {gameSetup.players.map((player) => (
+        <p key={player.id}>
+          {`${player.id} troublemaker state: active=${
+            player.activePotion?.id ?? 'none'
+          }; target=${
+            player.activePotion?.targetPlayerId ?? 'none'
+          }; tokens=${
+            player.spellSlots
+              .flatMap(({ tokens }) => tokens)
+              .map(({ id }) => id)
+              .join(',') || 'none'
+          }`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function DevineChanceStateProbe() {
+  const { gameSetup } = useGameSetup();
+
+  return (
+    <div>
+      {gameSetup.players.map((player) => (
+        <p key={player.id}>
+          {`${player.id} Devine Chance state: active=${
+            player.activePotion?.id ?? 'none'
+          }; health=${player.currentHealth}/${player.maxHealth}`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function StormMasterStateProbe() {
+  const { currentPlayer, gameSetup } = useGameSetup();
+
+  return (
+    <div>
+      <p>{`Storm current player: ${currentPlayer.id}`}</p>
+      <p>{`Storm pending caster: ${gameSetup.stormMasterPendingPlayerId ?? 'none'}`}</p>
+      <p>{`Storm effect caster: ${gameSetup.stormMasterEffect?.casterPlayerId ?? 'none'}`}</p>
+      {gameSetup.players.map((player) => (
+        <p key={player.id}>
+          {`${player.id} storm position: ${player.position?.x ?? 'none'},${player.position?.y ?? 'none'}`}
         </p>
       ))}
     </div>
@@ -1235,6 +1293,570 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     ).toBeInTheDocument();
   });
 
+  test('resolves Troublemaker with one shared even roll before movement continues', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const targetStartingToken = initialGameSetup.players[1].spellSlots[0].tokens[0];
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'troublemaker'),
+    ];
+    initialGameSetup.players[0].nextForcedRoll = {
+      sourcePotionId: 'test',
+      usedFrom: 'board',
+      value: 2,
+    };
+    initialGameSetup.players[1].spellSlots[0].tokens.push({
+      committed: true,
+      id: 'target-black',
+      protected: false,
+      type: 'black',
+    });
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <TroublemakerStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const chooser = screen.getByRole('dialog', {
+      name: 'Choose a player to target',
+    });
+
+    expect(
+      within(chooser).queryByRole('group', { name: 'Player 1 option' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(
+        within(chooser).getByRole('group', { name: 'Player 2 option' })
+      ).getByRole('button', { name: 'Choose' })
+    );
+
+    expect(
+      screen.getByText(
+        /player-1 troublemaker state: active=troublemaker; target=player-2/
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Active Potion' })
+      ).getByText('Troublemaker')
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+
+    expect(screen.getAllByLabelText('Dice roller')).toHaveLength(1);
+    finishDiceSequence();
+
+    const resultModal = screen.getByRole('dialog', {
+      name: 'Troublemaker token loss',
+    });
+
+    expect(
+      within(resultModal).getByRole('img', { name: 'Player 2 piece' })
+    ).toBeInTheDocument();
+    expect(
+      within(resultModal).getByText('You lost this token')
+    ).toBeInTheDocument();
+    expect(
+      within(resultModal).getByRole('img', { name: 'Black lost token' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        new RegExp(
+          `player-2 troublemaker state: active=none; target=none; tokens=${targetStartingToken.id}`
+        )
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /player-1 troublemaker state: active=troublemaker; target=player-2/
+      )
+    ).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(resultModal).getByRole('button', { name: 'Continue' })
+    );
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Troublemaker token loss' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /player-1 troublemaker state: active=none; target=none/
+      )
+    ).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledTimes(1);
+    expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      2,
+      { blockedNodeIds: [] }
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Move to square 1, 28' })
+    );
+  });
+
+  test('resolves Devine Chance with one shared even roll before movement continues', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0] = {
+      ...initialGameSetup.players[0],
+      currentHealth: 40,
+      potions: [
+        POTION_DEFINITIONS.find(({ id }) => id === 'devine-chance'),
+      ],
+      nextForcedRoll: {
+        sourcePotionId: 'test',
+        usedFrom: 'board',
+        value: 2,
+      },
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <DevineChanceStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(
+      screen.getByText(
+        'player-1 Devine Chance state: active=devine-chance; health=40/100'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Active Potion' })
+      ).getByText('Devine Chance')
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+
+    expect(screen.getAllByLabelText('Dice roller')).toHaveLength(1);
+    finishDiceSequence();
+
+    const resultModal = screen.getByRole('dialog', {
+      name: 'Devine Chance result',
+    });
+
+    expect(
+      within(resultModal).getByText('You recovered all your health')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'player-1 Devine Chance state: active=devine-chance; health=100/100'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'player-2 Devine Chance state: active=none; health=15/100'
+      )
+    ).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(resultModal).getByRole('button', { name: 'Continue' })
+    );
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Devine Chance result' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'player-1 Devine Chance state: active=none; health=100/100'
+      )
+    ).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledTimes(1);
+    expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      2,
+      { blockedNodeIds: [] }
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Move to square 1, 28' })
+    );
+  });
+
+  test('keeps Buy and Sell when the token bag has fewer than three tokens', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'buy-and-sell'),
+    ];
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'bag-red', type: 'red' },
+      { committed: false, id: 'bag-blue', type: 'blue' },
+    ];
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    const modal = screen.getByRole('dialog', { name: 'Buy and Sell' });
+
+    expect(
+      within(modal).getByText(
+        'You do not have enough tokens in your token bag to cast this potion'
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(modal).getByRole('button', { name: 'OK' }));
+
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('1/3')
+    ).toBeInTheDocument();
+  });
+
+  test('discards three tokens, gains one choice, then consumes Buy and Sell', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'buy-and-sell'),
+    ];
+    initialGameSetup.players[0].tokenBag = [
+      { committed: false, id: 'bag-red', type: 'red' },
+      { committed: false, id: 'bag-blue', type: 'blue' },
+      { committed: false, id: 'bag-green', type: 'green' },
+    ];
+    jest
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.99);
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    let modal = screen.getByRole('dialog', { name: 'Buy and Sell' });
+    const discardButton = within(modal).getByRole('button', {
+      name: 'Discard',
+    });
+
+    expect(discardButton).toBeDisabled();
+    within(modal)
+      .getAllByRole('button', { name: /select .* bag token/i })
+      .forEach((button) => fireEvent.click(button));
+    expect(discardButton).toBeEnabled();
+    fireEvent.click(discardButton);
+
+    modal = screen.getByRole('dialog', { name: 'Buy and Sell' });
+    const rewardOptions = within(modal).getAllByRole('group', {
+      name: /reward token option/i,
+    });
+
+    expect(rewardOptions).toHaveLength(2);
+    expect(
+      rewardOptions.map((option) =>
+        within(option).getByRole('img').getAttribute('aria-label')
+      )
+    ).toEqual(['red reward token', 'grey reward token']);
+    fireEvent.click(
+      within(rewardOptions[1]).getByRole('button', { name: 'Choose' })
+    );
+
+    expect(
+      within(modal).getByText('The token was added to your token bag')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Test token bag: player-1-grey-1')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'OK' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Buy and Sell' })
+    ).not.toBeInTheDocument();
+  });
+
+  test('replaces Cauldron in its original slot after a forced potion choice', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0] = {
+      ...initialGameSetup.players[0],
+      activePotion: null,
+      currentHealth: 40,
+      potions: [
+        POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+        POTION_DEFINITIONS.find(({ id }) => id === 'cauldron'),
+        POTION_DEFINITIONS.find(({ id }) => id === 'heal'),
+      ],
+    };
+    jest
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(0.99);
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    const potionSection = screen.getByRole('region', { name: 'Potions' });
+    const cauldronSlot = within(potionSection)
+      .getByRole('group', { name: 'Cauldron potion' })
+      .closest('.potion-slot');
+
+    fireEvent.click(
+      within(cauldronSlot).getByRole('button', { name: 'Use' })
+    );
+    let confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'No' })
+    );
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Cauldron choices' })
+    ).not.toBeInTheDocument();
+    expect(within(cauldronSlot).getByText('Cauldron')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+
+    fireEvent.click(
+      within(cauldronSlot).getByRole('button', { name: 'Use' })
+    );
+    confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'Yes' })
+    );
+
+    const choiceModal = screen.getByRole('dialog', {
+      name: 'Cauldron choices',
+    });
+    const options = within(choiceModal).getAllByRole('group', {
+      name: /cauldron potion option/i,
+    });
+
+    expect(options).toHaveLength(3);
+    expect(
+      options.map((option) =>
+        within(option).getByRole('group', { name: /potion$/i })
+          .getAttribute('aria-label')
+      )
+    ).toEqual([
+      'Roll Choice potion',
+      'Devine Chance potion',
+      'SOS potion',
+    ]);
+    expect(
+      within(choiceModal).queryByRole('button', { name: /cancel|close/i })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('modal-overlay'));
+    fireEvent.keyDown(choiceModal, { key: 'Escape' });
+    expect(screen.getByRole('dialog', {
+      name: 'Cauldron choices',
+    })).toBeInTheDocument();
+
+    fireEvent.click(
+      within(options[1]).getByRole('button', { name: 'Choose' })
+    );
+
+    const potionSlots = potionSection.querySelectorAll('.potion-slot');
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Cauldron choices' })
+    ).not.toBeInTheDocument();
+    expect(within(potionSlots[0]).getByText('Small Heal')).toBeInTheDocument();
+    expect(within(potionSlots[1]).getByText('Devine Chance')).toBeInTheDocument();
+    expect(within(potionSlots[2]).getByText('Heal')).toBeInTheDocument();
+    expect(within(potionSection).queryByText('Cauldron')).not.toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    within(potionSection)
+      .getAllByRole('button', { name: 'Use' })
+      .forEach((button) => expect(button).toBeDisabled());
+  });
+
+  test.each([
+    ['double-dice', 'Double Dice', 2, [0.34, 0.8], 8],
+    ['triple-dice', 'Triple Dice', 3, [0.5, 0.7, 0.99], 15],
+  ])(
+    'activates %s, rolls every die simultaneously, and moves by the total',
+    (potionId, potionName, diceCount, randomValues, expectedTotal) => {
+      const initialGameSetup = createCommittedGameplaySetup();
+
+      initialGameSetup.players[0].potions = [
+        POTION_DEFINITIONS.find(({ id }) => id === potionId),
+      ];
+
+      render(
+        <GameSetupProvider initialGameSetup={initialGameSetup}>
+          <GameplayPage />
+          <PlayerPotionStateProbe />
+        </GameSetupProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+      fireEvent.click(
+        within(
+          screen.getByRole('dialog', { name: /use potion confirmation/i })
+        ).getByRole('button', { name: 'Yes' })
+      );
+
+      expect(screen.getByText(`Test active potion: ${potionId}`)).toBeInTheDocument();
+      expect(screen.getByText(`Test next board dice: ${diceCount}`)).toBeInTheDocument();
+      expect(
+        within(
+          screen.getByRole('region', { name: 'Active Potion' })
+        ).getByText(potionName)
+      ).toBeInTheDocument();
+
+      const randomSpy = jest.spyOn(Math, 'random');
+      randomValues.forEach((value) => randomSpy.mockReturnValueOnce(value));
+      fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+
+      expect(screen.getAllByLabelText('Dice roller')).toHaveLength(diceCount);
+      expect(screen.getAllByRole('img', { name: 'Dice rolling' })).toHaveLength(
+        diceCount
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+
+      expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+        expect.any(Object),
+        { x: 0, y: 29 },
+        expectedTotal,
+        { blockedNodeIds: [] }
+      );
+      expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+      expect(screen.getByText('Test next board dice: 1')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Move to square 1, 28' })
+      );
+    }
+  );
+
+  test('uses Roll Choice for only the first die of a multi-dice board roll', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'double-dice'
+    );
+    initialGameSetup.players[0].nextBoardDiceCount = 2;
+    initialGameSetup.players[0].nextForcedRoll = {
+      sourcePotionId: 'roll-choice',
+      usedFrom: 'board',
+      value: 4,
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+      </GameSetupProvider>
+    );
+
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.7);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('img', { name: 'Dice face 4' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Dice face 5' })).toBeInTheDocument();
+    expect(randomSpy).toHaveBeenCalledTimes(1);
+    expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      9,
+      { blockedNodeIds: [] }
+    );
+    expect(screen.getByText('Test forced roll: none')).toBeInTheDocument();
+  });
+
+  test('halves the summed multi-dice total when Heavy Weight is active', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'heavy-weight'
+    );
+    initialGameSetup.players[0].nextBoardDiceCount = 2;
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    jest
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0.34)
+      .mockReturnValueOnce(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(mockGetHighlightedNodeIds).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      4,
+      { blockedNodeIds: [] }
+    );
+    expect(
+      screen.getByText('4', {
+        selector: '.heavy-weight-dice-result-number',
+      })
+    ).toBeInTheDocument();
+  });
+
   test('heals with Small Heal and animates the potion over the board player image', () => {
     const initialGameSetup = createCommittedGameplaySetup();
     const smallHeal = POTION_DEFINITIONS.find(({ id }) => id === 'small-heal');
@@ -1612,5 +2234,271 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       expect.any(Number),
       { blockedNodeIds: ['start-area'] }
     );
+  });
+
+  test('uses one even Storm Master roll for caster movement and blocks every other player until the caster returns', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'storm-master'),
+    ];
+    initialGameSetup.players[0].nextForcedRoll = {
+      sourcePotionId: 'test',
+      usedFrom: 'board',
+      value: 2,
+    };
+    initialGameSetup.players[1].nextForcedRoll = {
+      sourcePotionId: 'test',
+      usedFrom: 'board',
+      value: 3,
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+        <StormMasterStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(screen.getByText('Test active potion: storm-master')).toBeInTheDocument();
+    expect(screen.getByText('Storm pending caster: player-1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(screen.getByText('Storm pending caster: none')).toBeInTheDocument();
+    expect(screen.getByText('Storm effect caster: player-1')).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Move to square 1, 28' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Turn change' }))
+        .getByRole('button', { name: 'OK' })
+    );
+
+    expect(screen.getByText('Storm current player: player-2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+
+    const stormResult = screen.getByRole('dialog', {
+      name: 'Storm Master result',
+    });
+
+    expect(
+      within(stormResult).getByText('The storm prevents you from moving')
+    ).toHaveClass('larger-text', 'language-en');
+    expect(screen.getByText('player-2 storm position: 1,29')).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      within(stormResult).getByRole('button', { name: 'Continue' })
+    );
+
+    expect(screen.getByText('Storm current player: player-1')).toBeInTheDocument();
+    expect(screen.getByText('Storm effect caster: none')).toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Turn change' })
+    ).toBeInTheDocument();
+  });
+
+  test('uses an odd Storm Master roll to end the caster turn without movement or a lasting effect', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'storm-master'),
+    ];
+    initialGameSetup.players[0].nextForcedRoll = {
+      sourcePotionId: 'test',
+      usedFrom: 'board',
+      value: 3,
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <PlayerPotionStateProbe />
+        <StormMasterStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+
+    const stormResult = screen.getByRole('dialog', {
+      name: 'Storm Master result',
+    });
+
+    expect(
+      within(stormResult).getByText('The storm targeted you')
+    ).toHaveClass('larger-text', 'language-en');
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(screen.getByText('Storm effect caster: none')).toBeInTheDocument();
+    expect(screen.getByText('player-1 storm position: 0,29')).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(stormResult).getByRole('button', { name: 'Continue' })
+    );
+
+    expect(screen.getByText('Storm current player: player-2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Turn change' })
+    ).toBeInTheDocument();
+  });
+
+  test('uses the total of a multi-dice Storm Master roll for its even result', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const stormMaster = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'storm-master'
+    );
+
+    initialGameSetup.stormMasterPendingPlayerId = 'player-1';
+    initialGameSetup.players[0] = {
+      ...initialGameSetup.players[0],
+      activePotion: stormMaster,
+      nextBoardDiceCount: 2,
+      nextForcedRoll: {
+        sourcePotionId: 'test',
+        usedFrom: 'board',
+        value: 2,
+      },
+    };
+    jest.spyOn(Math, 'random').mockReturnValue(0.2);
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <StormMasterStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    expect(screen.getAllByLabelText('Dice roller')).toHaveLength(2);
+    finishDiceSequence();
+
+    expect(mockGetHighlightedNodeIds).toHaveBeenCalledWith(
+      expect.any(Object),
+      { x: 0, y: 29 },
+      4,
+      { blockedNodeIds: [] }
+    );
+    expect(screen.getByText('Storm effect caster: player-1')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('dialog', { name: 'Storm Master result' })
+    ).not.toBeInTheDocument();
+  });
+
+  test('uses the Heavy Weight-adjusted final value for a pending Storm Master result', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.stormMasterPendingPlayerId = 'player-1';
+    initialGameSetup.players[0] = {
+      ...initialGameSetup.players[0],
+      activePotion: {
+        ...POTION_DEFINITIONS.find(({ id }) => id === 'heavy-weight'),
+        sourcePlayerId: 'player-2',
+      },
+      nextForcedRoll: {
+        sourcePotionId: 'test',
+        usedFrom: 'board',
+        value: 5,
+      },
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <StormMasterStateProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(
+      screen.getByRole('dialog', { name: 'Storm Master result' })
+    ).toHaveTextContent('The storm targeted you');
+    expect(screen.getByText('Storm effect caster: none')).toBeInTheDocument();
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
+  });
+
+  test('allows a storm-blocked player to use a Board potion and resolves Devine Chance before blocking movement', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+    const devineChance = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'devine-chance'
+    );
+
+    initialGameSetup.currentTurnIndex = 1;
+    initialGameSetup.stormMasterEffect = {
+      affectedPlayerIds: ['player-2'],
+      casterPlayerId: 'player-1',
+      expiresWhenTurnReturnsToPlayerId: 'player-1',
+    };
+    initialGameSetup.players[1] = {
+      ...initialGameSetup.players[1],
+      activePotion: devineChance,
+      nextForcedRoll: {
+        sourcePotionId: 'test',
+        usedFrom: 'board',
+        value: 2,
+      },
+      potions: [
+        POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+      ],
+    };
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+        <StormMasterStateProbe />
+      </GameSetupProvider>
+    );
+
+    const useButton = screen.getByRole('button', { name: 'Use' });
+
+    expect(useButton).toBeEnabled();
+    fireEvent.click(useButton);
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
+    finishDiceSequence();
+
+    const devineResult = screen.getByRole('dialog', {
+      name: 'Devine Chance result',
+    });
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Storm Master result' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(devineResult).getByRole('button', { name: 'Continue' })
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: 'Storm Master result' })
+    ).toHaveTextContent('The storm prevents you from moving');
+    expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
   });
 });

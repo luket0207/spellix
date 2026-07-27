@@ -1325,7 +1325,18 @@ Feature-008: Implement Double Dice and Triple Dice potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added optional player `nextBoardDiceCount` state to represent one pending two- or three-dice Board roll; it is set by potion consumption and cleared after resolution or at turn end.
+* Double Dice and Triple Dice now consume through the existing confirmation flow, lock Board potion usage, and appear in Active Potion until their roll resolves.
+* Added one feature-local MultiDiceRoll coordinator that repeats the existing DiceRoll component horizontally, starts all dice together, and reports one summed result after every die resolves.
+* Board movement and highlights use the summed result, including verified 3 + 5 = 8 and 4 + 5 + 6 = 15 outcomes.
+* Roll Choice forces only the first die while remaining dice stay random; its existing one-use forced state clears after the aggregate roll.
+* Prepared Heavy Weight and multi-dice state sums every die first, then applies the existing rounded-up halving rule and localized Heavy Weight aggregate result.
+* Multi-dice Active Potion and pending dice count clear after the roll, or at turn end if no roll occurs, so later Board turns return to one die.
+* Existing DiceRoll animation, Battle dice, movement rules beyond the roll amount, routes, and unrelated Active Potion presentation were not changed.
 
 Related Feature
 
@@ -1476,7 +1487,16 @@ Feature-009: Implement Troublemaker potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added Troublemaker to the existing other-player targeting path so the caster is excluded, the potion is consumed only after a valid target is chosen, and the chosen player id is stored on the caster's Active Potion.
+* Added guarded Troublemaker roll resolution that uses the one existing Board die result for parity and later movement: even targets the chosen player, while odd targets the caster.
+* Reused the EPIC-007 death-token helper for one-token loss, preserving protected starting tokens, Black-token priority, random eligible fallback, immutable spell-slot updates, and safe empty results.
+* Kept Troublemaker active while the dice and token result resolve, blocked movement selection until acknowledgement, then cleared the Active Potion and generated movement choices from the already-recorded roll.
+* Added a lo-fi wooden result modal with the losing player's centred image, exact English/Japanese loss text, the lost Token component, localized Continue action, and a clear no-eligible-token message without list markup.
+* Preserved existing Spellbound, Heavy Weight, multi-dice, Roll Choice, Board movement, battle, and death-token behavior.
 
 Related Feature
 
@@ -1631,7 +1651,16 @@ Feature-010: Implement Devine Chance potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Devine Chance now consumes through the existing Board confirmation flow without healing immediately, locks Board potion use, and appears in the caster's Active Potion until its roll result is acknowledged.
+* Added guarded Devine Chance roll resolution that uses the caster's one existing Board die result: even fully heals only the caster, while odd fully heals every other player and leaves the caster unchanged.
+* Full healing sets each affected player's `currentHealth` to their existing `maxHealth`, preserving Light Green-adjusted maximums and making no max-health calculation changes.
+* Added a feature-local result state and lo-fi default wooden modal with exact English/Japanese text, `larger-text`, the correct language class, centred localized Continue action, yellow inherited text, and no list markup.
+* Movement choices remain blocked through the dice and result modal, then use the already-recorded roll after Continue; Devine Chance is removed from Active Potion at that point.
+* Preserved existing percentage-healing potions, healing animation, Troublemaker, multi-dice, Roll Choice, Board movement, battle behavior, and player max-health rules.
 
 Related Feature
 
@@ -1790,7 +1819,17 @@ Feature-011: Implement Buy and Sell potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added the localized Buy and Sell modal flow after the existing Board potion confirmation, while leaving the potion in its slot and Board potion usage unlocked until the reward is successfully added.
+* Players with fewer than three bag tokens receive the exact required `larger-text` message and OK action without any token, potion, Active Potion, or usage-state change.
+* Eligible players can select exactly three displayed bag-token instances in a div-based wrapping layout; Discard remains disabled until three are selected, and Cancel clears the local selection without changing game state.
+* Discarding validates and removes exactly those three token ids in one transaction, then presents two different Token component rewards with Choose actions.
+* Reward generation samples directly from every token type with equal probability and excludes the first result from the second draw, without rarity weighting.
+* Choosing a reward creates a new normal token instance, adds it to the bag, consumes Buy and Sell, and locks Board potion usage in the same validated state update without entering Active Potion.
+* The same modal then displays the exact localized success text and OK action; token bag capacity and unrelated potion, token, route, and UI behavior were not changed.
 
 Related Feature
 
@@ -2015,7 +2054,17 @@ Feature-012: Implement Cauldron potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Added a pure without-replacement Cauldron generator that draws directly from all 28 records in the current potion source-of-truth table, giving every Common/Rare and Mini/Board/Battle/Both potion equal eligibility, including Cauldron itself.
+* Added a feature-local lo-fi Cauldron choice modal that reuses the default wooden Modal, PotionIcon, and Button components to show exactly three distinct localized potion choices horizontally with localized Choose actions underneath.
+* The choice modal has no Cancel or close control and the shared Modal has no overlay-click or Escape dismissal behavior, so confirming Cauldron forces one of the three choices.
+* Added guarded `cauldronChoiceState` containing the player id, original potion slot index, and three canonical potion ids; starting the flow leaves Cauldron in place, does not lock Board use, and does not enter Active Potion.
+* Generic potion consumption now rejects Cauldron so its required choice cannot be bypassed.
+* Choosing a verified offered potion atomically replaces Cauldron at its original index, clears the choice state, and marks Board potion usage for the turn without triggering or activating the replacement.
+* Potion capacity, general reward generation, rarity data, existing potion effects, routes, and unrelated potion UI behavior were not changed.
 
 Related Feature
 
@@ -2289,7 +2338,18 @@ Feature-013: Implement Storm Master potion behaviour
 
 Status
 
-* not started
+* done
+
+Completion Notes
+
+* Reused the standard Board potion Use/confirmation flow so confirmed Storm Master is consumed, marks Board potion usage, enters the caster's Active Potion section, and remains pending for that caster's normal board roll.
+* Added guarded game-level pending, result, and one-round effect state. The caster's final movement value resolves Storm Master, removes it from Active Potion, and either records every other player as movement-blocked on even or creates the immediate caster-targeted result on odd.
+* Even rolls continue through the existing movement highlights for the caster. Odd rolls and affected-player rolls create a forced localized result modal, skip movement highlights and destination selection, preserve the player's square, then advance through the normal next-turn modal.
+* The effect removes each affected player after their blocked turn and expires when turn order returns to the original caster.
+* Reused the existing roll pipeline after multi-dice totals and Heavy Weight adjustment. Blocked players still roll, Roll Choice and multi-dice cleanup still occurs, and existing Troublemaker or Devine Chance result handling completes before the storm blocks movement.
+* Added one feature-local lo-fi result modal using the existing wooden Modal and Button components, exact English/Japanese messages, language classes, `larger-text`, centred shared actions, and no list markup.
+* Followed Feature-013's explicit rule that storm-blocked players may still use otherwise allowed Board potions; the older Storm Master data description's Board-potion restriction was not applied.
+* Battle behavior, potion confirmation, one-potion-per-turn limits, player targeting, Mini potions, normal movement, and unrelated gameplay UI were not changed.
 
 Related Feature
 

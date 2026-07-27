@@ -1,0 +1,21 @@
+.troublemaker-result-content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.troublemaker-result-player-image {
+  display: block;
+  height: 180px;
+  margin: 0 auto;
+  width: auto;
+}
+
+.troublemaker-result-message,
+.troublemaker-result-empty {
+  color: #F5FA00;
+  margin: 0;
+  text-align: center;
+}

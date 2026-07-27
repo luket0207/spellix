@@ -1,0 +1,20 @@
+.cauldron-choice-title {
+  margin-bottom: 60px;
+  text-align: center;
+  color: #F5FA00;
+  font-weight: bold;
+}
+
+.cauldron-choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+}
+
+.cauldron-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}

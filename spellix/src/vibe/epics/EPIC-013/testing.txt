@@ -314,6 +314,50 @@ Manual Testing Still Needed
 
 ---
 
+Feature-008: Implement Double Dice and Triple Dice potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Double Dice, click Use, and accept the existing confirmation.
+   Expected: Double Dice is consumed, Board potion usage locks, and Double Dice appears in Active Potion.
+2. Click Roll Dice.
+   Expected: Two existing dice components appear next to each other and begin rolling simultaneously.
+3. Resolve a 3 and 5.
+   Expected: Movement highlights use 8, Double Dice clears from Active Potion after both dice resolve, and the modal closes after both result phases finish.
+4. End the turn without rolling in a separate Double Dice activation.
+   Expected: The unused effect clears at turn end and that player's later Board turn returns to one die.
+5. Repeat activation with Triple Dice and resolve 4, 5, and 6.
+   Expected: Three dice appear horizontally, roll together, total 15 for movement, and Triple Dice clears after resolution.
+6. Prepare Roll Choice value 4 with Double Dice and roll.
+   Expected: The first die is 4, only the remaining die is random, the movement result is their sum, and Roll Choice clears once.
+7. Prepare Heavy Weight with a two-dice Board roll totalling 7.
+   Expected: Both dice roll, the aggregate Heavy Weight result is 4, movement uses 4, and the existing localized Heavy Weight message/timing remains active.
+8. Repeat Double/Triple activation, roll, movement, and no-roll expiry while inspecting the browser console.
+   Expected: Board behavior remains stable, Battle dice remain unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature across all 4 focused suites with absent helper/coordinator modules, generic consumption without Active Potion state, one-die Gameplay rendering, and no aggregate interactions.
+* The final focused Feature-008 regression passes 4 suites and all 13 selected tests for two/three-dice rules, simultaneous starts, horizontal CSS, exact aggregate callbacks, 8/15 movement totals, activation, consumption, Active Potion display, roll/no-roll cleanup, forced-first Roll Choice behavior, Heavy Weight after-sum halving, and normal reset state.
+* The complete shared GameSetup and potion regression passes 28 suites and all 140 tests, including every earlier potion lifecycle, capacity, targeting, and Battle-filtering test.
+* `npm run build` compiles successfully after Create React App and ESLint checks; the successful rerun followed one command timeout with no compile result.
+* `git diff --check` reports no whitespace errors.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify component counts, simultaneous rolling phase, die faces, random-call counts, forced-first behavior, sums, movement arguments, state cleanup, Active Potion visibility, horizontal flex direction, and Heavy Weight composition but cannot visually inspect live horizontal alignment, simultaneous animation smoothness, or the browser console.
+
+Manual Testing Still Needed
+
+* Run the eight-step browser regression above to visually confirm two/three-dice alignment, simultaneous animations, aggregate movement, interaction presentation, turn cleanup, and live console output.
+
+---
+
 Bug-001: Copy and Paste duplicate token items should stack horizontally with buttons underneath
 
 Test Status
@@ -509,3 +553,306 @@ Automated Test Limitations
 Manual Testing Still Needed
 
 * Run the five-step browser regression above to visually confirm both centred lines, both language fonts, retained timing, normal-result presentation, and live console output.
+
+---
+
+Feature-009: Implement Troublemaker potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player Troublemaker, confirm its Board use, and inspect the other-player chooser.
+   Expected: The caster is excluded, another player can be selected, Troublemaker leaves the potion slots, Board potion usage locks, and Troublemaker appears in the caster's Active Potion with the chosen target stored.
+2. Give the chosen player a removable Black token plus a protected starting token, force an even roll, and wait for the dice sequence to finish.
+   Expected: Exactly one die sequence runs, the Black token is removed first, the starting token remains, Troublemaker stays active, and movement choices do not appear yet.
+3. Inspect and continue the token-loss modal.
+   Expected: The wooden modal centres the losing player's image, shows `You lost this token`, renders the lost Token without list markup, and Continue closes the modal, removes Troublemaker from Active Potion, and enables movement using the same even roll.
+4. Repeat with an odd roll and no Black token on the caster.
+   Expected: The caster loses one random eligible committed token, protected starting tokens remain, the chosen player's tokens do not change, and movement later uses that same odd result.
+5. Repeat when the selected losing player has only protected starting tokens.
+   Expected: No token is removed, a clear no-eligible-token result appears, Continue remains available, and the turn safely proceeds without errors.
+6. Repeat the result with a Japanese losing player.
+   Expected: The modal uses the Japanese font, displays `このトークンを失いました。`, and shows the localized `続ける` action.
+7. Complete both parity paths while inspecting the browser console.
+   Expected: Troublemaker expires only after result acknowledgement, no second roll occurs, normal Board movement and turn progression continue, and no console errors appear.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing Feature-009 behavior across the new context, result-modal, and Gameplay coverage: Troublemaker was not routed through targeting, no roll-resolution or dismissal actions existed, no result modal existed, and the expected state/movement sequence failed.
+* The final focused Troublemaker regression passes 3 suites and all 7 selected tests for target exclusion, valid consumption, caster-owned Active Potion state, even/odd resolution, protected-token safety, Black priority, random fallback, safe no-token results, exact English/Japanese modal content, centred structure, no list markup, delayed movement, same-roll highlights, and effect expiry.
+* The complete potion and death-penalty regression passes 29 suites and all 131 tests, including Spellbound, Heavy Weight, Roll Choice, multi-dice, one-potion-per-turn, chooser, Active Potion, and death-token selection behavior.
+* The shared game-setup regression passes 2 suites and all 22 tests.
+* The complete GameplayPage suite passes 34 of 40 tests, including Feature-009. Its 6 failures are pre-existing stale assertions outside Feature-009: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify state, token ids, parity, classes, DOM structure, exact localized text, timers, movement highlights, and expiry but cannot visually inspect the wooden background, rendered centring/fonts, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above to visually confirm the modal presentation, localized fonts, one-roll timing, both parity paths, no-token path, movement continuation, and live console output.
+
+---
+
+Feature-010: Implement Devine Chance potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player Devine Chance while that player and at least two other players have health below their current maximums, then confirm its Board use.
+   Expected: Devine Chance leaves the potion slots, Board potion usage locks, no player heals immediately, and Devine Chance appears in the caster's Active Potion.
+2. Force an even roll and wait for the normal dice sequence to finish.
+   Expected: Exactly one die component rolls, only the caster recovers to their existing full `maxHealth`, every other player's health remains unchanged, Devine Chance stays active, and movement choices remain unavailable.
+3. Inspect and continue the even result modal.
+   Expected: The default wooden modal shows `You recovered all your health` in yellow `larger-text` with the correct font, has a centred Continue button and no list markup, then closes, removes Devine Chance from Active Potion, and enables movement using the same even roll.
+4. Repeat Devine Chance with an odd roll in a three-or-more-player game.
+   Expected: Every player except the caster recovers to their existing full `maxHealth`, the caster's health does not change, and the modal shows `You helped everyone else recover`.
+5. Repeat both result types with a Japanese caster.
+   Expected: The even modal displays `HPが全回復しました。`, the odd modal displays `他の全員のHPを回復させました。`, and the action displays `続ける` with the Japanese language class.
+6. Complete both parity paths while inspecting movement and the browser console.
+   Expected: No second dice roll occurs, movement uses the original potion roll, Devine Chance expires only after result acknowledgement, normal turn progression continues, and no console errors appear.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing Feature-010 behavior across the new context, result-modal, and Gameplay coverage: Devine Chance was consumed without becoming active, no parity resolver or dismissal action existed, no result modal existed, and the gated same-roll movement sequence failed.
+* The final focused Devine Chance regression passes 3 suites and all 5 selected tests for activation without premature healing, even caster healing, odd all-other-player healing across three players, current-max-health use, caster exclusion on odd rolls, Active Potion lifetime, exact English/Japanese modal copy and classes, default wooden modal structure, no list markup, one die, delayed movement, same-roll highlights, and expiry.
+* The complete potion and game-setup regression passes 32 suites and all 153 tests, including existing percentage-heal potions, Troublemaker, target effects, one-potion-per-turn, Active Potion, Roll Choice, and multi-dice behavior.
+* The complete GameplayPage suite passes 35 of 41 tests, including Feature-010. Its 6 failures are the same pre-existing stale assertions outside Feature-010: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies player health values, parity, state lifetime, exact localized copy, classes, modal structure, dice count, movement gating, highlights, and expiry but cannot visually inspect the wooden background, rendered text colour/fonts, centred action, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to visually confirm both localized result modals, all-player healing in a larger game, one-roll timing, same-roll movement, Active Potion expiry, and live console output.
+
+---
+
+Feature-011: Implement Buy and Sell potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player Buy and Sell with fewer than three tokens in their token bag, confirm its Board use, and acknowledge the error modal.
+   Expected: The exact localized not-enough-tokens text uses `larger-text`; no tokens change, Buy and Sell remains in its slot, Board potion usage stays unlocked, and Active Potion remains empty.
+2. Give the player at least four bag tokens, confirm Buy and Sell, select one token, then two, then three.
+   Expected: The exact localized discard instruction appears, every bag token is displayed without list markup, selected tokens are visibly marked, and Discard becomes enabled only at exactly three selections.
+3. Cancel the discard selection.
+   Expected: The modal closes, all bag tokens and potions remain unchanged, Board potion usage stays unlocked, and Buy and Sell does not enter Active Potion.
+4. Reopen the flow, select exactly three tokens, and click Discard.
+   Expected: Exactly the selected token instances leave the bag and two different Token component rewards appear, each with a localized Choose button underneath.
+5. Repeat reward generation enough times to inspect Common and Rare results.
+   Expected: Every token type is eligible with equal probability, rarity does not affect selection, and duplicate reward types never appear together.
+6. Choose either offered token and acknowledge the result.
+   Expected: A new instance of the chosen type enters the bag, the exact localized success text appears in the same modal, Buy and Sell is then consumed, Board potion usage locks, Active Potion stays empty, and normal play continues without console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing Feature-011 behavior across the new utility, modal, context, and Gameplay coverage: reward generation and transaction actions did not exist, no Buy and Sell modal existed, and both page flows failed.
+* The final feature-local regression passes 3 suites and all 20 tests for every token type's equal eligibility, two distinct rewards, exact English/Japanese copy and classes, `larger-text`, div-based wrapping markup, visible exact-three selection, disabled controls, Cancel, verified token removal, new token identity, delayed consumption/Board lock, same-modal success, and no Active Potion.
+* Both focused Gameplay integration tests pass for the insufficient-token path and the complete discard, reward, success, consumption, and usage-lock flow.
+* The complete potion and game-setup regression passes 35 suites and all 173 tests, including existing capacity, Copy and Paste, Tokensmith, target effects, healing, multi-dice, Troublemaker, Devine Chance, one-potion-per-turn, and Active Potion behavior.
+* The complete GameplayPage suite passes 37 of 43 tests, including both Feature-011 paths. Its 6 failures are the same pre-existing stale assertions outside Feature-011: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify state, token ids, deterministic reward eligibility, exact localized copy, classes, controls, and DOM structure but cannot visually inspect rendered selection clarity, wrapping, language fonts, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the six-step browser regression above to visually confirm both languages, selection clarity, reward layout, varied Common/Rare offers, successful continuation, and live console output.
+
+---
+
+Bug-006: Buy and Sell reward grid needs choose-token instruction text
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Use Buy and Sell, select exactly three bag tokens, and click Discard.
+   Expected: The reward step shows `Choose a token to add to your token bag` centred above the two reward choices with a `60px` gap below it.
+2. Repeat with a Japanese player.
+   Expected: The instruction reads `トークンバッグに追加するトークンを選んでください。` and uses the Japanese language font.
+3. Open the reward step with a missing or invalid player language.
+   Expected: The instruction falls back to the exact English text and English language font.
+4. Inspect the instruction and reward choices.
+   Expected: The instruction uses the modal's normal yellow text styling, the grid remains below it, both Token choices and Choose buttons remain visible, and no `ul` or `li` elements are present.
+5. Choose either reward while inspecting the browser console.
+   Expected: The selected token is added through the existing flow, the success state appears, potion consumption timing is unchanged, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-006 with all 4 selected checks failing for the missing English, Japanese, and fallback instruction plus the missing scoped CSS rule.
+* The final Buy and Sell modal suite passes all 8 tests for exact localized copy, invalid-language fallback, language classes, instruction-before-grid order, `60px` margin, centred yellow styling, list-free markup, reward controls, selection, Cancel, and success behavior.
+* The complete Buy and Sell feature regression passes 3 suites and all 23 tests, including equal reward eligibility, distinct choices, context transactions, delayed consumption, Board usage locking, and Active Potion exclusion.
+* Both focused Gameplay integration tests pass for the insufficient-token and complete discard/reward paths.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify copy, classes, DOM order, callbacks, and exact CSS declarations but cannot visually inspect rendered spacing, centring, yellow colour, language fonts, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm both language presentations, exact spacing and centring, unchanged reward layout/flow, and live console output.
+
+---
+
+Feature-012: Implement Cauldron potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current player Cauldron between two other potions, click its Board Use button, and choose No in the standard confirmation.
+   Expected: The confirmation closes, Cauldron remains in its original slot, no choice modal appears, Board potion usage stays unlocked, and all eligible potion Use buttons remain enabled.
+2. Confirm Cauldron with Yes.
+   Expected: A wooden yellow-text modal opens with exactly three different potion choices from the current complete potion catalog; Cauldron remains in its slot, Board usage is still unlocked, and Active Potion remains empty while the choice is pending.
+3. Inspect the three choices in English and Japanese.
+   Expected: Potions are horizontally stacked using the existing localized PotionIcon name/description, each has a localized Choose button centred underneath, and no `ul` or `li` markup exists.
+4. Try clicking the overlay, pressing Escape, and finding a Cancel or close control.
+   Expected: The modal remains open and provides no way to leave without choosing one of the three potions.
+5. Choose the middle offered potion.
+   Expected: The modal closes, the chosen potion replaces Cauldron in the exact original slot, the other potion slots and total capacity remain unchanged, and Cauldron is no longer present.
+6. Inspect the replacement and Board controls.
+   Expected: The replacement is not immediately triggered or placed in Active Potion, Board potion usage is now locked, and even a Board/Both replacement cannot be used again during that turn.
+7. Repeat the flow enough times to inspect Common, Rare, Mini, Board, Battle, Both, and Cauldron offers while watching the browser console.
+   Expected: All current potion records are eligible with equal probability, choices never duplicate within one modal, deprecated potions never appear, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing Feature-012 behavior across the new utility, modal, context, and Gameplay coverage: no generator or modal modules existed, no transaction actions existed, Gameplay consumed Cauldron immediately, and generic consumption could bypass the required choice.
+* The final focused Cauldron regression passes 3 suites and all 36 tests for every catalog potion's equal first-choice eligibility, three distinct full-catalog offers, current potion records, default wooden modal use, exact English/Japanese PotionIcon content and Choose controls, horizontal/list-free structure, no cancellation, guarded start, invalid-choice rejection, generic-consumption blocking, same-slot replacement, delayed Board lock, and Active Potion exclusion.
+* The focused Gameplay integration passes the complete standard No/Yes confirmation, deterministic three-choice, overlay/Escape persistence, original-slot replacement, non-activation, and same-turn Board lock flow.
+* The complete potion and game-setup regression passes 38 suites and all 212 tests, including Buy and Sell, capacity, Copy and Paste, Tokensmith, target effects, healing, multi-dice, Troublemaker, Devine Chance, one-potion-per-turn, and Active Potion behavior.
+* The centralized potion source-of-truth suite passes all 3 tests for the complete 28-record table, no deprecated potion records, and localization helpers.
+* The complete GameplayPage suite passes 38 of 44 tests, including Feature-012. Its 6 failures are the same pre-existing stale assertions outside Feature-012: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* Deterministic random tests prove every catalog entry is equally index-eligible and choices are sampled without replacement, but do not statistically measure long-run browser randomness.
+* JSDOM and stylesheet assertions verify modal persistence, classes, DOM order, callbacks, and layout declarations but cannot visually inspect the rendered wooden background, yellow text, horizontal wrapping, language fonts, or live browser console.
+
+Manual Testing Still Needed
+
+* Run the seven-step browser regression above to visually confirm the forced-choice presentation, both languages, varied catalog offers, exact slot replacement, Board lock, and live console output.
+
+---
+
+Bug-007: Cauldron choice list needs larger-text title
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Use Cauldron from the board and confirm its standard confirmation with Yes.
+   Expected: The forced Cauldron choice modal opens with `Choose a new potion to gain` centred above the three potion choices.
+2. Repeat with a Japanese player.
+   Expected: The title reads `獲得する新しいポーションを選んでください。` and uses the Japanese language font.
+3. Open the modal with a missing or invalid player language.
+   Expected: The title falls back to the exact English text and English language font.
+4. Inspect the title and choices.
+   Expected: The title uses `larger-text`, bold yellow modal text, centred alignment, and a `60px` bottom margin; all three choices remain below it and no `ul` or `li` elements are present.
+5. Choose any offered potion while inspecting the browser console.
+   Expected: The existing Choose flow replaces Cauldron in its original slot, keeps all established consumption and Board-lock behavior, and produces no console errors.
+
+Automated Tests Completed
+
+* Red-first execution reproduced Bug-007 with all 4 selected checks failing for the missing English, Japanese, and fallback titles plus the missing scoped CSS rule; the 3 existing modal behavior tests remained green.
+* The final Cauldron choice modal suite passes all 7 tests for exact localized copy, missing- and invalid-language fallback, language classes, title-before-list order, `larger-text`, `60px` margin, centred yellow styling, list-free markup, three choices, Choose callbacks, and forced-modal persistence.
+* The complete Cauldron feature regression passes 3 suites and all 39 tests, including generation, context transactions, cancellation blocking, same-slot replacement, delayed Board lock, and Active Potion exclusion.
+* The complete potion and game-setup regression passes 38 suites and all 215 tests.
+* The focused Gameplay Cauldron integration test passes. The complete GameplayPage suite remains at 38 of 44 passing tests; its 6 failures are the same pre-existing stale assertions outside Bug-007: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM and stylesheet assertions verify exact copy, classes, DOM order, callbacks, and CSS declarations but cannot visually inspect rendered spacing, centring, yellow colour, language fonts, or the live browser console.
+
+Manual Testing Still Needed
+
+* Run the five-step browser regression above to visually confirm both language presentations, exact title styling and spacing, unchanged Cauldron choice flow, and live console output.
+
+---
+
+Feature-013: Implement Storm Master potion behaviour
+
+Test Status
+
+* passed
+
+Manual Regression Steps And Expected Results
+
+1. Give the current Board player Storm Master, click Use, choose No, then repeat and choose Yes.
+   Expected: No leaves the potion and Board usage unchanged; Yes consumes Storm Master, locks that player's Board potion use, and shows Storm Master in Active Potion while waiting for the normal board roll.
+2. Force an even roll and complete the dice sequence.
+   Expected: The same final roll resolves Storm Master, removes it from Active Potion, creates no result modal for the caster, and shows normal movement choices using that value.
+3. Move the caster, advance to another player, and use an otherwise allowed Board potion before rolling.
+   Expected: The affected player can use the potion under Feature-013's explicit rule, then can still perform their normal board roll.
+4. Complete the affected player's roll.
+   Expected: Roll Choice, multi-dice, Heavy Weight, Troublemaker, or Devine Chance behavior resolves as applicable, no movement squares are highlighted, the player remains on the same square, and `The storm prevents you from moving` appears in a wooden yellow-text `larger-text` modal.
+5. Click Continue on the storm message.
+   Expected: The affected player's turn ends, the normal next-turn modal appears, and the next player begins after it is acknowledged.
+6. Repeat until every non-caster has taken one blocked turn.
+   Expected: Every other player is blocked once, the caster is never blocked by their own even result, and the ongoing effect expires when turn order returns to the caster.
+7. Use Storm Master again and force an odd final roll.
+   Expected: Storm Master leaves Active Potion, `The storm targeted you` appears, no movement is highlighted, the caster stays on the same square, no lasting storm effect is created, and Continue advances through the normal next-turn modal.
+8. Repeat both result types with a Japanese player and with a missing or invalid language.
+   Expected: Japanese shows `嵐のせいで移動できません。` and `嵐の標的になりました。` with the Japanese font; missing or invalid language falls back to the exact English messages and font.
+9. Repeat with Double Dice or Triple Dice and with Heavy Weight affecting the caster.
+   Expected: Storm Master uses the total multi-dice result or the final Heavy Weight-adjusted movement value for its even/odd decision and never rolls a separate die.
+10. Inspect both result modals and the browser console.
+   Expected: Each modal has a centred localized Continue button, no `ul` or `li`, and no console errors occur.
+
+Automated Tests Completed
+
+* Red-first execution reproduced the missing feature across all 3 selected suites: generic consumption removed Storm Master without activating or tracking it, no lifecycle actions or board blocking existed, and the required result modal module did not exist.
+* The final context and modal regression passes 2 suites and all 7 tests for confirmed activation, consumption, Active Potion display state, pending caster state, even totals above six, all-other-player targeting, once-per-player blocking, caster-return expiry, odd forced turn completion, next-turn modal state, exact English/Japanese messages, invalid-language fallback, `larger-text`, default wooden modal use, localized controls, and list-free markup.
+* All 5 focused Gameplay integrations pass for even caster movement, affected-player roll/no-movement/turn advancement, odd caster blocking, Active Potion expiry, Board-potion availability while blocked, Devine Chance-before-storm ordering, multi-dice total parity, Heavy Weight-adjusted parity, unchanged positions, absent movement highlights, and normal turn-change modals.
+* The complete potion and game-setup regression passes 40 suites and all 222 tests.
+* The complete GameplayPage suite passes 43 of 49 tests, including every Feature-013 integration. Its 6 failures are the same pre-existing stale assertions outside Feature-013: three expect an older shorter spell-warning sentence, two expect removed inline image styles, and one expects older DiceRoll result text.
+* `npm run build` compiles successfully after Create React App and ESLint checks.
+* `git diff --check` reports no whitespace errors; Git reports only existing LF-to-CRLF working-copy notices.
+
+Automated Test Limitations
+
+* The project has no `npm run lint` script; the production build supplied the available ESLint compile check.
+* JSDOM verifies state, exact copy, classes, controls, modal order, roll values, turn advancement, positions, and movement-highlight suppression but cannot visually inspect the rendered wooden background, yellow text, centred action, language fonts, or live browser console.
+* Devine Chance sequencing, multi-dice totals, and Heavy Weight adjustment are covered in combined Gameplay tests; the equivalent live-browser Troublemaker and Roll Choice storm combinations remain part of the manual regression.
+
+Manual Testing Still Needed
+
+* Run the ten-step browser regression above to visually confirm both localized modal presentations, every non-caster turn in a larger game, live roll-dependent combinations, caster-return expiry, and console output.

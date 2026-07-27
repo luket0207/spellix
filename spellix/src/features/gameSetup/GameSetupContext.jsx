@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import { POTION_DEFINITIONS } from '../../data/potions';
+import { TOKEN_TYPES } from '../../data/tokens';
 import {
   clampPlayerCount,
   cloneSpellSlots,
@@ -26,6 +27,11 @@ import {
   canUsePotionInContext,
 } from '../potions/potionUsage';
 import { createCopyPasteDuplicate } from '../potions/copyPaste';
+import { generateCauldronPotionChoices } from '../potions/cauldron';
+import {
+  getMultiDiceCount,
+  isMultiDicePotion,
+} from '../potions/multiDice';
 import { isTargetPlayerPotion } from '../potions/targetPlayerPotions';
 import { createTokensmithMove } from '../potions/tokensmith';
 import { generateBattleRewardChoices } from '../rewards/rewardItems';
@@ -64,10 +70,22 @@ function clearStartingCharge(player) {
 }
 
 function clearBoardTurnPotion(player) {
-  return ['heavy-weight', 'spellbound', 'starting-charge'].includes(
-    player?.activePotion?.id
-  )
-    ? { ...player, activePotion: null }
+  const shouldClearActivePotion = [
+    'devine-chance',
+    'double-dice',
+    'heavy-weight',
+    'spellbound',
+    'starting-charge',
+    'storm-master',
+    'triple-dice',
+  ].includes(player?.activePotion?.id);
+
+  return shouldClearActivePotion || player?.nextBoardDiceCount
+    ? {
+        ...player,
+        activePotion: shouldClearActivePotion ? null : player.activePotion,
+        nextBoardDiceCount: null,
+      }
     : player;
 }
 
@@ -98,10 +116,21 @@ function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
   }
 
   const didPlayerChange = nextPlayerId !== currentPlayerId;
+  const stormMasterEffect =
+    currentSetup.stormMasterEffect
+      ?.expiresWhenTurnReturnsToPlayerId === nextPlayerId
+      ? null
+      : currentSetup.stormMasterEffect;
 
   return {
     ...currentSetup,
     currentTurnIndex: nextTurnIndex,
+    stormMasterEffect,
+    stormMasterPendingPlayerId:
+      didPlayerChange &&
+      currentSetup.stormMasterPendingPlayerId === currentPlayerId
+        ? null
+        : currentSetup.stormMasterPendingPlayerId,
     players: didPlayerChange
       ? currentSetup.players.map((player) => {
           const playerWithExpiredPotion =
@@ -423,7 +452,49 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
     return {
       ...setup,
+      buyAndSellTransaction: setup.buyAndSellTransaction
+        ? {
+            ...setup.buyAndSellTransaction,
+            rewardTokenTypes: [
+              ...setup.buyAndSellTransaction.rewardTokenTypes,
+            ],
+          }
+        : null,
+      cauldronChoiceState: setup.cauldronChoiceState
+        ? {
+            ...setup.cauldronChoiceState,
+            potionIds: [...setup.cauldronChoiceState.potionIds],
+          }
+        : null,
+      devineChanceResult: setup.devineChanceResult
+        ? { ...setup.devineChanceResult }
+        : null,
       pendingNextTurnModal: Boolean(setup.pendingNextTurnModal),
+      stormMasterEffect: setup.stormMasterEffect
+        ? {
+            ...setup.stormMasterEffect,
+            affectedPlayerIds: [
+              ...setup.stormMasterEffect.affectedPlayerIds,
+            ],
+          }
+        : null,
+      stormMasterPendingPlayerId:
+        setup.stormMasterPendingPlayerId ?? null,
+      stormMasterResult: setup.stormMasterResult
+        ? { ...setup.stormMasterResult }
+        : null,
+      troublemakerResult: setup.troublemakerResult
+        ? {
+            ...setup.troublemakerResult,
+            removedTokens:
+              setup.troublemakerResult.removedTokens?.map(
+                ({ columnNumber, token }) => ({
+                  columnNumber,
+                  token: { ...token },
+                })
+              ) ?? [],
+          }
+        : null,
       players: setup.players.map((player, index) => {
         const normalizedPlayer = {
           ...player,
@@ -439,6 +510,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           nextForcedRoll: player.nextForcedRoll
             ? { ...player.nextForcedRoll }
             : null,
+          nextBoardDiceCount: player.nextBoardDiceCount ?? null,
           number: player.number ?? index + 1,
           pendingPotionEffects:
             player.pendingPotionEffects?.map((effect) => ({ ...effect })) ?? [],
@@ -475,7 +547,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       return {
         ...currentSetup,
         activeBattle: null,
+        buyAndSellTransaction: null,
+        cauldronChoiceState: null,
+        devineChanceResult: null,
         pendingPotionGrant: null,
+        stormMasterEffect: null,
+        stormMasterPendingPlayerId: null,
+        stormMasterResult: null,
+        troublemakerResult: null,
         playerCount: nextPlayerCount,
         players: createPlayers(nextPlayerCount, currentSetup.players),
         turnOrder: [],
@@ -1068,9 +1147,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const player = currentSetup.players.find(({ id }) => id === playerId);
       const potion = player?.potions[potionIndex];
       const activeBattle = currentSetup.activeBattle;
+      const isBuyAndSell = potion?.id === 'buy-and-sell';
+      const isCauldron = potion?.id === 'cauldron';
       const isCopyPaste = potion?.id === 'copy-and-paste';
+      const isDevineChance = potion?.id === 'devine-chance';
+      const isMultiDice = isMultiDicePotion(potion);
       const isRollChoice = potion?.id === 'roll-choice';
       const isStartingCharge = potion?.id === 'starting-charge';
+      const isStormMaster = potion?.id === 'storm-master';
       const isTargetingPotion = isTargetPlayerPotion(potion);
       const isTokensmith = potion?.id === 'tokensmith';
       const forcedRollValue = options.forcedRollValue;
@@ -1096,9 +1180,12 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         potionIndex < 0 ||
         potionIndex >= player.potions.length ||
         !canUsePotionInContext(potion, context) ||
+        isBuyAndSell ||
+        isCauldron ||
         isCopyPaste ||
         isTargetingPotion ||
         isTokensmith ||
+        (isStormMaster && currentSetup.stormMasterPendingPlayerId) ||
         (isRollChoice && !hasValidForcedRollValue) ||
         (!isBoardUse && !isBattleUse)
       ) {
@@ -1107,6 +1194,10 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
       return {
         ...currentSetup,
+        stormMasterPendingPlayerId:
+          isStormMaster && isBoardUse
+            ? playerId
+            : currentSetup.stormMasterPendingPlayerId,
         activeBattle: isBattleUse
           ? {
               ...activeBattle,
@@ -1120,9 +1211,17 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 activePotion:
                   isRollChoice && isBoardUse
                     ? { ...potion, chosenRoll: forcedRollValue }
-                    : isStartingCharge && isBoardUse
+                    : (isDevineChance ||
+                        isStartingCharge ||
+                        isStormMaster ||
+                        isMultiDice) &&
+                      isBoardUse
                       ? { ...potion }
                       : currentPlayer.activePotion,
+                nextBoardDiceCount:
+                  isMultiDice && isBoardUse
+                    ? getMultiDiceCount(potion)
+                    : currentPlayer.nextBoardDiceCount,
                 nextForcedRoll: isRollChoice
                   ? {
                       sourcePotionId: potion.id,
@@ -1141,6 +1240,226 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                       },
                     }
                   : {}),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const startCauldronChoice = (playerId, potionIndex) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[potionIndex];
+      const canUseBoardPotion =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+
+      if (
+        !player ||
+        !Number.isInteger(potionIndex) ||
+        potion?.id !== 'cauldron' ||
+        currentSetup.cauldronChoiceState ||
+        !canUseBoardPotion
+      ) {
+        return currentSetup;
+      }
+
+      const choices = generateCauldronPotionChoices();
+
+      return {
+        ...currentSetup,
+        cauldronChoiceState: {
+          originalPotionSlotIndex: potionIndex,
+          playerId,
+          potionIds: choices.map(({ id }) => id),
+        },
+      };
+    });
+  };
+
+  const resolveCauldronChoice = (playerId, selectedPotionId) => {
+    setGameSetup((currentSetup) => {
+      const choiceState = currentSetup.cauldronChoiceState;
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const originalPotion =
+        player?.potions[choiceState?.originalPotionSlotIndex];
+      const selectedPotion = POTION_DEFINITIONS.find(
+        ({ id }) => id === selectedPotionId
+      );
+      const canResolveBoardPotion =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+
+      if (
+        !player ||
+        choiceState?.playerId !== playerId ||
+        !choiceState.potionIds.includes(selectedPotionId) ||
+        originalPotion?.id !== 'cauldron' ||
+        !selectedPotion ||
+        !canResolveBoardPotion
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        cauldronChoiceState: null,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                potions: currentPlayer.potions.map((potion, index) =>
+                  index === choiceState.originalPotionSlotIndex
+                    ? { ...selectedPotion }
+                    : potion
+                ),
+                turnPotionUsage: {
+                  ...currentPlayer.turnPotionUsage,
+                  boardPotionUsedThisTurn: true,
+                },
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const startBuyAndSell = (
+    playerId,
+    potionIndex,
+    selectedTokenIds,
+    rewardTokenTypes
+  ) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[potionIndex];
+      const uniqueSelectedTokenIds = new Set(selectedTokenIds);
+      const uniqueRewardTokenTypes = new Set(rewardTokenTypes);
+      const isBoardUse =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId &&
+        !player?.turnPotionUsage?.boardPotionUsedThisTurn;
+      const hasSelectedTokens =
+        uniqueSelectedTokenIds.size === 3 &&
+        [...uniqueSelectedTokenIds].every((tokenId) =>
+          player?.tokenBag.some((token) => token.id === tokenId)
+        );
+      const hasValidRewards =
+        uniqueRewardTokenTypes.size === 2 &&
+        [...uniqueRewardTokenTypes].every((tokenType) =>
+          TOKEN_TYPES.includes(tokenType)
+        );
+
+      if (
+        !player ||
+        potion?.id !== 'buy-and-sell' ||
+        currentSetup.buyAndSellTransaction ||
+        !Number.isInteger(potionIndex) ||
+        !isBoardUse ||
+        !hasSelectedTokens ||
+        !hasValidRewards
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        buyAndSellTransaction: {
+          playerId,
+          potionIndex,
+          rewardTokenTypes: [...uniqueRewardTokenTypes],
+          status: 'choosing',
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                tokenBag: currentPlayer.tokenBag.filter(
+                  (token) => !uniqueSelectedTokenIds.has(token.id)
+                ),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveBuyAndSellPotion = (playerId, selectedRewardType) => {
+    setGameSetup((currentSetup) => {
+      const transaction = currentSetup.buyAndSellTransaction;
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const potion = player?.potions[transaction?.potionIndex];
+
+      if (
+        transaction?.status !== 'choosing' ||
+        transaction.playerId !== playerId ||
+        !transaction.rewardTokenTypes.includes(selectedRewardType) ||
+        potion?.id !== 'buy-and-sell'
+      ) {
+        return currentSetup;
+      }
+
+      const rewardToken = createDebugToken(player, selectedRewardType);
+
+      return {
+        ...currentSetup,
+        buyAndSellTransaction: {
+          ...transaction,
+          selectedRewardType,
+          status: 'success',
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                activePotion: currentPlayer.activePotion,
+                potions: currentPlayer.potions.filter(
+                  (_, index) => index !== transaction.potionIndex
+                ),
+                tokenBag: addTokenToBag(currentPlayer.tokenBag, rewardToken),
+                turnPotionUsage: {
+                  ...currentPlayer.turnPotionUsage,
+                  boardPotionUsedThisTurn: true,
+                },
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const completeBuyAndSell = (playerId) => {
+    setGameSetup((currentSetup) =>
+      currentSetup.buyAndSellTransaction?.playerId === playerId &&
+      currentSetup.buyAndSellTransaction.status === 'success'
+        ? { ...currentSetup, buyAndSellTransaction: null }
+        : currentSetup
+    );
+  };
+
+  const clearPlayerBoardDiceEffect = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(
+        (currentPlayer) => currentPlayer.id === playerId
+      );
+
+      if (
+        !player?.nextBoardDiceCount &&
+        !isMultiDicePotion(player?.activePotion)
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                activePotion: isMultiDicePotion(currentPlayer.activePotion)
+                  ? null
+                  : currentPlayer.activePotion,
+                nextBoardDiceCount: null,
               }
             : currentPlayer
         ),
@@ -1179,6 +1498,10 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           if (currentPlayer.id === playerId) {
             return {
               ...currentPlayer,
+              activePotion:
+                potion.id === 'troublemaker'
+                  ? { ...potion, targetPlayerId }
+                  : currentPlayer.activePotion,
               potions: currentPlayer.potions.filter(
                 (_, index) => index !== potionIndex
               ),
@@ -1189,7 +1512,10 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             };
           }
 
-          if (currentPlayer.id === targetPlayerId) {
+          if (
+            currentPlayer.id === targetPlayerId &&
+            potion.id !== 'troublemaker'
+          ) {
             return {
               ...currentPlayer,
               pendingPotionEffects: [
@@ -1205,6 +1531,266 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           return currentPlayer;
         }),
       };
+    });
+  };
+
+  const resolveTroublemakerRoll = (playerId, roll) => {
+    setGameSetup((currentSetup) => {
+      const caster = currentSetup.players.find(({ id }) => id === playerId);
+      const activePotion = caster?.activePotion;
+      const targetPlayer = currentSetup.players.find(
+        ({ id }) => id === activePotion?.targetPlayerId
+      );
+      const isCurrentPlayer =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId;
+
+      if (
+        !caster ||
+        !targetPlayer ||
+        activePotion?.id !== 'troublemaker' ||
+        !isCurrentPlayer ||
+        currentSetup.troublemakerResult ||
+        !Number.isInteger(roll) ||
+        roll < 1 ||
+        roll > 6
+      ) {
+        return currentSetup;
+      }
+
+      const losingPlayerId =
+        roll % 2 === 0 ? targetPlayer.id : caster.id;
+      const losingPlayer = currentSetup.players.find(
+        ({ id }) => id === losingPlayerId
+      );
+      const penaltyResult = applyDeathTokenPenalty({
+        removalCount: 1,
+        spellSlots: losingPlayer?.spellSlots ?? [],
+      });
+
+      return {
+        ...currentSetup,
+        troublemakerResult: {
+          casterPlayerId: playerId,
+          losingPlayerId,
+          removedTokens: penaltyResult.removedTokens,
+          roll,
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === losingPlayerId
+            ? applyLightGreenHealthBonus(
+                {
+                  ...currentPlayer,
+                  spellSlots: penaltyResult.spellSlots,
+                },
+                penaltyResult.spellSlots
+              )
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const dismissTroublemakerResult = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const result = currentSetup.troublemakerResult;
+
+      if (!result || result.casterPlayerId !== playerId) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        troublemakerResult: null,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId &&
+          currentPlayer.activePotion?.id === 'troublemaker'
+            ? { ...currentPlayer, activePotion: null }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveDevineChanceRoll = (playerId, roll) => {
+    setGameSetup((currentSetup) => {
+      const caster = currentSetup.players.find(({ id }) => id === playerId);
+      const isCurrentPlayer =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId;
+
+      if (
+        !caster ||
+        caster.activePotion?.id !== 'devine-chance' ||
+        !isCurrentPlayer ||
+        currentSetup.devineChanceResult ||
+        !Number.isInteger(roll) ||
+        roll < 1 ||
+        roll > 6
+      ) {
+        return currentSetup;
+      }
+
+      const healedGroup = roll % 2 === 0 ? 'caster' : 'others';
+
+      return {
+        ...currentSetup,
+        devineChanceResult: {
+          casterPlayerId: playerId,
+          healedGroup,
+          roll,
+        },
+        players: currentSetup.players.map((currentPlayer) => {
+          const shouldHeal =
+            healedGroup === 'caster'
+              ? currentPlayer.id === playerId
+              : currentPlayer.id !== playerId;
+
+          return shouldHeal
+            ? {
+                ...currentPlayer,
+                currentHealth: currentPlayer.maxHealth,
+              }
+            : currentPlayer;
+        }),
+      };
+    });
+  };
+
+  const dismissDevineChanceResult = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const result = currentSetup.devineChanceResult;
+
+      if (!result || result.casterPlayerId !== playerId) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        devineChanceResult: null,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId &&
+          currentPlayer.activePotion?.id === 'devine-chance'
+            ? { ...currentPlayer, activePotion: null }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resolveStormMasterRoll = (playerId, roll) => {
+    setGameSetup((currentSetup) => {
+      const caster = currentSetup.players.find(({ id }) => id === playerId);
+      const isCurrentPlayer =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId;
+
+      if (
+        !caster ||
+        currentSetup.stormMasterPendingPlayerId !== playerId ||
+        !isCurrentPlayer ||
+        currentSetup.stormMasterResult ||
+        !Number.isInteger(roll) ||
+        roll < 1
+      ) {
+        return currentSetup;
+      }
+
+      const isEven = roll % 2 === 0;
+
+      return {
+        ...currentSetup,
+        stormMasterEffect: isEven
+          ? {
+              affectedPlayerIds: currentSetup.players
+                .filter(({ id }) => id !== playerId)
+                .map(({ id }) => id),
+              casterPlayerId: playerId,
+              expiresWhenTurnReturnsToPlayerId: playerId,
+            }
+          : null,
+        stormMasterPendingPlayerId: null,
+        stormMasterResult: isEven
+          ? null
+          : {
+              casterPlayerId: playerId,
+              playerId,
+              resultType: 'caster-targeted',
+              roll,
+            },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId &&
+          currentPlayer.activePotion?.id === 'storm-master'
+            ? { ...currentPlayer, activePotion: null }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const startStormMasterBlockedTurn = (playerId, roll) => {
+    setGameSetup((currentSetup) => {
+      const isCurrentPlayer =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId;
+      const isAffected =
+        currentSetup.stormMasterEffect?.affectedPlayerIds.includes(playerId);
+
+      if (
+        !isCurrentPlayer ||
+        !isAffected ||
+        currentSetup.stormMasterResult ||
+        !Number.isInteger(roll) ||
+        roll < 1
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        stormMasterResult: {
+          casterPlayerId: currentSetup.stormMasterEffect.casterPlayerId,
+          playerId,
+          resultType: 'movement-blocked',
+          roll,
+        },
+      };
+    });
+  };
+
+  const completeStormMasterForcedTurn = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const result = currentSetup.stormMasterResult;
+      const isCurrentPlayer =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] === playerId;
+
+      if (
+        !result ||
+        result.playerId !== playerId ||
+        !isCurrentPlayer ||
+        currentSetup.turnOrder.length === 0
+      ) {
+        return currentSetup;
+      }
+
+      const nextTurnIndex =
+        (currentSetup.currentTurnIndex + 1) % currentSetup.turnOrder.length;
+      const stormMasterEffect =
+        result.resultType === 'movement-blocked' &&
+        currentSetup.stormMasterEffect
+          ? {
+              ...currentSetup.stormMasterEffect,
+              affectedPlayerIds:
+                currentSetup.stormMasterEffect.affectedPlayerIds.filter(
+                  (affectedPlayerId) => affectedPlayerId !== playerId
+                ),
+            }
+          : currentSetup.stormMasterEffect;
+
+      return transitionToPlayerTurn(
+        {
+          ...currentSetup,
+          stormMasterEffect,
+          stormMasterResult: null,
+        },
+        nextTurnIndex
+      );
     });
   };
 
@@ -2035,11 +2621,16 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         applyBattleEffect,
         applyBattleDiceResult,
         clearActiveBattle,
+        clearPlayerBoardDiceEffect,
         clearPlayerForcedRoll,
         claimLootChestReward,
+        completeBuyAndSell,
+        completeStormMasterForcedTurn,
         continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
         completeMiniGame,
+        dismissDevineChanceResult,
+        dismissTroublemakerResult,
         dismissMiniGameReturnNotice,
         dismissNextTurnModal,
         discardSelectedRewardToken,
@@ -2055,19 +2646,27 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         replaceSelectedRewardTokenInBag,
         resolvePendingPotionGrant,
         resolveCopyPastePotion,
+        resolveDevineChanceRoll,
+        resolveStormMasterRoll,
         resolveTargetPlayerPotion,
+        resolveTroublemakerRoll,
         resolveTokensmithPotion,
         resolveSelectedPotionReward,
         finalizeBattleEffects,
         resetGame,
         returnFromMiniGame,
         resolveBattleFreezeCheck,
+        resolveBuyAndSellPotion,
+        resolveCauldronChoice,
         resolvePendingCavePotionReward,
         selectBattleReward,
         setActiveBattlePhase,
         setPlayerAnywhereMode,
         setPlayerHealth,
         setPlayerPosition,
+        startBuyAndSell,
+        startCauldronChoice,
+        startStormMasterBlockedTurn,
         setPlayerColour,
         setPlayerGender,
         setPlayerLanguage,

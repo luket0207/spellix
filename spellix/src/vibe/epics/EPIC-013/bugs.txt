@@ -662,3 +662,262 @@ Testing Required
 * Confirm normal dice roll results are unchanged.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this bug fixed.
+
+
+---
+
+Bug-006: Buy and Sell reward grid needs choose-token instruction text
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions for the exact English and Japanese instruction, invalid-language English fallback, correct language classes, placement before the reward grid, list-free markup, preserved Choose callbacks, and the required centred yellow `60px` margin styling.
+* Reproduced Bug-006 with 4 focused failures because the reward branch rendered only the two token options and no instruction or scoped instruction style existed.
+
+Final Fix
+
+* Added one localized instruction paragraph immediately above the existing `buy-and-sell-reward-grid`.
+* Reused the modal's normalized gameplay language and existing language classes, so Japanese displays the required Japanese text and missing or invalid languages fall back to English.
+* Added only the required scoped `60px` bottom margin, centred text, normal yellow colour, and bold weight.
+* Preserved the two existing Token choices, Choose buttons and callbacks, div-based markup, reward generation, discard logic, potion consumption timing, and all other Buy and Sell behavior.
+
+Related Feature
+
+* Feature-011: Implement Buy and Sell potion behaviour
+
+Bug Summary
+
+* On the `buy-and-sell-reward-grid` page of the modal, there is currently no instruction text telling the player what to do.
+* Add instruction text above the reward token choices.
+
+Required Text
+
+English:
+
+```txt id="oxm9cg"
+Choose a token to add to your token bag
+```
+
+Japanese:
+
+```txt id="fwsm7e"
+トークンバッグに追加するトークンを選んでください。
+```
+
+Layout Requirement
+
+* The instruction text should appear above the two reward token choices.
+* The text should have:
+
+```css id="b6jp26"
+margin-bottom: 60px;
+```
+
+* The text should be centred.
+* The text should use the correct language font.
+* The text should use the modal’s normal yellow text styling.
+
+Suggested Structure
+
+```jsx id="ns24hv"
+<p className={`buy-and-sell-reward-instruction ${languageClass}`}>
+  {chooseTokenToAddText}
+</p>
+
+<div className="buy-and-sell-reward-grid">
+  {rewardTokens.map((token) => (
+    <div className="buy-and-sell-reward-card" key={token.id}>
+      <TokenIcon token={token} showName={true} />
+
+      <Button onClick={() => chooseRewardToken(token)}>
+        {chooseText}
+      </Button>
+    </div>
+  ))}
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="yxzp9l"
+.buy-and-sell-reward-instruction {
+  margin-bottom: 60px;
+  text-align: center;
+  color: #F5FA00;
+  font-weight: bold;
+}
+```
+
+Translation Requirement
+
+* Add or reuse the new translation:
+
+```txt id="pp0cii"
+Choose a token to add to your token bag	トークンバッグに追加するトークンを選んでください。
+```
+
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `p` and `div` elements with grid or flex layouts.
+
+Out Of Scope
+
+* No changes to Buy and Sell token generation.
+* No changes to token discard logic.
+* No changes to the two reward token choices.
+* No changes to the Choose button behaviour.
+* No changes to potion consumption timing.
+* No unrelated modal redesign.
+
+Testing Required
+
+* Reach the Buy and Sell reward choice step.
+* Confirm the instruction text appears above the reward token choices.
+* Confirm English text says `Choose a token to add to your token bag`.
+* Confirm Japanese text says `トークンバッグに追加するトークンを選んでください。`.
+* Confirm the instruction has `margin-bottom: 60px`.
+* Confirm the text is centred.
+* Confirm the text uses the correct English font.
+* Confirm the text uses the correct Japanese font.
+* Confirm the reward grid still displays correctly below the text.
+* Confirm Choose buttons still work.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-007: Cauldron choice list needs larger-text title
+
+Status
+
+* fixed
+
+Attempted Fixes
+
+* Added red-first assertions for the exact English and Japanese title, missing- and invalid-language English fallback, correct language classes, placement above the choice list, `larger-text`, paragraph/list-free markup, preserved Choose callbacks, and the required centred yellow `60px` margin styling.
+* Reproduced Bug-007 with 4 focused failures because the modal rendered only the three potion choices and no title or scoped title style existed.
+
+Final Fix
+
+* Added one localized `larger-text` title paragraph immediately above the existing `cauldron-choice-list`.
+* Reused the modal's normalized gameplay language and existing language classes, so Japanese displays the required Japanese title and missing or invalid languages fall back to English.
+* Added only the required scoped `60px` bottom margin, centred text, yellow colour, and bold weight.
+* Preserved the three existing potion choices, Choose buttons and callbacks, div-based layout, forced-choice behavior, random generation, replacement logic, and cancellation rules.
+
+Related Feature
+
+* Feature-012: Implement Cauldron potion behaviour
+
+Bug Summary
+
+* The `cauldron-choice-list` element needs a clear title above the potion choices.
+* The title should tell the player to choose a new potion to gain.
+* It should use the `larger-text` class.
+* It should have `margin-bottom: 60px`.
+
+Required Text
+
+English:
+
+```txt id="8l6vw4"
+Choose a new potion to gain
+```
+
+Japanese:
+
+```txt id="xs9u3t"
+獲得する新しいポーションを選んでください。
+```
+
+Layout Requirement
+
+* The title should appear above the three Cauldron potion choices.
+* The title should be centred.
+* The title should use the correct language font.
+* The title should use yellow modal text styling.
+* The title must use the `larger-text` class.
+* The title should have:
+
+```css id="hm00po"
+margin-bottom: 60px;
+```
+
+Suggested Structure
+
+```jsx id="99orjs"
+<p className={`cauldron-choice-title larger-text ${languageClass}`}>
+  {chooseNewPotionToGainText}
+</p>
+
+<div className="cauldron-choice-list">
+  {potionChoices.map((potion) => (
+    <div className="cauldron-choice-card" key={potion.id}>
+      <Potion potion={potion} showName={true} />
+
+      <Button onClick={() => chooseCauldronPotion(potion)}>
+        {chooseText}
+      </Button>
+    </div>
+  ))}
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="dzkpfp"
+.cauldron-choice-title {
+  margin-bottom: 60px;
+  text-align: center;
+  color: #F5FA00;
+  font-weight: bold;
+}
+```
+
+Translation Requirement
+
+* Add or reuse the new translation:
+
+```txt id="0s94vs"
+Choose a new potion to gain	獲得する新しいポーションを選んでください。
+```
+
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `p` and `div` elements with grid or flex layouts.
+
+Out Of Scope
+
+* No changes to Cauldron random potion generation.
+* No changes to the three potion choices.
+* No changes to Choose button behaviour.
+* No changes to potion replacement logic.
+* No changes to Cauldron cancellation rules.
+* No unrelated modal redesign.
+
+Testing Required
+
+* Use Cauldron from the board.
+* Confirm the Cauldron choice modal opens.
+* Confirm the title appears above the potion choices.
+* Confirm English text says `Choose a new potion to gain`.
+* Confirm Japanese text says `獲得する新しいポーションを選んでください。`.
+* Confirm the title uses `larger-text`.
+* Confirm the title has `margin-bottom: 60px`.
+* Confirm the title is centred.
+* Confirm the title uses the correct English font.
+* Confirm the title uses the correct Japanese font.
+* Confirm the potion choices still appear correctly below the title.
+* Confirm Choose buttons still work.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

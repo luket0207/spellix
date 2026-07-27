@@ -88,6 +88,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
       nextForcedRoll: existingPlayer?.nextForcedRoll
         ? { ...existingPlayer.nextForcedRoll }
         : null,
+      nextBoardDiceCount: existingPlayer?.nextBoardDiceCount ?? null,
       pendingPotionEffects:
         existingPlayer?.pendingPotionEffects?.map((effect) => ({ ...effect })) ?? [],
       pieceImage: getPlayerPieceImageName({ colour, gender }),
@@ -112,10 +113,17 @@ export function createPlayers(playerCount, existingPlayers = []) {
 export function createInitialGameSetup() {
   return {
     activeBattle: null,
+    buyAndSellTransaction: null,
+    cauldronChoiceState: null,
+    devineChanceResult: null,
     miniGameResult: null,
     miniGameReturnNotice: null,
     pendingNextTurnModal: false,
     pendingPotionGrant: null,
+    stormMasterEffect: null,
+    stormMasterPendingPlayerId: null,
+    stormMasterResult: null,
+    troublemakerResult: null,
     playerCount: MIN_PLAYER_COUNT,
     players: createPlayers(MIN_PLAYER_COUNT),
     turnOrder: [],

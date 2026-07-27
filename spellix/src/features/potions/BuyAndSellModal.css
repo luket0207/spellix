@@ -1,0 +1,48 @@
+.buy-and-sell-token-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.buy-and-sell-reward-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.buy-and-sell-reward-instruction {
+  margin-bottom: 60px;
+  text-align: center;
+  color: #F5FA00;
+  font-weight: bold;
+}
+
+.buy-and-sell-token-select {
+  background: none;
+  border: 0;
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.buy-and-sell-token-select.is-selected {
+  outline: 3px solid #F5FA00;
+}
+
+.buy-and-sell-token-select  .token-display-name {
+  color: #F5FA00;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.buy-and-sell-reward-option {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

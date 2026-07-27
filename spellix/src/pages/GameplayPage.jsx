@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { POTION_DEFINITIONS } from '../data/potions';
 import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
@@ -17,11 +18,17 @@ import PotionList from '../features/potions/PotionList';
 import ActivePotionSection from '../features/potions/ActivePotionSection';
 import HeavyWeightDiceResult from '../features/potions/HeavyWeightDiceResult';
 import HealingPotionAnimation from '../features/potions/HealingPotionAnimation';
+import MultiDiceRoll from '../features/potions/MultiDiceRoll';
 import PotionUseConfirmationModal from '../features/potions/PotionUseConfirmationModal';
 import RollChoiceModal from '../features/potions/RollChoiceModal';
+import StormMasterResultModal from '../features/potions/StormMasterResultModal';
+import BuyAndSellModal from '../features/potions/BuyAndSellModal';
+import CauldronChoiceModal from '../features/potions/CauldronChoiceModal';
 import CopyPasteModal from '../features/potions/CopyPasteModal';
+import DevineChanceResultModal from '../features/potions/DevineChanceResultModal';
 import OtherPlayerChooser from '../features/potions/OtherPlayerChooser';
 import TokensmithModal from '../features/potions/TokensmithModal';
+import TroublemakerResultModal from '../features/potions/TroublemakerResultModal';
 import { createCopyPasteDuplicate } from '../features/potions/copyPaste';
 import { isHealingPotion } from '../features/potions/potionUsage';
 import {
@@ -58,8 +65,13 @@ import './GameplayPage.css';
 function GameplayPage() {
   const {
     advanceTurn,
+    clearPlayerBoardDiceEffect,
     clearPlayerForcedRoll,
+    completeStormMasterForcedTurn,
+    completeBuyAndSell,
     currentPlayer,
+    dismissDevineChanceResult,
+    dismissTroublemakerResult,
     dismissMiniGameReturnNotice,
     dismissNextTurnModal,
     gameSetup,
@@ -72,10 +84,19 @@ function GameplayPage() {
     updatePlayerSpells,
     consumePlayerPotion,
     resolveCopyPastePotion,
+    resolveBuyAndSellPotion,
+    resolveCauldronChoice,
+    resolveDevineChanceRoll,
+    resolveStormMasterRoll,
     resolveTargetPlayerPotion,
+    resolveTroublemakerRoll,
     resolveTokensmithPotion,
+    startBuyAndSell,
+    startCauldronChoice,
+    startStormMasterBlockedTurn,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
+  const [diceCountForCurrentRoll, setDiceCountForCurrentRoll] = useState(1);
   const [draftSpellSlots, setDraftSpellSlots] = useState([]);
   const [draftTokenBag, setDraftTokenBag] = useState([]);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState([]);
@@ -87,6 +108,7 @@ function GameplayPage() {
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
   const [mergeSaveDraft, setMergeSaveDraft] = useState(null);
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
+  const [pendingBuyAndSellUse, setPendingBuyAndSellUse] = useState(null);
   const [pendingCopyPasteUse, setPendingCopyPasteUse] = useState(null);
   const [pendingCopyPasteDuplicate, setPendingCopyPasteDuplicate] = useState(null);
   const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
@@ -137,9 +159,49 @@ function GameplayPage() {
     ? !isStartingSetupComplete || overCapacityColumns.length > 0
     : !hasUnsavedSpellChanges || overCapacityColumns.length > 0;
   const isHeavyWeightActive = currentPlayer?.activePotion?.id === 'heavy-weight';
+  const isDevineChanceActive =
+    currentPlayer?.activePotion?.id === 'devine-chance';
+  const isTroublemakerActive =
+    currentPlayer?.activePotion?.id === 'troublemaker';
+  const nextBoardDiceCount = currentPlayer?.nextBoardDiceCount ?? 1;
+  const devineChanceResult = gameSetup.devineChanceResult ?? null;
+  const troublemakerResult = gameSetup.troublemakerResult ?? null;
+  const stormMasterResult = gameSetup.stormMasterResult ?? null;
+  const isStormMasterPending =
+    gameSetup.stormMasterPendingPlayerId === currentPlayer?.id;
+  const isStormMasterBlocked = Boolean(
+    currentPlayer &&
+      gameSetup.stormMasterEffect?.affectedPlayerIds.includes(currentPlayer.id)
+  );
+  const troublemakerLosingPlayer = gameSetup.players.find(
+    ({ id }) => id === troublemakerResult?.losingPlayerId
+  );
+  const buyAndSellTransaction = gameSetup.buyAndSellTransaction ?? null;
+  const cauldronChoiceState = gameSetup.cauldronChoiceState ?? null;
+  const cauldronChoices =
+    cauldronChoiceState?.potionIds
+      .map((potionId) =>
+        POTION_DEFINITIONS.find(({ id }) => id === potionId)
+      )
+      .filter(Boolean) ?? [];
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
+      if (pendingPotionUse.potion.id === 'cauldron') {
+        startCauldronChoice(
+          pendingPotionUse.playerId,
+          pendingPotionUse.potionIndex
+        );
+        setPendingPotionUse(null);
+        return;
+      }
+
+      if (pendingPotionUse.potion.id === 'buy-and-sell') {
+        setPendingBuyAndSellUse(pendingPotionUse);
+        setPendingPotionUse(null);
+        return;
+      }
+
       if (pendingPotionUse.potion.id === 'roll-choice') {
         setPendingRollChoiceUse(pendingPotionUse);
         setPendingPotionUse(null);
@@ -207,6 +269,52 @@ function GameplayPage() {
   const closeCopyPasteModal = () => {
     setPendingCopyPasteUse(null);
     setPendingCopyPasteDuplicate(null);
+  };
+
+  const closeBuyAndSellModal = () => {
+    setPendingBuyAndSellUse(null);
+  };
+
+  const handleDiscardBuyAndSellTokens = (
+    selectedTokenIds,
+    rewardTokenTypes
+  ) => {
+    if (!pendingBuyAndSellUse) {
+      return;
+    }
+
+    startBuyAndSell(
+      pendingBuyAndSellUse.playerId,
+      pendingBuyAndSellUse.potionIndex,
+      selectedTokenIds,
+      rewardTokenTypes
+    );
+  };
+
+  const handleChooseBuyAndSellReward = (tokenType) => {
+    const playerId =
+      buyAndSellTransaction?.playerId ?? pendingBuyAndSellUse?.playerId;
+
+    if (playerId) {
+      resolveBuyAndSellPotion(playerId, tokenType);
+    }
+  };
+
+  const handleCompleteBuyAndSell = () => {
+    const playerId =
+      buyAndSellTransaction?.playerId ?? pendingBuyAndSellUse?.playerId;
+
+    if (playerId) {
+      completeBuyAndSell(playerId);
+    }
+
+    setPendingBuyAndSellUse(null);
+  };
+
+  const handleChooseCauldronPotion = (potion) => {
+    if (cauldronChoiceState) {
+      resolveCauldronChoice(cauldronChoiceState.playerId, potion.id);
+    }
   };
 
   const handleDuplicateToken = (token) => {
@@ -326,11 +434,13 @@ function GameplayPage() {
       showDiceModal ||
       showSpellsModal ||
       pendingNextTurnModal ||
+      stormMasterResult ||
       currentDiceRoll !== null
     ) {
       return;
     }
 
+    setDiceCountForCurrentRoll(nextBoardDiceCount);
     setShowDiceModal(true);
   };
 
@@ -342,6 +452,52 @@ function GameplayPage() {
     markPlayerTokenBagSeen(currentPlayer.id);
     setIsRedoMode(false);
     setShowSpellsModal(true);
+  };
+
+  const prepareBoardMovement = (diceRoll) => {
+    if (currentPlayer.anywhereMode) {
+      setHighlightedNodeIds(
+        getAnywhereModeHighlightedNodeIds(
+          gameSetup.board,
+          currentPlayer.position
+        )
+      );
+      return;
+    }
+
+    setHighlightedNodeIds(
+      getHighlightedNodeIds(
+        gameSetup.board,
+        currentPlayer.position,
+        diceRoll,
+        {
+          blockedNodeIds: currentPlayer.hasLeftStartArea
+            ? ['start-area']
+            : [],
+        }
+      )
+    );
+  };
+
+  const continueAfterRollDependentEffects = (diceRoll) => {
+    if (!currentPlayer) {
+      return;
+    }
+
+    if (isStormMasterPending) {
+      resolveStormMasterRoll(currentPlayer.id, diceRoll);
+
+      if (diceRoll % 2 !== 0) {
+        return;
+      }
+    }
+
+    if (isStormMasterBlocked) {
+      startStormMasterBlockedTurn(currentPlayer.id, diceRoll);
+      return;
+    }
+
+    prepareBoardMovement(diceRoll);
   };
 
   const handleDiceRollComplete = (originalDiceRoll) => {
@@ -359,20 +515,26 @@ function GameplayPage() {
       clearPlayerForcedRoll(currentPlayer.id);
     }
 
-    if (currentPlayer.anywhereMode) {
-      setHighlightedNodeIds(getAnywhereModeHighlightedNodeIds(gameSetup.board, currentPlayer.position));
+    if (diceCountForCurrentRoll > 1) {
+      clearPlayerBoardDiceEffect(currentPlayer.id);
+    }
+
+    if (isTroublemakerActive) {
+      resolveTroublemakerRoll(currentPlayer.id, originalDiceRoll);
       return;
     }
 
-    setHighlightedNodeIds(
-      getHighlightedNodeIds(gameSetup.board, currentPlayer.position, diceRoll, {
-        blockedNodeIds: currentPlayer.hasLeftStartArea ? ['start-area'] : [],
-      })
-    );
+    if (isDevineChanceActive) {
+      resolveDevineChanceRoll(currentPlayer.id, originalDiceRoll);
+      return;
+    }
+
+    continueAfterRollDependentEffects(diceRoll);
   };
 
   const handleDiceSequenceComplete = () => {
     setShowDiceModal(false);
+    setDiceCountForCurrentRoll(1);
   };
 
   const handleSquareClick = (square) => {
@@ -381,6 +543,9 @@ function GameplayPage() {
       showDiceModal ||
       showSpellsModal ||
       pendingNextTurnModal ||
+      devineChanceResult ||
+      stormMasterResult ||
+      troublemakerResult ||
       currentDiceRoll === null
     ) {
       return;
@@ -411,6 +576,34 @@ function GameplayPage() {
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
     advanceTurn();
+  };
+
+  const handleContinueTroublemakerResult = () => {
+    if (!currentPlayer || currentDiceRoll === null || !troublemakerResult) {
+      return;
+    }
+
+    dismissTroublemakerResult(currentPlayer.id);
+    continueAfterRollDependentEffects(currentDiceRoll);
+  };
+
+  const handleContinueDevineChanceResult = () => {
+    if (!currentPlayer || currentDiceRoll === null || !devineChanceResult) {
+      return;
+    }
+
+    dismissDevineChanceResult(currentPlayer.id);
+    continueAfterRollDependentEffects(currentDiceRoll);
+  };
+
+  const handleContinueStormMasterResult = () => {
+    if (!currentPlayer || !stormMasterResult) {
+      return;
+    }
+
+    setCurrentDiceRoll(null);
+    setHighlightedNodeIds([]);
+    completeStormMasterForcedTurn(currentPlayer.id);
   };
 
   const handleSpellTokenDrop = (tokenId, destinationId) => {
@@ -628,6 +821,9 @@ function GameplayPage() {
             showDiceModal ||
             showSpellsModal ||
             pendingNextTurnModal ||
+            devineChanceResult ||
+            stormMasterResult ||
+            troublemakerResult ||
             currentDiceRoll !== null
           }
           onClick={handleRollDice}
@@ -703,6 +899,24 @@ function GameplayPage() {
         language={currentLanguage}
         onSelect={handleSelectRollChoice}
       />
+      <BuyAndSellModal
+        isOpen={Boolean(
+          pendingBuyAndSellUse || buyAndSellTransaction
+        )}
+        language={currentLanguage}
+        onChoose={handleChooseBuyAndSellReward}
+        onClose={closeBuyAndSellModal}
+        onComplete={handleCompleteBuyAndSell}
+        onDiscard={handleDiscardBuyAndSellTokens}
+        tokenBag={currentPlayer?.tokenBag ?? []}
+        transaction={buyAndSellTransaction}
+      />
+      <CauldronChoiceModal
+        choices={cauldronChoices}
+        isOpen={Boolean(cauldronChoiceState)}
+        language={currentLanguage}
+        onChoose={handleChooseCauldronPotion}
+      />
       <CopyPasteModal
         duplicateToken={pendingCopyPasteDuplicate?.token}
         isOpen={Boolean(pendingCopyPasteUse)}
@@ -728,6 +942,25 @@ function GameplayPage() {
         language={currentLanguage}
         onChoosePlayer={handleChooseTargetPlayer}
         players={gameSetup.players}
+      />
+      <TroublemakerResultModal
+        isOpen={Boolean(troublemakerResult) && !showDiceModal}
+        language={troublemakerLosingPlayer?.language ?? currentLanguage}
+        onContinue={handleContinueTroublemakerResult}
+        player={troublemakerLosingPlayer}
+        removedTokens={troublemakerResult?.removedTokens ?? []}
+      />
+      <DevineChanceResultModal
+        healedGroup={devineChanceResult?.healedGroup}
+        isOpen={Boolean(devineChanceResult) && !showDiceModal}
+        language={currentLanguage}
+        onContinue={handleContinueDevineChanceResult}
+      />
+      <StormMasterResultModal
+        isOpen={Boolean(stormMasterResult) && !showDiceModal}
+        language={currentLanguage}
+        onContinue={handleContinueStormMasterResult}
+        resultType={stormMasterResult?.resultType}
       />
 
       <SpellsModal
@@ -812,22 +1045,43 @@ function GameplayPage() {
         variant="dice"
       >
         {currentPlayer?.anywhereMode ? <p>Anywhere Mode</p> : null}
-        <DiceRoll
-          forcedResult={currentPlayer?.nextForcedRoll?.value ?? null}
-          mode="temporary"
-          onRollComplete={handleDiceRollComplete}
-          onSequenceComplete={handleDiceSequenceComplete}
-          resultDurationExtensionMs={isHeavyWeightActive ? 1000 : 0}
-          resultText={
-            isHeavyWeightActive
-              ? (originalRoll) =>
-                  <HeavyWeightDiceResult
-                    language={currentLanguage}
-                    roll={getHeavyWeightBoardRoll(originalRoll)}
-                  />
-              : null
-          }
-        />
+        {diceCountForCurrentRoll > 1 ? (
+          <MultiDiceRoll
+            aggregateResultText={
+              isHeavyWeightActive
+                ? (total) => (
+                    <HeavyWeightDiceResult
+                      language={currentLanguage}
+                      roll={getHeavyWeightBoardRoll(total)}
+                    />
+                  )
+                : null
+            }
+            diceCount={diceCountForCurrentRoll}
+            forcedFirstResult={currentPlayer?.nextForcedRoll?.value ?? null}
+            onRollComplete={handleDiceRollComplete}
+            onSequenceComplete={handleDiceSequenceComplete}
+            resultDurationExtensionMs={isHeavyWeightActive ? 1000 : 0}
+          />
+        ) : (
+          <DiceRoll
+            forcedResult={currentPlayer?.nextForcedRoll?.value ?? null}
+            mode="temporary"
+            onRollComplete={handleDiceRollComplete}
+            onSequenceComplete={handleDiceSequenceComplete}
+            resultDurationExtensionMs={isHeavyWeightActive ? 1000 : 0}
+            resultText={
+              isHeavyWeightActive
+                ? (originalRoll) => (
+                    <HeavyWeightDiceResult
+                      language={currentLanguage}
+                      roll={getHeavyWeightBoardRoll(originalRoll)}
+                    />
+                  )
+                : null
+            }
+          />
+        )}
       </Modal>
 
       {currentPlayer ? (

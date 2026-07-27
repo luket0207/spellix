@@ -1,4 +1,8 @@
-export const TARGET_PLAYER_POTION_IDS = ['spellbound', 'heavy-weight'];
+export const TARGET_PLAYER_POTION_IDS = [
+  'spellbound',
+  'heavy-weight',
+  'troublemaker',
+];
 
 export function isTargetPlayerPotion(potion) {
   return TARGET_PLAYER_POTION_IDS.includes(potion?.id);
