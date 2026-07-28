@@ -1,0 +1,93 @@
+.decision-page {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.decision-modal {
+  text-align: center;
+}
+
+.decision-modal-content,
+.decision-outcome {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.decision-player-image {
+  display: block;
+  height: 150px;
+  object-fit: contain;
+  width: auto;
+}
+
+.decision-question,
+.decision-outcome-text {
+  margin: 40px 0 0;
+  text-align: center;
+}
+
+.decision-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 32px;
+  width: 100%;
+}
+
+.decision-choice-button {
+  width: 100%;
+}
+
+.decision-outcome-result {
+  font-size: 16px;
+  margin: 18px 0 32px;
+  text-align: center;
+}
+
+.decision-effect-item,
+.decision-health-effect {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.decision-health-effect {
+  max-width: 420px;
+  width: 100%;
+}
+
+.decision-potion-actions {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.decision-potion-choice-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.decision-potion-replace-button {
+  flex: 1;
+  min-width: 0;
+}
+
+.decision-potion-discard-button {
+  width: 100%;
+}
+
+.decision-continue-button {
+  margin-top: 24px;
+}

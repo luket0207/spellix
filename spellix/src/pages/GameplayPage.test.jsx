@@ -119,6 +119,44 @@ function renderGameplayPage() {
   );
 }
 
+test.each([
+  ['en', 'You miss your turn this turn'],
+  ['jp', '\u3053\u306e\u30bf\u30fc\u30f3\u306f\u884c\u52d5\u3067\u304d\u307e\u305b\u3093\u3002'],
+])(
+  'shows the %s skipped-turn notice and keeps the following player modal open',
+  (language, skipMessage) => {
+    const setup = createCommittedGameplaySetup();
+
+    setup.currentTurnIndex = 1;
+    setup.pendingNextTurnModal = true;
+    setup.players[1].language = language;
+    setup.players[1].skipNextTurn = true;
+
+    render(
+      <GameSetupProvider initialGameSetup={setup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    const skippedTurnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+
+    expect(within(skippedTurnDialog).getByText(skipMessage)).toHaveClass(
+      'larger-text',
+      `language-${language}`
+    );
+
+    fireEvent.click(
+      within(skippedTurnDialog).getByRole('button', { name: /^ok$/i })
+    );
+
+    const nextTurnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+
+    expect(nextTurnDialog).toBeInTheDocument();
+    expect(within(nextTurnDialog).getByText('Red Players Turn')).toBeInTheDocument();
+    expect(within(nextTurnDialog).queryByText(skipMessage)).not.toBeInTheDocument();
+  }
+);
+
 function PlayerPotionStateProbe() {
   const { currentPlayer } = useGameSetup();
 

@@ -4,7 +4,7 @@ Feature-001: Add Decision page with random question, choice resolution, and plac
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -942,6 +942,1652 @@ Testing Checkpoints
 * Confirm zero-chance `N/A` neutral outcomes are not selected.
 * Confirm all chance totals equal `100`.
 * Confirm no actual reward or punishment is applied yet.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added the `/decision` route and complete question-to-placeholder-outcome-to-board flow.
+* Added all 12 bilingual decisions with exactly 3 choices each, localized outcome narratives and result labels, validated 100-point chance totals, stable random question selection, and weighted good/neutral/bad resolution.
+* Added a localized Start Decision action and separate manual Decision environment selector under the existing Debug Mini Games section.
+* Reused the current-player context, player piece lookup, battle environment assets, shared wooden `Modal`, shared `Button`, language classes, and existing `advanceTurn` next-turn invariant.
+* Assumption: Japanese outcome result labels use direct translations of the supplied English result labels because the source table provides Japanese narratives but does not list separate Japanese result labels.
+* Decision outcomes are display-only and do not grant or remove potions/tokens, change health, or skip turns.
+* Automatic board-square Decision encounters, real outcome effects, Good Decisions potion behavior, and Decision animations remain out of scope.
+* Updated only `features.txt` and `testing.txt` for EPIC-015; no `implementation.txt` was created or updated, following the main project rules.
+
+
+---
+
+Feature-002: Implement Decision page rewards and punishments
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-010 Feature-015: Redesign Spell Token Assignment page
+* EPIC-011 Feature-002: Global Cave reward resolution order
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the actual rewards and punishments from Decision page outcomes.
+* Use the decision data added in Feature-001.
+* Neutral outcomes should continue to do nothing except display the outcome text.
+* Good outcomes should grant rewards.
+* Bad outcomes should apply punishments.
+* Reuse existing reward and punishment mechanisms from battle, death, cave, and potion flows wherever possible.
+
+Core Rule
+
+* The Decision page should now resolve the chosen outcome fully before returning to the board.
+* The Continue button should only return to the board once the outcome has been displayed and any required reward or punishment flow has finished.
+
+Outcome Categories
+
+* Decision outcomes can currently produce these result types:
+
+  * Nothing
+  * Gain a specific potion
+  * Gain a random common potion
+  * Gain a random rare potion
+  * Gain a specific token rarity
+  * Gain a common token
+  * Gain a rare token
+  * Gain a token
+  * Lose X health
+  * Lose a token
+  * Lose a random potion
+  * Lose your next turn
+
+Neutral Outcome Requirement
+
+* Neutral outcomes always do nothing.
+* When a neutral outcome is selected:
+
+  * show the outcome narrative text.
+  * show the outcome result text, usually `Nothing`.
+  * show the Continue button.
+* Clicking Continue should:
+
+  * return to the board.
+  * advance the turn to the next player.
+  * show the next-turn modal as usual.
+
+Good Outcome: Gain Potion
+
+* Potion rewards can be:
+
+  * a specific potion, such as `Small Heal`, `Cauldron`, `Freeze`, `Thaw`, or `First Aid`.
+  * a random common potion.
+  * a random rare potion.
+  * a random potion from the requested rarity group.
+* Use the potion data from the current source-of-truth potion table.
+* When a potion reward is granted:
+
+  * display the outcome narrative text.
+  * display the outcome result text.
+  * then show the actual Potion component for the potion being gained.
+  * include the potion name.
+  * include the potion tooltip.
+* If the player has room in their potion slots:
+
+  * add the potion to the player’s potion slots.
+  * allow Continue to return to the board and advance the turn.
+* If the player’s potion slots are full:
+
+  * use the usual potion replacement flow.
+  * allow the player to discard the new potion.
+  * or allow the player to discard one existing potion and keep the new potion.
+  * this should match the existing battle potion reward flow.
+* Once potion reward resolution is complete:
+
+  * Continue returns to the board.
+  * the turn advances to the next player.
+
+Good Outcome: Gain Token
+
+* Token rewards can be:
+
+  * a common token.
+  * a rare token.
+  * a token from both common and rare options.
+  * a specific token category if later added to decision data.
+* Token rewards should use the same method battle uses to award and assign tokens.
+* Use the existing Spell Token Assignment component with the trash ability.
+* This should match battle token reward behaviour.
+* When a token reward is granted:
+
+  * display the outcome narrative text.
+  * display the outcome result text.
+  * show the token reward through the assignment flow.
+* The player should be able to place or trash the token using the same rules as battle rewards.
+* Once token assignment is complete:
+
+  * return to the board.
+  * advance the turn to the next player.
+
+Punishment: Lose Your Next Turn
+
+* This is a new mechanism.
+* When this punishment is inflicted:
+
+  * store a one-time skip-turn flag on the affected player.
+  * complete the current Decision page normally.
+  * return to the board.
+  * advance to the next player as usual.
+
+Skip Turn Storage Requirement
+
+* Each player should be able to have a pending skip-turn flag.
+* Suggested state field:
+
+```js id="c2qwum"
+player.skipNextTurn = true;
+```
+
+* Exact state location can vary.
+* The effect should be one-time only.
+* Once it has caused the player to miss a turn, it should be cleared.
+
+Skip Turn Trigger Requirement
+
+* When the affected player’s turn comes back around:
+
+  * still show the next-turn modal for that player.
+  * do not let them take a normal board turn.
+  * replace the normal OK button behaviour.
+* In the next-turn modal, when the skip-turn flag is active:
+
+  * display this sentence above the OK button.
+  * use `larger-text`.
+
+English:
+
+```txt id="r6p9pm"
+You miss your turn this turn
+```
+
+Japanese:
+
+```txt id="i1hg85"
+このターンは行動できません。
+```
+
+* When the player clicks OK:
+
+  * immediately clear the skip-turn flag.
+  * immediately move on to the player after them.
+  * show the next-turn modal for the next player.
+* The skipped player should not roll.
+* The skipped player should not move.
+* The skipped player should not use board potions.
+* This happens once, then the player returns to normal on their next turn.
+
+Punishment: Lose X Health
+
+* Some bad outcomes cause health loss, such as:
+
+  * Lose 5 health
+  * Lose 10 health
+  * Lose 15 health
+  * Lose 20 health
+* When this punishment happens:
+
+  * show the outcome narrative text.
+  * show the outcome result text.
+  * include the player’s health bar inside the modal.
+  * centre all modal content.
+* The Continue button should initially be disabled.
+* Wait 1 second.
+* Then subtract the specified amount of health from the player.
+* Animate or update the health bar using the existing health bar behaviour.
+* After health loss is applied, enable Continue.
+* Clicking Continue should return to the board and advance the turn.
+
+Suggested Flow
+
+```js id="a8yz2v"
+setContinueDisabled(true);
+showOutcomeWithHealthBar(outcome);
+
+await delay(1000);
+
+applyHealthLoss(currentPlayerId, healthLossAmount);
+
+setContinueDisabled(false);
+```
+
+* If the health loss reduces the player to 0 HP, use the existing death/respawn behaviour if already required globally.
+* If death handling is not yet available from this page, stop safely and do not allow negative health.
+
+Punishment: Lose A Token
+
+* Losing a token should work exactly the same way it does when the player dies.
+* Starting tokens cannot be removed.
+* Black tokens should be removed first.
+* If no black tokens can be removed, remove a random eligible token.
+* If no tokens can be removed, display:
+
+English:
+
+```txt id="urv8nl"
+No tokens were able to be removed
+```
+
+Japanese:
+
+```txt id="uup0hy"
+トークンを取り除くことができませんでした。
+```
+
+* If a token is removed, display:
+
+English:
+
+```txt id="anwmar"
+This token has been removed
+```
+
+Japanese:
+
+```txt id="jvs1hv"
+このトークンは取り除かれました。
+```
+
+* Below the message, show the removed token using the Token component.
+* Include the token name.
+* Include the token tooltip if the component normally supports it.
+* All of this should be shown inside the Decision outcome modal.
+* All content should be centred.
+* The Continue button should appear underneath.
+
+Token Removal Priority
+
+```txt id="j66pog"
+1. Do not remove starting tokens.
+2. Remove black tokens first if possible.
+3. Otherwise remove a random eligible token.
+4. If no eligible tokens exist, show the no-token-removed message.
+```
+
+Punishment: Lose A Potion
+
+* Losing a potion should follow the same pattern as losing a token.
+* If the player has no potions in their potion slots, display:
+
+English:
+
+```txt id="axj0pf"
+No potions were able to be removed
+```
+
+Japanese:
+
+```txt id="pcrhx8"
+ポーションを取り除くことができませんでした。
+```
+
+* If a potion is removed, display:
+
+English:
+
+```txt id="bnyvwh"
+This potion was removed
+```
+
+Japanese:
+
+```txt id="uw9rn5"
+このポーションは取り除かれました。
+```
+
+* Below the message, show the removed potion using the Potion component.
+* Include the potion name.
+* Include the potion tooltip.
+* All content should be centred inside the modal.
+* The Continue button should appear underneath.
+
+Potion Removal Selection
+
+* If the result says `Lose a random potion`, remove a random potion from the player’s potion slots.
+* Only remove existing potion slots that currently contain a potion.
+* Do not remove empty slots.
+* If there are no removable potions, show the no-potion-removed message.
+
+Outcome Mapping Requirement
+
+* Use the Feature-001 decision data to decide which reward or punishment to apply.
+* The outcome result text should map to an internal effect type.
+
+Suggested Result Parsing / Data Direction
+
+* Prefer adding an explicit `effect` object to the decision data rather than parsing English result strings.
+* Example:
+
+```js id="u81sa9"
+{
+  result: {
+    en: "Gain a Small Heal potion",
+    jp: "小回復ポーションを獲得"
+  },
+  text: {
+    en: "The voice belongs to a grateful spirit, which rewards your kindness.",
+    jp: "声の主は感謝した精霊で、あなたの親切にお礼をくれました。"
+  },
+  effect: {
+    type: "gainPotion",
+    potionId: "small-heal"
+  }
+}
+```
+
+* Example random common potion:
+
+```js id="azd5ds"
+effect: {
+  type: "gainPotion",
+  rarity: "common"
+}
+```
+
+* Example random rare token:
+
+```js id="dajztf"
+effect: {
+  type: "gainToken",
+  rarity: "rare"
+}
+```
+
+* Example lose health:
+
+```js id="xbky3m"
+effect: {
+  type: "loseHealth",
+  amount: 10
+}
+```
+
+* Example lose next turn:
+
+```js id="gbtlqc"
+effect: {
+  type: "skipNextTurn"
+}
+```
+
+* This avoids fragile logic based on English text.
+
+Required Effect Types
+
+```js id="klvz7e"
+"none"
+"gainPotion"
+"gainToken"
+"loseHealth"
+"loseToken"
+"losePotion"
+"skipNextTurn"
+```
+
+Suggested Effect Fields
+
+```js id="g7goe2"
+{
+  type: "gainPotion",
+  potionId: "small-heal",
+  rarity: null
+}
+
+{
+  type: "gainPotion",
+  potionId: null,
+  rarity: "common"
+}
+
+{
+  type: "gainToken",
+  rarity: "common"
+}
+
+{
+  type: "gainToken",
+  rarity: "rare"
+}
+
+{
+  type: "gainToken",
+  rarity: "any"
+}
+
+{
+  type: "loseHealth",
+  amount: 15
+}
+
+{
+  type: "loseToken"
+}
+
+{
+  type: "losePotion"
+}
+
+{
+  type: "skipNextTurn"
+}
+```
+
+Decision Outcome Flow Requirement
+
+* The page should follow this order:
+
+```txt id="xhd9fc"
+1. Player chooses an answer.
+2. Weighted good / neutral / bad result is selected.
+3. Outcome narrative text is shown.
+4. Outcome result text is shown.
+5. Any reward or punishment flow is resolved.
+6. Continue becomes available when resolution is complete.
+7. Continue returns to board and advances the turn.
+```
+
+* For instant outcomes like `Nothing`, `Lose a token`, `Lose a potion`, or `Lose your next turn`, Continue can appear immediately after the result is displayed.
+* For health loss, Continue should stay disabled until after the 1 second delay and health update.
+* For potion rewards with full slots, Continue should not complete the flow until the replacement decision is resolved.
+* For token rewards, Continue should not complete the flow until token assignment is resolved.
+
+Modal Display Requirement
+
+* All Decision outcome displays should remain inside the Decision modal.
+* All text should be centred.
+* Player image should remain at the top unless an existing reused flow requires otherwise.
+* Outcome narrative text should use `larger-text`.
+* Outcome result text should be smaller than the narrative text.
+* Reward/punishment item components should appear centred beneath the relevant message.
+* Continue button should appear at the bottom.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Translation Requirement
+
+* Add or reuse all required bilingual text:
+
+  * `You miss your turn this turn` / `このターンは行動できません。`
+  * `No tokens were able to be removed` / `トークンを取り除くことができませんでした。`
+  * `This token has been removed` / `このトークンは取り除かれました。`
+  * `No potions were able to be removed` / `ポーションを取り除くことができませんでした。`
+  * `This potion was removed` / `このポーションは取り除かれました。`
+* Outcome narrative and result text should use the bilingual data from Feature-001.
+* English should use the correct English font.
+* Japanese should use the correct Japanese font.
+* If language is missing or invalid, fall back to English.
+
+Out Of Scope
+
+* No new Decision questions.
+* No changes to the good / neutral / bad chance values.
+* No changes to the Decision page layout from Feature-001 except what is required for rewards and punishments.
+* No Good Decisions potion behaviour yet.
+* No new reward animation unless reused flows already include one.
+* No unrelated battle, cave, river, loot, or board redesign.
+* No changes to existing battle reward behaviour except reuse from this feature.
+* No changes to existing death token-removal behaviour except reuse from this feature.
+
+Testing Checkpoints
+
+* Trigger a Decision page from the debug menu.
+
+* Choose an answer that resolves to a neutral outcome.
+
+* Confirm the outcome text displays.
+
+* Confirm no reward or punishment is applied.
+
+* Confirm Continue returns to the board and advances the turn.
+
+* Force or repeatedly test a specific potion reward.
+
+* Confirm the correct specific potion can be granted.
+
+* Confirm random common potion rewards only choose common potions.
+
+* Confirm random rare potion rewards only choose rare potions.
+
+* Confirm the awarded Potion component is displayed with name and tooltip.
+
+* Confirm the normal full-slot replacement flow works.
+
+* Confirm Continue only returns to board after potion reward resolution is complete.
+
+* Force or repeatedly test a token reward.
+
+* Confirm common token rewards only choose common tokens.
+
+* Confirm rare token rewards only choose rare tokens.
+
+* Confirm `Gain a token` can choose from the intended token pool.
+
+* Confirm the Spell Token Assignment component is used.
+
+* Confirm the trash ability works.
+
+* Confirm Continue/return flow happens only after token assignment resolution is complete.
+
+* Force a `Lose your next turn` outcome.
+
+* Confirm the decision ends and turn advances normally.
+
+* Let the affected player’s next turn arrive.
+
+* Confirm the next-turn modal appears for that player.
+
+* Confirm the modal shows `You miss your turn this turn` / `このターンは行動できません。`.
+
+* Confirm the text uses `larger-text`.
+
+* Click OK.
+
+* Confirm the game immediately moves to the next player.
+
+* Confirm the skipped player does not roll, move, or use board potions.
+
+* Confirm the skip flag clears after one missed turn.
+
+* Force `Lose 10 health`.
+
+* Confirm the Decision outcome modal includes the player’s health bar.
+
+* Confirm Continue starts disabled.
+
+* Confirm the game waits 1 second.
+
+* Confirm the correct amount of health is removed.
+
+* Confirm Continue becomes enabled after health loss is applied.
+
+* Confirm Continue returns to the board and advances the turn.
+
+* Force `Lose a token`.
+
+* Confirm starting tokens are not removed.
+
+* Confirm black tokens are removed first if present.
+
+* Confirm otherwise a random eligible token is removed.
+
+* Confirm if no token can be removed, the no-token message displays.
+
+* Confirm if a token is removed, the removed Token component displays with name.
+
+* Confirm all content is centred.
+
+* Force `Lose a random potion`.
+
+* Confirm if no potions exist, the no-potion message displays.
+
+* Confirm if a potion exists, a random potion is removed.
+
+* Confirm the removed Potion component displays with name.
+
+* Confirm all content is centred.
+
+* Confirm English text uses the correct font.
+
+* Confirm Japanese text uses the correct font.
+
+* Confirm no `ul` or `li` elements are introduced.
+
+* Confirm there are no console errors.
+
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added explicit effect metadata for every Decision outcome using the required `none`, `gainPotion`, `gainToken`, `loseHealth`, `loseToken`, `losePotion`, and `skipNextTurn` types.
+* Implemented specific and rarity-based potion rewards with the existing potion slot capacity and replacement/discard flow. The supplied `Freeze` reward maps to the current source-of-truth `ice-beam` potion.
+* Implemented common, rare, and any-rarity token rewards through the existing reward-mode Spell Token Assignment component, including spell slots, token bag placement/replacement, trash, capacity checks, and column-merge confirmation.
+* Implemented delayed 5/10/15/20 health loss with the shared HealthBar, a disabled Continue button during the one-second delay, and safe clamping at 0 because Decision-page respawn handling is not currently available.
+* Reused the death token penalty selector so protected starting tokens remain, black tokens are removed first, and otherwise one eligible committed token is selected randomly.
+* Implemented random existing-potion removal and the exact required bilingual removed/nothing-to-remove messages with shared PotionIcon and Token displays.
+* Added a persistent one-time player skip flag. The affected player's next-turn modal shows the exact localized message, and OK clears the flag, advances immediately, and leaves the following player's next-turn modal open.
+* Neutral outcomes remain display-only, and Continue is gated until every non-instant reward or punishment is resolved.
+* Kept all outcome content inside the existing centred Decision modal without list markup, new routes, new questions, changed chances, Good Decisions behavior, or unrelated redesign.
+* Updated only `features.txt` and `testing.txt` for this feature. The conflicting source instruction to update `implementation.txt` was not followed because the project rules explicitly prohibit creating or updating that file.
+
+
+---
+
+Feature-003: Implement Good Decisions potion behaviour on Decision page
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+* Feature-002: Implement Decision page rewards and punishments
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Mini potion `Good Decisions`.
+* Good Decisions can only be used on the Decision page.
+* When active, it removes all bad outcome chances from every decision choice.
+* The decision will then resolve as either good or neutral, never bad.
+* The potion should be consumed once the decision outcome has been resolved.
+
+Potion Availability Requirement
+
+* `Good Decisions` is a Mini potion.
+* It should not be usable from the board potion section.
+* It should not be usable from the battle potion section.
+* It should only become usable on the Decision page.
+* Mini potion use is independent from board potion and battle potion use.
+* A player may still use Good Decisions on the Decision page even if they already used a board potion earlier in the same board turn.
+
+Decision Page Display Requirement
+
+* If the current decision player owns `Good Decisions`, display the potion above the 3 decision choice buttons.
+* The potion should appear after the question text and before the choice buttons.
+* The potion display should include:
+
+  * the Potion component.
+  * the potion name.
+  * the tooltip.
+  * a `Use` button underneath it.
+
+Button Text
+
+English:
+
+```txt id="g5d66u"
+Use
+```
+
+Japanese:
+
+```txt id="juwj1i"
+使用する
+```
+
+Suggested Structure
+
+```jsx id="ge10df"
+{playerHasGoodDecisions && (
+  <div className="decision-mini-potion-section">
+    <Potion
+      potion={goodDecisionsPotion}
+      showName={true}
+      showTooltip={true}
+    />
+
+    {!isGoodDecisionsActive ? (
+      <button
+        className={`decision-mini-potion-use-button ${languageClass}`}
+        onClick={handleUseGoodDecisions}
+      >
+        {useText}
+      </button>
+    ) : (
+      <p className={`decision-mini-potion-active-text ${languageClass}`}>
+        {activeText}
+      </p>
+    )}
+  </div>
+)}
+```
+
+Active State Requirement
+
+* When the player chooses to use Good Decisions:
+
+  * do not immediately remove the potion from the Decision page.
+  * do not remove the Potion component from the UI yet.
+  * replace the `Use` button with a `<p>` tag.
+  * the `<p>` tag should say `Active`.
+  * the `Active` text should be yellow.
+  * the `Active` text should take up the same height as the Use button.
+* This prevents the modal contents from jumping when the button is replaced.
+
+Active Text
+
+English:
+
+```txt id="opaxpx"
+Active
+```
+
+Japanese:
+
+```txt id="gen6c6"
+発動中
+```
+
+Suggested CSS Direction
+
+```css id="b463wl"
+.decision-mini-potion-active-text {
+  min-height: 36px;
+  margin: 0;
+  color: #F5FA00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* Match the `min-height` to the actual Use button height if different.
+* The key requirement is no layout jump when `Use` becomes `Active`.
+
+Outcome Chance Requirement
+
+* If Good Decisions is active, remove the chance of a bad outcome from every choice.
+* No matter which choice the player chooses, the result should only be:
+
+  * good.
+  * neutral.
+* A bad outcome should become impossible.
+
+Chance Rebalancing Requirement
+
+* Do not simply reroll when a bad outcome is selected.
+* Instead, resolve the choice using only its good and neutral chances.
+* Bad chance should be ignored while Good Decisions is active.
+* The remaining good and neutral chances should be treated proportionally.
+
+Example
+
+```txt id="y4qr2c"
+Original choice:
+Good 30
+Neutral 20
+Bad 50
+
+With Good Decisions active:
+Good and neutral are the only possible outcomes.
+Good is 30 out of 50.
+Neutral is 20 out of 50.
+Bad cannot happen.
+```
+
+Suggested Logic Direction
+
+```js id="iifoz0"
+function resolveDecisionOutcome(choice, goodDecisionsActive) {
+  const { good, neutral, bad } = choice.chances;
+
+  if (goodDecisionsActive) {
+    const safeTotal = good + neutral;
+
+    if (safeTotal <= 0) {
+      return "good";
+    }
+
+    const roll = Math.random() * safeTotal;
+
+    if (roll < good) {
+      return "good";
+    }
+
+    return "neutral";
+  }
+
+  const roll = Math.random() * 100;
+
+  if (roll < good) {
+    return "good";
+  }
+
+  if (roll < good + neutral) {
+    return "neutral";
+  }
+
+  return "bad";
+}
+```
+
+Zero Neutral Chance Requirement
+
+* Some choices have `neutral: 0`.
+* If Good Decisions is active and the selected choice has:
+
+  * good chance greater than 0.
+  * neutral chance 0.
+* Then that choice should always produce a good outcome.
+* Do not accidentally select the `N/A` neutral outcome.
+
+Edge Case Requirement
+
+* If a choice somehow has `good: 0`, `neutral: 0`, and `bad: 100`, Good Decisions should prevent the bad outcome.
+* Since there is no safe outcome to choose from, default to a good outcome and log a development warning.
+* This should not happen with the current Decision data, but it is safer to guard against bad data.
+
+Potion Consumption Requirement
+
+* Good Decisions should be consumed only after the player has chosen a decision option and the outcome has been resolved.
+* It should not be consumed immediately when the Use button is clicked.
+* If the player uses Good Decisions, then chooses an option:
+
+  * resolve the outcome with bad outcomes removed.
+  * remove Good Decisions from the player’s potion slots.
+  * continue with the outcome reward/punishment flow from Feature-002.
+* Since bad outcomes cannot happen while Good Decisions is active, the resolved outcome should only apply:
+
+  * good reward effects.
+  * neutral no-effect display.
+* The potion should be gone by the time the player returns to the board.
+
+Mini Potion Independence Requirement
+
+* Mini potion use is independent from board and battle potion use.
+* Good Decisions can be used even if the player already used a board potion earlier in the same board turn.
+* Using Good Decisions should not:
+
+  * consume the board potion use for the turn.
+  * consume the battle potion use for the turn.
+  * be blocked by board potion usage.
+  * be blocked by battle potion usage.
+* If later Mini potion limits are added, they should be tracked separately.
+
+No Cancel Requirement
+
+* The player still has no way to cancel or leave the Decision page.
+* Once Good Decisions is active, it remains active until the player chooses a decision option.
+* There is no need for a button to deactivate it.
+
+Expected Behaviour
+
+* If the player owns Good Decisions, the potion appears above the 3 choice buttons.
+* The potion displays with its name and tooltip.
+* The Use button appears underneath the potion.
+* Clicking Use changes the button to yellow `Active` text.
+* The Potion component remains visible.
+* The layout does not jump when Use changes to Active.
+* While active, bad outcomes cannot be selected.
+* The chosen answer resolves only to good or neutral.
+* Good Decisions is consumed after the decision outcome is resolved.
+* Good Decisions can be used even if the player already used a board potion earlier that turn.
+* Normal Decision page flow continues after the outcome.
+
+Out Of Scope
+
+* No changes to Decision question data.
+* No changes to good / neutral / bad chance values in the source data.
+* No changes to actual good reward effects from Feature-002.
+* No changes to neutral outcome behaviour.
+* No new Mini potion limit system beyond this potion’s independent use.
+* No changes to board potion use limits.
+* No changes to battle potion use limits.
+* No unrelated Decision page redesign.
+
+Testing Checkpoints
+
+* Give the current player Good Decisions.
+* Start a Decision page.
+* Confirm Good Decisions appears above the 3 choice buttons.
+* Confirm the Potion component shows the potion name.
+* Confirm the tooltip works.
+* Confirm the Use button appears under the potion.
+* Click Use.
+* Confirm the Potion component remains visible.
+* Confirm the Use button is replaced by `Active` / `発動中`.
+* Confirm the Active text is yellow.
+* Confirm the Active text area is the same height as the Use button.
+* Confirm the modal layout does not jump.
+* Choose a decision option.
+* Confirm the outcome is never bad.
+* Test a choice with good, neutral, and bad chances.
+* Confirm only good or neutral can happen while Good Decisions is active.
+* Test a choice with neutral chance 0.
+* Confirm the outcome becomes good, not `N/A`.
+* Confirm Good Decisions is consumed after the outcome is resolved.
+* Confirm the player no longer has Good Decisions after returning to the board.
+* Use a board potion earlier in the same turn, then trigger a Decision page.
+* Confirm Good Decisions can still be used.
+* Confirm using Good Decisions does not affect board potion use tracking.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Implement Cave Runner potion behaviour in Cave Mini Game
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-010 Feature-011: Refine Cave Mini Game movement and ogre chase
+* EPIC-010 Feature-012: Add Cave reward generation
+* EPIC-010 Feature-013: Add Mini Game Failed screen
+* EPIC-011 Feature-002: Global Cave reward resolution order
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Mini potion `Cave Runner`.
+* Cave Runner is the only potion in the game that does not need to be actively played to be triggered.
+* It is automatically used only when the player is chased out of the Cave Mini Game by an ogre and would normally lose health.
+* It prevents the ogre health damage.
+* It does not prevent the player from losing the prizes they gained in the cave.
+
+Potion Behaviour Summary
+
+```txt id="4qdyhk"
+Cave Runner: Escape a cave encounter with no damage but lose any prizes you had.
+```
+
+Trigger Requirement
+
+* Cave Runner should only trigger in the Cave Mini Game.
+* Cave Runner should not have a Use button.
+* Cave Runner should not need manual confirmation.
+* It should trigger automatically if:
+
+  * the player owns Cave Runner.
+  * the player is in the Cave Mini Game.
+  * the player gets chased out by an ogre.
+  * the ogre chase would normally cause health loss.
+* If these conditions are met:
+
+  * consume Cave Runner.
+  * prevent the health loss.
+  * still remove any cave prizes the player had gained.
+
+Cave Prize Requirement
+
+* Cave Runner does not save cave prizes.
+* If the player is chased out by the ogre:
+
+  * any pending cave rewards should still be lost.
+  * the player should not receive cave prizes.
+  * only the ogre health damage is prevented.
+
+Consumption Requirement
+
+* Cave Runner is consumed only when it actually prevents ogre damage.
+* Do not consume Cave Runner if:
+
+  * the player successfully exits the cave and keeps their prizes.
+  * the player retreats normally.
+  * the player completes the cave without being chased out.
+  * the player is in the cave but no ogre damage would happen.
+  * the player owns Cave Runner but it is never needed.
+
+Display Requirement
+
+* If the player owns Cave Runner and is inside the Cave Mini Game, display the potion.
+* It should appear below the `Go Deeper` and `Retreat` buttons.
+* It should have:
+
+```css id="jys7hr"
+margin-top: 40px;
+```
+
+* The display should include:
+
+  * the Potion component.
+  * the potion name.
+  * the tooltip.
+  * the word `Active` underneath it.
+* There should be no Use button.
+
+Active Text
+
+English:
+
+```txt id="ebltfd"
+Active
+```
+
+Japanese:
+
+```txt id="bdmjir"
+発動中
+```
+
+Suggested Structure
+
+```jsx id="70okzh"
+{playerHasCaveRunner && (
+  <div className="cave-runner-active-potion">
+    <Potion
+      potion={caveRunnerPotion}
+      showName={true}
+      showTooltip={true}
+    />
+
+    <p className={`cave-runner-active-text ${languageClass}`}>
+      {activeText}
+    </p>
+  </div>
+)}
+```
+
+Suggested CSS Direction
+
+```css id="gl4c2o"
+.cave-runner-active-potion {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cave-runner-active-text {
+  margin: 8px 0 0;
+  color: #F5FA00;
+  text-align: center;
+}
+```
+
+Ogre Chase Resolution Requirement
+
+* When the ogre catches or chases the player out, check for Cave Runner before applying health loss.
+* If Cave Runner exists:
+
+  * consume Cave Runner.
+  * skip the health damage.
+  * clear cave prizes as normal.
+  * proceed to the correct cave failure / exit flow.
+* If Cave Runner does not exist:
+
+  * apply the normal ogre health damage.
+  * clear cave prizes as normal.
+  * proceed with the existing cave failure flow.
+
+Suggested Logic Direction
+
+```js id="wlb3px"
+function resolveOgreChaseFailure(playerId) {
+  const hasCaveRunner = playerHasPotion(playerId, "cave-runner");
+
+  clearPendingCavePrizes(playerId);
+
+  if (hasCaveRunner) {
+    removePotionFromPlayer(playerId, "cave-runner");
+    return resolveCaveFailureWithoutDamage(playerId);
+  }
+
+  return resolveCaveFailureWithOgreDamage(playerId);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that Cave Runner prevents only the ogre damage and is consumed only when used for that purpose.
+
+Expected Behaviour
+
+* Cave Runner appears in the Cave Mini Game when the player owns it.
+* It appears below the Go Deeper and Retreat buttons.
+* It has `margin-top: 40px`.
+* It shows `Active` / `発動中` underneath.
+* It does not show a Use button.
+* It does not need confirmation.
+* If the player gets chased out by the ogre, Cave Runner prevents the health damage.
+* The player still loses cave prizes.
+* Cave Runner is consumed when it prevents ogre damage.
+* Cave Runner is not consumed if the player escapes successfully and receives prizes.
+* Cave Runner is not consumed if it is never needed.
+
+Out Of Scope
+
+* No changes to cave reward generation.
+* No changes to cave reward odds.
+* No changes to Go Deeper or Retreat button logic except the Cave Runner display positioning.
+* No changes to ogre chase probability.
+* No new Cave Runner animation.
+* No changes to Bridge Builder.
+* No unrelated Cave Mini Game redesign.
+
+Testing Checkpoints
+
+* Give the player Cave Runner.
+* Start the Cave Mini Game.
+* Confirm Cave Runner appears below Go Deeper and Retreat.
+* Confirm it has `margin-top: 40px`.
+* Confirm it shows the Potion component with name and tooltip.
+* Confirm it shows `Active` / `発動中`.
+* Confirm it does not show a Use button.
+* Successfully leave the cave with prizes.
+* Confirm Cave Runner is not consumed.
+* Trigger an ogre chase failure.
+* Confirm cave prizes are lost.
+* Confirm ogre health damage is not applied.
+* Confirm Cave Runner is consumed.
+* Trigger an ogre chase failure without Cave Runner.
+* Confirm normal ogre health damage still applies.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Implement Bridge Builder potion behaviour in River Mini Game
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-010 Feature-013: Add Mini Game Failed screen
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+
+Goal
+
+* Implement the behaviour of the Mini potion `Bridge Builder`.
+* Bridge Builder can be used in the River Mini Game.
+* When used, it automatically sends the player to the River Mini Game success screen.
+* It should use the normal potion confirmation flow before being consumed.
+
+Potion Behaviour Summary
+
+```txt id="dsypjk"
+Bridge Builder: Auto win a River Mini Game.
+```
+
+Display Requirement
+
+* If the player owns Bridge Builder and is inside the River Mini Game, display the potion.
+* It should be displayed beneath the player’s image.
+* It should be absolutely positioned so it does not interfere with other River Mini Game elements.
+* The display should include:
+
+  * the Potion component.
+  * the potion name.
+  * the tooltip.
+  * a Use button underneath it.
+
+Button Text
+
+English:
+
+```txt id="os8vga"
+Use
+```
+
+Japanese:
+
+```txt id="bwubwm"
+使用する
+```
+
+Suggested Structure
+
+```jsx id="5qkm9f"
+{playerHasBridgeBuilder && (
+  <div className="river-bridge-builder-potion">
+    <Potion
+      potion={bridgeBuilderPotion}
+      showName={true}
+      showTooltip={true}
+    />
+
+    <button
+      className={`river-bridge-builder-use-button ${languageClass}`}
+      onClick={handleUseBridgeBuilder}
+    >
+      {useText}
+    </button>
+  </div>
+)}
+```
+
+Suggested CSS Direction
+
+```css id="a6ai4q"
+.river-player-area {
+  position: relative;
+}
+
+.river-bridge-builder-potion {
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+```
+
+* Exact positioning can vary depending on the River Mini Game layout.
+* The important requirement is that Bridge Builder appears beneath the player image and does not push or disrupt the existing page layout.
+
+Confirmation Requirement
+
+* When the player clicks Use, show the usual potion confirmation modal.
+* Use the same confirmation style used elsewhere in the game.
+* The confirmation should ask:
+
+English:
+
+```txt id="20s2ik"
+Are you sure you want to use Bridge Builder?
+```
+
+Japanese:
+
+```txt id="bn12tf"
+Bridge Builderを使用してもよろしいですか？
+```
+
+* If the existing reusable potion confirmation modal automatically builds this text from the potion name, reuse it.
+* The confirmation should include:
+
+  * larger-text confirmation question.
+  * Potion Description subtitle/body if the reusable modal normally includes it.
+  * Yes and No buttons.
+* If the player clicks No:
+
+  * close the confirmation modal.
+  * return to the River Mini Game.
+  * do not consume Bridge Builder.
+  * do not move to the success screen.
+* If the player clicks Yes:
+
+  * consume Bridge Builder.
+  * show the Bridge Builder success modal.
+
+Bridge Builder Success Modal Requirement
+
+* After the player confirms Yes, show a new modal with:
+
+English:
+
+```txt id="6jfcls"
+The potion created a bridge over the river for you
+```
+
+Japanese:
+
+```txt id="otwd7g"
+ポーションが川に橋を架けてくれました。
+```
+
+* This text should:
+
+  * use `larger-text`.
+  * be centred.
+  * use the correct language font.
+  * use normal modal yellow text styling.
+* The modal should have one OK button underneath.
+
+OK Button Requirement
+
+* OK button text:
+
+English:
+
+```txt id="uk2jca"
+OK
+```
+
+Japanese:
+
+```txt id="l92qwo"
+OK
+```
+
+* Clicking OK should:
+
+  * take the player to the River Mini Game success screen.
+  * follow the same success flow as if the player had crossed the river normally.
+* Bridge Builder should already be consumed before or during this transition.
+* Do not apply river failure damage or forfeits.
+
+Suggested Success Modal Structure
+
+```jsx id="mzt9l8"
+<div className="modal-background bridge-builder-success-modal">
+  <p className={`larger-text ${languageClass}`}>
+    {bridgeBuilderSuccessText}
+  </p>
+
+  <button
+    className={`modal-button ${languageClass}`}
+    onClick={goToRiverSuccessScreen}
+  >
+    OK
+  </button>
+</div>
+```
+
+Mini Potion Independence Requirement
+
+* Bridge Builder is a Mini potion.
+* It should only be usable in the River Mini Game.
+* It should not be blocked by board potion usage from earlier in the turn.
+* It should not consume the board potion use for the turn.
+* It should not consume the battle potion use for the turn.
+* If later Mini potion limits are added, Bridge Builder should use that separate Mini potion tracking.
+
+Consumption Requirement
+
+* Bridge Builder should be consumed only if the player confirms Yes.
+* It should not be consumed when:
+
+  * the player clicks No.
+  * the player owns it but never uses it.
+  * the player exits the River Mini Game through another success or failure route.
+* Once consumed, remove it from the player’s potion slots.
+
+Expected Behaviour
+
+* Bridge Builder appears in the River Mini Game when the player owns it.
+* It appears beneath the player image.
+* It is absolutely positioned and does not disturb the River Mini Game layout.
+* It shows the Potion component with name and tooltip.
+* It shows a Use button.
+* Clicking Use opens the normal potion confirmation modal.
+* Clicking No returns to the River Mini Game and does not consume the potion.
+* Clicking Yes consumes the potion.
+* After Yes, a larger-text modal says `The potion created a bridge over the river for you` / `ポーションが川に橋を架けてくれました。`.
+* Clicking OK takes the player to the River success screen.
+* The River success flow behaves the same as a normal successful crossing.
+* Board potion limits do not block Bridge Builder use.
+
+Out Of Scope
+
+* No changes to River Mini Game normal win/loss mechanics.
+* No changes to river dice or choice logic.
+* No changes to river reward generation.
+* No changes to Cave Runner.
+* No new bridge animation.
+* No unrelated River Mini Game redesign.
+
+Testing Checkpoints
+
+* Give the player Bridge Builder.
+* Start the River Mini Game.
+* Confirm Bridge Builder appears beneath the player image.
+* Confirm it is absolutely positioned and does not move other River elements.
+* Confirm the Potion component shows name and tooltip.
+* Confirm the Use button appears beneath it.
+* Click Use.
+* Confirm the normal potion confirmation modal appears.
+* Click No.
+* Confirm the modal closes.
+* Confirm the player remains in the River Mini Game.
+* Confirm Bridge Builder is not consumed.
+* Click Use again.
+* Click Yes.
+* Confirm Bridge Builder is consumed.
+* Confirm the success modal appears.
+* Confirm English text says `The potion created a bridge over the river for you`.
+* Confirm Japanese text says `ポーションが川に橋を架けてくれました。`.
+* Confirm the success text uses `larger-text`.
+* Click OK.
+* Confirm the game goes to the River success screen.
+* Confirm river failure damage/forfeits are not applied.
+* Use a board potion earlier in the same turn, then enter River Mini Game.
+* Confirm Bridge Builder can still be used.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+
+---
+
+Feature-006: Add respawn flow when a player starts their turn with 0 health
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-010 Feature-013: Add Mini Game Failed screen
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-015 Feature-002: Implement Decision page rewards and punishments
+
+Goal
+
+* Add a respawn flow for players who start their turn with `0` health.
+* If a player reaches their turn with `0` health, they should not begin a normal turn.
+* The next-turn modal button should say `Respawn` / `リスポーン` instead of `OK`.
+* Clicking Respawn should remove a token using the same rules as battle loss.
+* After the token-removal modal is confirmed, the player should return to the starting square and recover to full health.
+
+Trigger Requirement
+
+* When a player’s turn starts, check their current health.
+* If the active player has:
+
+```txt id="0pv8k1"
+0 health
+```
+
+* The next-turn modal should still appear as usual.
+* However, the modal should enter respawn mode.
+
+Next-Turn Modal Requirement
+
+* In respawn mode, the normal OK button should be replaced with:
+
+English:
+
+```txt id="cc77iz"
+Respawn
+```
+
+Japanese:
+
+```txt id="z79dwq"
+リスポーン
+```
+
+* The player should not be able to roll, move, or use board potions before respawning.
+* Clicking Respawn starts the respawn penalty flow.
+
+Token Removal Requirement
+
+* Respawning removes a token from the player.
+* This should use the same token-removal logic as battle loss.
+* Token removal priority:
+
+```txt id="gq7pvs"
+1. Starting tokens cannot be removed.
+2. Black tokens are removed first.
+3. If no removable black token exists, remove a random eligible token.
+4. If no eligible token exists, no token is removed.
+```
+
+* Reuse the existing battle-loss token removal helper if one already exists.
+* Do not create a separate inconsistent token-removal rule for respawning.
+
+Token Removed Modal Requirement
+
+* After clicking Respawn, show a modal explaining what token was removed.
+* This should use the same bilingual wording and layout as battle loss.
+
+If a token was removed, show:
+
+English:
+
+```txt id="r5xiov"
+This token has been removed
+```
+
+Japanese:
+
+```txt id="1im7ao"
+このトークンは取り除かれました。
+```
+
+* Show the removed token component underneath.
+* Include the token name.
+* Include the token tooltip if the existing component supports it.
+* Content should be centred.
+* Show an OK button underneath.
+
+If no token could be removed, show:
+
+English:
+
+```txt id="5qcvjt"
+No tokens were able to be removed
+```
+
+Japanese:
+
+```txt id="4ainb1"
+トークンを取り除くことができませんでした。
+```
+
+* Show an OK button underneath.
+* Content should be centred.
+
+Suggested Modal Structure
+
+```jsx id="gdlbb2"
+<div className="modal-background respawn-token-modal">
+  <p className={`larger-text ${languageClass}`}>
+    {tokenRemovalMessage}
+  </p>
+
+  {removedToken && (
+    <div className="respawn-removed-token-display">
+      <TokenIcon
+        token={removedToken}
+        showName={true}
+        showTooltip={true}
+      />
+    </div>
+  )}
+
+  <button
+    className={`modal-button ${languageClass}`}
+    onClick={confirmRespawn}
+  >
+    OK
+  </button>
+</div>
+```
+
+Respawn Completion Requirement
+
+* When the OK button in the token-removal modal is clicked:
+
+  * move the player back to the starting square in the bottom-left corner.
+  * restore the player to full health.
+  * allow their turn to begin from the starting square.
+
+Starting Square Requirement
+
+* The player should move back to the starting square in the bottom-left start area.
+* Use the same starting position used when a player first begins the game or respawns elsewhere.
+* Do not choose a random start area square unless existing respawn logic already does that consistently.
+
+Health Restoration Requirement
+
+* After respawn is confirmed, restore the player to full health.
+* Current health should become equal to max health.
+
+Suggested Logic Direction
+
+```js id="9dfzc7"
+function confirmRespawn(playerId) {
+  movePlayerToStartSquare(playerId);
+  restorePlayerToFullHealth(playerId);
+  closeRespawnModal();
+  allowTurnToStart(playerId);
+}
+```
+
+Turn Flow Requirement
+
+* The next-turn modal still appears first when the active player changes.
+* If the player has 0 health:
+
+  * next-turn modal appears.
+  * Respawn button is shown instead of OK.
+  * Respawn removes token and shows removal modal.
+  * OK on removal modal moves player to start and restores full health.
+  * the same player may then take their turn from the start square.
+* Do not skip the player’s turn just because they had 0 health.
+* Respawn is the required start-of-turn action before normal movement.
+
+Interaction With Skip-Turn Effects
+
+* If the player has both `0` health and a pending skip-turn effect, resolve respawn first unless an existing global rule says otherwise.
+* The player should not remain at 0 health indefinitely.
+* After respawn, the skip-turn effect can still be resolved according to the skip-turn rules if required by the turn system.
+* If this interaction is ambiguous in implementation, add a clear comment and preserve the next-turn modal invariant.
+
+Expected Behaviour
+
+* A player reaches their turn with 0 health.
+* The next-turn modal appears as normal.
+* The modal button says `Respawn` / `リスポーン`, not `OK`.
+* Clicking Respawn removes a token using battle-loss token-removal rules.
+* Starting tokens are never removed.
+* Black tokens are removed first.
+* Otherwise, a random eligible token is removed.
+* If no token can be removed, the no-token message appears.
+* The removed token modal uses the same bilingual wording as battle loss.
+* Clicking OK returns the player to the bottom-left starting square.
+* Clicking OK restores the player to full health.
+* The player can then take their turn normally.
+
+Out Of Scope
+
+* No changes to battle loss logic except reusing it.
+* No changes to max health calculation.
+* No changes to token rarity rules.
+* No changes to board movement rules.
+* No changes to normal next-turn modal behaviour for players with health above 0.
+* No unrelated respawn animation.
+* No unrelated board redesign.
+
+Testing Checkpoints
+
+* Set a player’s health to 0 before their turn starts.
+* Advance to that player’s turn.
+* Confirm the next-turn modal appears.
+* Confirm the button says `Respawn`.
+* Confirm Japanese button says `リスポーン`.
+* Confirm the normal OK button is not shown.
+* Click Respawn.
+* Confirm a token-removal modal appears.
+* Confirm starting tokens are not removed.
+* Confirm black tokens are removed first if available.
+* Confirm otherwise a random eligible token is removed.
+* Confirm if no token can be removed, the no-token message appears.
+* Confirm removed token text says `This token has been removed` / `このトークンは取り除かれました。`.
+* Confirm no-token text says `No tokens were able to be removed` / `トークンを取り除くことができませんでした。`.
+* Confirm the removed token component shows its name.
+* Click OK.
+* Confirm the player moves to the bottom-left starting square.
+* Confirm the player is restored to full health.
+* Confirm the player can now take their turn normally.
+* Confirm players with health above 0 still see the normal OK flow.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.

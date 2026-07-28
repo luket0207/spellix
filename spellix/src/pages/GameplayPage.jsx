@@ -1108,6 +1108,11 @@ function GameplayPage() {
             height: '200px',
             player: currentPlayer,
           })}
+          {currentPlayer.skipNextTurn ? (
+            <p className={`larger-text ${languageClassName}`}>
+              {gameplayTranslations.skipTurnMessage}
+            </p>
+          ) : null}
           </div>
         </Modal>
       ) : null}

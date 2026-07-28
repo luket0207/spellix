@@ -3,6 +3,7 @@ import {
   getBattleTitle,
   getBattleTurnMessage,
   getCaveMiniGameTranslations,
+  getDecisionTranslations,
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
@@ -18,6 +19,25 @@ import {
 } from './translations';
 
 describe('gameplay translations', () => {
+  test('returns exact Decision controls in both languages with English fallback', () => {
+    const english = getDecisionTranslations('en');
+    const japanese = getDecisionTranslations('jp');
+
+    expect(english).toEqual({
+      continue: 'Continue',
+      decision: 'Decision',
+      environment: 'Decision Environment',
+      startDecision: 'Start Decision',
+    });
+    expect(japanese).toEqual({
+      continue: '続ける',
+      decision: '決断',
+      environment: '決断の背景',
+      startDecision: '決断を開始',
+    });
+    expect(getDecisionTranslations('invalid')).toBe(english);
+  });
+
   test('returns exact Loot Chest copy in both languages with English fallback', () => {
     const english = getLootChestTranslations('en');
     const japanese = getLootChestTranslations('jp');
@@ -117,6 +137,7 @@ describe('gameplay translations', () => {
       potions: 'Potions',
       rollDice: 'Roll Dice',
       rollEvenToUnfreeze: 'Roll even to unfreeze',
+      skipTurnMessage: 'You miss your turn this turn',
       spells: 'Spells',
       spellsNew: 'New',
       targetPlayerChoose: 'Choose',
@@ -130,6 +151,8 @@ describe('gameplay translations', () => {
       spellsNew: '新規',
       rollEvenToUnfreeze:
         '\u51cd\u7d50\u72b6\u614b\u3092\u89e3\u9664\u3059\u308b\u306b\u306f\u3001\u5076\u6570\u3092\u51fa\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+      skipTurnMessage:
+        '\u3053\u306e\u30bf\u30fc\u30f3\u306f\u884c\u52d5\u3067\u304d\u307e\u305b\u3093\u3002',
       targetPlayerChoose: '\u9078\u3076',
       targetPlayerPrompt:
         '\u5bfe\u8c61\u306b\u3059\u308b\u30d7\u30ec\u30a4\u30e4\u30fc\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002',

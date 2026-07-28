@@ -643,10 +643,33 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   };
 
   const dismissNextTurnModal = () => {
-    setGameSetup((currentSetup) => ({
-      ...currentSetup,
-      pendingNextTurnModal: false,
-    }));
+    setGameSetup((currentSetup) => {
+      const currentPlayerId =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] ?? null;
+      const shouldSkipTurn = currentSetup.players.some(
+        (player) => player.id === currentPlayerId && player.skipNextTurn
+      );
+
+      if (!shouldSkipTurn || currentSetup.turnOrder.length === 0) {
+        return {
+          ...currentSetup,
+          pendingNextTurnModal: false,
+        };
+      }
+
+      const clearedSetup = {
+        ...currentSetup,
+        players: currentSetup.players.map((player) =>
+          player.id === currentPlayerId
+            ? { ...player, skipNextTurn: false }
+            : player
+        ),
+      };
+      const nextTurnIndex =
+        (currentSetup.currentTurnIndex + 1) % currentSetup.turnOrder.length;
+
+      return transitionToPlayerTurn(clearedSetup, nextTurnIndex);
+    });
   };
 
   const startMiniGame = (type, playerId) => {
@@ -1052,6 +1075,29 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       ...currentSetup,
       players: currentSetup.players.map((player) =>
         player.id === playerId ? { ...player, currentHealth } : player
+      ),
+    }));
+  };
+
+  const markPlayerToSkipNextTurn = (playerId) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId ? { ...player, skipNextTurn: true } : player
+      ),
+    }));
+  };
+
+  const removePlayerPotion = (playerId, potionIndex) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              potions: player.potions.filter((_, index) => index !== potionIndex),
+            }
+          : player
       ),
     }));
   };
@@ -2741,9 +2787,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         miniGameResult: gameSetup.miniGameResult ?? null,
         miniGameReturnNotice: gameSetup.miniGameReturnNotice ?? null,
         markPlayerTokenBagSeen,
+        markPlayerToSkipNextTurn,
         pendingNextTurnModal: gameSetup.pendingNextTurnModal ?? false,
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,
+        removePlayerPotion,
         resolvePendingPotionGrant,
         resolveCopyPastePotion,
         resolveCosmicIntervention,

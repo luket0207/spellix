@@ -21,6 +21,7 @@ import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
 import RewardPage from './pages/RewardPage';
 import StartPage from './pages/StartPage';
+import DecisionPage from './pages/DecisionPage';
 import CaveMiniGame from './pages/MiniGames/CaveMiniGame';
 import LootChestPage from './pages/MiniGames/LootChestPage';
 import MiniGameLosePage from './pages/MiniGames/MiniGameLosePage';
@@ -53,6 +54,7 @@ function App() {
   const [selectedReplacementPotionIndex, setSelectedReplacementPotionIndex] = useState('');
   const [selectedDebugEnemyId, setSelectedDebugEnemyId] = useState(ENEMIES[0]?.id ?? '');
   const [selectedBattleEnvironment, setSelectedBattleEnvironment] = useState('fields');
+  const [selectedDecisionEnvironment, setSelectedDecisionEnvironment] = useState('fields');
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
@@ -303,6 +305,18 @@ function App() {
     navigate('/mini-game/cave');
   };
 
+  const handleStartDecision = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug decisions are only available during gameplay turns.');
+      return;
+    }
+
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/decision');
+  };
+
   return (
     <>
       <button
@@ -320,6 +334,10 @@ function App() {
         <Route path="/setup" element={<GameSetupPage />} />
         <Route path="/gameplay" element={<GameplayPage />} />
         <Route path="/battle" element={<BattlePage />} />
+        <Route
+          path="/decision"
+          element={<DecisionPage environment={selectedDecisionEnvironment} />}
+        />
         <Route path="/reward" element={<RewardPage />} />
         <Route path="/mini-game/cave" element={<CaveMiniGame />} />
         <Route path="/mini-game/river" element={<RiverMiniGame />} />
@@ -363,6 +381,7 @@ function App() {
         onGiveToken={handleGiveDebugToken}
         onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
         onStartCaveMiniGame={handleStartCaveMiniGame}
+        onStartDecision={handleStartDecision}
         onStartBattle={handleStartBattle}
         onStartRiverMiniGame={handleStartRiverMiniGame}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
@@ -371,6 +390,7 @@ function App() {
         onReplacePendingToken={handleReplacePendingToken}
         onSelectedEnvironmentChange={setSelectedBattleEnvironment}
         onSelectedEnemyIdChange={setSelectedDebugEnemyId}
+        onSelectedDecisionEnvironmentChange={setSelectedDecisionEnvironment}
         onSelectedPotionIdChange={setSelectedDebugPotionId}
         onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
         onSelectedTokenTypeChange={setSelectedDebugTokenType}
@@ -378,6 +398,7 @@ function App() {
         pendingTokenType={pendingDebugTokenType}
         players={gameSetup.players}
         selectedEnemyId={selectedDebugEnemyId}
+        selectedDecisionEnvironment={selectedDecisionEnvironment}
         selectedEnvironment={selectedBattleEnvironment}
         selectedPotionId={selectedDebugPotionId}
         selectedPotionPlayerId={selectedDebugPotionPlayerId}

@@ -1,0 +1,313 @@
+Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a two-player game, open Settings, open Debug, and inspect the Mini Games section.
+   Expected: A localized `Decision Environment` selector and `Start Decision` button appear for the current player alongside the existing Cave and River controls.
+2. Select each available Decision environment and start a Decision.
+   Expected: `/decision` opens with the selected full-screen scene background and a centred wooden modal.
+3. Inspect the initial Decision modal in English.
+   Expected: The current player's centred image appears first, followed by one random question with `larger-text`, a 40px top margin, and exactly three vertically stacked full-width choices using the English font.
+4. Repeat with a Japanese current player.
+   Expected: The debug controls, question, choices, outcome text, result label, and Continue button use the supplied Japanese text and Japanese font.
+5. Re-render the page or change the player's language before choosing.
+   Expected: The selected decision remains stable and does not randomly change.
+6. Start fresh Decision encounters several times.
+   Expected: Questions can be selected from the complete 12-question source table, and every question has exactly three choices.
+7. Choose options whose rolls resolve to good, neutral, and bad outcomes.
+   Expected: Resolution follows each choice's weighted chances; zero-chance neutral `N/A` outcomes are never selected.
+8. Inspect the modal after choosing.
+   Expected: The question and three choices are removed, the player image remains, the localized narrative uses `larger-text`, the smaller localized result appears below it, and Continue is the only modal action.
+9. Compare the player before and after good and bad placeholder outcomes.
+   Expected: No health, potion, token, or skipped-turn state changes are applied by this feature.
+10. Click Continue.
+    Expected: The app returns to the board, advances to the next player, and shows the existing locked next-turn modal before board controls become available.
+11. Inspect the Decision modal markup.
+    Expected: It contains no `ul` or `li`, and there is no cancel, close, skip, retreat, back, or escape action.
+12. Watch the browser console throughout the flow.
+    Expected: Valid source data produces no warnings or runtime errors; malformed chance data would produce a clear development warning naming the decision, choice, and total.
+
+Automated Tests Completed
+
+* `src/data/decisionQuestions.test.js` verifies all 12 bilingual decisions, exactly 3 choices per decision, all localized outcome fields, every chance total, random first/last selection, good/neutral/bad boundaries, zero-chance exclusion, and invalid-total warnings.
+* `src/pages/DecisionPage.test.jsx` verifies background selection, shared wooden modal reuse, current-player image, stable random selection, exactly 3 choices, requested classes and CSS layout, list-free markup, bilingual/fallback rendering, placeholder outcome replacement, unchanged player resources, turn advancement, and pending next-turn state.
+* `src/features/debug/DebugModal.test.jsx` verifies Japanese Decision debug copy, font class, environment selection, and start callback while preserving the existing Debug suite.
+* `src/AppMiniGames.test.jsx` verifies the app route from Debug through environment selection, Decision resolution, Continue, next-player transition, and locked next-turn modal.
+* `src/i18n/translations.test.js` verifies exact English/Japanese Decision control copy and invalid-language English fallback.
+* Focused affected regression passed: 5 suites and 56 tests.
+* ESLint passed for all EPIC-015 JavaScript and JSX files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-001.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+Bug-001: Decision page should not show next player image before returning to board
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a two-player game and trigger a Decision for player 1.
+   Expected: Player 1's image appears in the Decision modal.
+2. Choose an option and fully resolve its outcome.
+   Expected: Player 1's image remains visible throughout reward or punishment resolution.
+3. Click Continue and watch the Decision modal until the board replaces it.
+   Expected: The modal never displays player 2's image during the transition.
+4. Inspect the returned board and next-turn modal.
+   Expected: The active turn advances to player 2 and the normal player 2 next-turn modal appears.
+5. Repeat with different Decision outcome categories.
+   Expected: Rewards, punishments, and Continue gating remain unchanged.
+6. Watch the browser console during the transition.
+   Expected: No runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` keeps the page mounted after Continue, proves the live current player advances, and verifies the displayed image remains the entering player's image.
+* Full Decision page and app return-flow regression passed: 2 suites and 44 tests.
+* ESLint passed for the focused implementation and test files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-001.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+Feature-002: Implement Decision page rewards and punishments
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger a Decision from Debug and resolve a neutral `Nothing` outcome.
+   Expected: The narrative and result display, no player state changes, and Continue advances to the next player with the normal next-turn modal.
+2. Resolve each specific potion result: Small Heal, First Aid, Freeze, Thaw, and Cauldron.
+   Expected: The mapped source-of-truth potion appears with its localized name and tooltip and is added when a slot is available. Freeze displays the existing Ice Beam potion.
+3. Resolve random common and rare potion results repeatedly.
+   Expected: Only potions of the requested rarity are selected.
+4. Resolve a potion reward with three occupied potion slots.
+   Expected: Continue remains disabled until the player replaces one existing potion or discards the new potion.
+5. Resolve common, rare, and unrestricted token rewards.
+   Expected: The existing reward-mode Spell Token Assignment appears with spell slots, token bag, and trash; Continue remains disabled until placement, replacement, or discard is confirmed.
+6. Resolve each health-loss amount.
+   Expected: The shared health bar appears, Continue is disabled for one second, then the exact damage is applied and Continue enables. Health never becomes negative.
+7. Resolve token loss with protected starting tokens, an eligible black token, and another eligible committed token.
+   Expected: Starting tokens remain and the black token is removed first; without black, one other eligible token is selected randomly.
+8. Resolve token loss when no eligible committed token exists in English and Japanese.
+   Expected: The exact localized no-token-removed message appears and Continue is available.
+9. Resolve random potion loss with multiple potions and then with no potions.
+   Expected: One existing potion is removed and displayed with name and tooltip, or the exact localized no-potion-removed message appears.
+10. Resolve `Lose your next turn`, advance around to the affected player, and inspect their next-turn modal in English and Japanese.
+    Expected: The exact `larger-text` skip message appears above OK and board controls remain unavailable.
+11. Click OK on the skipped player's modal.
+    Expected: The flag clears once, the skipped player cannot act, the game advances immediately, and the following player's next-turn modal remains open.
+12. Inspect every Decision outcome modal.
+    Expected: Content stays centred inside the existing modal, the player image remains, and no `ul` or `li` markup is introduced.
+
+Automated Tests Completed
+
+* `src/data/decisionQuestions.test.js` verifies every outcome has an explicit effect and checks all required result-to-effect mappings, potion IDs, rarities, health amounts, and skip type.
+* `src/pages/DecisionPage.test.jsx` verifies neutral no-op behavior, all specific potion mappings, common/rare potion selection, full-slot replacement gating, common/rare/any token assignment with trash, delayed clamped health loss, death-priority token removal, protected-token handling, exact bilingual removal messages, random/no-potion handling, skip storage, item names/tooltips, and Continue gating.
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies a skipped turn clears exactly once, advances immediately, and leaves the next player's modal pending.
+* `src/pages/GameplayPage.test.jsx` verifies the exact English and Japanese skip messages, `larger-text` language classes, and modal handoff to the following player.
+* Focused Decision/context regression passed: 3 suites and 47 tests.
+* Targeted skipped-turn Gameplay regression passed: 1 suite and 2 tests.
+* Complete affected app/debug/translation/Decision/context regression passed: 6 suites and 92 tests after updating the exact gameplay translation assertion.
+* ESLint passed for all affected implementation files and focused feature tests.
+* `npm run build` passed.
+
+Known Existing Test Baseline
+
+* Running the complete existing `GameplayPage.test.jsx` still has 6 unrelated pre-existing failures in forced-spell-warning text, dice-result timing, and image style expectations. The 2 new skipped-turn tests pass in that same run.
+* Linting the complete existing `GameplayPage.test.jsx` still reports 13 pre-existing `testing-library/no-node-access` violations outside the added skipped-turn tests.
+
+Automated Tests Still Needed
+
+* None for Feature-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-002: Do not display "Nothing" for neutral Decision outcomes
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger a Decision and resolve a neutral outcome whose result is `Nothing`.
+   Expected: The localized narrative remains visible, but no `Nothing` result label appears.
+2. Repeat with a Japanese current player.
+   Expected: The Japanese narrative remains visible, but `何もなし` does not appear.
+3. Inspect the neutral outcome modal.
+   Expected: The player image and Continue button remain, and no empty result-label element or its margin is reserved.
+4. Resolve a good potion or token outcome.
+   Expected: The reward result label still appears.
+5. Resolve a bad health, token, potion, or skipped-turn outcome.
+   Expected: The punishment result label still appears.
+6. Resolve choices with zero neutral chance repeatedly.
+   Expected: Zero-chance `N/A` outcomes remain unselectable.
+7. Watch the browser console throughout the checks.
+   Expected: No runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` verifies hidden English/Japanese neutral labels, preserved narrative and Continue controls, preserved good and bad labels, and unchanged outcome effects.
+* `src/data/decisionQuestions.test.js` continues to verify zero-chance neutral outcomes are never selected.
+* Complete Decision UI and data regression passed: 2 suites and 32 tests.
+* ESLint passed for the focused implementation and test files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-003: Decision potion replacement modal should stack existing potion choices horizontally
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Fill all three potion slots, then resolve a Decision outcome that grants another potion.
+   Expected: The replacement flow shows the new potion with its name and tooltip.
+2. Inspect the three current potion choices.
+   Expected: All three replacement buttons appear in one horizontal row without overflowing the modal.
+3. Select each current potion choice in separate runs.
+   Expected: The selected potion is replaced by the offered potion and the existing reward flow completes normally.
+4. Inspect and select the discard-new-potion action.
+   Expected: It appears separately below the replacement row, spans the modal width, and discards only the offered potion.
+5. Repeat the flow for English and Japanese players.
+   Expected: Existing language font classes, potion names, and tooltips remain correct.
+6. Inspect the modal markup and browser console.
+   Expected: No `ul` or `li` elements and no runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` verifies the three replacement buttons use a dedicated horizontal row, the discard action is outside that row and full width, no list markup is introduced, and replacement state still updates correctly.
+* Focused Decision page regression passed: 1 suite and 26 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-004: Decision health-loss outcome should not show next player before returning to board
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger a Decision health-loss outcome for player 1.
+   Expected: Player 1's image and current health bar appear, and Continue is disabled during the existing one-second delay.
+2. Wait for the health-loss delay to finish.
+   Expected: The exact damage is applied to player 1, the health bar shows player 1's updated health, and Continue becomes enabled.
+3. Click Continue and watch the Decision modal until navigation completes.
+   Expected: Player 1's image and updated health remain visible; player 2's image and health never flash in the Decision modal.
+4. Inspect the returned board and next-turn modal.
+   Expected: The active turn advances to player 2 and the normal player 2 next-turn modal appears.
+5. Repeat with damage that would reduce health below zero.
+   Expected: Player 1's health remains clamped at zero and the display does not revert to its pre-damage value.
+6. Watch the browser console throughout the flow.
+   Expected: No runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` leaves the health-loss Decision page mounted after Continue, confirms the live turn advances to player 2, and verifies player 1's image and post-damage health remain displayed.
+* The existing health test continues to verify the one-second delay and zero clamp.
+* Complete Decision page regression passed: 1 suite and 27 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-005: Decision token rewards should open token assignment after Continue
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Resolve Decision outcomes that grant a common, rare, and unrestricted token.
+   Expected: The outcome modal shows the original player image, narrative, result label, awarded token with name and tooltip, and an enabled Continue button.
+2. Inspect the initial token reward outcome.
+   Expected: The full token assignment component is not present.
+3. Click Continue.
+   Expected: The outcome content is replaced by the existing reward token assignment UI for the same Decision player, including spell slots, token bag, awarded token, Trash area, and disabled Confirm button.
+4. Stage the token in a valid spell slot or token bag destination.
+   Expected: Existing capacity, Grey, merged-column, White merge, and replacement rules apply; Confirm enables only for a valid staged result.
+5. Stage the token in the Trash area.
+   Expected: Discard remains a valid assignment result and Confirm becomes available.
+6. Before confirming any staged result, inspect the route and turn.
+   Expected: The game remains in the Decision assignment flow, the turn does not advance, and no next-turn modal appears.
+7. Confirm a placement or discard.
+   Expected: The staged result is committed, the game returns to the board, the turn advances, and the next player's next-turn modal appears first.
+8. Watch the browser console throughout the flow.
+   Expected: No runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` verifies common, rare, and unrestricted token outcomes show their result and awarded token without embedded assignment, then open the existing reward assignment UI only after Continue.
+* The focused integration test stages a token in the token bag, confirms the route and turn remain unchanged before confirmation, then verifies the token commits, gameplay returns, the turn advances, and the next-turn modal is pending.
+* Existing Decision assignment tests continue to cover the Trash area, disabled confirmation before staging, and reused assignment controls.
+* Complete Decision page regression passed: 1 suite and 28 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.

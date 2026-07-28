@@ -34,6 +34,35 @@ const potionPlayers = [
 ];
 
 describe('DebugModal', () => {
+  test('offers localized Decision controls and reports the selected environment', () => {
+    const handleEnvironmentChange = jest.fn();
+    const handleStartDecision = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onSelectedDecisionEnvironmentChange={handleEnvironmentChange}
+        onStartDecision={handleStartDecision}
+        selectedDecisionEnvironment="fields"
+      />
+    );
+
+    const environmentSelect = screen.getByLabelText('決断の背景');
+    const startButton = screen.getByRole('button', { name: '決断を開始' });
+
+    expect(environmentSelect).toHaveValue('fields');
+    expect(startButton).toHaveClass('language-jp');
+
+    fireEvent.change(environmentSelect, { target: { value: 'forest' } });
+    fireEvent.click(startButton);
+
+    expect(handleEnvironmentChange).toHaveBeenCalledWith('forest');
+    expect(handleStartDecision).toHaveBeenCalledTimes(1);
+  });
+
   test('offers the Cave Mini Game trigger for the current player', () => {
     const handleStartCaveMiniGame = jest.fn();
 

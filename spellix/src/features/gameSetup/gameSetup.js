@@ -93,6 +93,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
         existingPlayer?.pendingPotionEffects?.map((effect) => ({ ...effect })) ?? [],
       pieceImage: getPlayerPieceImageName({ colour, gender }),
       potions: existingPlayer?.potions?.map((potion) => ({ ...potion })) ?? [],
+      skipNextTurn: Boolean(existingPlayer?.skipNextTurn),
       tokenBag: existingPlayer ? cloneTokenBag(existingPlayer.tokenBag) : createInitialTokenBag(playerId),
       spellSlots: existingPlayer
         ? cloneSpellSlots(existingPlayer.spellSlots)

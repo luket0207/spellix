@@ -112,6 +112,33 @@ test('debug Mini Games section starts Cave for the current player', () => {
   expect(screen.getByRole('button', { name: /go deeper/i })).toBeInTheDocument();
 });
 
+test('debug Mini Games section completes a Decision through the next-turn modal', () => {
+  jest.spyOn(Math, 'random').mockReturnValue(0);
+  renderApp('/gameplay');
+
+  fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+
+  fireEvent.change(screen.getByLabelText('Decision Environment'), {
+    target: { value: 'mountains' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Start Decision' }));
+
+  expect(screen.getByRole('dialog', { name: 'Decision' })).toBeInTheDocument();
+  expect(screen.getByTestId('decision-page')).toHaveStyle({
+    backgroundImage: 'url(mountains.png)',
+  });
+  expect(screen.getAllByRole('button', { name: /voice|lantern/i })).toHaveLength(3);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Ask the voice who it is' }));
+  expect(screen.getByText('Gain a Small Heal potion')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+  expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
+});
+
 test('Cave retreat without roll again advances through the next-turn modal', () => {
   jest.useFakeTimers();
   jest.spyOn(Math, 'random').mockReturnValue(0.5);

@@ -14,6 +14,7 @@ function TurnAdvanceProbe() {
     <div>
       <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
       <p>{`Next turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
+      <p>{`Skip flag: ${currentPlayer?.skipNextTurn ? 'set' : 'clear'}`}</p>
       <button type="button" onClick={advanceTurn}>Advance Turn</button>
       <button type="button" onClick={dismissNextTurnModal}>Dismiss Next Turn</button>
     </div>
@@ -37,6 +38,29 @@ test('queues one dismissible next-turn modal whenever advanceTurn changes player
 
   fireEvent.click(screen.getByRole('button', { name: /dismiss next turn/i }));
   expect(screen.getByText('Next turn modal: clear')).toBeInTheDocument();
+});
+
+test('clears a one-time skip flag and immediately queues the following player modal', () => {
+  const setup = createFreezeSetup();
+
+  setup.currentTurnIndex = 1;
+  setup.pendingNextTurnModal = true;
+  setup.players[1].skipNextTurn = true;
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <TurnAdvanceProbe />
+    </GameSetupProvider>
+  );
+
+  expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Skip flag: set')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /dismiss next turn/i }));
+
+  expect(screen.getByText('Current player: player-1')).toBeInTheDocument();
+  expect(screen.getByText('Next turn modal: pending')).toBeInTheDocument();
+  expect(screen.getByText('Skip flag: clear')).toBeInTheDocument();
 });
 
 function createFreezeSetup({ activeBattle = null } = {}) {

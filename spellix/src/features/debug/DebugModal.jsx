@@ -1,6 +1,10 @@
 import Modal from '../../components/Modal';
 import Token from '../../components/tokens/Token';
 import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
+import {
+  getDecisionTranslations,
+  getGameplayLanguage,
+} from '../../i18n/translations';
 import DebugPotionGrantControls from './DebugPotionGrantControls';
 import { DEBUG_TOKEN_TYPES, getDebugTokenTypeLabel } from './tokenBagAdmin';
 import './debug.css';
@@ -18,12 +22,14 @@ function DebugModal({
   onGiveToken,
   onPendingPotionReplacementChange,
   onStartBattle,
+  onStartDecision,
   onStartRiverMiniGame,
   onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
   onReplacePendingPotion,
   onReplacePendingToken,
   onSelectedEnvironmentChange,
+  onSelectedDecisionEnvironmentChange,
   onSelectedEnemyIdChange,
   onSelectedPotionIdChange,
   onSelectedPotionPlayerIdChange,
@@ -32,6 +38,7 @@ function DebugModal({
   pendingPotionGrant = null,
   players = [],
   selectedEnemyId = '',
+  selectedDecisionEnvironment = 'fields',
   selectedEnvironment = 'fields',
   pendingTokenType = '',
   selectedPotionId = '',
@@ -43,6 +50,9 @@ function DebugModal({
   const isCurrentPlayerReady = Boolean(currentPlayer?.hasCommittedInitialSpells);
   const isAnywhereModeEnabled = Boolean(currentPlayer?.anywhereMode);
   const isTokenSelectionDisabled = !currentPlayer || !isCurrentPlayerReady || Boolean(pendingTokenType);
+  const currentLanguage = getGameplayLanguage(currentPlayer?.language);
+  const decisionTranslations = getDecisionTranslations(currentLanguage);
+  const decisionLanguageClassName = `language-${currentLanguage}`;
 
   return (
     <Modal
@@ -123,6 +133,34 @@ function DebugModal({
 
         <div className="debug-mini-game-controls">
           <h2>Mini Games</h2>
+          <label
+            className={decisionLanguageClassName}
+            htmlFor="debug-decision-environment"
+          >
+            {decisionTranslations.environment}
+          </label>
+          <select
+            id="debug-decision-environment"
+            value={selectedDecisionEnvironment}
+            disabled={!currentPlayer}
+            onChange={(event) =>
+              onSelectedDecisionEnvironmentChange(event.target.value)
+            }
+          >
+            {BATTLE_ENVIRONMENTS.map((environment) => (
+              <option key={environment} value={environment}>
+                {`${environment.charAt(0).toUpperCase()}${environment.slice(1)}`}
+              </option>
+            ))}
+          </select>
+          <button
+            className={decisionLanguageClassName}
+            type="button"
+            disabled={!currentPlayer}
+            onClick={onStartDecision}
+          >
+            {decisionTranslations.startDecision}
+          </button>
           <button type="button" disabled={!currentPlayer} onClick={onStartCaveMiniGame}>
             Start Cave Mini Game
           </button>

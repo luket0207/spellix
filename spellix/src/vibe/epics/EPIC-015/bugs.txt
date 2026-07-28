@@ -1,0 +1,842 @@
+---
+
+Bug-001: Decision page should not show next player image before returning to board
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+* Feature-002: Implement Decision page rewards and punishments
+* EPIC-011 Bug-004: Prevent visible player image changing prematurely before screen transition completes
+
+Bug Summary
+
+* When clicking the OK / Continue button to end the Decision sequence, the player image changes to the next player’s image before the page returns to the board.
+* This looks wrong because the Decision page still visually belongs to the player who made the decision.
+* The Decision page should keep showing the original decision player until navigation back to the board has completed.
+
+Expected Behaviour
+
+* The Decision page shows the player who triggered the decision.
+* After the outcome is resolved, clicking Continue should begin the return-to-board flow.
+* While still on the Decision page, the displayed player image should remain the original decision player.
+* The image should not update to the next player before the page changes.
+* The active player can still advance internally, but the Decision page UI must not visually update to the next player before navigation completes.
+
+Required Fix
+
+* Store the decision player separately when the Decision page starts.
+* Use this stored decision player for all Decision page display.
+* Do not render the Decision page image directly from `currentPlayer` if `currentPlayer` changes before navigation finishes.
+
+Suggested State Direction
+
+```js id="gh3lpe"
+const [decisionPlayer, setDecisionPlayer] = useState(null);
+
+useEffect(() => {
+  setDecisionPlayer(currentPlayer);
+}, []);
+```
+
+Suggested Rendering Direction
+
+```jsx id="t8gkmw"
+<PlayerImage
+  player={decisionPlayer}
+  className="decision-player-image"
+/>
+```
+
+* Exact implementation can vary.
+* The important requirement is that the Decision page display is locked to the player who entered the Decision page.
+
+Turn Advance Requirement
+
+* The turn should still advance when the Decision sequence ends.
+* The next-turn modal should still appear after returning to the board.
+* The next player’s image should only appear once the board or next-turn modal is shown.
+* Do not delay or break the existing turn-advance logic.
+
+Out Of Scope
+
+* No changes to decision outcome logic.
+* No changes to decision rewards or punishments.
+* No changes to the Continue button flow except preventing the visual player-image swap.
+* No changes to next-turn modal behaviour.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Start a Decision encounter.
+* Confirm the current player’s image appears in the Decision modal.
+* Choose a decision option.
+* Resolve the outcome.
+* Click Continue.
+* Confirm the Decision page does not briefly show the next player’s image.
+* Confirm the original decision player remains visible until the page leaves.
+* Confirm the game returns to the board.
+* Confirm the active player advances correctly.
+* Confirm the next-turn modal appears for the correct next player.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Added a focused regression that deliberately keeps `DecisionPage` mounted after Continue while the shared turn state advances.
+* Before the fix, the live current player changed from player 1 to player 2 and the Decision image changed from `m-red.png` to `m-blue.png`.
+
+Attempted Fix
+
+* Captured the current player once when the Decision page starts.
+* Derived the active Decision player from live context only while the live player ID still matches the captured player ID.
+
+Final Fix
+
+* Decision display and effect data now use the captured entering player after the shared current player advances.
+* Live state updates for the same Decision player still appear during reward and punishment resolution.
+* Continue still advances the turn and navigates to the board without adding a delay or changing next-turn modal behavior.
+
+Verification
+
+* The focused reproduction now passes with the live current player at player 2 while the still-mounted Decision image remains `m-red.png`.
+* Full Decision page and app return-flow regression passed: 2 suites and 44 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not run during this automated pass.
+
+Bug-002: Do not display “Nothing” for neutral Decision outcomes
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+* Feature-002: Implement Decision page rewards and punishments
+
+Bug Summary
+
+* When a neutral Decision outcome happens, the result is often `Nothing`.
+* This looks unnecessary when displayed to the player.
+* If the result is `Nothing`, do not display the result label.
+* Only display the narrative outcome text.
+
+Current Problem
+
+* Neutral outcomes currently display something like:
+
+```txt id="pxa0ps"
+The lantern goes dark, but nothing else happens.
+
+Nothing
+```
+
+* This should instead display only:
+
+```txt id="b7v0v0"
+The lantern goes dark, but nothing else happens.
+```
+
+Required Behaviour
+
+* If a Decision outcome result is `Nothing`, hide the result text entirely.
+* Do not display the word `Nothing`.
+* Do not display the Japanese equivalent either.
+* Continue to display the outcome narrative text.
+* Continue to display the Continue button.
+
+Affected Outcomes
+
+* This mainly affects neutral outcomes from the Decision data.
+* Some neutral outcomes have `Nothing` as their result.
+* Some zero-chance neutral outcomes have `N/A`; these should already never be selected according to Feature-001 and Feature-003.
+* If `N/A` is somehow selected due to bad data, do not display `N/A` either.
+
+Suggested Logic Direction
+
+```js id="5p6lnv"
+const hiddenResultLabels = ["Nothing", "N/A"];
+
+const shouldShowOutcomeResult =
+  decisionOutcome.result?.en &&
+  !hiddenResultLabels.includes(decisionOutcome.result.en);
+```
+
+* Exact implementation can vary.
+* Prefer a structured flag if one already exists in the outcome data.
+
+Better Data Direction
+
+```js id="w17jxk"
+{
+  type: "neutral",
+  result: {
+    en: "Nothing",
+    jp: "何もなし"
+  },
+  text: {
+    en: "The lantern goes dark, but nothing else happens.",
+    jp: "ランタンの明かりが消えましたが、それ以上は何も起こりませんでした。"
+  },
+  effect: {
+    type: "none"
+  },
+  hideResultLabel: true
+}
+```
+
+* This avoids relying only on English string comparison.
+* If `effect.type === "none"`, the result label can be hidden by default.
+
+Outcome Display Requirement
+
+* The Decision outcome modal should still show:
+
+  * player image.
+  * outcome narrative text.
+  * Continue button.
+* It should not reserve awkward empty space where the result label would have been.
+* Margins should collapse cleanly when the result label is hidden.
+
+Suggested JSX Direction
+
+```jsx id="ndrpda"
+<p className={`decision-outcome-text larger-text ${languageClass}`}>
+  {decisionOutcome.text[language]}
+</p>
+
+{shouldShowOutcomeResult && (
+  <p className={`decision-outcome-result ${languageClass}`}>
+    {decisionOutcome.result[language]}
+  </p>
+)}
+
+<button
+  className={`decision-continue-button ${languageClass}`}
+  onClick={handleDecisionContinue}
+>
+  {continueText}
+</button>
+```
+
+Expected Behaviour
+
+* Neutral Decision outcomes still display their narrative sentence.
+* Neutral Decision outcomes with result `Nothing` do not display the word `Nothing`.
+* The Japanese equivalent is also hidden.
+* Continue button still appears.
+* Good reward result labels still display.
+* Bad punishment result labels still display.
+* Layout spacing still looks clean when the result label is hidden.
+
+Out Of Scope
+
+* No changes to Decision outcome chances.
+* No changes to Decision question data.
+* No changes to good reward effects.
+* No changes to bad punishment effects.
+* No changes to Continue turn flow.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Force a neutral Decision outcome with result `Nothing`.
+* Confirm the narrative outcome text appears.
+* Confirm the word `Nothing` does not appear.
+* Confirm the Japanese equivalent does not appear.
+* Confirm the Continue button appears in the correct place.
+* Confirm spacing still looks clean.
+* Force a good outcome.
+* Confirm the reward result text still appears.
+* Force a bad outcome.
+* Confirm the punishment result text still appears.
+* Confirm zero-chance `N/A` outcomes are still not selected.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Focused English and Japanese tests confirmed that neutral outcomes rendered `Nothing` / `何もなし` in a `decision-outcome-result` paragraph.
+
+Attempted Fix
+
+* Reused the existing structured `effect.type` value rather than changing Decision data or parsing only localized display text.
+* Added defensive checks for English result labels `Nothing` and `N/A`.
+
+Final Fix
+
+* Decision outcomes with `effect.type === "none"` no longer render the result-label paragraph.
+* The narrative, player image, and Continue button remain unchanged.
+* Good reward and bad punishment result labels still render through the existing markup.
+* Omitting the paragraph also removes its margin, so no empty result-label space remains.
+
+Verification
+
+* Complete Decision UI and data regression passed: 2 suites and 32 tests.
+* Focused tests cover hidden English and Japanese neutral labels, preserved good and bad labels, Continue availability, and zero-chance neutral behavior.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not run during this automated pass.
+
+---
+
+Bug-003: Decision potion replacement modal should stack existing potion choices horizontally
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-002: Implement Decision page rewards and punishments
+* EPIC-014 Bug-001: Battle reward modal should show the awarded potion or token component
+
+Bug Summary
+
+* When a player receives a potion from a Decision outcome but their potion slots are already full, the replacement choice layout needs adjusting.
+* The 3 current potion buttons should be horizontally stacked.
+* The button to discard the new potion should remain full width.
+
+Required Behaviour
+
+* If a Decision outcome grants a potion and the player’s potion slots are full:
+
+  * show the normal potion replacement flow.
+  * show the new potion being offered.
+  * show the 3 current potion choices horizontally.
+  * each current potion should have its own replacement button.
+  * keep the discard-new-potion button as a full-width button.
+
+Layout Requirement
+
+* The existing potion choices should appear in one horizontal row.
+* The discard-new-potion button should sit separately underneath and span the full modal width.
+* Do not make the discard-new-potion button part of the horizontal row.
+
+Suggested Structure
+
+```jsx id="oa3c0c"
+<div className="decision-potion-replacement-modal">
+  <div className="new-potion-display">
+    <Potion
+      potion={newPotion}
+      showName={true}
+      showTooltip={true}
+    />
+  </div>
+
+  <div className="current-potion-choice-row">
+    {currentPotions.map((potion, index) => (
+      <button
+        key={potion.id}
+        className={`current-potion-replace-button ${languageClass}`}
+        onClick={() => replaceExistingPotion(index)}
+      >
+        <Potion
+          potion={potion}
+          showName={true}
+          showTooltip={true}
+        />
+      </button>
+    ))}
+  </div>
+
+  <button
+    className={`discard-new-potion-button ${languageClass}`}
+    onClick={discardNewPotion}
+  >
+    {discardNewPotionText}
+  </button>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="k2za7g"
+.current-potion-choice-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.current-potion-replace-button {
+  flex: 1;
+  max-width: 160px;
+}
+
+.discard-new-potion-button {
+  width: 100%;
+  margin-top: 24px;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the 3 existing potion replacement buttons are horizontal, while the discard-new-potion button stays full width.
+
+Decision-Specific Requirement
+
+* This bug applies specifically to potion rewards granted from Decision outcomes.
+* If the Decision flow reuses the battle potion replacement modal, update the shared modal carefully so the battle flow is not broken.
+* If the shared modal already supports layout variants, use or add a variant for the Decision reward flow.
+
+No Layout Jump Requirement
+
+* The modal should remain stable when the player chooses a potion to replace.
+* Potion components should keep their name and tooltip.
+* The horizontally stacked current potion buttons should fit inside the modal without overflowing.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to potion replacement logic.
+* No changes to potion reward generation.
+* No changes to decision outcome resolution.
+* No changes to token reward assignment.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Trigger a Decision outcome that grants a potion.
+* Fill the player’s potion slots before the reward is granted.
+* Confirm the potion replacement modal appears.
+* Confirm the new potion is shown with name and tooltip.
+* Confirm the 3 current potion choices are horizontally stacked.
+* Confirm each current potion choice can replace that potion.
+* Confirm the discard-new-potion button is full width.
+* Confirm the discard-new-potion button is not part of the horizontal row.
+* Confirm the replacement flow still works correctly.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Added a focused full-slot Decision potion reward regression.
+* Before the fix, the three replacement choices and discard action shared one vertically stacked action container.
+
+Attempted Fix
+
+* The focused regression failed because there was no dedicated horizontal replacement row and the discard action was not structurally separate.
+
+Final Fix
+
+* Wrapped the three current potion replacement buttons in a dedicated horizontal flex row.
+* Kept the discard-new-potion action outside that row and set it to the full available width.
+* Preserved the existing potion components, language classes, click handlers, reward resolution, and no-list markup.
+
+Verification
+
+* The focused Decision page suite passed: 1 suite and 26 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not run during this automated pass.
+
+---
+
+Bug-004: Decision health-loss outcome should not show next player before returning to board
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-002: Implement Decision page rewards and punishments
+* Bug-001: Decision page should not show next player image before returning to board
+
+Bug Summary
+
+* When a Decision punishment removes health from the player, the Decision page briefly changes to the next player before returning to the board.
+* This causes the next player’s image and health bar to flash on the Decision page before the page has gone.
+* The Decision page should keep showing the original decision player until navigation back to the board is complete.
+
+Required Behaviour
+
+* During a health-loss Decision outcome:
+
+  * show the original decision player’s image.
+  * show the original decision player’s health bar.
+  * remove the correct health amount from that original player.
+  * keep displaying that same player after Continue is clicked.
+* The next player’s image and health should not appear on the Decision page.
+* The next player should only appear after the game has returned to the board or next-turn modal.
+
+Required Fix
+
+* Lock all Decision page display data to the player who started the Decision sequence.
+* This should include:
+
+  * player image.
+  * health bar.
+  * player name, if displayed.
+  * any player-specific outcome display.
+* Do not render the health-loss Decision modal from live `currentPlayer` if `currentPlayer` changes before the route transition completes.
+
+Suggested State Direction
+
+```js id="l8uzuy"
+const [decisionPlayerId] = useState(currentPlayer.id);
+```
+
+Suggested Rendering Direction
+
+```jsx id="zg65ni"
+const decisionPlayer = players.find((player) => player.id === decisionPlayerId);
+
+<PlayerImage player={decisionPlayer} />
+
+<HealthBar
+  currentHealth={decisionPlayer.currentHealth}
+  maxHealth={decisionPlayer.maxHealth}
+/>
+```
+
+* Exact implementation can vary.
+* The important requirement is that the Decision UI uses the stored decision player, not the newly advanced active player.
+
+Turn Advance Requirement
+
+* The turn should still advance correctly.
+* The active player can still change as part of the end-of-decision flow.
+* However, the Decision page must not visually react to that active player change before navigation completes.
+* The next-turn modal invariant must still be preserved after returning to the board.
+
+Out Of Scope
+
+* No changes to health-loss amount.
+* No changes to health-loss timing.
+* No changes to health bar design.
+* No changes to Decision outcome data.
+* No changes to non-health Decision outcomes unless they have the same premature-player-switch bug.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Trigger a Decision outcome with a health-loss punishment.
+* Confirm the original decision player’s image is shown.
+* Confirm the original decision player’s health bar is shown.
+* Confirm Continue starts disabled if the health-loss delay is still active.
+* Confirm health is removed from the correct player.
+* Click Continue.
+* Confirm the Decision page does not briefly show the next player’s image.
+* Confirm the Decision page does not briefly show the next player’s health bar.
+* Confirm the game returns to the board.
+* Confirm the active player advances correctly.
+* Confirm the next-turn modal appears for the correct next player.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Added a focused health-loss regression that deliberately keeps `DecisionPage` mounted after Continue while the live turn advances to player 2.
+* Before the fix, player 1's health correctly fell from 40 to 20, then the still-mounted health bar reverted to the stale captured value of 40 after Continue.
+
+Attempted Fix
+
+* The existing Bug-001 fix captured the complete entering player object, which preserved the player image but also preserved stale pre-damage health.
+
+Final Fix
+
+* Captured only the entering player's ID when the Decision sequence starts.
+* Derived the displayed Decision player from the latest `gameSetup.players` state using that stored ID.
+* Preserved the existing health-loss amount, one-second delay, zero clamp, Continue navigation, turn advancement, and next-turn behavior.
+
+Verification
+
+* The focused regression confirms the live current player advances to player 2 while the still-mounted Decision modal keeps player 1's image and updated health of 20.
+* The complete Decision page suite passed: 1 suite and 27 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not run during this automated pass.
+
+---
+
+Bug-005: Decision token rewards should open token assignment after Continue
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-002: Implement Decision page rewards and punishments
+* EPIC-010 Feature-015: Redesign Spell Token Assignment page
+* EPIC-011 Feature-002: Global Cave reward resolution order
+
+Bug Summary
+
+* When the player receives a token reward from a Decision outcome, the token assignment component should not appear inside the Decision outcome modal.
+* The Decision outcome modal should first show the reward result.
+* The Continue button should then take the player to the token assignment modal.
+* After token assignment is confirmed, the game should return to the board and advance to the next turn.
+
+Required Behaviour
+
+* When a Decision outcome grants a token:
+
+  * show the player image.
+  * show the outcome narrative text.
+  * show the outcome result text.
+  * show the awarded token if useful, using the Token component with name and tooltip.
+  * show the Continue button.
+* Do not embed the full token assignment component inside this Decision outcome display.
+
+Continue Flow Requirement
+
+* For token rewards, the Continue button should not immediately return to the board.
+* Instead, Continue should open the existing token assignment modal/page.
+* The token assignment flow should use the same component and rules as battle/cave reward token assignment.
+* Once token assignment is confirmed:
+
+  * commit the token assignment or trash result.
+  * return to the board.
+  * advance the turn to the next player.
+  * show the next-turn modal according to the invariant.
+
+Suggested Flow
+
+```txt id="94jyok"
+1. Decision outcome grants token.
+2. Decision outcome modal displays reward text.
+3. Player clicks Continue.
+4. Token assignment modal opens.
+5. Player assigns or trashes the token.
+6. Player confirms assignment.
+7. Game returns to board.
+8. Turn advances to next player.
+9. Next-turn modal appears first.
+```
+
+Suggested State Direction
+
+```js id="ux56x4"
+function handleDecisionContinue() {
+  if (decisionOutcome.effect.type === "gainToken") {
+    openTokenAssignment({
+      source: "decision",
+      token: awardedToken,
+      onComplete: finishDecisionAndAdvanceTurn
+    });
+
+    return;
+  }
+
+  finishDecisionAndAdvanceTurn();
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that token assignment happens after Continue, not inside the outcome content.
+
+Token Assignment Requirement
+
+* Use the existing token assignment component.
+* It should include the trash ability.
+* It should follow the same rules as battle reward assignment.
+* It should respect:
+
+  * token bag capacity.
+  * spell slot rules.
+  * merged column rules.
+  * Grey capacity rules.
+  * White merge rules.
+  * all existing token assignment invariants.
+
+Decision Outcome Display Requirement
+
+* The Decision outcome modal should remain clean.
+* It should not contain the full token assignment UI.
+* It may show the awarded token component as part of the reward summary.
+* The full assignment UI should only appear after Continue is clicked.
+
+Turn Advance Requirement
+
+* Do not advance the turn before token assignment is finished.
+* Do not show the next-turn modal before token assignment is finished.
+* Do not return to the board until token assignment is confirmed.
+* The visible player image should remain the decision player until the transition away from the Decision/token assignment flow is complete.
+
+Out Of Scope
+
+* No changes to token reward generation.
+* No changes to token rarity selection.
+* No changes to token assignment component design.
+* No changes to token effects.
+* No changes to potion reward flow.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Trigger a Decision outcome that grants a token.
+* Confirm the Decision outcome modal appears.
+* Confirm the full token assignment component is not shown inside the outcome modal.
+* Confirm the outcome narrative text is shown.
+* Confirm the outcome result text is shown.
+* Confirm Continue is shown.
+* Click Continue.
+* Confirm the token assignment modal opens.
+* Confirm the awarded token is available for assignment.
+* Confirm the trash ability is available.
+* Confirm assignment rules match the battle reward assignment flow.
+* Confirm cancelling/confirming follows the existing assignment rules.
+* Confirm the game does not return to the board before assignment is confirmed.
+* Confirm the turn does not advance before assignment is confirmed.
+* Confirm after assignment is confirmed, the game returns to the board.
+* Confirm the turn advances to the next player.
+* Confirm the next-turn modal appears first.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Added focused common, rare, and unrestricted token reward regressions.
+* Before the fix, `SpellTokenAssignment` rendered inside the Decision outcome content immediately, the awarded token summary was absent, and Continue remained disabled until assignment finished.
+
+Attempted Fix
+
+* The focused regressions failed for all three token reward categories before the production flow was changed.
+
+Final Fix
+
+* Token reward outcomes now display the narrative, result label, awarded `Token` with name and tooltip, and enabled Continue without embedding assignment.
+* Continue opens a separate local assignment phase that reuses the existing `SpellTokenAssignment`, reward drag/drop handlers, Trash area, capacity rules, replacement flow, and merge confirmation.
+* Assignment confirmation commits or discards the token before returning to gameplay, advancing the turn, and opening the next-turn modal.
+
+Verification
+
+* The complete Decision page suite passed: 1 suite and 28 tests.
+* Focused coverage confirms no assignment before Continue, no navigation or turn advance before confirmation, committed token state after confirmation, gameplay return, turn advancement, and pending next-turn modal.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not run during this automated pass.
+
+---
+
+Bug-006: Decision health bar should not visually reset after health-loss Continue is clicked
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* Feature-002: Implement Decision page rewards and punishments
+* Bug-004: Decision health-loss outcome should not show next player before returning to board
+
+Bug Summary
+
+* When a Decision punishment removes health from the player, the health bar correctly reduces at first.
+* However, after clicking Continue, the health bar visually jumps back up to the value it had before the health was removed.
+* Once the board loads, the health is correctly reduced.
+* This means the game state is probably correct, but the Decision page health bar display is briefly reverting to stale visual data.
+* Stop the health bar from visually jumping back up after Continue is clicked.
+
+Expected Behaviour
+
+* A Decision outcome causes the player to lose health.
+* The modal displays the player’s health bar.
+* Continue starts disabled.
+* After the delay, the correct health amount is removed.
+* The health bar visually reduces.
+* Continue becomes enabled.
+* When Continue is clicked, the health bar should stay at the reduced value until the Decision page is gone.
+* The health bar should not jump back to the old pre-damage value.
+* The board should still show the correctly reduced health after navigation.
+
+Required Fix
+
+* Lock the Decision health display to the resolved damaged health value once the health-loss punishment has applied.
+* Do not let the Decision modal re-render from stale pre-damage player data during the Continue/navigation flow.
+* Do not reset local Decision health state when Continue is clicked.
+* Do not re-read the old player health value from route state, encounter state, or cached decision player state after health has already been applied.
+
+Suggested State Direction
+
+```js id="gc2olu"
+const [displayHealth, setDisplayHealth] = useState(decisionPlayer.currentHealth);
+
+async function resolveHealthLossOutcome(amount) {
+  setContinueDisabled(true);
+
+  await delay(1000);
+
+  const newHealth = Math.max(0, displayHealth - amount);
+
+  applyHealthLoss(decisionPlayerId, amount);
+  setDisplayHealth(newHealth);
+
+  setContinueDisabled(false);
+}
+```
+
+Suggested Rendering Direction
+
+```jsx id="no0l4z"
+<HealthBar
+  currentHealth={displayHealth}
+  maxHealth={decisionPlayer.maxHealth}
+/>
+```
+
+* Exact implementation can vary.
+* The important requirement is that the Decision page health bar keeps showing the reduced health after the punishment has resolved.
+
+Navigation Requirement
+
+* Clicking Continue should begin the return-to-board flow.
+* During that transition:
+
+  * keep displaying the original decision player.
+  * keep displaying the reduced health value.
+  * do not visually restore old health.
+  * do not visually switch to the next player.
+* Once the board is shown, the board should use the global player state as normal.
+
+Likely Cause To Check
+
+* The health bar may be rendering from:
+
+  * stored `decisionPlayer` copied before damage.
+  * route state captured before damage.
+  * `currentPlayer` after turn advance.
+  * a local state reset caused by clicking Continue.
+* Make sure the display source after health loss is the updated post-damage value.
+
+Out Of Scope
+
+* No changes to the amount of health lost.
+* No changes to health-loss timing.
+* No changes to board health display.
+* No changes to turn advancement.
+* No changes to Decision rewards.
+* No changes to non-health punishments.
+* No unrelated Decision page redesign.
+
+Testing Required
+
+* Trigger a Decision outcome that removes health.
+* Confirm the player’s health bar appears in the Decision modal.
+* Confirm Continue starts disabled.
+* Confirm the health loss applies after the delay.
+* Confirm the health bar visually reduces.
+* Confirm Continue becomes enabled.
+* Click Continue.
+* Confirm the health bar does not jump back up to the old value.
+* Confirm the Decision page does not show the next player’s image or health.
+* Confirm the game returns to the board.
+* Confirm the board shows the correctly reduced health.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
