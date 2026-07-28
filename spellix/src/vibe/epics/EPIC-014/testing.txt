@@ -1,3 +1,172 @@
+Bug-006: Battle dice result should stay visible for 2 seconds before animations begin
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start a battle, roll the dice, and wait for the result.
+   Expected: The result remains visible for 2 seconds, the dice does not fade, no battle effect begins, and battle controls remain disabled.
+2. Allow the 2-second result pause to finish.
+   Expected: The dice fades out and the applicable damage, Guard, freeze, charge, or token animation begins only after the pause.
+3. Allow a nonlethal battle effect queue to finish.
+   Expected: Existing effects resolve in their original order and duration, then the dice fades back in when battle can continue.
+4. Resolve player and enemy freeze checks with both odd and even results.
+   Expected: Each result remains visible for 2 seconds; the dice fades before the freeze outcome continues, and an enemy follow-up attack starts only after that fade.
+5. Resolve winning and losing rolls.
+   Expected: The result pause still occurs, effects resolve normally, and the dice does not reappear after battle enters reward or loss flow.
+6. Watch the browser console throughout the flow.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* Added focused regressions proving the settled result remains visible with no effect or fade through 1,999ms, then hides and begins the effect at 2 seconds while dice and potion controls stay disabled through the freeze-check fade.
+* Reproduced the pre-fix bug: the focused regression failed because the damage animation was already active when the result appeared.
+* Updated normal attacks, Guard, Green, Orange, charge, Purple, potion, forced-roll, freeze-check, automatic enemy, reward, win, and loss timing coverage.
+* Focused Bug-006 and freeze lifecycle regressions passed: 9 tests.
+* Previously stale shared timing regressions passed: 9 tests.
+* BattlePage and translation regression passed: 62 tests with 3 exclusions.
+* The exclusions are the separately documented persistent-dice copy baseline and two unrelated working-tree style contracts: title-panel `background-size` is currently `100% 100%` instead of `cover`, and battle-row bottom margin is currently `120px` instead of Bug-004's `60px`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-006.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-005: Frozen unfreeze prompt should be restyled and repositioned above battle dice
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start an English battle with the current actor frozen and wait for the turn modal to close.
+   Expected: `Roll even to unfreeze` appears above the dice using the English font; the old text does not appear.
+2. Repeat with a Japanese player.
+   Expected: `\u51cd\u7d50\u72b6\u614b\u3092\u89e3\u9664\u3059\u308b\u306b\u306f\u3001\u5076\u6570\u3092\u51fa\u3057\u3066\u304f\u3060\u3055\u3044\u3002` appears using the Japanese font.
+3. Inspect the prompt and dice container.
+   Expected: The prompt is centred `40px` above the dice, has a `400px` maximum width, light-blue background, black centred text, rounded corners, and does not alter the dice container's `300px` width or transparent background.
+4. Roll an even freeze check, then repeat with an odd freeze check.
+   Expected: Existing unfreeze calculation and actor progression remain unchanged; the prompt disappears when frozen status clears and does not make the battle row jump.
+5. Start frozen with Thaw available, cancel its confirmation, then use it.
+   Expected: The prompt remains after cancellation and disappears after Thaw removes frozen status.
+6. Observe an enemy automatic freeze check and inspect the prompt markup.
+   Expected: Existing automatic rolling remains unchanged, the localized prompt follows the current-actor freeze condition, and no `ul` or `li` is introduced in the dice panel.
+7. Watch the browser console throughout the flow.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* Added exact English/Japanese gameplay translation coverage, including existing invalid-language English fallback coverage.
+* Added BattlePage coverage for localized copy, language font classes, old-text removal, dice-panel containment, list-free markup, and every requested positioning/style declaration.
+* Updated existing Thaw, player freeze-check, Ice Beam enemy freeze-check, and automatic enemy freeze-check expectations to use the new copy.
+* Reproduced the pre-fix bug: 2 focused tests failed.
+* Focused Bug-005 and freeze/Thaw regressions passed: 5 tests.
+* BattlePage and translation regression run passed 62 tests with 3 exclusions.
+* The exclusions are the separately documented persistent-dice copy baseline and two unrelated working-tree style contracts: title-panel `background-size` is currently `100% 100%` instead of `cover`, and battle-row bottom margin is currently `120px` instead of Bug-004's `60px`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-004: Align battle dice bottom edge with battle-side elements and remove dice background
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Open a battle and inspect the player side, dice container, and opponent side.
+   Expected: All three remain in player, dice, opponent order and their bottom edges align.
+2. Inspect the space below the battle row.
+   Expected: The row ends `60px` above the bottom of the screen.
+3. Inspect the dice area.
+   Expected: Its container is exactly `300px` wide, its dice content remains centred, and no white or translucent white background appears behind it.
+4. Roll the dice and allow a normal battle effect queue to finish.
+   Expected: The dice remains visible while rolling, fades after the result appears, keeps its `300px` layout space while hidden, cannot be clicked while faded, and returns after all effects finish.
+5. Resolve a freeze check and a lethal roll.
+   Expected: Existing freeze-result timing and reward/loss navigation remain unchanged, with no premature dice reappearance or row movement.
+6. Watch the browser console throughout the flow.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* Added exact CSS contract coverage for `align-items: end`, `margin-bottom: 60px`, `width: 300px`, and removal of the dice background declaration.
+* Reproduced the pre-fix bug with the focused regression: 1 test failed on the existing centre alignment.
+* Focused Bug-004, title/potions panel, and fade lifecycle regression passed: 5 tests.
+* BattlePage regression passed: 50 tests; the separately documented persistent battle dice copy baseline test was skipped.
+* `npm run build` passed.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-009: Rearrange battle page with dice element between characters
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open a battle in English and Japanese at desktop width.
+   Expected: The wooden title/potions panel keeps its existing width and side/top padding, its bottom padding is `20px`, and the player, dice, and opponent appear in that order in one horizontal row.
+2. Repeat at a narrow mobile-first width.
+   Expected: The three-column row remains within the viewport with the dice visually between both actors and without unnecessary vertical scrolling.
+3. Roll the battle dice during a normal attack.
+   Expected: The rolling die and result are visible, then the dice panel fades out while damage, Guard, charge, freeze, and token-result effects resolve; its Roll control cannot be used while faded.
+4. Wait for all effects to finish.
+   Expected: The dice panel fades back in only after both its result sequence and the battle effect queue finish, while its reserved grid space keeps both actors stationary.
+5. Resolve a freeze check and complete a lethal roll.
+   Expected: The dice stays hidden through the freeze-result sequence, returns when the battle continues, and does not briefly return when the battle enters reward or loss flow.
+6. Inspect the moved dice panel and watch the browser console throughout the flow.
+   Expected: The dice panel introduces no `ul` or `li`, and no runtime errors or warnings appear.
+
+Automated Tests Completed
+
+* Added BattlePage coverage for the exact player, dice, opponent DOM order and the three-column grid contract.
+* Added CSS coverage for the opacity transition, hidden pointer-event lock, retained layout display, reduced title/potions padding, and narrow-screen gap.
+* Added lifecycle coverage proving the die remains visible while rolling, hides after the result appears, stays hidden through the battle effect queue, and returns after resolution.
+* Added freeze-check coverage proving the dice remains hidden until the existing persistent result sequence completes.
+* Added terminal-state coverage proving the dice does not return before reward navigation.
+* Focused Feature-009 tests passed: 4 tests.
+* BattlePage regression passed: 50 tests; the separately documented persistent battle dice copy baseline test was skipped.
+* `npm run build` passed.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-009.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 ---
 
 ---

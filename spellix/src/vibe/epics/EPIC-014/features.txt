@@ -1459,3 +1459,277 @@ Completion Notes
 * Added the English and Japanese empty-state copy to the existing potion usage translations with the existing English fallback.
 * Preserved potion names, cursor tooltips, Use controls, disabled rules, effects, title copy, turn logic, reward logic, and div-based markup.
 * Added no component, route, dependency, potion rule, or unrelated battle layout change.
+
+---
+
+Feature-009: Rearrange battle page with dice element between characters
+
+Status
+
+* done
+
+Related Feature
+
+* Feature-008: Move battle potions bar into standalone title panel
+* Feature-002: Implement Ice Beam battle potion behaviour
+* Feature-003: Implement Charger battle potion behaviour
+* Feature-004: Implement Cosmic Intervention battle potion behaviour
+* Feature-005: Implement Shields Down battle potion behaviour
+* Feature-006: Implement Thaw battle potion behaviour
+
+Goal
+
+* Rearrange the battle page so the whole scene fits more comfortably onto one page.
+* Reduce excess padding beneath the battle potions bar.
+* Move the dice element between the two battle characters.
+* Make the battle character area behave like a row of three elements:
+
+  * player character.
+  * dice element.
+  * opponent character.
+* Fade the dice element out after a roll so battle animations can play clearly.
+* Fade the dice element back in once all roll-result animations have finished.
+
+Feature-008 Padding Adjustment
+
+* The battle title and potions panel from Feature-008 currently has too much bottom padding below the potions bar.
+* Take `20px` away from the bottom padding.
+* If Feature-008 uses `40px` padding on all sides, update it to:
+
+```css id="xj1rqd"
+padding: 40px 40px 20px;
+```
+
+* This means:
+
+  * top padding remains `40px`.
+  * left padding remains `40px`.
+  * right padding remains `40px`.
+  * bottom padding becomes `20px`.
+
+* The goal is to reduce empty space beneath the fixed-height potions bar while keeping the panel visually consistent.
+
+Battle Layout Requirement
+
+* The main battle scene should be rearranged into a horizontal row of three main elements:
+
+```txt id="vlghqg"
+Player character | Dice element | Opponent character
+```
+
+* The dice element should sit between the two characters.
+* The dice element should no longer sit above or below the two-character battle area if that causes the page to become too tall.
+* The whole battle page should fit onto one page comfortably without unnecessary vertical scrolling.
+
+Suggested Structure
+
+```jsx id="93rnsg"
+<div className="battle-main-row">
+  <div className="battle-character-panel battle-player-panel">
+    {playerBattleDisplay}
+  </div>
+
+  <div className={`battle-dice-panel ${diceHiddenClass}`}>
+    {battleDiceElement}
+  </div>
+
+  <div className="battle-character-panel battle-opponent-panel">
+    {opponentBattleDisplay}
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="c5y4ga"
+.battle-main-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  justify-content: center;
+  column-gap: 28px;
+  width: 100%;
+}
+
+.battle-dice-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the dice element is visually placed between the two characters.
+
+Dice Fade Behaviour
+
+* When the player rolls the dice, the dice element should fade out.
+* While the dice element is faded out:
+
+  * battle animations should play.
+  * attack animations should play.
+  * damage animations should play.
+  * potion animations should play if relevant.
+  * the dice element should not visually block or compete with the animations.
+* Once all relevant animations and roll-result effects have finished, the dice element should fade back in.
+
+Required Sequence
+
+```txt id="btg55n"
+Player clicks Roll.
+Dice rolls.
+Dice result is resolved.
+Dice element fades out.
+Battle animations play.
+Damage / guard / freeze / charge effects resolve.
+All animations finish.
+Dice element fades back in.
+Player can continue when appropriate.
+```
+
+* If the dice animation itself needs to remain visible while the dice is actively rolling, fade out only after the dice result has been shown.
+* Do not hide the dice before the player can see what they rolled unless the existing dice UX already handles that elsewhere.
+
+Suggested State Direction
+
+```js id="ens0da"
+const [isBattleDiceHidden, setIsBattleDiceHidden] = useState(false);
+const [battleAnimationQueueRunning, setBattleAnimationQueueRunning] = useState(false);
+```
+
+Suggested flow:
+
+```js id="r8z6pn"
+async function handleBattleRoll() {
+  const roll = await rollBattleDice();
+
+  setIsBattleDiceHidden(true);
+
+  await runBattleResultAnimations(roll);
+
+  setIsBattleDiceHidden(false);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the dice fades out while result animations are playing and fades back in once they are complete.
+
+Fade Styling Requirement
+
+* The dice element should fade smoothly.
+* Use opacity transitions rather than instantly removing it from layout.
+* The dice element should keep its reserved space while hidden so the battle row does not jump.
+
+Suggested CSS Direction
+
+```css id="r4j7xo"
+.battle-dice-panel {
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+.battle-dice-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+```
+
+* Do not use `display: none` for the dice element during the fade.
+* Do not remove the dice element from the DOM if that causes layout movement.
+* Keep the middle column stable.
+
+Animation Queue Requirement
+
+* The dice should fade back in only after all relevant animations have finished.
+* This includes:
+
+  * normal attack animation.
+  * damage animation.
+  * guard animation.
+  * freeze animation.
+  * Cosmic Intervention animation, if triggered in the same flow.
+  * Shields Down animation, if triggered in the same flow.
+  * any existing token effect animation tied to the roll.
+* Avoid using a fixed timeout if there is already an animation-completion or promise-based sequence available.
+* If fixed timing is unavoidable, it must account for the longest animation in the sequence before fading the dice back in.
+
+Interaction Requirement
+
+* While the dice element is faded out, its buttons should not be clickable.
+* If the battle is waiting for animations to finish, all relevant battle controls should remain disabled.
+* After animations finish:
+
+  * if battle continues, the dice element fades back in.
+  * if battle ends, do not fade the dice back in unnecessarily before the battle end flow or reward modal appears.
+
+Responsive / Fit Requirement
+
+* The battle page should fit comfortably on one page.
+* Reduce vertical spacing where appropriate, especially under the battle title/potions panel.
+* The row of three should not overflow the mobile-first layout.
+* If the viewport is too narrow for the three-column row, use the project’s current mobile layout strategy, but still keep the dice visually between the two characters as much as possible.
+
+No Layout Jump Requirement
+
+* The battle row should not jump when the dice fades out.
+* The dice panel should keep its width and height while hidden.
+* Character positions should remain stable during animations.
+* The title/potions panel should also remain stable when potions are used or removed, as required by Feature-008.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Expected Behaviour
+
+* Battle title and potions panel have less bottom padding than Feature-008 originally specified.
+* The bottom padding beneath the potions bar is reduced by `20px`.
+* The player character, dice element, and opponent character appear in one horizontal row.
+* The dice element sits between the two characters.
+* The battle scene fits more comfortably onto one page.
+* After the player rolls, the dice element fades out.
+* Battle animations play while the dice element is hidden.
+* Once all animations finish, the dice element fades back in.
+* The dice element keeps its layout space while hidden.
+* The battle page does not jump during dice fade transitions.
+
+Out Of Scope
+
+* No changes to battle damage calculation.
+* No changes to potion effects.
+* No changes to battle reward logic.
+* No changes to character images.
+* No changes to battle title text.
+* No changes to the fixed-height potions bar from Feature-008 except the reduced bottom padding below it.
+* No unrelated battle screen redesign.
+
+Testing Checkpoints
+
+* Open the battle screen.
+* Confirm the Feature-008 title/potions panel now has `20px` less bottom padding.
+* Confirm the battle title and potions bar still share the `modalBackground.png` panel.
+* Confirm the player character, dice element, and opponent character appear as a row of three.
+* Confirm the dice element is between the two characters.
+* Confirm the battle page fits more comfortably on one page.
+* Roll the battle dice.
+* Confirm the dice result is still visible at the correct point.
+* Confirm the dice element fades out after rolling.
+* Confirm battle animations play while the dice element is faded out.
+* Confirm the dice element does not remain clickable while faded out.
+* Confirm the dice panel still reserves space and does not cause layout jumping.
+* Confirm the dice element fades back in after all animations finish.
+* Confirm the dice does not fade back in unnecessarily if the battle ends.
+* Confirm English layout still works.
+* Confirm Japanese layout still works.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reduced the existing battle title/potions panel bottom padding from `40px` to `20px` without changing its other dimensions.
+* Reused the existing battle display and persistent dice component in a three-column player, dice, opponent grid.
+* Reused the existing dice sequence and battle-resolution state so the dice remains visible while rolling, fades during result effects, and returns only after the sequence and effect queue finish.
+* Kept the dice mounted with reserved grid space and disabled interaction while faded; terminal reward and loss flows do not restore it.
+* Added only the required narrow-screen grid gap adjustment and did not change battle calculations, potion effects, rewards, images, title text, routes, or shared abstractions.

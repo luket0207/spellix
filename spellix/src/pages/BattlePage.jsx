@@ -37,6 +37,7 @@ import {
 import './BattlePage.css';
 
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
+const BATTLE_DICE_FADE_MS = 350;
 
 function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
@@ -111,6 +112,7 @@ function BattlePage() {
     setPlayerPosition,
     consumePlayerPotion,
   } = useGameSetup();
+  const freezeCheckFadeTimeoutRef = useRef(null);
   const lastDiceRollRef = useRef(null);
   const turnTransitionTimeoutRef = useRef(null);
   const advanceBattleTurnRef = useRef(advanceBattleTurn);
@@ -120,8 +122,10 @@ function BattlePage() {
   const [closedTurnModalActor, setClosedTurnModalActor] = useState(null);
   const [enemyAutoRollRequestId, setEnemyAutoRollRequestId] = useState(0);
   const [forcedRollRequest, setForcedRollRequest] = useState(null);
+  const [isBattleDiceHidden, setIsBattleDiceHidden] = useState(false);
   const [isBattleDiceRolling, setIsBattleDiceRolling] = useState(false);
-  const [pendingEnemyAttackAfterFreeze, setPendingEnemyAttackAfterFreeze] = useState(false);
+  const [isBattleDiceSequenceComplete, setIsBattleDiceSequenceComplete] =
+    useState(true);
   const [showLoseModal, setShowLoseModal] = useState(false);
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
   const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
@@ -144,6 +148,11 @@ function BattlePage() {
       navigate('/gameplay', { replace: true });
     }
   }, [hasBattleContext, navigate]);
+
+  useEffect(
+    () => () => window.clearTimeout(freezeCheckFadeTimeoutRef.current),
+    []
+  );
 
   useEffect(() => {
     if (!isActiveBattle) {
@@ -219,6 +228,28 @@ function BattlePage() {
     }
   }, [activeBattle?.phase, navigate]);
 
+  useEffect(() => {
+    if (
+      !isBattleDiceHidden ||
+      !isBattleDiceSequenceComplete ||
+      activeBattle?.isResolvingTurn ||
+      activeBattle?.cosmicInterventionPending ||
+      activeBattle?.shieldsDownPending ||
+      activeBattle?.phase !== 'active'
+    ) {
+      return;
+    }
+
+    setIsBattleDiceHidden(false);
+  }, [
+    activeBattle?.cosmicInterventionPending,
+    activeBattle?.isResolvingTurn,
+    activeBattle?.phase,
+    activeBattle?.shieldsDownPending,
+    isBattleDiceHidden,
+    isBattleDiceSequenceComplete,
+  ]);
+
   if (!hasBattleContext) {
     return null;
   }
@@ -241,7 +272,8 @@ function BattlePage() {
       isPotionAnimationPending ||
       !isActiveBattle ||
       !isPlayerTurn ||
-      isBattleDiceRolling
+      isBattleDiceRolling ||
+      isBattleDiceHidden
   );
   const areBattlePotionsDisabled = Boolean(
     showTurnModal ||
@@ -250,7 +282,8 @@ function BattlePage() {
       activeBattle.playerPotionUsedThisTurn ||
       !isActiveBattle ||
       !isPlayerTurn ||
-      isBattleDiceRolling
+      isBattleDiceRolling ||
+      isBattleDiceHidden
   );
   const turnActorName = isPlayerTurn
     ? getPlayerColourDisplayName(currentLanguage, battlePlayer.colour)
@@ -306,8 +339,12 @@ function BattlePage() {
   };
 
   const handleDiceRollComplete = (result) => {
-    setIsBattleDiceRolling(false);
     lastDiceRollRef.current = result;
+  };
+
+  const handleDiceSequenceComplete = (result) => {
+    setIsBattleDiceRolling(false);
+    setIsBattleDiceHidden(true);
 
     if (isPlayerTurn && battlePlayer.nextForcedRoll) {
       clearPlayerForcedRoll(battlePlayer.id);
@@ -316,23 +353,25 @@ function BattlePage() {
     if (isFreezeCheck) {
       resolveBattleFreezeCheck(result);
 
-      if (!isPlayerTurn && result % 2 === 0) {
-        setPendingEnemyAttackAfterFreeze(true);
-      }
+      window.clearTimeout(freezeCheckFadeTimeoutRef.current);
+      freezeCheckFadeTimeoutRef.current = window.setTimeout(() => {
+        setIsBattleDiceSequenceComplete(true);
 
+        if (!isPlayerTurn && result % 2 === 0) {
+          setEnemyAutoRollRequestId((requestId) => requestId + 1);
+        }
+      }, BATTLE_DICE_FADE_MS);
       return;
     }
 
+    setIsBattleDiceSequenceComplete(true);
     applyBattleDiceResult(result);
   };
 
-  const handleDiceSequenceComplete = () => {
-    if (!pendingEnemyAttackAfterFreeze) {
-      return;
-    }
-
-    setPendingEnemyAttackAfterFreeze(false);
-    setEnemyAutoRollRequestId((requestId) => requestId + 1);
+  const handleDiceRollStart = () => {
+    setIsBattleDiceHidden(false);
+    setIsBattleDiceRolling(true);
+    setIsBattleDiceSequenceComplete(false);
   };
 
   const handleForcedBattleRoll = (value) => {
@@ -472,6 +511,31 @@ function BattlePage() {
           />
         </section>
 
+        <div
+          className={`battle-dice${
+            isBattleDiceHidden ? ' battle-dice--hidden' : ''
+          }`}
+        >
+          {isFreezeCheck && !showTurnModal ? (
+            <p className={`battle-unfreeze-prompt ${languageClassName}`}>
+              {gameplayTranslations.rollEvenToUnfreeze}
+            </p>
+          ) : null}
+          <DiceRoll
+            autoRoll={shouldAutoRollEnemy}
+            autoRollRequestId={enemyAutoRollRequestId}
+            disabled={isBattleDiceDisabled}
+            forcedResult={isPlayerTurn ? battlePlayer.nextForcedRoll?.value ?? null : null}
+            forcedRollRequest={forcedRollRequest}
+            mode="persistent"
+            onRollComplete={handleDiceRollComplete}
+            onSequenceComplete={handleDiceSequenceComplete}
+            onRollStart={handleDiceRollStart}
+            rollButtonClassName={languageClassName}
+            rollButtonLabel={gameplayTranslations.rollDice}
+          />
+        </div>
+
         <section aria-label="Battle enemy panel" className="battle-side battle-side--enemy">
           {activeBattleEffect?.type === 'greenReduction' && !isEffectTargetPlayer ? (
             <span
@@ -531,23 +595,6 @@ function BattlePage() {
             yellowUses={activeBattle.enemyChargeUses}
           />
         </section>
-      </div>
-
-      <div className="battle-dice">
-        {isFreezeCheck && !showTurnModal ? <p>Roll to see if you unfreeze</p> : null}
-        <DiceRoll
-          autoRoll={shouldAutoRollEnemy}
-          autoRollRequestId={enemyAutoRollRequestId}
-          disabled={isBattleDiceDisabled}
-          forcedResult={isPlayerTurn ? battlePlayer.nextForcedRoll?.value ?? null : null}
-          forcedRollRequest={forcedRollRequest}
-          mode="persistent"
-          onRollComplete={handleDiceRollComplete}
-          onSequenceComplete={handleDiceSequenceComplete}
-          onRollStart={() => setIsBattleDiceRolling(true)}
-          rollButtonClassName={languageClassName}
-          rollButtonLabel={gameplayTranslations.rollDice}
-        />
       </div>
 
       <PotionUseConfirmationModal

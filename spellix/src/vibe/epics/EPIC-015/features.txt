@@ -1,0 +1,947 @@
+---
+
+Feature-001: Add Decision page with random question, choice resolution, and placeholder outcome display
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-003 Feature-001: Gameplay UI cleanup
+* EPIC-010 Feature-013: Mini Game Failed screen
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-014 Feature-008: Move battle potions bar into standalone title panel
+
+Goal
+
+* Add a new page called the `Decision` page.
+* A decision is a question with 3 possible answers.
+* Each answer has a percentage chance of producing a good, neutral, or bad outcome.
+* In this feature, implement:
+
+  * the Decision page route.
+  * the Decision page layout.
+  * the decision question data.
+  * random question selection.
+  * 3 full-width answer buttons.
+  * weighted good / neutral / bad outcome resolution.
+  * temporary outcome display.
+  * Continue flow back to the board.
+  * debug menu access.
+* Actual rewards and punishments are out of scope for this feature.
+
+Concept Summary
+
+* A decision contains:
+
+  * one question.
+  * three fixed choices.
+  * each choice has a good, neutral, and bad chance.
+  * each outcome has:
+
+    * an outcome result, such as `Gain a Small Heal potion`, `Nothing`, `Lose a token`, or `Lose your next turn`.
+    * outcome text, usually a longer narrative sentence explaining what happened.
+* The player must choose one of the 3 options.
+* The game then rolls against that choice’s good / neutral / bad chances.
+* For now, the game only displays the selected outcome.
+* Later features will implement the actual outcome effects.
+
+Terminology Note
+
+* The source table uses `Choice Natural Chance`.
+* In implementation, treat this as `Choice Neutral Chance`.
+* Use `neutral` everywhere in code unless the existing project already uses another spelling.
+
+Decision Page Route Requirement
+
+* Add a new page for decisions.
+* Suggested route:
+
+```txt id="q9vvz6"
+/decision
+```
+
+* Use the existing React Router DOM patterns already used by gameplay, battle, river, cave, and loot pages.
+* All React files must use `.jsx`.
+
+Debug Menu Requirement
+
+* Add a debug button to start a decision.
+* This button should appear under the debug menu’s Mini Games section.
+* Suggested button text:
+
+English:
+
+```txt id="cs5obk"
+Start Decision
+```
+
+Japanese:
+
+```txt id="g9g4al"
+決断を開始
+```
+
+* Clicking this debug button should navigate to the Decision page.
+* It should use the current player as the decision player.
+* This debug button is required even before decisions are fully connected to board square encounters.
+
+Background Requirement
+
+* The Decision page should use the background of the square the player landed on, like a battle does.
+* Because this is not fully implemented yet, copy the current battle approach:
+
+  * allow the background to be manually selected for now.
+  * allow the developer to test different Decision page backgrounds.
+* Do not block this feature on automatic square-background connection.
+* Use the same full-screen background style as battles where practical.
+
+Page Layout Requirement
+
+* The Decision page should use a full-page background.
+* In the middle of the page, display a modal.
+* The modal should use the normal modal style:
+
+  * wooden modal background.
+  * yellow text.
+  * correct English/Japanese fonts.
+  * centred content.
+  * no `ul` or `li`.
+
+Modal Question State
+
+When the player first arrives on the Decision page:
+
+* Choose one completely random decision question from the decision question data.
+* Show the current player’s image at the top of the modal.
+* The player image should be centred.
+* Show the question below the player image.
+* The question should have:
+
+```css id="bz4cuw"
+margin-top: 40px;
+```
+
+* The question should use the class:
+
+```txt id="t5s6s9"
+larger-text
+```
+
+* The question should be centred.
+* Below the question, show exactly 3 choices.
+* Each choice should be a button.
+* The 3 choice buttons should be:
+
+  * stacked vertically.
+  * full width.
+  * styled like existing modal buttons.
+  * bilingual.
+* These should be the only buttons shown in the modal at this stage.
+* The player has no cancel, close, retreat, skip, or back button.
+
+Suggested Question State Structure
+
+```jsx id="vifqj6"
+<div className="decision-page">
+  <div className="decision-modal modal-background">
+    <PlayerImage
+      player={currentPlayer}
+      className="decision-player-image"
+    />
+
+    <p className={`decision-question larger-text ${languageClass}`}>
+      {currentDecision.question[language]}
+    </p>
+
+    <div className="decision-choice-list">
+      {currentDecision.choices.map((choice) => (
+        <button
+          key={choice.id}
+          className={`decision-choice-button ${languageClass}`}
+          onClick={() => handleDecisionChoice(choice)}
+        >
+          {choice.text[language]}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+```
+
+Choice List Layout
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid.
+* The choice buttons should be full width.
+* The choice buttons should be vertically stacked with consistent spacing.
+
+Suggested CSS Direction
+
+```css id="op7ggd"
+.decision-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-top: 32px;
+}
+
+.decision-choice-button {
+  width: 100%;
+}
+```
+
+Random Question Requirement
+
+* On arrival to the Decision page, pick a completely random question from the decision question data.
+* The selected question should remain stable until the player completes that decision.
+* Do not re-randomise when:
+
+  * the language changes.
+  * the component re-renders.
+  * the player clicks a choice.
+  * the outcome is displayed.
+* Only choose a new question when a new decision encounter starts.
+
+Suggested State Direction
+
+```js id="pcvwme"
+const [currentDecision, setCurrentDecision] = useState(null);
+const [decisionOutcome, setDecisionOutcome] = useState(null);
+
+useEffect(() => {
+  setCurrentDecision(selectRandomDecision(decisionQuestions));
+}, []);
+```
+
+Outcome Resolution Requirement
+
+* When a player clicks a choice button, use that choice’s chances to randomly decide the outcome.
+* Possible outcomes:
+
+  * good.
+  * neutral.
+  * bad.
+* Actual outcome effects are out of scope.
+* For now, display:
+
+  * the outcome text.
+  * the outcome result.
+* Example:
+
+  * outcome text: `The voice belongs to a grateful spirit, which rewards your kindness.`
+  * outcome result: `Gain a Small Heal potion`
+
+Suggested Resolution Logic
+
+```js id="z4e6qp"
+function resolveDecisionOutcome(chances) {
+  const roll = Math.random() * 100;
+
+  if (roll < chances.good) {
+    return "good";
+  }
+
+  if (roll < chances.good + chances.neutral) {
+    return "neutral";
+  }
+
+  return "bad";
+}
+```
+
+Chance Validation Requirement
+
+* Each choice’s good, neutral, and bad chance should total `100`.
+* If a choice does not total `100`, log a clear development warning.
+* If an outcome has a `0` chance, it should never be selected.
+* Some neutral outcomes in the table are `N/A` because their chance is `0`.
+* Do not display `N/A` outcomes unless bad data causes them to be selected.
+
+Outcome Display Requirement
+
+After a choice is clicked:
+
+* Remove the original question.
+* Remove the 3 choice buttons.
+* Keep the player image visible at the top.
+* Below the player image, show:
+
+  * the outcome narrative text.
+  * the outcome result.
+  * a Continue button.
+* The outcome narrative text should:
+
+  * be centred.
+  * use the `larger-text` class.
+  * use the correct language font.
+* The outcome result should:
+
+  * be centred.
+  * be smaller than the narrative text.
+  * use the correct language font.
+  * have appropriate margin spacing from the narrative text.
+* The Continue button should appear below the outcome result.
+
+Suggested Outcome Structure
+
+```jsx id="iylo7y"
+<div className="decision-modal modal-background">
+  <PlayerImage
+    player={currentPlayer}
+    className="decision-player-image"
+  />
+
+  <p className={`decision-outcome-text larger-text ${languageClass}`}>
+    {decisionOutcome.text[language]}
+  </p>
+
+  <p className={`decision-outcome-result ${languageClass}`}>
+    {decisionOutcome.result[language]}
+  </p>
+
+  <button
+    className={`decision-continue-button ${languageClass}`}
+    onClick={handleDecisionContinue}
+  >
+    {continueText}
+  </button>
+</div>
+```
+
+Suggested Outcome CSS Direction
+
+```css id="hw1sg4"
+.decision-outcome-text {
+  margin: 40px 0 18px;
+  text-align: center;
+}
+
+.decision-outcome-result {
+  margin: 0 0 32px;
+  text-align: center;
+  font-size: 16px;
+}
+```
+
+Continue Button Requirement
+
+* Continue button text:
+
+English:
+
+```txt id="jx0tsp"
+Continue
+```
+
+Japanese:
+
+```txt id="t2jijw"
+続ける
+```
+
+* Clicking Continue should:
+
+  * return the player to the board.
+  * move the turn on to the next player.
+  * show the next-turn modal according to the existing next-turn modal invariant.
+* The Continue button should not apply any reward or punishment in this feature.
+
+Turn Flow Requirement
+
+* The player must make a decision.
+* There is no cancel, close, retreat, skip, or back button.
+* Once the outcome has been displayed and Continue is clicked:
+
+  * the decision encounter is complete.
+  * the board turn ends.
+  * the active player advances.
+  * the next-turn modal must be the first thing shown after returning to the board.
+
+Bilingual Requirement
+
+* All visible text must support English and Japanese.
+* This includes:
+
+  * debug button.
+  * decision questions.
+  * decision choice buttons.
+  * outcome narrative text.
+  * outcome result text.
+  * Continue button.
+* English should use the correct English font.
+* Japanese should use the correct Japanese font.
+* If language is missing or invalid, fall back to English.
+
+Decision Data Requirement
+
+* Add the decision question data from the revised brief.
+* The data should support all fields required for later outcome implementation.
+* Recommended source file:
+
+```txt id="lb4yzo"
+src/data/decisionQuestions.js
+```
+
+* Exact path can vary, but the decision data should be separate from the page component if practical.
+
+Suggested Data Shape
+
+```js id="rrgkix"
+{
+  id: "old-lantern",
+  question: {
+    en: "You find an old lantern glowing beside an abandoned wizard’s tower. A faint voice seems to be coming from inside. Do you:",
+    jp: "古い魔法使いの塔のそばで、古びたランタンが光っているのを見つけました。中からかすかな声が聞こえてくるようです。どうしますか？"
+  },
+  choices: [
+    {
+      id: "ask-the-voice",
+      text: {
+        en: "Ask the voice who it is",
+        jp: "中の声に正体を尋ねる"
+      },
+      chances: {
+        good: 50,
+        neutral: 20,
+        bad: 30
+      },
+      outcomes: {
+        good: {
+          result: {
+            en: "Gain a Small Heal potion",
+            jp: "小回復ポーションを獲得"
+          },
+          text: {
+            en: "The voice belongs to a grateful spirit, which rewards your kindness.",
+            jp: "声の主は感謝した精霊で、あなたの親切にお礼をくれました。"
+          }
+        },
+        neutral: {
+          result: {
+            en: "Nothing",
+            jp: "何もなし"
+          },
+          text: {
+            en: "The voice fades away without answering.",
+            jp: "声は返事をせず、そのまま消えていきました。"
+          }
+        },
+        bad: {
+          result: {
+            en: "Lose a token",
+            jp: "トークンを1つ失う"
+          },
+          text: {
+            en: "The voice deceives you and steals one of your tokens.",
+            jp: "声にだまされ、トークンを1つ奪われました。"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+Decision Source Of Truth
+
+* Implement the following 12 decision questions.
+* Each decision has exactly 3 choices.
+
+Decision 1: Old Lantern
+
+Question EN:
+
+```txt id="uowbla"
+You find an old lantern glowing beside an abandoned wizard’s tower. A faint voice seems to be coming from inside. Do you:
+```
+
+Question JP:
+
+```txt id="vd2xwj"
+古い魔法使いの塔のそばで、古びたランタンが光っているのを見つけました。中からかすかな声が聞こえてくるようです。どうしますか？
+```
+
+Choice data:
+
+```txt id="qdu66u"
+Ask the voice who it is / 中の声に正体を尋ねる / good 50 / neutral 20 / bad 30
+Good: Gain a Small Heal potion / The voice belongs to a grateful spirit, which rewards your kindness. / 声の主は感謝した精霊で、あなたの親切にお礼をくれました。
+Neutral: Nothing / The voice fades away without answering. / 声は返事をせず、そのまま消えていきました。
+Bad: Lose a token / The voice deceives you and steals one of your tokens. / 声にだまされ、トークンを1つ奪われました。
+
+Extinguish the lantern / ランタンの火を消す / good 20 / neutral 30 / bad 50
+Good: Gain a common token / When the flame goes out, a useful token appears inside the lantern. / 火が消えると、ランタンの中から役立つトークンが現れました。
+Neutral: Nothing / The lantern goes dark, but nothing else happens. / ランタンの明かりが消えましたが、それ以上は何も起こりませんでした。
+Bad: Lose 10 health / A burst of cursed smoke escapes from the lantern. / 呪われた煙がランタンから噴き出し、体力を10失いました。
+
+Pick up the lantern and carry it with you / ランタンを拾って持っていく / good 30 / neutral 50 / bad 20
+Good: Gain a common potion / The lantern guides you to a hidden potion. / ランタンの光が、隠されたポーションへと導いてくれました。
+Neutral: Nothing / The lantern remains silent as you carry it. / ランタンを持ち歩いても、何も反応しませんでした。
+Bad: Lose 10 health / The lantern drains some of your life force. / ランタンに生命力を吸い取られ、体力を10失いました。
+```
+
+Decision 2: Luminous Mushrooms
+
+Question EN:
+
+```txt id="wl03zk"
+A circle of luminous mushrooms appears across your path. You hear distant music coming from its centre. Do you:
+```
+
+Question JP:
+
+```txt id="p7z360"
+光り輝くキノコの輪が道を塞いでいます。その中心から遠くに音楽が聞こえてきます。どうしますか？
+```
+
+Choice data:
+
+```txt id="4ua3pv"
+Step inside the circle / キノコの輪の中に入る / good 60 / neutral 20 / bad 20
+Good: Gain a Small Heal potion / The music fills you with warmth, and a Small Heal potion appears at your feet. / 音楽に包まれると温かな力を感じ、足元に小回復ポーションが現れました。
+Neutral: Nothing / You dance to the strange music, but nothing else happens. / 不思議な音楽に合わせて踊りましたが、それ以上は何も起こりませんでした。
+Bad: Lose a random potion / Mischievous fairies surround you and steal one of your potions. / いたずら好きな妖精たちに囲まれ、ポーションを1つ奪われました。
+
+Pick one of the mushrooms / キノコを1つ摘む / good 30 / neutral 10 / bad 60
+Good: Gain a rare potion / The mushroom transforms into a rare potion in your hand. / 摘んだキノコが手の中でレアポーションに変わりました。
+Neutral: Nothing / The mushroom crumbles into harmless glowing dust. / キノコは無害な光る粉となって崩れました。
+Bad: Lose 10 health / The mushroom releases poisonous spores when you touch it. / キノコに触れた瞬間、毒の胞子が放出され、体力を10失いました。
+
+Walk around the circle without touching it / キノコの輪に触れずに迂回する / good 30 / neutral 50 / bad 20
+Good: Gain a common potion / A friendly fairy notices your caution and leaves you a common potion. / あなたの慎重な行動に気づいた親切な妖精が、コモンポーションを残してくれました。
+Neutral: Nothing / You safely walk around the circle and continue your journey. / 無事にキノコの輪を迂回し、旅を続けました。
+Bad: Lose 15 health / The circle suddenly expands beneath your feet and drains your energy. / キノコの輪が突然足元まで広がり、力を吸い取られて体力を15失いました。
+```
+
+Decision 3: Magical Creature In Thorns
+
+Question EN:
+
+```txt id="kwlgo5"
+A small magical creature is caught in a thorny bush. It growls whenever you approach. Do you:
+```
+
+Question JP:
+
+```txt id="h6w4kj"
+小さな魔法生物がトゲだらけの茂みに引っかかっています。近づくたびにうなり声を上げます。どうしますか？
+```
+
+Choice data:
+
+```txt id="u373ki"
+Cut through the thorns with damage spell / 攻撃呪文でトゲを切り払う / good 30 / neutral 30 / bad 40
+Good: Gain a common token / The creature is grateful for your help and gives you a common token. / 魔法生物は助けてもらったことに感謝し、コモントークンをくれました。
+Neutral: Nothing / You cut through the thorns, but the creature immediately runs away. / トゲを切り払いましたが、魔法生物はすぐに逃げてしまいました。
+Bad: Lose 10 health / Your spell frightens the creature, and it attacks you before escaping. / 呪文に驚いた魔法生物に襲われ、逃げられる前に体力を10失いました。
+
+Use a guard spell to push the thorns away / 防御呪文でトゲを押しのける / good 40 / neutral 30 / bad 30
+Good: Gain a common token / The thorns move aside safely, and the grateful creature gives you a common token. / トゲを安全に押しのけることができ、感謝した魔法生物からコモントークンをもらいました。
+Neutral: Nothing / The creature escapes from the bush without looking back. / 魔法生物は茂みから抜け出すと、振り返ることなく逃げていきました。
+Bad: Lose 10 health / The thorns spring back and strike you with poisonous spikes. / トゲが勢いよく元に戻り、毒のある針が刺さって体力を10失いました。
+
+Place some food nearby and wait for it to calm down / 近くに食べ物を置き、落ち着くのを待つ / good 30 / neutral 40 / bad 30
+Good: Gain a common potion / The creature calms down and reveals a common potion hidden beneath the bush. / 魔法生物は落ち着き、茂みの下に隠されていたコモンポーションを見せてくれました。
+Neutral: Nothing / The creature eats the food but remains trapped in the thorns. / 魔法生物は食べ物を食べましたが、トゲに引っかかったままでした。
+Bad: Lose 10 health / The food attracts a swarm of biting insects. / 食べ物に噛みつく虫の群れが集まり、体力を10失いました。
+```
+
+Decision 4: Locked Spellbook
+
+Question EN:
+
+```txt id="ki363x"
+You discover a locked spellbook covered in warning symbols. The book begins to shake when you touch it. Do you:
+```
+
+Question JP:
+
+```txt id="j48zi9"
+警告の印で覆われた、鍵のかかった魔導書を見つけました。触れると本が震え始めます。どうしますか？
+```
+
+Choice data:
+
+```txt id="2h88x8"
+Break the lock and open the book / 鍵を壊して本を開く / good 20 / neutral 40 / bad 40
+Good: Gain a rare token / A powerful token falls from a hidden compartment inside the book. / 本の中の隠し場所から、強力なレアトークンが落ちてきました。
+Neutral: Nothing / The pages are completely blank, and the book stops shaking. / ページには何も書かれておらず、本の震えも止まりました。
+Bad: Lose a token / The book awakens and consumes one of your tokens. / 魔導書が目覚め、あなたのトークンを1つ飲み込んでしまいました。
+
+Speak a protective spell over it / 本に防御呪文をかける / good 50 / neutral 30 / bad 20
+Good: Gain a Cauldron potion / The warning symbols disappear, revealing a Cauldron potion hidden within the book. / 警告の印が消え、本の中に隠されていた大釜ポーションが現れました。
+Neutral: Nothing / The protective spell calms the book, but nothing else happens. / 防御呪文によって本は静かになりましたが、それ以上は何も起こりませんでした。
+Bad: Lose 10 health / The warning symbols reflect your spell back at you. / 警告の印が呪文を跳ね返し、体力を10失いました。
+
+Take the book to a magical scholar / 魔導書を魔法学者のもとへ持っていく / good 35 / neutral 30 / bad 35
+Good: Gain a common token / The scholar rewards you with a common token for bringing them the unusual book. / 学者は珍しい魔導書を持ってきたお礼として、コモントークンをくれました。
+Neutral: Nothing / The scholar examines the book but cannot discover its secret. / 学者は魔導書を調べましたが、その秘密を解き明かすことはできませんでした。
+Bad: Lose a token / The scholar secretly takes one of your tokens as payment. / 学者は代金として、こっそりあなたのトークンを1つ持っていきました。
+```
+
+Decision 5: Traveller In Magical Ice
+
+Question EN:
+
+```txt id="eofgin"
+You find a traveller trapped inside a block of magical ice. Their eyes are open, but they cannot speak. Do you:
+```
+
+Question JP:
+
+```txt id="lnucuz"
+旅人が魔法の氷の中に閉じ込められています。目は開いていますが、話すことはできません。どうしますか？
+```
+
+Choice data:
+
+```txt id="tjo6co"
+Melt the ice with a damage spell / 攻撃呪文で氷を溶かす / good 35 / neutral 30 / bad 35
+Good: Gain a common token / The traveller is freed and gives you a common token as thanks. / 旅人は無事に解放され、お礼としてコモントークンをくれました。
+Neutral: Nothing / The ice melts, but the traveller disappears into a cloud of mist. / 氷は溶けましたが、旅人は霧となって消えてしまいました。
+Bad: Lose 10 health / The magical ice explodes as it melts, injuring you. / 魔法の氷が溶ける途中で爆発し、体力を10失いました。
+
+Search the traveller’s belongings for clues / 旅人の持ち物から手がかりを探す / good 50 / neutral 30 / bad 20
+Good: Gain a Freeze potion / You find the Freeze potion that got the traveller into this mess in the first place. / そもそも旅人をこんな目に遭わせた凍結ポーションを見つけました。
+Neutral: Nothing / You find an old map, but it contains no useful information. / 古い地図を見つけましたが、役立つ情報はありませんでした。
+Bad: Lose a token / A magical trap hidden among the traveller’s belongings steals one of your tokens. / 旅人の持ち物に仕掛けられていた魔法の罠により、トークンを1つ奪われました。
+
+Leave them frozen and continue on your way / 旅人を氷の中に残して先へ進む / good 20 / neutral 30 / bad 50
+Good: Gain a Thaw potion / You later discover a Thaw potion that the traveller was probably looking for. / その後、旅人がおそらく探していた解凍ポーションを見つけました。
+Neutral: Nothing / You leave the frozen traveller behind and continue your journey. / 氷漬けの旅人を残し、そのまま旅を続けました。
+Bad: Lose your next turn / The traveller’s curse follows you, freezing you in place. / 旅人にかけられた呪いがあなたにも襲いかかり、その場で凍りついて次のターンを失いました。
+```
+
+Decision 6: Ancient Well
+
+Question EN:
+
+```txt id="wzs0vr"
+An ancient well calls your name and offers to grant you knowledge in exchange for a personal memory. Do you:
+```
+
+Question JP:
+
+```txt id="k1k2p3"
+古代の井戸があなたの名前を呼び、個人的な思い出と引き換えに知識を授けると申し出てきました。どうしますか？
+```
+
+Choice data:
+
+```txt id="fbd1c2"
+Offer it a happy childhood memory / 幸せな子どもの頃の思い出を差し出す / good 50 / neutral 20 / bad 30
+Good: Gain a common potion / The well accepts the memory and reveals a common potion hidden in its depths. / 井戸はその思い出を受け取り、奥底に隠されていたコモンポーションを差し出しました。
+Neutral: Nothing / The memory fades, but the promised knowledge never comes. / 思い出は薄れていきましたが、約束された知識は得られませんでした。
+Bad: Lose 10 health / The well takes more than you offered, draining part of your life force. / 井戸は差し出した以上のものを奪い、生命力を吸い取られて体力を10失いました。
+
+Drop a magical coin into the well instead / 代わりに魔法のコインを井戸へ投げ入れる / good 35 / neutral 30 / bad 35
+Good: Gain a rare potion / The coin awakens an ancient enchantment, and a rare potion rises from the water. / コインが古代の魔法を目覚めさせ、水の中からレアポーションが浮かび上がりました。
+Neutral: Nothing / The coin disappears into the darkness, but the well remains silent. / コインは暗闇の中へ消えましたが、井戸は何も語りませんでした。
+Bad: Lose 20 health / The well rejects the coin and releases a powerful curse. / 井戸はコインを拒み、強力な呪いを放ったため、体力を20失いました。
+
+Seal the well with a silencing spell / 沈黙の呪文で井戸を封じる / good 10 / neutral 30 / bad 60
+Good: Gain a rare token / Your spell breaks the magic binding the well, causing a rare token to rise from within. / 呪文によって井戸を縛っていた魔法が解け、中からレアトークンが浮かび上がりました。
+Neutral: Nothing / The voice falls silent, and nothing else happens. / 声は静まりましたが、それ以上は何も起こりませんでした。
+Bad: Lose 5 health / The trapped voice lashes out before the seal closes. / 封印が閉じる直前に閉じ込められた声が襲いかかり、体力を5失いました。
+```
+
+Decision 7: Injured Goblin
+
+Question EN:
+
+```txt id="nyp27v"
+An injured goblin lies beside the path, clutching a stolen potion. It begs you not to take it. Do you:
+```
+
+Question JP:
+
+```txt id="u5kgji"
+傷ついたゴブリンが道端に倒れ、盗んだポーションを握りしめています。取らないでくれとあなたに懇願しています。どうしますか？
+```
+
+Choice data:
+
+```txt id="gtscbd"
+Heal the goblin and let it keep the potion / ゴブリンを回復し、ポーションを持たせたままにする / good 40 / neutral 30 / bad 30
+Good: Gain a rare potion / The grateful goblin reveals a second rare potion and gives it to you. / 感謝したゴブリンはもう1つのレアポーションを取り出し、あなたにくれました。
+Neutral: Nothing / The goblin thanks you and quickly disappears with the stolen potion. / ゴブリンは礼を言うと、盗んだポーションを持ってすぐに姿を消しました。
+Bad: Lose 10 health / The goblin mistakes your spell for an attack and strikes you before fleeing. / ゴブリンはあなたの呪文を攻撃だと勘違いし、逃げる前に襲いかかってきたため、体力を10失いました。
+
+Take the potion and leave the goblin behind / ポーションを奪い、ゴブリンを置き去りにする / good 50 / neutral 0 / bad 50
+Good: Gain a rare potion / You take the rare potion before the injured goblin can stop you. / 傷ついたゴブリンが止める前に、レアポーションを手に入れました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose a token / The goblin curses you as you leave, causing one of your tokens to vanish. / 立ち去るあなたにゴブリンが呪いをかけ、トークンを1つ消されました。
+
+Offer to trade food for the potion / 食べ物とポーションの交換を申し出る / good 30 / neutral 40 / bad 30
+Good: Gain a rare potion / The hungry goblin accepts your offer and trades you the rare potion. / 空腹のゴブリンは提案を受け入れ、食べ物と引き換えにレアポーションをくれました。
+Neutral: Nothing / The goblin refuses the trade but allows you to continue on your way. / ゴブリンは交換を断りましたが、あなたが先へ進むことは許してくれました。
+Bad: Lose 10 health / The goblin grabs the food and attacks you to keep the potion as well. / ゴブリンは食べ物を奪い、ポーションも守ろうと襲いかかってきたため、体力を10失いました。
+```
+
+Decision 8: Young Dragon
+
+Question EN:
+
+```txt id="m5w4ox"
+A young dragon is sleeping on top of a small pile of treasure. One of the items bears your faction's symbol. Do you:
+```
+
+Question JP:
+
+```txt id="i8phv2"
+若いドラゴンが小さな宝の山の上で眠っています。その中の1つには、あなたの陣営の紋章が刻まれています。どうしますか？
+```
+
+Choice data:
+
+```txt id="hktrse"
+Carefully take only the faction heirloom / 陣営の家宝だけを慎重に取る / good 20 / neutral 20 / bad 60
+Good: Gain a rare token / The heirloom contains a hidden rare token that responds to your faction's symbol. / 家宝に隠されていたレアトークンが、あなたの陣営の紋章に反応して現れました。
+Neutral: Nothing / The dragon begins to stir, forcing you to retreat without taking anything. / ドラゴンが目を覚ましそうになったため、何も取らずに退きました。
+Bad: Lose 10 health / The dragon wakes and strikes you with its tail. / ドラゴンが目を覚まし、尻尾で攻撃してきたため、体力を10失いました。
+
+Wake the dragon and ask for the item / ドラゴンを起こして、その品を返してほしいと頼む / good 40 / neutral 30 / bad 30
+Good: Gain a rare token / The dragon recognises your faction's symbol and gives you a rare token from its hoard. / ドラゴンはあなたの陣営の紋章に気づき、宝の山からレアトークンを1つくれました。
+Neutral: Nothing / The dragon refuses your request and returns to sleep. / ドラゴンは頼みを断り、再び眠りにつきました。
+Bad: Lose 15 health / The irritated dragon attacks you for disturbing its sleep. / 眠りを邪魔されて怒ったドラゴンに襲われ、体力を15失いました。
+
+Cast a sleeping spell to keep the dragon unconscious / ドラゴンが目を覚まさないように眠りの呪文をかける / good 50 / neutral 0 / bad 50
+Good: Gain a rare token / Your spell deepens the dragon's sleep, allowing you to recover a rare token from the treasure. / 呪文によってドラゴンはさらに深く眠り、宝の中からレアトークンを手に入れることができました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose 20 health / The dragon resists the spell and awakens in a fury, breathing fire at you. / ドラゴンは呪文に抵抗して激怒し、炎を吐いたため、体力を20失いました。
+```
+
+Decision 9: Silver-Chained Chest
+
+Question EN:
+
+```txt id="isdjaj"
+You discover a wooden chest wrapped in silver chains. Something inside scratches against the lid. Do you:
+```
+
+Question JP:
+
+```txt id="shpt8x"
+銀の鎖が巻きつけられた木製の宝箱を見つけました。中から何かが蓋を引っかいています。どうしますか？
+```
+
+Choice data:
+
+```txt id="mgifxa"
+Break the chains with a spell / 呪文で鎖を壊す / good 30 / neutral 20 / bad 50
+Good: Gain a common token / The chains fall away, revealing a common token secured beneath the lid. / 鎖が外れ、蓋の下に隠されていたコモントークンが現れました。
+Neutral: Nothing / The chest opens, but whatever was inside has already disappeared. / 宝箱は開きましたが、中にいたものはすでに姿を消していました。
+Bad: Lose 10 health / A furious creature bursts from the chest and attacks you. / 怒った魔法生物が宝箱から飛び出して襲いかかり、体力を10失いました。
+
+Knock on the chest and wait for a response / 宝箱をノックして返事を待つ / good 50 / neutral 30 / bad 20
+Good: Gain a common potion / A tiny creature opens the lid and rewards your politeness with a common potion. / 小さな魔法生物が蓋を開け、礼儀正しいあなたにコモンポーションをくれました。
+Neutral: Nothing / The scratching stops, but the chest remains locked. / 引っかく音は止まりましたが、宝箱は閉じたままでした。
+Bad: Lose 10 health / The chest bites your hand when you knock on it. / ノックした瞬間に宝箱に手を噛まれ、体力を10失いました。
+
+Break the chest against a tree / 宝箱を木に叩きつけて壊す / good 30 / neutral 0 / bad 70
+Good: Gain a common token / The chest splits open, and a common token rolls out unharmed. / 宝箱が割れ、中から無傷のコモントークンが転がり出てきました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose 10 health / The impact releases a violent curse from inside the chest. / 衝撃で宝箱の中から激しい呪いが放たれ、体力を10失いました。
+```
+
+Decision 10: Translucent Wizard
+
+Question EN:
+
+```txt id="kclcju"
+A translucent wizard appears on the path and claims that they cannot remember where they died. Do you:
+```
+
+Question JP:
+
+```txt id="v4p4zm"
+半透明の魔法使いが道に現れ、自分がどこで死んだのか思い出せないと言っています。どうしますか？
+```
+
+Choice data:
+
+```txt id="y92dmh"
+Offer to help them search / 一緒に探すと申し出る / good 70 / neutral 0 / bad 30
+Good: Gain a common potion / You find the wizard's resting place, and the grateful spirit rewards you with a common potion. / 魔法使いが眠る場所を見つけると、感謝した霊がコモンポーションをくれました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose your next turn / The search continues through the night, leaving you too exhausted to act next turn. / 捜索は夜通し続き、疲れ果てて次のターンを失いました。
+
+Cast a spell to restore their memory / 記憶を取り戻す呪文をかける / good 50 / neutral 20 / bad 30
+Good: Gain a common potion / The wizard remembers a hidden cache and guides you to a common potion. / 魔法使いは隠し場所を思い出し、コモンポーションのある場所へ案内してくれました。
+Neutral: Nothing / The spell restores only a few meaningless fragments of memory. / 呪文で戻ったのは、役に立たない記憶の断片だけでした。
+Bad: Lose 10 health / The wizard's final moments flood into your mind and overwhelm you. / 魔法使いの最期の記憶があなたの心に流れ込み、圧倒されて体力を10失いました。
+
+Order the ghost to leave you alone / 幽霊に立ち去るよう命じる / good 20 / neutral 20 / bad 60
+Good: Gain a rare potion / The ghost respects your confidence and leaves behind a rare potion before departing. / 幽霊はあなたの毅然とした態度を認め、立ち去る前にレアポーションを残しました。
+Neutral: Nothing / The ghost quietly disappears without causing any trouble. / 幽霊は何もせず、静かに姿を消しました。
+Bad: Lose a token / The offended ghost passes through you and steals one of your tokens. / 怒った幽霊があなたの体を通り抜け、トークンを1つ奪いました。
+```
+
+Decision 11: Black Rose
+
+Question EN:
+
+```txt id="z1rd7f"
+A single black rose grows in the middle of a ruined battlefield. Its petals move even though there is no wind. Do you:
+```
+
+Question JP:
+
+```txt id="tgusie"
+荒れ果てた戦場の中央に、一本の黒いバラが咲いています。風もないのに花びらが揺れています。どうしますか？
+```
+
+Choice data:
+
+```txt id="s6387p"
+Pick the rose / 黒いバラを摘む / good 50 / neutral 0 / bad 50
+Good: Gain a common potion / The rose transforms into a common potion as soon as you pick it. / バラを摘むと、すぐにコモンポーションへと姿を変えました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose 15 health / The rose's thorns wrap around your hand and drain your strength. / バラのトゲが手に巻きついて力を吸い取り、体力を15失いました。
+
+Pour a healing potion onto its roots / 根元に回復ポーションを注ぐ / good 70 / neutral 20 / bad 10
+Good: Gain a First Aid potion / The rose blooms brightly and transforms your offering into a First Aid potion. / バラが鮮やかに咲き、注いだポーションを応急手当ポーションへと変えました。
+Neutral: Nothing / The roots absorb the potion, but the rose does not change. / 根がポーションを吸収しましたが、バラには何の変化もありませんでした。
+Bad: Lose 15 health / The revived roots burst from the ground and lash out at you. / 活力を取り戻した根が地面から飛び出して襲いかかり、体力を15失いました。
+
+Destroy it / 黒いバラを破壊する / good 20 / neutral 10 / bad 70
+Good: Gain a token / When the rose is destroyed, a token is revealed beneath its roots. / バラを破壊すると、根の下からトークンが1つ現れました。
+Neutral: Nothing / The rose crumbles into ash without any further effect. / バラは灰になって崩れましたが、それ以上は何も起こりませんでした。
+Bad: Lose 10 health / The rose releases a cloud of cursed pollen as it is destroyed. / バラを破壊した瞬間に呪われた花粉が広がり、体力を10失いました。
+```
+
+Decision 12: Hooded Merchant
+
+Question EN:
+
+```txt id="iqzc1l"
+A hooded merchant offers you a sealed potion in exchange for one of your tokens. They refuse to explain what the potion does. Do you:
+```
+
+Question JP:
+
+```txt id="m8a53s"
+フードをかぶった商人が、トークン1つと引き換えに封をされたポーションを差し出してきました。商人はその効果を説明しようとしません。どうしますか？
+```
+
+Choice data:
+
+```txt id="x15hr5"
+Accept the trade / 取引を受け入れる / good 70 / neutral 0 / bad 30
+Good: Gain a common potion / The sealed bottle contains a useful common potion. / 封を開けると、中には役立つコモンポーションが入っていました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose your next turn / The potion releases a sleeping mist, causing you to miss your next turn. / ポーションから眠りの霧が放たれ、次のターンを失いました。
+
+Refuse the trade / 取引を断る / good 50 / neutral 0 / bad 50
+Good: Gain a common token / The merchant respects your caution and gives you a common token as a test of character. / 商人はあなたの慎重さを評価し、心を試した褒美としてコモントークンをくれました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose a token / The merchant distracts you while leaving and secretly steals one of your tokens. / 商人は立ち去る際にあなたの注意をそらし、こっそりトークンを1つ盗みました。
+
+Attempt to steal the potion while the merchant is distracted / 商人がよそ見をしている間にポーションを盗もうとする / good 30 / neutral 0 / bad 70
+Good: Gain a rare potion / You successfully take the bottle and discover that it contains a rare potion. / ポーションを盗むことに成功し、中身がレアポーションだと分かりました。
+Neutral: Nothing / N/A / N/A
+Bad: Lose a token / The merchant catches you and takes one of your tokens as punishment. / 商人に見つかり、罰としてトークンを1つ奪われました。
+```
+
+Outcome Effect Placeholder Requirement
+
+* This feature should not apply the actual effect from the outcome result.
+* Do not actually:
+
+  * grant potions.
+  * grant tokens.
+  * remove tokens.
+  * remove potions.
+  * reduce health.
+  * skip turns.
+* Only display the result and narrative text.
+* Later features will implement each outcome type.
+
+Manual Background Selection Requirement
+
+* Add or reuse a temporary debug/manual background selector for the Decision page.
+* This should work like the current battle background testing approach.
+* The background selector should be development/debug support only.
+* The Decision page should ultimately be able to use the square landed on, but automatic square connection is not required in this feature.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` anywhere in the new Decision page UI.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* Do not implement actual good rewards.
+* Do not implement actual neutral effects.
+* Do not implement actual bad punishments.
+* Do not connect decisions to real board square encounter generation yet.
+* Do not implement Good Decisions potion behaviour yet.
+* Do not implement decision-specific animations yet.
+* Do not add cancel, back, skip, close, retreat, or escape buttons.
+* Do not redesign battle, cave, river, loot, or board pages.
+* Do not add unrelated encounter systems.
+
+Assumptions
+
+* The current player image can be reused from existing battle, mini-game, or player display components.
+* The modal background and button styles can be reused from existing modal components.
+* Until automatic square-background selection exists, manual background selection is acceptable as it is for battles.
+* Outcome result labels are temporary display labels in this feature, but should be structured clearly enough for later implementation.
+
+Stop Point
+
+* Stop once:
+
+  * the Decision page exists.
+  * it can be opened from the debug menu under Mini Games.
+  * a random decision question from the 12-question data table is displayed.
+  * 3 full-width answer buttons are displayed.
+  * clicking a choice resolves good / neutral / bad by weighted chance.
+  * the question and buttons are replaced by outcome narrative text and outcome result text.
+  * Continue returns to the board and advances the turn.
+* Do not implement actual rewards or punishments in this feature.
+
+Testing Checkpoints
+
+* Open the debug menu.
+* Confirm there is a Start Decision button under Mini Games.
+* Click Start Decision.
+* Confirm the Decision page opens.
+* Confirm the page uses a scene background.
+* Confirm the background can be manually selected for testing.
+* Confirm the modal is centred.
+* Confirm the player image appears at the top of the modal.
+* Confirm the player image is centred.
+* Confirm a random decision question appears below the image.
+* Confirm the question has `margin-top: 40px`.
+* Confirm the question uses `larger-text`.
+* Confirm the question is centred.
+* Confirm exactly 3 choice buttons appear.
+* Confirm the choice buttons are full width.
+* Confirm the choice buttons are stacked vertically.
+* Confirm there are no cancel, close, skip, retreat, or back buttons.
+* Click a choice.
+* Confirm the choice resolves using the selected choice’s good / neutral / bad chances.
+* Confirm the question and buttons disappear.
+* Confirm the player image remains visible.
+* Confirm the outcome narrative text appears.
+* Confirm the outcome narrative text is centred and uses `larger-text`.
+* Confirm the outcome result appears below the narrative text.
+* Confirm the outcome result is smaller than the narrative text.
+* Confirm the outcome result is centred.
+* Confirm Continue appears below the outcome.
+* Click Continue.
+* Confirm the game returns to the board.
+* Confirm the turn advances to the next player.
+* Confirm the next-turn modal appears first after the active player changes.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm zero-chance `N/A` neutral outcomes are not selected.
+* Confirm all chance totals equal `100`.
+* Confirm no actual reward or punishment is applied yet.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

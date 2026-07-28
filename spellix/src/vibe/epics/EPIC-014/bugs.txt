@@ -434,3 +434,490 @@ Final Fix
 * Moved the image-relative size to `.battle-actor-image svg.cosmic-intervention-bolt`.
 * The actual rendered bolt SVG now uses `height: 100%` and `width: auto`, overriding Font Awesome's intrinsic icon sizing without adding a wrapper.
 * Existing centring, colour, 1.5-second animation, delayed damage, Guard handling, lethal flow, and battle control locking are unchanged.
+
+---
+
+Bug-004: Align battle dice bottom edge with battle-side elements and remove dice background
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-009: Rearrange battle page with dice element between characters
+
+Bug Summary
+
+* After moving the dice element between the two battle-side elements, the dice positioning needs refinement.
+* The dice element’s bottom edge should align with the bottom edge of the battle-side elements.
+* There should be a fixed `60px` margin between the bottom of the battle row elements and the bottom of the screen.
+* The dice element itself should have a fixed width of `300px`.
+* The dice element should no longer have a white background.
+
+Required Layout Behaviour
+
+* The battle row should align the bottom edges of:
+
+  * the player-side battle element.
+  * the dice element.
+  * the opponent-side battle element.
+* The dice element should not sit higher or lower than the bottom of the character-side elements.
+* The bottom of the full battle row should sit `60px` above the bottom of the screen.
+
+Suggested CSS Direction
+
+```css id="v8wp32"
+.battle-main-row {
+  align-items: end;
+  margin-bottom: 60px;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is bottom-edge alignment across the row and a `60px` bottom screen margin.
+
+Dice Width Requirement
+
+* The dice element itself should have a fixed width of:
+
+```css id="bpv3lg"
+width: 300px;
+```
+
+* This width should apply to the dice element container, not only to an inner child.
+* The dice should remain centred within that `300px` area.
+
+Suggested CSS Direction
+
+```css id="kjxmm5"
+.battle-dice-panel {
+  width: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+White Background Removal Requirement
+
+* Remove the white background from the dice element.
+* The dice element should sit naturally between the battle-side elements without a white box behind it.
+* Remove or override any styling such as:
+
+```css id="u7u55p"
+background: white;
+background-color: white;
+```
+
+Suggested CSS Direction
+
+```css id="pt2l1v"
+.battle-dice-panel,
+.battle-dice-element {
+  background: transparent;
+  background-color: transparent;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that no visible white background remains behind the dice element.
+
+Fade Behaviour Requirement
+
+* Preserve the Feature-009 fade behaviour.
+* The dice element should still:
+
+  * fade out after the dice roll when animations are playing.
+  * keep its reserved layout space while faded out.
+  * fade back in once all animations are finished.
+* The new fixed width and transparent background should not break the fade behaviour.
+
+Expected Behaviour
+
+* The dice element is positioned between the two battle-side elements.
+* The dice element’s bottom edge aligns with the bottom edge of the battle-side elements.
+* The bottom of the battle row sits `60px` above the bottom of the screen.
+* The dice element has a fixed width of `300px`.
+* The dice remains centred inside its `300px` container.
+* The dice element has no white background.
+* The dice fade-out and fade-in behaviour from Feature-009 still works.
+* The battle row does not jump when the dice fades.
+
+Out Of Scope
+
+* No changes to battle dice logic.
+* No changes to dice roll calculation.
+* No changes to battle potion effects.
+* No changes to battle animations.
+* No changes to character images.
+* No unrelated battle page redesign.
+
+Testing Required
+
+* Open the battle screen.
+* Confirm the dice element is still between the two battle-side elements.
+* Confirm the dice element’s bottom edge aligns with the bottom of the battle-side elements.
+* Confirm there is `60px` margin between the bottom of the battle row and the bottom of the screen.
+* Confirm the dice element has a fixed width of `300px`.
+* Confirm the dice is centred within the `300px` width.
+* Confirm the white background has been removed.
+* Roll the battle dice.
+* Confirm the dice still fades out during animations.
+* Confirm the dice still keeps its layout space while faded out.
+* Confirm the dice fades back in after animations finish.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a focused BattlePage regression for bottom alignment, the `60px` row bottom margin, the dice container's fixed `300px` width, and removal of its background declaration.
+* Reproduced the bug before the CSS fix: the focused test failed because the battle row still used `align-items: center`.
+* The first targeted edit matched the potion bar's alignment declaration; the focused regression caught it, and the unrelated declaration was restored before the final verification run.
+
+Final Fix
+
+* Changed the existing `.battle-display` grid to `align-items: end` and added `margin-bottom: 60px`.
+* Set the existing `.battle-dice` container to `width: 300px` and removed its translucent white background.
+* Preserved the existing player/dice/opponent order, centred dice contents, reserved hidden space, opacity transition, interaction lock, battle logic, potion behavior, and animation timing.
+
+
+---
+
+Bug-005: Frozen unfreeze prompt should be restyled and repositioned above battle dice
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-006: Implement Thaw battle potion behaviour
+* Feature-009: Rearrange battle page with dice element between characters
+* Bug-004: Align battle dice bottom edge with battle-side elements and remove dice background
+
+Bug Summary
+
+* The current frozen prompt text looks out of place after the battle page rearrangement.
+* The text also needs to be updated and made bilingual.
+* It should use the correct English/Japanese fonts.
+* It should be positioned above the dice element rather than sitting awkwardly in the battle layout.
+
+Old Text
+
+```txt id="rjz4h8"
+Roll to see if you unfreeze
+```
+
+New Text
+
+English:
+
+```txt id="v7g2ls"
+Roll even to unfreeze
+```
+
+Japanese:
+
+```txt id="aohsf6"
+凍結状態を解除するには、偶数を出してください。
+```
+
+Placement Requirement
+
+* The frozen unfreeze prompt should be positioned absolutely.
+* It should sit:
+
+```css id="xtk9tu"
+40px
+```
+
+above the dice element.
+
+* The prompt should visually belong to the dice element because it explains what the player needs to roll.
+* It should remain aligned with the dice element after Feature-009 and Bug-004 positioning changes.
+
+Suggested Structure
+
+```jsx id="6eeoq5"
+<div className="battle-dice-panel">
+  {isCurrentPlayerFrozen && (
+    <p className={`frozen-unfreeze-prompt ${languageClass}`}>
+      {rollEvenToUnfreezeText}
+    </p>
+  )}
+
+  {battleDiceElement}
+</div>
+```
+
+* Exact component names can vary.
+* The important requirement is that the prompt is positioned relative to the dice element, not floating randomly in the page.
+
+Suggested Positioning Direction
+
+```css id="88kbea"
+.battle-dice-panel {
+  position: relative;
+}
+
+.frozen-unfreeze-prompt {
+  position: absolute;
+  bottom: calc(100% + 40px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+```
+
+* This places the prompt `40px` above the dice element.
+* If the dice element has an inner wrapper, attach the absolute positioning to the wrapper that represents the visible dice area.
+
+Styling Requirement
+
+* The prompt should have:
+
+```css id="354jej"
+max-width: 400px;
+```
+
+* The background should be light blue.
+* The text should be black.
+* The corners should be rounded.
+* The text should be centred.
+* The prompt should use the correct language font.
+
+Suggested CSS Direction
+
+```css id="tjpkcg"
+.frozen-unfreeze-prompt {
+  max-width: 400px;
+  margin: 0;
+  padding: 10px 16px;
+  background-color: lightblue;
+  color: #000000;
+  border-radius: 12px;
+  text-align: center;
+  box-sizing: border-box;
+  z-index: 5;
+}
+```
+
+Translation Requirement
+
+* Add or reuse this translation:
+
+```txt id="0e1c0v"
+Roll even to unfreeze	凍結状態を解除するには、偶数を出してください。
+```
+
+* English should use the correct English font.
+* Japanese should use the correct Japanese font.
+* If language is missing or invalid, fall back to English.
+
+Visibility Requirement
+
+* Show this prompt only when the current battle player is frozen and needs to roll to unfreeze.
+* Do not show this prompt when the player is not frozen.
+* Do not show this prompt after Thaw has already removed frozen status.
+* If Thaw is available and the player is frozen, this prompt may still show because the player can either use Thaw or roll normally unless the battle flow explicitly blocks rolling.
+
+Layout Requirement
+
+* The prompt should not push the dice element down.
+* The prompt should not affect the fixed `300px` dice width from Bug-004.
+* The prompt should not reintroduce the white dice background removed in Bug-004.
+* The prompt should not cause the battle row to jump.
+* The prompt should remain readable when the dice element fades out and back in.
+
+Out Of Scope
+
+* No changes to frozen roll logic.
+* No changes to Thaw behaviour.
+* No changes to Ice Beam behaviour.
+* No changes to battle dice calculation.
+* No changes to the dice fade sequence from Feature-009.
+* No unrelated battle page redesign.
+
+Testing Required
+
+* Freeze the current battle player.
+* Confirm the old text `Roll to see if you unfreeze` no longer appears.
+* Confirm English text says `Roll even to unfreeze`.
+* Confirm Japanese text says `凍結状態を解除するには、偶数を出してください。`.
+* Confirm the text uses the correct English font.
+* Confirm the text uses the correct Japanese font.
+* Confirm the prompt is positioned `40px` above the dice element.
+* Confirm the prompt has `max-width: 400px`.
+* Confirm the prompt has a light blue background.
+* Confirm the prompt has black text.
+* Confirm the prompt has rounded corners.
+* Confirm the prompt is centred above the dice element.
+* Confirm the prompt does not push the dice or battle row out of alignment.
+* Confirm the prompt disappears once the player is no longer frozen.
+* Confirm using Thaw removes frozen status and hides the prompt.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added exact gameplay translation coverage for the new English and Japanese prompt copy.
+* Added a focused BattlePage regression for localized font classes, parent dice placement, absolute `40px` offset, `400px` maximum width, requested colors and radius, centred text, and list-free markup.
+* Reproduced the bug before implementation: both focused tests failed because the prompt remained hard-coded with the old English text and the translation object lacked the new label.
+
+Final Fix
+
+* Added `rollEvenToUnfreeze` to the existing English and Japanese gameplay translations with the existing English fallback.
+* Replaced the hard-coded prompt with the localized value and existing `language-en` / `language-jp` font class.
+* Positioned the prompt absolutely relative to the existing `300px` battle dice container, `40px` above it, with the requested maximum width, light-blue background, black text, rounded corners, and centred copy.
+* Preserved the existing current-actor freeze visibility, Thaw removal, enemy auto-freeze flow, dice calculation, fade sequence, and battle layout structure.
+
+---
+
+Bug-006: Battle dice result should stay visible for 2 seconds before animations begin
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-009: Rearrange battle page with dice element between characters
+* Bug-004: Align battle dice bottom edge with battle-side elements and remove dice background
+* Bug-005: Frozen unfreeze prompt should be restyled and repositioned above battle dice
+
+Bug Summary
+
+* The battle dice currently disappears too quickly after rolling.
+* Battle animations also begin too soon.
+* This means the player does not get enough time to see the dice result.
+* The sequence should pause for 2 seconds after the dice result appears.
+* Only after that pause should the dice fade out and battle animations begin.
+
+Required Sequence
+
+```txt id="4xnk73"
+1. Player rolls the battle dice.
+2. Dice result appears.
+3. Pause everything for 2 seconds.
+4. Dice element fades out.
+5. Battle animations begin.
+6. Battle effects resolve.
+7. Dice element fades back in once all animations are finished, if battle continues.
+```
+
+Timing Requirement
+
+* After the dice result is shown, wait:
+
+```txt id="j7se9m"
+2 seconds
+```
+
+* During this 2-second pause:
+
+  * the dice result should remain visible.
+  * the dice element should not fade out yet.
+  * battle animations should not start yet.
+  * damage, guard, freeze, charge, and other roll-result effects should not visually resolve yet.
+  * battle buttons should remain disabled to prevent duplicate input.
+
+Suggested Flow
+
+```js id="9gjdbx"
+async function handleBattleRoll() {
+  const roll = await rollBattleDice();
+
+  showBattleDiceResult(roll);
+
+  await delay(2000);
+
+  setIsBattleDiceHidden(true);
+
+  await runBattleResultAnimations(roll);
+
+  setIsBattleDiceHidden(false);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the 2-second pause happens after the visible dice result and before the dice fade-out or battle animations.
+
+Animation Start Requirement
+
+* The following should not start until after the 2-second pause:
+
+  * normal attack animations.
+  * damage animations.
+  * guard animations.
+  * freeze animations.
+  * charge result animations.
+  * Cosmic Intervention-related roll aftermath, if relevant.
+  * Shields Down-related aftermath, if relevant.
+  * any token effect animations tied to the battle roll.
+
+Dice Fade Requirement
+
+* Preserve the Feature-009 fade behaviour.
+* The dice should still fade out before battle animations play.
+* The difference is that fade-out should happen after the 2-second result pause, not immediately after the result appears.
+
+Battle Control Requirement
+
+* Battle controls should remain disabled during:
+
+  * dice rolling.
+  * the 2-second result pause.
+  * dice fade-out.
+  * battle animations.
+* Controls should only re-enable once all animations and effects are finished, if battle continues and it is still the player’s turn.
+
+Expected Behaviour
+
+* Player rolls the battle dice.
+* The dice result is clearly visible.
+* Nothing else visually resolves for 2 seconds.
+* After 2 seconds, the dice element fades out.
+* Battle animations then begin.
+* Battle effects resolve after the pause and fade sequence.
+* Dice fades back in once animations finish, unless battle has ended.
+* The player has enough time to read the battle dice result.
+
+Out Of Scope
+
+* No changes to dice roll calculation.
+* No changes to battle damage calculation.
+* No changes to potion effects.
+* No changes to freeze, guard, charge, or token effect rules.
+* No changes to battle rewards.
+* No unrelated battle screen redesign.
+
+Testing Required
+
+* Roll the battle dice.
+* Confirm the dice result appears.
+* Confirm the dice result remains visible for 2 seconds.
+* Confirm the dice does not fade out before the 2-second pause finishes.
+* Confirm battle animations do not begin before the 2-second pause finishes.
+* Confirm battle buttons remain disabled during the pause.
+* Confirm the dice fades out after the 2-second pause.
+* Confirm battle animations begin after the dice fades out.
+* Confirm battle effects still resolve correctly.
+* Confirm the dice fades back in after all animations finish, if battle continues.
+* Confirm the dice does not fade back in unnecessarily if battle ends.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a focused BattlePage timing regression and reproduced the bug before implementation: the damage animation began as soon as the dice result appeared.
+* Reused the persistent dice component's existing 2-second result lifecycle instead of adding a second independent result timer.
+* Updated shared battle timing regressions to preserve their existing effect durations while accounting for the result pause.
+
+Final Fix
+
+* Battle roll effects now begin from the dice sequence-complete callback, after the result has remained visible for 2 seconds.
+* The dice stays visible and battle controls stay disabled throughout the result pause, then the dice hides before normal battle effects resolve.
+* Freeze checks use the same result pause and wait for the existing dice fade duration before continuing an enemy follow-up roll.
+* Potion controls also remain disabled while the dice is hidden, including the freeze-check fade window.
+* Existing damage, Guard, freeze, charge, potion, token, reward, loss, and dice calculation rules are unchanged.

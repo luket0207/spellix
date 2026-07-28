@@ -14,12 +14,12 @@
   background-image: url('../images/misc/modalBackground.png');
   background-position: center;
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: 100% 100%;
   box-sizing: border-box;
   flex-shrink: 0;
   margin: 16px auto 0;
   max-width: calc(100% - 32px);
-  padding: 40px;
+  padding: 40px 40px 20px;
   width: 580px;
   z-index: 20;
 }
@@ -59,11 +59,12 @@
 
   align-self: center;
   box-sizing: border-box;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 24px;
-  align-items: flex-start;
+  align-items: end;
+  column-gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   justify-content: space-between;
+  margin-bottom: 120px;
   margin-top: auto;
   max-width: 950px;
   position: relative;
@@ -486,17 +487,43 @@
 
 .battle-dice {
   align-items: center;
-  align-self: center;
-  background-color: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-bottom: 10px;
-  margin-top: 20px;
-  padding: 30px 0;
-  width: min(950px, 100%);
+  opacity: 1;
+  position: relative;
+  transition: opacity 0.35s ease;
+  width: 300px;
+}
+
+.battle-unfreeze-prompt {
+  background-color: lightblue;
+  border-radius: 12px;
+  bottom: calc(100% + 40px);
+  box-sizing: border-box;
+  color: #000000;
+  left: 50%;
+  margin: 0;
+  max-width: 400px;
+  padding: 10px 16px;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 5;
+}
+
+.battle-dice--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .battle-display {
+    column-gap: 8px;
+  }
 }
 
 .battle-debug-controls {

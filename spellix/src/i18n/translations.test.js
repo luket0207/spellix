@@ -116,6 +116,7 @@ describe('gameplay translations', () => {
       heavyWeightDiceResult: expect.any(Function),
       potions: 'Potions',
       rollDice: 'Roll Dice',
+      rollEvenToUnfreeze: 'Roll even to unfreeze',
       spells: 'Spells',
       spellsNew: 'New',
       targetPlayerChoose: 'Choose',
@@ -127,6 +128,8 @@ describe('gameplay translations', () => {
       rollDice: 'サイコロを振る',
       spells: '呪文',
       spellsNew: '新規',
+      rollEvenToUnfreeze:
+        '\u51cd\u7d50\u72b6\u614b\u3092\u89e3\u9664\u3059\u308b\u306b\u306f\u3001\u5076\u6570\u3092\u51fa\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
       targetPlayerChoose: '\u9078\u3076',
       targetPlayerPrompt:
         '\u5bfe\u8c61\u306b\u3059\u308b\u30d7\u30ec\u30a4\u30e4\u30fc\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002',

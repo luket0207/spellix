@@ -230,7 +230,7 @@ describe('BattlePage flows', () => {
     expect(panelRule).toMatch(/background-size:\s*cover/);
     expect(panelRule).toMatch(/box-sizing:\s*border-box/);
     expect(panelRule).toMatch(/margin:\s*16px auto 0/);
-    expect(panelRule).toMatch(/padding:\s*40px/);
+    expect(panelRule).toMatch(/padding:\s*40px 40px 20px/);
     expect(panelRule).toMatch(/width:\s*580px/);
     expect(titleRule).toMatch(/color:\s*#F5FA00/i);
     expect(titleRule).toMatch(/font-size:\s*32px/);
@@ -247,6 +247,253 @@ describe('BattlePage flows', () => {
     expect(emptyTextRule).toMatch(/color:\s*#F5FA00/i);
     expect(emptyTextRule).toMatch(/margin:\s*0/);
     expect(emptyTextRule).toMatch(/text-align:\s*center/);
+  });
+
+  test('bottom-aligns the transparent fixed-width dice between both battle actors', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const battleDisplayRule = stylesheet.match(
+      /\.battle-display\s*\{([^}]*)\}/
+    )?.[1];
+    const battleDiceRule = stylesheet.match(/\.battle-dice\s*\{([^}]*)\}/)?.[1];
+    const hiddenDiceRule = stylesheet.match(
+      /\.battle-dice--hidden\s*\{([^}]*)\}/
+    )?.[1];
+
+    renderBattleFlow();
+
+    const battleDisplay = document.querySelector('.battle-display');
+    const playerPanel = screen.getByLabelText(/battle player panel/i);
+    const dicePanel = document.querySelector('.battle-dice');
+    const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
+
+    expect(battleDisplay.children).toHaveLength(3);
+    expect(battleDisplay.children[0]).toBe(playerPanel);
+    expect(battleDisplay.children[1]).toBe(dicePanel);
+    expect(battleDisplay.children[2]).toBe(enemyPanel);
+    expect(dicePanel).toContainElement(screen.getByLabelText(/dice roller/i));
+    expect(dicePanel.querySelector('ul, li')).toBeNull();
+    expect(battleDisplayRule).toMatch(/display:\s*grid/);
+    expect(battleDisplayRule).toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*1fr\) auto minmax\(0,\s*1fr\)/
+    );
+    expect(battleDisplayRule).toMatch(/align-items:\s*end/);
+    expect(battleDisplayRule).toMatch(/margin-bottom:\s*60px/);
+    expect(battleDiceRule).toMatch(/width:\s*300px/);
+    expect(battleDiceRule).not.toMatch(/background(?:-color)?:/);
+    expect(battleDiceRule).toMatch(/opacity:\s*1/);
+    expect(battleDiceRule).toMatch(/transition:\s*opacity 0\.35s ease/);
+    expect(hiddenDiceRule).toMatch(/opacity:\s*0/);
+    expect(hiddenDiceRule).toMatch(/pointer-events:\s*none/);
+    expect(hiddenDiceRule).not.toMatch(/display:\s*none/);
+    expect(stylesheet).toMatch(
+      /@media \(max-width:\s*600px\)\s*\{[^}]*\.battle-display\s*\{[^}]*column-gap:\s*8px;/s
+    );
+  });
+
+  test('keeps the result visible for two seconds before fading into battle effects', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    renderBattleFlow();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const dicePanel = document.querySelector('.battle-dice');
+    const rollButton = screen.getByRole('button', { name: /roll dice/i });
+
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+    fireEvent.click(rollButton);
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(dicePanel.querySelector('.dice-roll-result')).toHaveClass(
+      'dice-roll-result--visible'
+    );
+    expect(dicePanel.querySelector('.dice-roll-result')).toHaveTextContent('1');
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+    expect(rollButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(1999);
+    });
+
+    expect(dicePanel.querySelector('.dice-roll-result')).toHaveClass(
+      'dice-roll-result--visible'
+    );
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+    expect(rollButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(dicePanel).toHaveClass('battle-dice--hidden');
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/resolving turn: false/i)).toBeInTheDocument();
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+  });
+
+  test('restores the dice only after a freeze-check result sequence finishes', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const frozenPlayerSetup = createBattleSetup();
+
+    frozenPlayerSetup.activeBattle.playerFrozen = true;
+    frozenPlayerSetup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+    ];
+    renderBattleFlow(['/battle'], frozenPlayerSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const dicePanel = document.querySelector('.battle-dice');
+    const potionUseButton = screen.getByRole('button', { name: 'Use' });
+
+    expect(potionUseButton).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/player frozen: true/i)).toBeInTheDocument();
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+    expect(potionUseButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(1999);
+    });
+
+    expect(screen.getByText(/player frozen: true/i)).toBeInTheDocument();
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+    expect(potionUseButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.getByText(/player frozen: false/i)).toBeInTheDocument();
+    expect(dicePanel).toHaveClass('battle-dice--hidden');
+    expect(potionUseButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(349);
+    });
+
+    expect(dicePanel).toHaveClass('battle-dice--hidden');
+    expect(potionUseButton).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(dicePanel).not.toHaveClass('battle-dice--hidden');
+  });
+
+  test('does not restore the dice when battle effects finish in a reward state', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const winningBattleSetup = createBattleSetup();
+
+    winningBattleSetup.activeBattle = {
+      ...winningBattleSetup.activeBattle,
+      enemyCurrentHealth: 15,
+      enemyId: 'boneveil-acolyte',
+      level: 1,
+    };
+    renderBattleFlow(['/battle'], winningBattleSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(document.querySelector('.battle-dice')).not.toHaveClass(
+      'battle-dice--hidden'
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(document.querySelector('.battle-dice')).toHaveClass(
+      'battle-dice--hidden'
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
+    expect(document.querySelector('.battle-dice')).not.toBeInTheDocument();
+  });
+
+  test('localizes and positions the frozen prompt above the battle dice', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const battleDiceRule = stylesheet.match(/\.battle-dice\s*\{([^}]*)\}/)?.[1];
+    const promptRule = stylesheet.match(
+      /\.battle-unfreeze-prompt\s*\{([^}]*)\}/
+    )?.[1];
+    const frozenPlayerSetup = createBattleSetup();
+
+    frozenPlayerSetup.activeBattle.playerFrozen = true;
+    const { unmount } = renderBattleFlow(['/battle'], frozenPlayerSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const englishPrompt = screen.getByText('Roll even to unfreeze');
+    const dicePanel = document.querySelector('.battle-dice');
+
+    expect(englishPrompt).toHaveClass(
+      'battle-unfreeze-prompt',
+      'language-en'
+    );
+    expect(dicePanel).toContainElement(englishPrompt);
+    expect(dicePanel.querySelector('ul, li')).toBeNull();
+    expect(screen.queryByText('Roll to see if you unfreeze')).not.toBeInTheDocument();
+    expect(battleDiceRule).toMatch(/position:\s*relative/);
+    expect(promptRule).toMatch(/position:\s*absolute/);
+    expect(promptRule).toMatch(/bottom:\s*calc\(100% \+ 40px\)/);
+    expect(promptRule).toMatch(/left:\s*50%/);
+    expect(promptRule).toMatch(/transform:\s*translateX\(-50%\)/);
+    expect(promptRule).toMatch(/max-width:\s*400px/);
+    expect(promptRule).toMatch(/background-color:\s*lightblue/);
+    expect(promptRule).toMatch(/color:\s*#000000/i);
+    expect(promptRule).toMatch(/border-radius:\s*12px/);
+    expect(promptRule).toMatch(/text-align:\s*center/);
+
+    unmount();
+
+    const japaneseFrozenPlayerSetup = createBattleSetup();
+
+    japaneseFrozenPlayerSetup.activeBattle.playerFrozen = true;
+    japaneseFrozenPlayerSetup.players[0].language = 'jp';
+    renderBattleFlow(['/battle'], japaneseFrozenPlayerSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(
+      screen.getByText(
+        '\u51cd\u7d50\u72b6\u614b\u3092\u89e3\u9664\u3059\u308b\u306b\u306f\u3001\u5076\u6570\u3092\u51fa\u3057\u3066\u304f\u3060\u3055\u3044\u3002'
+      )
+    ).toHaveClass('battle-unfreeze-prompt', 'language-jp');
   });
 
   test('centres the Battle turn and loss modal content with current modal classes', () => {
@@ -533,6 +780,10 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
     expect(screen.getByText('Player charged: true')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(1000);
@@ -949,7 +1200,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(thawUseButton).toBeEnabled();
-    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Player frozen')).toHaveClass(
       'battle-freeze-indicator--enter'
     );
@@ -967,7 +1218,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText('Player 1 potions: thaw,first-aid')).toBeInTheDocument();
     expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
     expect(screen.getByText('Player frozen: true')).toBeInTheDocument();
-    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
 
     fireEvent.click(
       within(thawCard).getByRole('button', { name: 'Use' })
@@ -982,7 +1233,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText('Player frozen: false')).toBeInTheDocument();
     expect(screen.getByText('Battle actor: player')).toBeInTheDocument();
     expect(
-      screen.queryByText(/roll to see if you unfreeze/i)
+      screen.queryByText(/roll even to unfreeze/i)
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText('Player frozen')).toHaveClass(
       'battle-freeze-indicator--exit'
@@ -994,6 +1245,10 @@ describe('BattlePage flows', () => {
     expect(screen.queryByLabelText('Player frozen')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Force 2' }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     act(() => {
       jest.advanceTimersByTime(2000);
     });
@@ -1080,6 +1335,10 @@ describe('BattlePage flows', () => {
     expect(screen.getByText('Player freeze uses: 0,0,1,0,0,0')).toBeInTheDocument();
 
     act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    act(() => {
       jest.advanceTimersByTime(1000);
     });
 
@@ -1091,11 +1350,15 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2350);
     });
 
     expect(Math.random).toHaveBeenCalledTimes(1);
@@ -1144,6 +1407,13 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByRole('img', { name: /dice face 2/i })).toBeInTheDocument();
+    expect(screen.getByText('Player 1 next forced roll: 2')).toBeInTheDocument();
+    expect(randomSpy).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText('Player 1 next forced roll: none')).toBeInTheDocument();
     expect(randomSpy).not.toHaveBeenCalled();
   });
@@ -1443,6 +1713,10 @@ describe('BattlePage flows', () => {
     expect(enemyColumns[1]).toHaveClass('committed-spell-slot-column--purple-buffed');
 
     act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    act(() => {
       jest.advanceTimersByTime(1000);
     });
 
@@ -1487,6 +1761,10 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle enemy health: 120/i)).toBeInTheDocument();
     expect(screen.getByText(/player charged: true/i)).toBeInTheDocument();
     expect(playerColumns[0]).toHaveClass('committed-spell-slot-column--yellow-charged');
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(1000);
@@ -1585,8 +1863,14 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Force 2' }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/player frozen: true/i)).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -1596,7 +1880,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByLabelText(/player frozen/i)).toHaveClass(
       'battle-freeze-indicator--exit'
     );
-    expect(screen.queryByText(/roll to see if you unfreeze/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/roll even to unfreeze/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
     expect(screen.getByText(/player guard: 0/i)).toBeInTheDocument();
 
@@ -1619,6 +1903,12 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
+    expect(screen.getByText(/player guard: 0/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
   });
@@ -1633,6 +1923,12 @@ describe('BattlePage flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/player frozen: true/i)).toBeInTheDocument();
+
     act(() => {
       jest.advanceTimersByTime(2000);
     });
@@ -1667,8 +1963,14 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/enemy frozen: true/i)).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -1703,13 +2005,17 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/enemy frozen: false/i)).toBeInTheDocument();
     expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
     expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
     expect(Math.random).toHaveBeenCalledTimes(1);
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(349);
     });
 
     expect(screen.queryByRole('img', { name: /dice rolling/i })).not.toBeInTheDocument();
@@ -1720,6 +2026,12 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
     expect(Math.random).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -1784,6 +2096,10 @@ describe('BattlePage flows', () => {
 
     act(() => {
       jest.advanceTimersByTime(1);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
     });
 
     expect(screen.getByText('120 / 120')).toBeInTheDocument();
@@ -1858,6 +2174,10 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1);
     });
 
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/enemy guard: 25/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveAttribute('data-icon', 'shield');
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveClass('battle-guard-shield');
@@ -1913,6 +2233,10 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
     expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/player guard shield/i)).toHaveAttribute('data-icon', 'shield');
@@ -1953,6 +2277,10 @@ describe('BattlePage flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -2021,6 +2349,10 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/battle player health: 100/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
@@ -2059,6 +2391,10 @@ describe('BattlePage flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -2107,6 +2443,10 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(screen.getByText(/battle enemy health: 40/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/orange counter animation/i)).toHaveClass(
       'battle-orange-effect--player-to-enemy'
@@ -2135,6 +2475,10 @@ describe('BattlePage flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -2191,6 +2535,10 @@ describe('BattlePage flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -2258,6 +2606,10 @@ describe('BattlePage flows', () => {
 
     expect(randomSpy).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(2000);
