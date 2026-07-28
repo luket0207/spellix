@@ -1149,13 +1149,18 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const activeBattle = currentSetup.activeBattle;
       const isBuyAndSell = potion?.id === 'buy-and-sell';
       const isCauldron = potion?.id === 'cauldron';
+      const isCharger = potion?.id === 'charger';
       const isCopyPaste = potion?.id === 'copy-and-paste';
+      const isCosmicIntervention = potion?.id === 'cosmic-intervention';
       const isDevineChance = potion?.id === 'devine-chance';
+      const isIceBeam = potion?.id === 'ice-beam';
       const isMultiDice = isMultiDicePotion(potion);
       const isRollChoice = potion?.id === 'roll-choice';
+      const isShieldsDown = potion?.id === 'shields-down';
       const isStartingCharge = potion?.id === 'starting-charge';
       const isStormMaster = potion?.id === 'storm-master';
       const isTargetingPotion = isTargetPlayerPotion(potion);
+      const isThaw = potion?.id === 'thaw';
       const isTokensmith = potion?.id === 'tokensmith';
       const forcedRollValue = options.forcedRollValue;
       const hasValidForcedRollValue =
@@ -1187,6 +1192,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         isTokensmith ||
         (isStormMaster && currentSetup.stormMasterPendingPlayerId) ||
         (isRollChoice && !hasValidForcedRollValue) ||
+        (isCharger && isBattleUse && activeBattle.playerCharged) ||
+        (isShieldsDown &&
+          isBattleUse &&
+          Math.max(0, activeBattle.enemyGuard ?? 0) === 0) ||
+        (isThaw && isBattleUse && !activeBattle.playerFrozen) ||
         (!isBoardUse && !isBattleUse)
       ) {
         return currentSetup;
@@ -1201,6 +1211,18 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         activeBattle: isBattleUse
           ? {
               ...activeBattle,
+              ...(isCharger ? { playerCharged: true } : {}),
+              ...(isCosmicIntervention
+                ? { cosmicInterventionPending: true }
+                : {}),
+              ...(isIceBeam
+                ? {
+                    enemyFrozen: true,
+                    freezeAppliedByIceBeamThisTurn: true,
+                  }
+                : {}),
+              ...(isShieldsDown ? { shieldsDownPending: true } : {}),
+              ...(isThaw ? { playerFrozen: false } : {}),
               playerPotionUsedThisTurn: true,
             }
           : activeBattle,
@@ -1243,6 +1265,68 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
               }
             : currentPlayer
         ),
+      };
+    });
+  };
+
+  const resolveCosmicIntervention = () => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+      const enemy = getEnemyById(activeBattle?.enemyId);
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'active' ||
+        !activeBattle.cosmicInterventionPending ||
+        !enemy
+      ) {
+        return currentSetup;
+      }
+
+      const enemyGuard = Math.max(0, activeBattle.enemyGuard ?? 0);
+      const enemyCurrentHealth =
+        activeBattle.enemyCurrentHealth ?? enemy.currentHealth;
+      const nextEnemyGuard = Math.max(0, enemyGuard - 10);
+      const nextEnemyHealth = Math.max(
+        0,
+        enemyCurrentHealth - Math.max(0, 10 - enemyGuard)
+      );
+      const nextActiveBattle = {
+        ...activeBattle,
+        cosmicInterventionPending: false,
+        enemyCurrentHealth: nextEnemyHealth,
+        enemyGuard: nextEnemyGuard,
+      };
+      const nextSetup = {
+        ...currentSetup,
+        activeBattle: nextActiveBattle,
+      };
+
+      return nextEnemyHealth <= 0
+        ? createWonBattleSetup(nextSetup, nextActiveBattle)
+        : nextSetup;
+    });
+  };
+
+  const resolveShieldsDown = () => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (
+        !activeBattle ||
+        activeBattle.phase !== 'active' ||
+        !activeBattle.shieldsDownPending
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          enemyGuard: 0,
+          shieldsDownPending: false,
+        },
       };
     });
   };
@@ -1988,12 +2072,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       return {
         ...currentSetup,
         activeBattle: {
+          cosmicInterventionPending: false,
           currentBattleActor: 'player',
           enemyChargeUses: createTokenUses(enemy.spellSlots, 'yellow'),
           enemyCharged: false,
           enemyCurrentHealth: enemy.currentHealth,
           enemyFreezeUses: createTokenUses(enemy.spellSlots, 'light-blue'),
           enemyFrozen: false,
+          freezeAppliedByIceBeamThisTurn: false,
           enemyGuard: 0,
           enemyId,
           enemyNextCharged: null,
@@ -2015,6 +2101,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           playerNextPurpleBuffs: null,
           playerPotionUsedThisTurn: false,
           playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
+          shieldsDownPending: false,
         },
         players: hasStartingCharge
           ? currentSetup.players.map((currentPlayer) =>
@@ -2063,6 +2150,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const nextChargedKey = isPlayerActor ? 'playerNextCharged' : 'enemyNextCharged';
       const chargeUses = activeBattle[chargeUsesKey] ?? [0, 0, 0, 0, 0, 0];
       const freezeUses = activeBattle[freezeUsesKey] ?? [0, 0, 0, 0, 0, 0];
+      const isRedundantIceBeamFreeze = Boolean(
+        isPlayerActor &&
+          activeBattle.freezeAppliedByIceBeamThisTurn &&
+          activeBattle.enemyFrozen
+      );
       const purpleBuffs = activeBattle[purpleBuffsKey] ?? [0, 0, 0, 0, 0, 0];
       const currentActor = isPlayerActor ? playerBattleState : enemyBattleState;
       const effectiveActorColumnIndex = getEffectiveSpellColumnIndex(
@@ -2073,7 +2165,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         chargeAvailable: (chargeUses[effectiveActorColumnIndex] ?? 0) > 0,
         currentActor,
         diceResult,
-        freezeAvailable: (freezeUses[effectiveActorColumnIndex] ?? 0) > 0,
+        freezeAvailable:
+          (freezeUses[effectiveActorColumnIndex] ?? 0) > 0 &&
+          !isRedundantIceBeamFreeze,
         opponent: isPlayerActor ? enemyBattleState : playerBattleState,
         purpleBuff: purpleBuffs[effectiveActorColumnIndex] ?? 0,
         yellowCharged: Boolean(activeBattle[chargedKey]),
@@ -2225,6 +2319,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 [nextChargedKey]: null,
                 [nextPurpleBuffsKey]: null,
                 [purpleBuffsKey]: [0, 0, 0, 0, 0, 0],
+                ...(isPlayerActor
+                  ? { freezeAppliedByIceBeamThisTurn: false }
+                  : {}),
                 ...(nextBattleActor === 'player'
                   ? { playerPotionUsedThisTurn: false }
                   : {}),
@@ -2257,6 +2354,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         activeBattle: {
           ...currentSetup.activeBattle,
           currentBattleActor: nextBattleActor,
+          freezeAppliedByIceBeamThisTurn: isPlayerActor
+            ? false
+            : currentSetup.activeBattle.freezeAppliedByIceBeamThisTurn,
           isResolvingTurn: false,
           pendingEffects: [],
           [chargedKey]: currentSetup.activeBattle[nextChargedKey] ?? false,
@@ -2646,6 +2746,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         replaceSelectedRewardTokenInBag,
         resolvePendingPotionGrant,
         resolveCopyPastePotion,
+        resolveCosmicIntervention,
+        resolveShieldsDown,
         resolveDevineChanceRoll,
         resolveStormMasterRoll,
         resolveTargetPlayerPotion,

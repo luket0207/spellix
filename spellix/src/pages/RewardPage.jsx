@@ -334,26 +334,10 @@ function RewardPage() {
       }
     };
 
-    return (
-      <main
-        className={`reward-page${
-          usesNightSkyRewardFlow ? ' reward-page--assignment' : ''
-        }`}
-        style={rewardPageStyle}
-      >
-        {usesNightSkyRewardFlow ? <MagicalNightSky /> : null}
-        <section
-          aria-label={assignmentAriaLabel}
-          aria-modal={usesNightSkyRewardFlow ? 'true' : undefined}
-          className={`reward-panel${
-            usesNightSkyRewardFlow
-              ? ` reward-panel--assignment modal-panel modal-panel--default ${languageClassName}`
-              : ''
-          }`}
-          role={usesNightSkyRewardFlow ? 'dialog' : undefined}
-        >
-          <h1 className={languageClassName}>{spellAssignmentTranslations.assignReward}</h1>
-          {rewardResolution ? (
+    const rewardPanelContent = (
+      <>
+        <h1 className={languageClassName}>{spellAssignmentTranslations.assignReward}</h1>
+        {rewardResolution ? (
             <div className="assignment-result-modal">
               <p
                 className={`assignment-result-modal-content larger-text ${languageClassName}${
@@ -376,6 +360,24 @@ function RewardPage() {
                       ? rewardPageTranslations.potionReplaced
                       : rewardPageTranslations.potionDiscarded}
               </p>
+              <div className="battle-reward-item-display">
+                {isTokenReward ? (
+                  <Token
+                    ariaLabel={`${getTokenName(
+                      selectedReward.item.type,
+                      currentLanguage
+                    )} reward token`}
+                    language={currentLanguage}
+                    showName
+                    tokenType={selectedReward.item.type}
+                  />
+                ) : (
+                  <PotionIcon
+                    language={currentLanguage}
+                    potion={selectedReward.item}
+                  />
+                )}
+              </div>
               <div
                 aria-label="Assignment result actions"
                 className="assignment-result-modal-actions"
@@ -389,8 +391,8 @@ function RewardPage() {
                 </Button>
               </div>
             </div>
-          ) : isTokenReward ? (
-            <>
+        ) : isTokenReward ? (
+          <>
             {battlePlayer ? (
               <>
                 <SpellTokenAssignment
@@ -429,9 +431,9 @@ function RewardPage() {
             >
               {spellAssignmentTranslations.confirm}
             </Button>
-            </>
-          ) : (
-            <>
+          </>
+        ) : (
+          <>
             <div
               aria-label={rewardGrantTranslations.newPotion}
               className="new-potion-reward"
@@ -468,7 +470,7 @@ function RewardPage() {
                   );
                 })}
                 <Button
-                  className={`${languageClassName} potion-assignment-button-discard`}
+                  className={`${languageClassName} potion-assignment-button potion-assignment-button-discard`}
                   type="button"
                   onClick={() => resolveSelectedPotionReward()}
                 >
@@ -476,9 +478,37 @@ function RewardPage() {
                 </Button>
               </div>
             ) : null}
-            </>
-          )}
-        </section>
+          </>
+        )}
+      </>
+    );
+
+    return (
+      <main
+        className={`reward-page${
+          usesNightSkyRewardFlow ? ' reward-page--assignment' : ''
+        }`}
+        style={rewardPageStyle}
+      >
+        {usesNightSkyRewardFlow ? <MagicalNightSky /> : null}
+        {usesNightSkyRewardFlow ? (
+          <section
+            aria-label={assignmentAriaLabel}
+            aria-modal="true"
+            className={`reward-panel reward-panel--assignment modal-panel modal-panel--default ${languageClassName}`}
+            role="dialog"
+          >
+            {rewardPanelContent}
+          </section>
+        ) : (
+          <Modal
+            ariaLabel={assignmentAriaLabel}
+            isOpen
+            panelClassName={`reward-panel ${languageClassName}`}
+          >
+            {rewardPanelContent}
+          </Modal>
+        )}
         <SpellMergeConfirmationModal
           isOpen={Boolean(pendingRewardMerge)}
           language={currentLanguage}

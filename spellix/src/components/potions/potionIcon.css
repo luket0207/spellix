@@ -40,31 +40,15 @@
 }
 
 .potion-icon-tooltip {
-  position: fixed;
-  z-index: 1000;
-  right: 8px;
-  bottom: 8px;
-  left: 8px;
-  width: max-content;
-  max-width: min(280px, calc(100vw - 16px));
-  padding: 6px 8px;
-  margin: 0 auto;
-  border: 1px solid #000000;
-  background: #ffffff;
-  color: #000000;
-  opacity: 0;
-  overflow-wrap: anywhere;
-  pointer-events: none;
-  visibility: hidden;
-  white-space: normal;
-}
-
-.potion-icon:hover .potion-icon-tooltip,
-.potion-icon:focus .potion-icon-tooltip,
-button:focus .potion-icon-tooltip,
-label:focus-within .potion-icon-tooltip {
-  opacity: 1;
-  visibility: visible;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .potion-icon--blue {

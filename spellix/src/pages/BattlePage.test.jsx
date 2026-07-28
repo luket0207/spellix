@@ -113,6 +113,8 @@ function GameStateSnapshot() {
       <p>{`Enemy guard: ${activeBattle?.enemyGuard ?? 'none'}`}</p>
       <p>{`Player frozen: ${activeBattle?.playerFrozen ?? 'none'}`}</p>
       <p>{`Enemy frozen: ${activeBattle?.enemyFrozen ?? 'none'}`}</p>
+      <p>{`Ice Beam freeze active: ${activeBattle?.freezeAppliedByIceBeamThisTurn ?? false}`}</p>
+      <p>{`Battle potion used: ${activeBattle?.playerPotionUsedThisTurn ?? false}`}</p>
       <p>{`Player freeze uses: ${activeBattle?.playerFreezeUses?.join(',') ?? 'none'}`}</p>
       <p>{`Enemy freeze uses: ${activeBattle?.enemyFreezeUses?.join(',') ?? 'none'}`}</p>
       <p>{`Player Purple buffs: ${activeBattle?.playerPurpleBuffs?.join(',') ?? 'none'}`}</p>
@@ -188,17 +190,63 @@ describe('BattlePage flows', () => {
     expect(debugControlsRule).not.toMatch(/right\s*:/);
   });
 
-  test('positions the battle title at the top centre with the required size and weight', () => {
+  test('groups the battle title and fixed-height potion bar in one wooden panel', () => {
     const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const panelRule = stylesheet.match(
+      /\.battle-title-potions-panel\s*\{([^}]*)\}/
+    )?.[1];
     const titleRule = stylesheet.match(/\.battle-title\s*\{([^}]*)\}/)?.[1];
+    const potionBarRule = stylesheet.match(
+      /\.battle-potions-bar\s*\{([^}]*)\}/
+    )?.[1];
+    const emptyTextRule = stylesheet.match(
+      /\.battle-potions-empty-text\s*\{([^}]*)\}/
+    )?.[1];
 
-    expect(titleRule).toMatch(/position:\s*absolute/);
-    expect(titleRule).toMatch(/top:\s*16px/);
-    expect(titleRule).toMatch(/left:\s*50%/);
-    expect(titleRule).toMatch(/transform:\s*translateX\(-50%\)/);
+    renderBattleFlow();
+
+    const panel = document.querySelector('.battle-title-potions-panel');
+    const title = screen.getByRole('heading', {
+      name: 'Hellcrown Reaper Battle',
+    });
+    const potionBar = document.querySelector('.battle-potions-bar');
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+
+    expect(panel.firstElementChild).toBe(title);
+    expect(title.nextElementSibling).toBe(potionBar);
+    expect(potionBar).toContainElement(potionSection);
+    expect(
+      within(potionBar).getByText(
+        'You have no battle potions at the moment'
+      )
+    ).toHaveClass('battle-potions-empty-text', 'language-en');
+    expect(panel.querySelector('ul, li')).toBeNull();
+
+    expect(panelRule).toMatch(
+      /background-image:\s*url\('\.\.\/images\/misc\/modalBackground\.png'\)/
+    );
+    expect(panelRule).toMatch(/background-size:\s*cover/);
+    expect(panelRule).toMatch(/box-sizing:\s*border-box/);
+    expect(panelRule).toMatch(/margin:\s*16px auto 0/);
+    expect(panelRule).toMatch(/padding:\s*40px/);
+    expect(panelRule).toMatch(/width:\s*580px/);
+    expect(titleRule).toMatch(/color:\s*#F5FA00/i);
     expect(titleRule).toMatch(/font-size:\s*32px/);
     expect(titleRule).toMatch(/font-weight:\s*700/);
+    expect(titleRule).toMatch(/margin:\s*0 auto 24px/);
+    expect(titleRule).toMatch(/max-width:\s*500px/);
     expect(titleRule).toMatch(/text-align:\s*center/);
+    expect(potionBarRule).toMatch(/align-items:\s*center/);
+    expect(potionBarRule).toMatch(/box-sizing:\s*border-box/);
+    expect(potionBarRule).toMatch(/display:\s*flex/);
+    expect(potionBarRule).toMatch(/height:\s*170px/);
+    expect(potionBarRule).toMatch(/justify-content:\s*center/);
+    expect(potionBarRule).toMatch(/padding:\s*20px 0/);
+    expect(emptyTextRule).toMatch(/color:\s*#F5FA00/i);
+    expect(emptyTextRule).toMatch(/margin:\s*0/);
+    expect(emptyTextRule).toMatch(/text-align:\s*center/);
   });
 
   test('centres the Battle turn and loss modal content with current modal classes', () => {
@@ -248,6 +296,20 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(`${enemy.japaneseName}のターン`)).toHaveClass('language-jp');
   });
 
+  test('localizes the empty battle potion bar for Japanese players', () => {
+    const setup = createBattleSetup();
+
+    setup.players[0].language = 'jp';
+
+    renderBattleFlow(['/battle'], setup);
+
+    expect(
+      screen.getByText(
+        '\u73fe\u5728\u3001\u30d0\u30c8\u30eb\u7528\u30dd\u30fc\u30b7\u30e7\u30f3\u3092\u6301\u3063\u3066\u3044\u307e\u305b\u3093\u3002'
+      )
+    ).toHaveClass('battle-potions-empty-text', 'language-jp');
+  });
+
   test('uses the selected environment background and falls back to fields', () => {
     const selectedEnvironmentSetup = createBattleSetup();
     selectedEnvironmentSetup.activeBattle.environment = 'mountains';
@@ -285,9 +347,13 @@ describe('BattlePage flows', () => {
     });
 
     const potionSection = screen.getByRole('region', { name: /battle potions/i });
+    const potionBar = document.querySelector('.battle-potions-bar');
+    const titlePanel = document.querySelector('.battle-title-potions-panel');
     const dicePanel = document.querySelector('.battle-dice');
 
-    expect(dicePanel.firstElementChild).toBe(potionSection);
+    expect(titlePanel).toContainElement(potionBar);
+    expect(potionBar).toContainElement(potionSection);
+    expect(dicePanel).not.toContainElement(potionSection);
     expect(within(potionSection).getByText('First Aid')).toBeInTheDocument();
     expect(within(potionSection).getByText('Roll Choice')).toBeInTheDocument();
     expect(within(potionSection).queryByText('Copy and Paste')).not.toBeInTheDocument();
@@ -343,6 +409,51 @@ describe('BattlePage flows', () => {
     ).toBeEnabled();
   });
 
+  test('keeps the potion bar mounted when the last Battle potion is consumed', () => {
+    const setup = createBattleSetup();
+
+    setup.players[0].potions = [
+      POTION_DEFINITIONS.find(({ id }) => id === 'first-aid'),
+    ];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionBar = document.querySelector('.battle-potions-bar');
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+
+    expect(within(potionSection).getByText('First Aid')).toBeInTheDocument();
+    expect(
+      within(potionBar).queryByText(
+        'You have no battle potions at the moment'
+      )
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    );
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(document.querySelector('.battle-potions-bar')).toBe(potionBar);
+    expect(screen.getByRole('region', { name: /battle potions/i })).toBe(
+      potionSection
+    );
+    expect(
+      within(potionBar).getByText(
+        'You have no battle potions at the moment'
+      )
+    ).toBeInTheDocument();
+    expect(potionBar.querySelector('ul, li')).toBeNull();
+  });
+
   test('cancelling Battle potion confirmation does not lock usage', () => {
     const setup = createBattleSetup();
 
@@ -372,6 +483,624 @@ describe('BattlePage flows', () => {
     within(potionSection).getAllByRole('button', { name: 'Use' }).forEach(
       (button) => expect(button).toBeEnabled()
     );
+  });
+
+  test('uses Charger to charge every player column until the current turn ends', () => {
+    const setup = createBattleSetup();
+    const charger = POTION_DEFINITIONS.find(({ id }) => id === 'charger');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.players[0].potions = [charger, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const chargerCard = within(potionSection)
+      .getByText('Charger')
+      .closest('.battle-potion-card');
+    const playerPanel = screen.getByLabelText(/battle player panel/i);
+
+    expect(
+      within(chargerCard).getByRole('button', { name: 'Use' })
+    ).toBeEnabled();
+
+    fireEvent.click(
+      within(chargerCard).getByRole('button', { name: 'Use' })
+    );
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(within(confirmation).getByText(/Charger/)).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Player charged: true')).toBeInTheDocument();
+    expect(
+      playerPanel.querySelectorAll('.committed-spell-slot-column--yellow-charged')
+    ).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
+    expect(screen.getByText('Player charged: true')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('Battle enemy health: 90')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('Player charged: false')).toBeInTheDocument();
+    expect(
+      playerPanel.querySelectorAll('.committed-spell-slot-column--yellow-charged')
+    ).toHaveLength(0);
+  });
+
+  test('keeps Charger visible but unusable when player columns are already charged', () => {
+    const setup = createBattleSetup();
+    const charger = POTION_DEFINITIONS.find(({ id }) => id === 'charger');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.activeBattle.playerCharged = true;
+    setup.players[0].potions = [charger, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const chargerCard = within(potionSection)
+      .getByText('Charger')
+      .closest('.battle-potion-card');
+    const firstAidCard = within(potionSection)
+      .getByText('First Aid')
+      .closest('.battle-potion-card');
+    const chargerUseButton = within(chargerCard).getByRole('button', {
+      name: 'Use',
+    });
+
+    expect(chargerUseButton).toBeDisabled();
+    expect(
+      within(firstAidCard).getByRole('button', { name: 'Use' })
+    ).toBeEnabled();
+
+    fireEvent.click(chargerUseButton);
+
+    expect(
+      screen.queryByRole('dialog', { name: /use potion confirmation/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Player 1 potions: charger,first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
+    expect(screen.getByText('Player charged: true')).toBeInTheDocument();
+  });
+
+  test('uses Cosmic Intervention after its bolt animation and locks battle controls', () => {
+    const setup = createBattleSetup();
+    const cosmicIntervention = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'cosmic-intervention'
+    );
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+
+    setup.activeBattle.enemyGuard = 15;
+    setup.players[0].potions = [cosmicIntervention, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const cosmicCard = within(potionSection)
+      .getByText('Cosmic Intervention')
+      .closest('.battle-potion-card');
+
+    fireEvent.click(
+      within(cosmicCard).getByRole('button', { name: 'Use' })
+    );
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText('Deal 10 damage to your opponent')
+    ).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    const bolt = screen.getByLabelText('Cosmic Intervention animation');
+    const enemyImage = screen.getByRole('img', { name: /battle enemy/i });
+    const boltRule = stylesheet.match(
+      /\.cosmic-intervention-bolt\s*\{([^}]*)\}/
+    )?.[1];
+    const boltIconRule = stylesheet.match(
+      /\.battle-actor-image\s+svg\.cosmic-intervention-bolt\s*\{([^}]*)\}/
+    )?.[1];
+
+    expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Enemy guard: 15')).toBeInTheDocument();
+    expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
+    expect(bolt.tagName).toBe('svg');
+    expect(bolt).toHaveAttribute('data-icon', 'bolt');
+    expect(bolt.parentElement).toContainElement(enemyImage);
+    expect(boltRule).toMatch(/animation:\s*cosmic-intervention-bolt 1\.5s linear forwards/);
+    expect(boltRule).toMatch(/color:\s*#F5FA00/i);
+    expect(boltRule).toMatch(/left:\s*50%/);
+    expect(boltRule).toMatch(/top:\s*50%/);
+    expect(boltRule).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
+    expect(boltIconRule).toMatch(/height:\s*100%/);
+    expect(boltIconRule).toMatch(/width:\s*auto/);
+    expect(stylesheet).toMatch(
+      /\.battle-actor-image\s*{[^}]*height:\s*150px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.battle-player-piece,\s*\.battle-enemy-piece\s*{[^}]*height:\s*100%;/s
+    );
+    expect(stylesheet).toMatch(
+      /@keyframes cosmic-intervention-bolt\s*\{[\s\S]*66%\s*\{[^}]*opacity:\s*1;[^}]*\}[\s\S]*100%\s*\{[^}]*opacity:\s*0;/s
+    );
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    within(potionSection)
+      .getAllByRole('button', { name: 'Use' })
+      .forEach((button) => expect(button).toBeDisabled());
+    document
+      .querySelectorAll('.battle-debug-controls button')
+      .forEach((button) => expect(button).toBeDisabled());
+
+    fireEvent.animationEnd(bolt);
+
+    expect(
+      screen.queryByLabelText('Cosmic Intervention animation')
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Enemy guard: 5')).toBeInTheDocument();
+    expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /remove 5 health/i })).toBeEnabled();
+  });
+
+  test.each([
+    [5, 115],
+    [0, 110],
+  ])(
+    'applies Cosmic Intervention through %i enemy Guard before health',
+    (startingGuard, expectedHealth) => {
+      const setup = createBattleSetup();
+      const cosmicIntervention = POTION_DEFINITIONS.find(
+        ({ id }) => id === 'cosmic-intervention'
+      );
+
+      setup.activeBattle.enemyGuard = startingGuard;
+      setup.players[0].potions = [cosmicIntervention];
+
+      renderBattleFlow(['/battle'], setup);
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+      fireEvent.click(
+        within(
+          screen.getByRole('dialog', { name: /use potion confirmation/i })
+        ).getByRole('button', { name: 'Yes' })
+      );
+
+      expect(screen.getByText(`Enemy guard: ${startingGuard}`)).toBeInTheDocument();
+      expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
+
+      fireEvent.animationEnd(
+        screen.getByLabelText('Cosmic Intervention animation')
+      );
+
+      expect(screen.getByText('Enemy guard: 0')).toBeInTheDocument();
+      expect(
+        screen.getByText(`Battle enemy health: ${expectedHealth}`)
+      ).toBeInTheDocument();
+      expect(screen.getByText('Battle phase: active')).toBeInTheDocument();
+    }
+  );
+
+  test('uses the normal battle win flow when Cosmic Intervention is lethal', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const setup = createBattleSetup();
+    const cosmicIntervention = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'cosmic-intervention'
+    );
+
+    setup.activeBattle.enemyCurrentHealth = 10;
+    setup.players[0].potions = [cosmicIntervention];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(screen.getByText('Battle enemy health: 10')).toBeInTheDocument();
+    fireEvent.animationEnd(
+      screen.getByLabelText('Cosmic Intervention animation')
+    );
+
+    expect(screen.getByText('Battle enemy health: 0')).toBeInTheDocument();
+    expect(screen.getByText('Battle phase: reward')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^choose$/i })).toHaveLength(3);
+    expect(
+      screen.queryByRole('button', { name: /roll dice/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test('keeps Shields Down visible but unusable when the enemy has no Guard', () => {
+    const setup = createBattleSetup();
+    const shieldsDown = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'shields-down'
+    );
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.players[0].potions = [shieldsDown, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const shieldsDownCard = within(potionSection)
+      .getByText('Shields Down')
+      .closest('.battle-potion-card');
+    const firstAidCard = within(potionSection)
+      .getByText('First Aid')
+      .closest('.battle-potion-card');
+    const shieldsDownUseButton = within(shieldsDownCard).getByRole('button', {
+      name: 'Use',
+    });
+
+    expect(shieldsDownUseButton).toBeDisabled();
+    expect(
+      within(firstAidCard).getByRole('button', { name: 'Use' })
+    ).toBeEnabled();
+
+    fireEvent.click(shieldsDownUseButton);
+
+    expect(
+      screen.queryByRole('dialog', { name: /use potion confirmation/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Player 1 potions: shields-down,first-aid')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
+    expect(screen.getByText('Enemy guard: 0')).toBeInTheDocument();
+  });
+
+  test('removes all enemy Guard after the Shields Down gavel animation', () => {
+    const setup = createBattleSetup();
+    const shieldsDown = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'shields-down'
+    );
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+
+    setup.activeBattle.enemyCurrentHealth = 10;
+    setup.activeBattle.enemyGuard = 50;
+    setup.players[0].potions = [shieldsDown, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const shieldsDownCard = within(potionSection)
+      .getByText('Shields Down')
+      .closest('.battle-potion-card');
+
+    fireEvent.click(
+      within(shieldsDownCard).getByRole('button', { name: 'Use' })
+    );
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText(
+        'Remove all guard from your opponent this turn'
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    const gavel = screen.getByLabelText('Shields Down animation');
+    const enemyImage = screen.getByRole('img', { name: /battle enemy/i });
+    const gavelRule = stylesheet.match(
+      /\.shields-down-gavel\s*\{([^}]*)\}/
+    )?.[1];
+    const gavelIconRule = stylesheet.match(
+      /\.battle-actor-image\s+svg\.shields-down-gavel\s*\{([^}]*)\}/
+    )?.[1];
+
+    expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Enemy guard: 50')).toBeInTheDocument();
+    expect(screen.getByText('Battle enemy health: 10')).toBeInTheDocument();
+    expect(screen.getByLabelText('Enemy guard shield')).toBeInTheDocument();
+    expect(gavel).toHaveAttribute('data-icon', 'gavel');
+    expect(gavel.parentElement).toContainElement(enemyImage);
+    expect(gavelRule).toMatch(
+      /animation:\s*shields-down-gavel 1\.5s ease-in-out forwards/
+    );
+    expect(gavelRule).toMatch(/color:\s*#F5FA00/i);
+    expect(gavelRule).toMatch(/left:\s*50%/);
+    expect(gavelRule).toMatch(/top:\s*0/);
+    expect(gavelIconRule).toMatch(/height:\s*100px/);
+    expect(gavelIconRule).toMatch(/width:\s*auto/);
+    expect(stylesheet).toMatch(
+      /@keyframes shields-down-gavel\s*\{[\s\S]*66%\s*\{[^}]*opacity:\s*1;[^}]*top:\s*50%;[^}]*\}[\s\S]*76%\s*\{[^}]*opacity:\s*0\.15;[^}]*\}[\s\S]*86%\s*\{[^}]*opacity:\s*1;[^}]*\}[\s\S]*94%\s*\{[^}]*opacity:\s*0\.15;[^}]*\}[\s\S]*100%\s*\{[^}]*opacity:\s*0;/s
+    );
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    within(potionSection)
+      .getAllByRole('button', { name: 'Use' })
+      .forEach((button) => expect(button).toBeDisabled());
+    document
+      .querySelectorAll('.battle-debug-controls button')
+      .forEach((button) => expect(button).toBeDisabled());
+
+    fireEvent.animationEnd(gavel);
+
+    expect(
+      screen.queryByLabelText('Shields Down animation')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Enemy guard shield')
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Enemy guard: 0')).toBeInTheDocument();
+    expect(screen.getByText('Battle enemy health: 10')).toBeInTheDocument();
+    expect(screen.getByText('Battle phase: active')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /remove 5 health/i })).toBeEnabled();
+  });
+
+  test('keeps Thaw visible but unusable while the player is not frozen', () => {
+    const setup = createBattleSetup();
+    const thaw = POTION_DEFINITIONS.find(({ id }) => id === 'thaw');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.players[0].potions = [thaw, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const thawCard = within(potionSection)
+      .getByText('Thaw')
+      .closest('.battle-potion-card');
+    const firstAidCard = within(potionSection)
+      .getByText('First Aid')
+      .closest('.battle-potion-card');
+    const thawUseButton = within(thawCard).getByRole('button', {
+      name: 'Use',
+    });
+
+    expect(thawUseButton).toBeDisabled();
+    expect(
+      within(firstAidCard).getByRole('button', { name: 'Use' })
+    ).toBeEnabled();
+
+    fireEvent.click(thawUseButton);
+
+    expect(
+      screen.queryByRole('dialog', { name: /use potion confirmation/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Player 1 potions: thaw,first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
+    expect(screen.getByText('Player frozen: false')).toBeInTheDocument();
+  });
+
+  test('uses Thaw before the freeze check and allows a normal attack roll', () => {
+    const setup = createBattleSetup();
+    const thaw = POTION_DEFINITIONS.find(({ id }) => id === 'thaw');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.activeBattle.playerFrozen = true;
+    setup.players[0].potions = [thaw, firstAid];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', {
+      name: /battle potions/i,
+    });
+    const thawCard = within(potionSection)
+      .getByText('Thaw')
+      .closest('.battle-potion-card');
+    const thawUseButton = within(thawCard).getByRole('button', {
+      name: 'Use',
+    });
+
+    expect(thawUseButton).toBeEnabled();
+    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Player frozen')).toHaveClass(
+      'battle-freeze-indicator--enter'
+    );
+
+    fireEvent.click(thawUseButton);
+    let confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText('Auto unfreeze yourself')
+    ).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
+
+    expect(screen.getByText('Player 1 potions: thaw,first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
+    expect(screen.getByText('Player frozen: true')).toBeInTheDocument();
+    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+
+    fireEvent.click(
+      within(thawCard).getByRole('button', { name: 'Use' })
+    );
+    confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Player frozen: false')).toBeInTheDocument();
+    expect(screen.getByText('Battle actor: player')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/roll to see if you unfreeze/i)
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Player frozen')).toHaveClass(
+      'battle-freeze-indicator--exit'
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.queryByLabelText('Player frozen')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 2' }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText('Player guard: 5')).toBeInTheDocument();
+    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+  });
+
+  test('uses Ice Beam to freeze the enemy without consuming a redundant freeze token', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const setup = createBattleSetup();
+    const iceBeam = POTION_DEFINITIONS.find(({ id }) => id === 'ice-beam');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    setup.players[0].potions = [iceBeam, firstAid];
+    setup.players[0].spellSlots[2] = {
+      ...setup.players[0].spellSlots[2],
+      tokens: [
+        {
+          committed: true,
+          id: 'player-1-light-blue-1',
+          type: 'light-blue',
+        },
+      ],
+    };
+    setup.activeBattle.playerFreezeUses = [0, 0, 1, 0, 0, 0];
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    const potionSection = screen.getByRole('region', { name: /battle potions/i });
+    const useButtons = within(potionSection).getAllByRole('button', { name: 'Use' });
+
+    expect(within(potionSection).getByText('Ice Beam')).toBeInTheDocument();
+    expect(useButtons).toHaveLength(2);
+
+    fireEvent.click(useButtons[0]);
+    const cancelledConfirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(within(cancelledConfirmation).getByText('Freeze your opponent')).toBeInTheDocument();
+    fireEvent.click(within(cancelledConfirmation).getByRole('button', { name: 'No' }));
+
+    expect(screen.getByText('Player 1 potions: ice-beam,first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Enemy frozen: false')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: false')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Enemy frozen')).not.toBeInTheDocument();
+    within(potionSection)
+      .getAllByRole('button', { name: 'Use' })
+      .forEach((button) => expect(button).toBeEnabled());
+
+    fireEvent.click(
+      within(potionSection).getAllByRole('button', { name: 'Use' })[0]
+    );
+    const confirmedDialog = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+    fireEvent.click(within(confirmedDialog).getByRole('button', { name: 'Yes' }));
+
+    const enemyFrozenOverlay = screen.getByLabelText('Enemy frozen');
+    const enemyImage = screen.getByRole('img', { name: /battle enemy/i });
+
+    expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
+    expect(screen.getByText('Enemy frozen: true')).toBeInTheDocument();
+    expect(screen.getByText('Ice Beam freeze active: true')).toBeInTheDocument();
+    expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
+    expect(enemyFrozenOverlay).toHaveAttribute('data-icon', 'snowflake');
+    expect(enemyFrozenOverlay).toHaveClass('battle-freeze-indicator--enter');
+    expect(enemyFrozenOverlay.parentElement).toContainElement(enemyImage);
+    expect(
+      within(potionSection).getByRole('button', { name: 'Use' })
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 3' }));
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText('Enemy frozen: true')).toBeInTheDocument();
+    expect(screen.getByText('Player freeze uses: 0,0,1,0,0,0')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('Battle actor: enemy')).toBeInTheDocument();
+    expect(screen.getByText('Ice Beam freeze active: false')).toBeInTheDocument();
+    expect(screen.getByText('Enemy frozen: true')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/roll to see if you unfreeze/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(Math.random).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Enemy frozen: false')).toBeInTheDocument();
+    expect(screen.getByText('Battle actor: player')).toBeInTheDocument();
   });
 
   test('activates Roll Choice in battle and forces the next player roll once', () => {

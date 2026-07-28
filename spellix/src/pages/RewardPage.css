@@ -28,6 +28,10 @@
   margin-top: 0;
 }
 
+.reward-panel {
+  text-align: center;
+}
+
 .reward-panel--assignment {
   background-color: transparent;
   color: #F5FA00;
@@ -56,6 +60,13 @@
   flex: 1;
 }
 
+.battle-reward-item-display {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 60px;
+}
+
 .assignment-result-modal-actions {
   margin-top: auto;
   display: flex;
@@ -75,6 +86,11 @@
 .potion-assignment-actions {
   display: grid;
   gap: 15px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.potion-assignment-actions button {
+  width: 100%;
 }
 
 .potion-assignment-button {

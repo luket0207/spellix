@@ -1,5 +1,10 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShield, faSnowflake } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBolt,
+  faGavel,
+  faShield,
+  faSnowflake,
+} from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button/Button';
@@ -98,6 +103,8 @@ function BattlePage() {
     clearPlayerForcedRoll,
     finalizeBattleEffects,
     gameSetup,
+    resolveCosmicIntervention,
+    resolveShieldsDown,
     resolveBattleFreezeCheck,
     setActiveBattlePhase,
     setPlayerHealth,
@@ -222,9 +229,16 @@ function BattlePage() {
   const battleTitle = getBattleTitle(currentLanguage, battleEnemy);
   const isPlayerTurn = activeBattle.currentBattleActor !== 'enemy';
   const isFreezeCheck = isPlayerTurn ? activeBattle.playerFrozen : activeBattle.enemyFrozen;
+  const isCosmicInterventionPending = Boolean(
+    activeBattle.cosmicInterventionPending
+  );
+  const isShieldsDownPending = Boolean(activeBattle.shieldsDownPending);
+  const isPotionAnimationPending =
+    isCosmicInterventionPending || isShieldsDownPending;
   const isBattleDiceDisabled = Boolean(
     showTurnModal ||
       activeBattle.isResolvingTurn ||
+      isPotionAnimationPending ||
       !isActiveBattle ||
       !isPlayerTurn ||
       isBattleDiceRolling
@@ -232,6 +246,7 @@ function BattlePage() {
   const areBattlePotionsDisabled = Boolean(
     showTurnModal ||
       activeBattle.isResolvingTurn ||
+      isPotionAnimationPending ||
       activeBattle.playerPotionUsedThisTurn ||
       !isActiveBattle ||
       !isPlayerTurn ||
@@ -367,7 +382,27 @@ function BattlePage() {
       className="battle-page"
       style={{ backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})` }}
     >
-      <h1 className={`battle-title ${languageClassName}`}>{battleTitle}</h1>
+      <div className="battle-title-potions-panel">
+        <h1 className={`battle-title ${languageClassName}`}>{battleTitle}</h1>
+        <div className="battle-potions-bar">
+          <BattlePotionList
+            disabled={areBattlePotionsDisabled}
+            emptyText={potionUsageTranslations.noBattlePotions}
+            isPotionDisabled={(potion) =>
+              (potion.id === 'charger' && activeBattle.playerCharged) ||
+              (potion.id === 'shields-down' &&
+                (activeBattle.enemyGuard ?? 0) <= 0) ||
+              (potion.id === 'thaw' && !activeBattle.playerFrozen)
+            }
+            language={currentLanguage}
+            onUsePotion={(potion, potionIndex) =>
+              setPendingPotionUse({ potion, potionIndex })
+            }
+            potions={battlePlayer.potions}
+            useText={potionUsageTranslations.use}
+          />
+        </div>
+      </div>
 
       <div className="battle-display">
         {activeBattleEffect?.type === 'redDamage' ? (
@@ -468,6 +503,22 @@ function BattlePage() {
             ) : (
               <p aria-label="Battle enemy fallback">{enemyDisplayName}</p>
             )}
+            {isCosmicInterventionPending ? (
+              <FontAwesomeIcon
+                aria-label="Cosmic Intervention animation"
+                className="cosmic-intervention-bolt"
+                icon={faBolt}
+                onAnimationEnd={resolveCosmicIntervention}
+              />
+            ) : null}
+            {isShieldsDownPending ? (
+              <FontAwesomeIcon
+                aria-label="Shields Down animation"
+                className="shields-down-gavel"
+                icon={faGavel}
+                onAnimationEnd={resolveShieldsDown}
+              />
+            ) : null}
           </BattleActorImage>
           <HealthBar currentHealth={battleEnemy.currentHealth} maxHealth={battleEnemy.maxHealth} />
           <CommittedSpellSlotList
@@ -483,15 +534,6 @@ function BattlePage() {
       </div>
 
       <div className="battle-dice">
-        <BattlePotionList
-          disabled={areBattlePotionsDisabled}
-          language={currentLanguage}
-          onUsePotion={(potion, potionIndex) =>
-            setPendingPotionUse({ potion, potionIndex })
-          }
-          potions={battlePlayer.potions}
-          useText={potionUsageTranslations.use}
-        />
         {isFreezeCheck && !showTurnModal ? <p>Roll to see if you unfreeze</p> : null}
         <DiceRoll
           autoRoll={shouldAutoRollEnemy}
@@ -523,13 +565,25 @@ function BattlePage() {
 
       {/* DEBUG ONLY: Floating battle debug controls. Remove before production. */}
       <div className="battle-debug-controls">
-        <button type="button" disabled={!isActiveBattle} onClick={handleRemoveHealth}>
+        <button
+          type="button"
+          disabled={!isActiveBattle || isPotionAnimationPending}
+          onClick={handleRemoveHealth}
+        >
           Remove 5 health
         </button>
-        <button type="button" disabled={!isActiveBattle} onClick={handleWin}>
+        <button
+          type="button"
+          disabled={!isActiveBattle || isPotionAnimationPending}
+          onClick={handleWin}
+        >
           Win
         </button>
-        <button type="button" disabled={!isActiveBattle} onClick={handleLose}>
+        <button
+          type="button"
+          disabled={!isActiveBattle || isPotionAnimationPending}
+          onClick={handleLose}
+        >
           Lose
         </button>
         {/* DEBUG ONLY: Forced dice roll buttons for battle testing. Remove before production. */}

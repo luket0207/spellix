@@ -7,6 +7,8 @@ import './PotionUsage.css';
 
 function BattlePotionList({
   disabled = false,
+  emptyText = 'You have no battle potions at the moment',
+  isPotionDisabled = () => false,
   language = 'en',
   onUsePotion,
   potions = [],
@@ -17,36 +19,38 @@ function BattlePotionList({
     .map((potion, index) => ({ index, potion }))
     .filter(({ potion }) => canUsePotionInContext(potion, 'battle'));
 
-  if (usablePotions.length === 0) {
-    return null;
-  }
-
   return (
     <section aria-label="Battle potions" className="battle-potion-section">
-      {usablePotions.map(({ index, potion }) => (
-        <div className="battle-potion-card" key={`${potion.id}-${index}`}>
-          <div className="battle-potion-icon-row">
-            <PotionIcon
-              language={activeLanguage}
-              potion={potion}
-              showName={false}
-            />
+      {usablePotions.length === 0 ? (
+        <p className={`battle-potions-empty-text language-${activeLanguage}`}>
+          {emptyText}
+        </p>
+      ) : (
+        usablePotions.map(({ index, potion }) => (
+          <div className="battle-potion-card" key={`${potion.id}-${index}`}>
+            <div className="battle-potion-icon-row">
+              <PotionIcon
+                language={activeLanguage}
+                potion={potion}
+                showName={false}
+              />
+            </div>
+            <div className={`battle-potion-name language-${activeLanguage}`}>
+              {getPotionName(potion, activeLanguage)}
+            </div>
+            <div className="battle-potion-button-row">
+              <Button
+                className={`language-${activeLanguage}`}
+                disabled={disabled || isPotionDisabled(potion)}
+                type="button"
+                onClick={() => onUsePotion(potion, index)}
+              >
+                {useText}
+              </Button>
+            </div>
           </div>
-          <div className={`battle-potion-name language-${activeLanguage}`}>
-            {getPotionName(potion, activeLanguage)}
-          </div>
-          <div className="battle-potion-button-row">
-            <Button
-              className={`language-${activeLanguage}`}
-              disabled={disabled}
-              type="button"
-              onClick={() => onUsePotion(potion, index)}
-            >
-              {useText}
-            </Button>
-          </div>
-        </div>
-      ))}
+        ))
+      )}
     </section>
   );
 }

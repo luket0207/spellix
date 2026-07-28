@@ -1,0 +1,436 @@
+---
+
+Bug-001: Battle reward modal should show the awarded potion or token component
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Put battle potion reward panel inside a modal
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-011 Feature-003: Clean up Battle modals for turn display, loss punishment, and reward choice
+
+Bug Summary
+
+* The battle reward modal should clearly show which potion or token has been added.
+* The reward should not only be described with text.
+* It should also display the awarded item using its correct component.
+
+Expected Behaviour
+
+* If the battle reward is a potion:
+
+  * show the potion using the Potion component.
+  * include the potion name.
+  * include the potion tooltip.
+* If the battle reward is a token:
+
+  * show the token using the Token component.
+  * include the token name.
+  * include the token tooltip.
+* The item should appear inside the reward modal.
+* The reward text should remain centred.
+
+Potion Reward Requirement
+
+* When a potion is awarded after battle, the reward modal should display the awarded potion visually.
+* The Potion component should include:
+
+  * potion icon.
+  * potion name.
+  * tooltip with potion details.
+* The displayed potion should match the exact potion that was added to the player’s potion slots.
+
+Token Reward Requirement
+
+* When a token is awarded after battle, the reward modal should display the awarded token visually.
+* The Token component should include:
+
+  * token icon.
+  * token name.
+  * tooltip with token details.
+* The displayed token should match the exact token that was added to the player’s token bag or assignment flow.
+
+Suggested Structure
+
+```jsx id="wj9z3f"
+<div className="battle-reward-modal-content">
+  <p className={`larger-text ${languageClass}`}>
+    {rewardAddedText}
+  </p>
+
+  <div className="battle-reward-item-display">
+    {reward.type === "potion" ? (
+      <Potion potion={reward.potion} showName={true} showTooltip={true} />
+    ) : (
+      <TokenIcon token={reward.token} showName={true} showTooltip={true} />
+    )}
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="q0y6ih"
+.battle-reward-modal-content {
+  text-align: center;
+}
+
+.battle-reward-item-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 18px;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the awarded item is shown using the correct component with name and tooltip included.
+
+Translation Requirement
+
+* The item component should use the current language.
+* English should show English potion/token names and tooltips.
+* Japanese should show Japanese potion/token names and tooltips.
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to reward generation.
+* No changes to potion reward odds.
+* No changes to token reward odds.
+* No changes to reward assignment logic.
+* No changes to potion replacement rules.
+* No changes to token bag capacity rules.
+* No unrelated battle reward redesign.
+
+Testing Required
+
+* Win a battle and receive a potion reward.
+* Confirm the reward modal shows the awarded Potion component.
+* Confirm the potion name is visible.
+* Confirm the potion tooltip works.
+* Confirm the displayed potion matches the potion added to the player’s slots.
+* Win a battle and receive a token reward.
+* Confirm the reward modal shows the awarded Token component.
+* Confirm the token name is visible.
+* Confirm the token tooltip works.
+* Confirm the displayed token matches the token awarded to the player.
+* Confirm English item names and tooltips display correctly.
+* Confirm Japanese item names and tooltips display correctly.
+* Confirm reward text remains centred.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Reused the selected reward object already retained by the reward flow rather than adding reward state or changing assignment logic.
+* Reused the existing `PotionIcon` and `Token` components so names, tooltips, language fallback, and item visuals stay consistent.
+
+Final Fix
+
+* Successful potion and token reward results now render the exact selected item inside a centred `battle-reward-item-display`.
+* Potion results show the existing potion icon, localized name, and tooltip.
+* Token results show the existing token icon, localized name, and tooltip.
+* No list markup, reward generation, odds, capacity, replacement, or assignment behavior changed.
+
+---
+
+Bug-001: Full-slot potion assignment styling does not match its existing test contract
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-001: Put battle potion reward panel inside a modal
+
+Repro Steps
+
+1. Run `npx react-scripts test src/pages/RewardPage.test.jsx --watchAll=false --runInBand`.
+2. Observe the existing `replaces one selected potion when all potion slots are full` test.
+
+Expected Behaviour
+
+* The discard button has the existing `potion-assignment-button` class.
+* The full-slot action CSS includes the four-column and button-width rules already asserted by the test.
+
+Actual Behaviour
+
+* The discard button only has `potion-assignment-button-discard`.
+* The committed CSS does not contain the asserted four-column or shared button-width declarations.
+
+Suspected Cause
+
+* The older test contract and the full-slot assignment markup/styles drifted before EPIC-014 Feature-001.
+
+Attempted Fixes
+
+* Reproduced the existing RewardPage suite failure before editing: 24 tests passed and the full-slot replacement test failed on the discard button's missing shared class.
+* Added the existing `potion-assignment-button` class to the discard action while preserving its discard-specific class.
+* Restored the test-contracted four-column grid and full-width action-button declarations.
+
+Final Fix
+
+* All four full-slot actions now share `potion-assignment-button`.
+* `.potion-assignment-actions` uses `repeat(4, 1fr)`, and its buttons use `width: 100%`.
+* Potion replacement, discard, modal, translation, and reward-resolution logic are unchanged.
+
+---
+
+
+---
+
+Bug-002: Cosmic Intervention bolt icon should match the height of the opponent image
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement Cosmic Intervention battle potion behaviour
+
+Bug Summary
+
+* The lightning bolt icon used for the Cosmic Intervention animation is too small.
+* It is currently smaller than the opponent image it is laid over.
+* The bolt should be increased so its height matches the height of the character image it appears over.
+
+Expected Behaviour
+
+* When Cosmic Intervention is used, the yellow `faBolt` icon should appear over the opponent image.
+* The bolt should be centred over the opponent image.
+* The bolt should have the same height as the opponent image.
+* It should no longer use a fixed `100px` height if that makes it too small.
+
+Required Fix
+
+* Update the Cosmic Intervention animation sizing.
+* Replace the fixed `100px` bolt height with sizing based on the image it overlays.
+* The bolt should scale to match the opponent image height.
+
+Suggested CSS Direction
+
+```css id="jbrh0k"
+.cosmic-intervention-bolt {
+  height: 100%;
+}
+```
+
+* This assumes the animation wrapper is positioned over the opponent image container.
+* If the wrapper is larger than the image, use a more specific image-height value or CSS variable instead.
+
+Alternative Direction
+
+```css id="na9v91"
+.battle-character-image-wrapper {
+  --battle-character-image-height: 180px;
+}
+
+.cosmic-intervention-bolt {
+  height: var(--battle-character-image-height);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the bolt visually matches the height of the image it is laid over.
+
+Positioning Requirement
+
+* Preserve existing centring behaviour.
+* The bolt should remain centred to the opponent image.
+* Do not let the larger bolt shift up, down, left, or right.
+* The animation should still feel like it is striking the opponent.
+
+Animation Requirement
+
+* Preserve the existing Cosmic Intervention animation sequence:
+
+  * yellow `faBolt`.
+  * jittery flashing for about 1 second.
+  * fade out for about 0.5 seconds.
+  * total duration `1.5s`.
+  * damage applied after the animation.
+* Only the bolt size should change.
+
+Out Of Scope
+
+* No changes to Cosmic Intervention damage.
+* No changes to Guard handling.
+* No changes to lethal battle resolution.
+* No changes to animation timing.
+* No changes to battle button disabling.
+* No unrelated battle UI redesign.
+
+Testing Required
+
+* Use Cosmic Intervention in battle.
+* Confirm the yellow `faBolt` appears over the opponent.
+* Confirm the bolt is centred over the opponent image.
+* Confirm the bolt height matches the opponent image height.
+* Confirm the bolt is no longer too small.
+* Confirm the 1.5 second animation timing is unchanged.
+* Confirm damage is still applied after the animation.
+* Confirm Guard still absorbs damage correctly.
+* Confirm lethal damage still ends battle correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Updated the existing Cosmic Intervention regression to require `height: 100%`; it failed against the fixed `100px` rule before the CSS change.
+* Confirmed the bolt and enemy image share the existing 150px `battle-actor-image` wrapper and that the enemy image already uses `height: 100%`.
+
+Final Fix
+
+* Changed only `.cosmic-intervention-bolt` from `height: 100px` to `height: 100%`.
+* The bolt now matches the enemy image wrapper height while preserving its existing centring, colour, animation timing, damage resolution, Guard handling, lethal flow, and control locking.
+
+
+---
+
+Bug-003: Cosmic Intervention bolt SVG itself must match opponent image height
+
+Status
+
+* fixed
+
+Related Feature
+
+* Feature-004: Implement Cosmic Intervention battle potion behaviour
+* Bug-002: Cosmic Intervention bolt icon should match the height of the opponent image
+
+Bug Summary
+
+* Bug-002 is not fixed yet.
+* The Cosmic Intervention bolt still remains the same height.
+* The issue is likely that the wrapper or animation area has been resized, but the actual `faBolt` icon itself has not changed size.
+* The icon itself needs to be the same height as the opponent image it is over.
+
+Required Fix
+
+* Ensure the actual Font Awesome icon/SVG is resized.
+* Do not only resize the wrapper, container, or animation layer.
+* The visible yellow `faBolt` graphic itself should match the height of the opponent image.
+
+Expected Behaviour
+
+* When Cosmic Intervention is used, the yellow `faBolt` appears over the opponent.
+* The visible bolt icon itself is the same height as the opponent image.
+* The bolt remains centred over the opponent image.
+* The bolt animation timing remains unchanged.
+* Damage is still applied after the animation completes.
+
+Suggested Implementation Direction
+
+* Check whether the current CSS is only affecting the wrapper element.
+* Apply the height to the actual Font Awesome icon or SVG element.
+
+Example direction:
+
+```jsx id="cye9mz"
+<div className="cosmic-intervention-bolt-wrapper">
+  <FontAwesomeIcon
+    icon={faBolt}
+    className="cosmic-intervention-bolt-icon"
+  />
+</div>
+```
+
+```css id="jv7xcn"
+.cosmic-intervention-bolt-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: var(--battle-character-image-height);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cosmic-intervention-bolt-icon {
+  height: 100%;
+  width: auto;
+  color: #F5FA00;
+}
+```
+
+* If the project uses `font-size` to size Font Awesome icons, set the icon size using the opponent image height:
+
+```css id="0b1q4b"
+.cosmic-intervention-bolt-icon {
+  font-size: var(--battle-character-image-height);
+  color: #F5FA00;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the rendered `faBolt` SVG/icon itself becomes the same height as the opponent image.
+
+Important Distinction
+
+* This is not enough:
+
+```css id="pplgyv"
+.cosmic-intervention-bolt-wrapper {
+  height: 100%;
+}
+```
+
+* That may only make the wrapper bigger.
+* The actual icon inside the wrapper must also be resized.
+
+Animation Requirement
+
+* Preserve the existing Cosmic Intervention animation:
+
+  * yellow `faBolt`.
+  * centred over opponent image.
+  * jittery flashing for about 1 second.
+  * fade out for about 0.5 seconds.
+  * total duration `1.5s`.
+  * damage applied after the animation.
+* Only the visible icon size should change.
+
+Out Of Scope
+
+* No changes to Cosmic Intervention damage.
+* No changes to Guard handling.
+* No changes to lethal battle resolution.
+* No changes to animation timing.
+* No changes to battle button disabling.
+* No unrelated battle UI redesign.
+
+Testing Required
+
+* Use Cosmic Intervention in battle.
+* Inspect the rendered bolt visually.
+* Confirm the visible yellow `faBolt` icon itself is the same height as the opponent image.
+* Confirm the wrapper has not simply become larger while the icon remains small.
+* Confirm the bolt remains centred over the opponent image.
+* Confirm the 1.5 second animation timing is unchanged.
+* Confirm damage is still applied after the animation.
+* Confirm Guard still absorbs damage correctly.
+* Confirm lethal damage still ends battle correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a regression confirming the animation node is the Font Awesome `svg` itself and requiring image-relative sizing on that exact SVG selector.
+* Reproduced the bug before the CSS fix: the focused test failed because no higher-specificity bolt SVG sizing rule existed.
+
+Final Fix
+
+* Moved the image-relative size to `.battle-actor-image svg.cosmic-intervention-bolt`.
+* The actual rendered bolt SVG now uses `height: 100%` and `width: auto`, overriding Font Awesome's intrinsic icon sizing without adding a wrapper.
+* Existing centring, colour, 1.5-second animation, delayed damage, Guard handling, lethal flow, and battle control locking are unchanged.

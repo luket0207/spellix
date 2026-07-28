@@ -49,20 +49,58 @@ describe('BattlePotionList', () => {
     });
   });
 
-  test('renders nothing when there are no Battle-compatible potions', () => {
-    const { container } = render(
+  test('disables only potions rejected by their current battle state', () => {
+    const onUsePotion = jest.fn();
+    const charger = POTION_DEFINITIONS.find(({ id }) => id === 'charger');
+    const firstAid = POTION_DEFINITIONS.find(({ id }) => id === 'first-aid');
+
+    render(
       <BattlePotionList
+        isPotionDisabled={(potion) => potion.id === 'charger'}
+        onUsePotion={onUsePotion}
+        potions={[charger, firstAid]}
+      />
+    );
+
+    const section = screen.getByRole('region', { name: 'Battle potions' });
+    const chargerCard = within(section)
+      .getByText('Charger')
+      .closest('.battle-potion-card');
+    const firstAidCard = within(section)
+      .getByText('First Aid')
+      .closest('.battle-potion-card');
+
+    expect(within(chargerCard).getByRole('button', { name: 'Use' })).toBeDisabled();
+    expect(within(firstAidCard).getByRole('button', { name: 'Use' })).toBeEnabled();
+
+    fireEvent.click(
+      within(chargerCard).getByRole('button', { name: 'Use' })
+    );
+    expect(onUsePotion).not.toHaveBeenCalled();
+  });
+
+  test('renders the supplied empty state when there are no Battle-compatible potions', () => {
+    render(
+      <BattlePotionList
+        emptyText="No Battle potions"
         onUsePotion={jest.fn()}
         potions={[potions[0], potions[3]]}
       />
     );
 
-    expect(container).toBeEmptyDOMElement();
+    const section = screen.getByRole('region', { name: 'Battle potions' });
+
+    expect(within(section).getByText('No Battle potions')).toHaveClass(
+      'battle-potions-empty-text',
+      'language-en'
+    );
+    expect(section.querySelector('ul, li')).toBeNull();
   });
 
   test('keeps Spellbound and Triple Dice out of the Battle potion section', () => {
-    const { container } = render(
+    render(
       <BattlePotionList
+        emptyText="No Battle potions"
         onUsePotion={jest.fn()}
         potions={[
           POTION_DEFINITIONS.find(({ id }) => id === 'spellbound'),
@@ -71,7 +109,11 @@ describe('BattlePotionList', () => {
       />
     );
 
-    expect(container).toBeEmptyDOMElement();
+    const section = screen.getByRole('region', { name: 'Battle potions' });
+
+    expect(within(section).getByText('No Battle potions')).toBeInTheDocument();
+    expect(within(section).queryByText('Spellbound')).not.toBeInTheDocument();
+    expect(within(section).queryByText('Triple Dice')).not.toBeInTheDocument();
   });
 
   test('keeps cards aligned and avoids list markup', () => {

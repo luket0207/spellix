@@ -1,12 +1,20 @@
 import { readFileSync } from 'fs';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import { getPotionName, POTION_DEFINITIONS } from '../data/potions';
-import { TOKEN_DEFINITIONS } from '../data/tokens';
+import {
+  getPotionDescription,
+  getPotionName,
+  POTION_DEFINITIONS,
+} from '../data/potions';
+import { getTokenName, TOKEN_DEFINITIONS } from '../data/tokens';
 import { getBattleBackgroundSource } from '../features/battle/battleEnvironments';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../features/gameSetup/gameSetup';
-import { getCaveMiniGameTranslations } from '../i18n/translations';
+import {
+  getCaveMiniGameTranslations,
+  getRewardPageTranslations,
+  getSpellAssignmentTranslations,
+} from '../i18n/translations';
 import RewardPage from './RewardPage';
 
 jest.mock('../features/spells/SpellTokenAssignment', () => {
@@ -269,6 +277,7 @@ describe('RewardPage choice flow', () => {
     expect(stylesheet).toMatch(/\.reward-page\s*{[^}]*justify-content:\s*center;/s);
     expect(stylesheet).toMatch(/\.reward-page\s*{[^}]*background-size:\s*cover;/s);
     expect(stylesheet).toMatch(/\.battle-reward-panel\s*{[^}]*text-align:\s*center;/s);
+    expect(stylesheet).toMatch(/\.reward-panel\s*{[^}]*text-align:\s*center;/s);
     expect(stylesheet).toMatch(
       /\.reward-options\s*{[^}]*align-items:\s*stretch;[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s
     );
@@ -303,6 +312,9 @@ describe('RewardPage choice flow', () => {
     expect(stylesheet).toMatch(
       /\.assignment-result-modal-actions\s+button\s*{[^}]*width:\s*auto;/s
     );
+    expect(stylesheet).toMatch(
+      /\.battle-reward-item-display\s*{[^}]*align-items:\s*center;[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s
+    );
   });
 
   test('adds a selected potion from mixed choices, then continues with only that reward', () => {
@@ -310,12 +322,39 @@ describe('RewardPage choice flow', () => {
 
     chooseReward(1);
 
+    const potionRewardDialog = screen.getByRole('dialog', {
+      name: 'Reward potion added.',
+    });
+
+    expect(potionRewardDialog).toHaveClass(
+      'modal-panel',
+      'modal-panel--default',
+      'reward-panel',
+      'language-en'
+    );
+    expect(screen.getByTestId('modal-overlay')).toContainElement(potionRewardDialog);
+    expect(within(potionRewardDialog).queryByRole('list')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /assign reward/i })).toBeInTheDocument();
     expect(screen.queryByText(/Selected reward:/)).not.toBeInTheDocument();
     expect(screen.getByText('Selected choice: reward-choice-2')).toBeInTheDocument();
     expect(screen.getByText('Reward potion added.')).toBeInTheDocument();
     expect(screen.getByText('Reward destination: potionSlot')).toBeInTheDocument();
     expect(screen.getByText('Player 1 potions: Roll Choice')).toBeInTheDocument();
+    const awardedPotion = within(potionRewardDialog).getByRole('group', {
+      name: 'Roll Choice potion',
+    });
+
+    expect(awardedPotion).toHaveAccessibleDescription(
+      getPotionDescription(
+        POTION_DEFINITIONS.find(({ id }) => id === 'roll-choice'),
+        'en'
+      )
+    );
+    expect(within(potionRewardDialog).getByText('Roll Choice')).toHaveClass(
+      'potion-icon-name',
+      'language-en'
+    );
+    expect(awardedPotion.parentElement).toHaveClass('battle-reward-item-display');
     expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
     expect(screen.queryByText('Gameplay')).not.toBeInTheDocument();
@@ -328,6 +367,36 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByText('Next turn modal: pending')).toBeInTheDocument();
     expect(screen.getByText('Player 1 potions: Roll Choice')).toBeInTheDocument();
     expect(screen.getByText('Player 1 token bag: empty')).toBeInTheDocument();
+  });
+
+  test('shows a full-slot battle potion reward in the normal modal without list markup', () => {
+    renderRewardPage([], (setup) => {
+      setup.players[0].potions = [
+        createNamedPotion(0),
+        createNamedPotion(1),
+        createNamedPotion(2),
+      ];
+    });
+
+    chooseReward(1);
+
+    const potionRewardDialog = screen.getByRole('dialog', {
+      name: 'Potion slots are full',
+    });
+
+    expect(potionRewardDialog).toHaveClass(
+      'modal-panel',
+      'modal-panel--default',
+      'reward-panel',
+      'language-en'
+    );
+    expect(screen.getByTestId('modal-overlay')).toContainElement(potionRewardDialog);
+    expect(within(potionRewardDialog).getByText('Roll Choice')).toHaveClass(
+      'potion-icon-name',
+      'language-en'
+    );
+    expect(within(potionRewardDialog).getByText('Potion slots are full.')).toBeInTheDocument();
+    expect(within(potionRewardDialog).queryByRole('list')).not.toBeInTheDocument();
   });
 
   test('replaces one selected potion when all potion slots are full', () => {
@@ -403,6 +472,11 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByRole('group', { name: '出目選択 potion' })).toHaveAccessibleDescription(
       '次に振るサイコロの出目を選ぶ。'
     );
+    expect(
+      screen.getByRole('dialog', {
+        name: rewardGrantTranslations.potionSlotsFull,
+      })
+    ).toHaveClass('modal-panel', 'modal-panel--default', 'reward-panel', 'language-jp');
     expect(
       screen.getByText(`${rewardGrantTranslations.potionSlotsFull}.`)
     ).toBeInTheDocument();
@@ -668,6 +742,111 @@ describe('RewardPage choice flow', () => {
       expect(screen.getByText(`Reward destination: ${destination}`)).toBeInTheDocument();
     }
   );
+
+  test('shows the exact awarded token component, name, and tooltip in the result modal', () => {
+    renderRewardPage();
+
+    chooseReward();
+    fireEvent.click(screen.getByRole('button', { name: /simulate reward token bag drop/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    const rewardDialog = screen.getByRole('dialog', { name: 'Reward assignment' });
+    const awardedToken = within(rewardDialog).getByRole('img', {
+      name: 'Damage reward token',
+    });
+
+    expect(awardedToken).toHaveClass('token-display--red');
+    expect(awardedToken).toHaveAccessibleDescription(
+      TOKEN_DEFINITIONS.red.description.en
+    );
+    expect(screen.getByText('Player 1 token bag: player-1-red-1')).toBeInTheDocument();
+    expect(within(rewardDialog).getByText(getTokenName('red', 'en'))).toHaveClass(
+      'token-display-name',
+      'language-en'
+    );
+    expect(awardedToken.parentElement.parentElement).toHaveClass(
+      'battle-reward-item-display'
+    );
+    expect(within(rewardDialog).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  test('shows a Japanese awarded potion name and tooltip in the result modal', () => {
+    const rewardTranslations = getRewardPageTranslations('jp');
+    const rollChoicePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'roll-choice'
+    );
+
+    renderRewardPage([], (setup) => {
+      setup.players[0].language = 'jp';
+    });
+
+    chooseReward(1, rewardTranslations.choose);
+
+    const rewardDialog = screen.getByRole('dialog', {
+      name: rewardTranslations.potionAdded,
+    });
+    const awardedPotion = within(rewardDialog).getByRole('group', {
+      name: `${getPotionName(rollChoicePotion, 'jp')} potion`,
+    });
+
+    expect(awardedPotion).toHaveAccessibleDescription(
+      getPotionDescription(rollChoicePotion, 'jp')
+    );
+    expect(within(rewardDialog).getByText(getPotionName(rollChoicePotion, 'jp'))).toHaveClass(
+      'potion-icon-name',
+      'language-jp'
+    );
+  });
+
+  test('shows a Japanese awarded token name and tooltip in the result modal', () => {
+    const rewardTranslations = getRewardPageTranslations('jp');
+    const spellTranslations = getSpellAssignmentTranslations('jp');
+
+    renderRewardPage([], (setup) => {
+      setup.players[0].language = 'jp';
+    });
+
+    chooseReward(0, rewardTranslations.choose);
+    fireEvent.click(screen.getByRole('button', { name: /simulate reward token bag drop/i }));
+    fireEvent.click(screen.getByRole('button', { name: spellTranslations.confirm }));
+
+    const rewardDialog = screen.getByRole('dialog', { name: 'Reward assignment' });
+    const awardedToken = within(rewardDialog).getByRole('img', {
+      name: `${getTokenName('red', 'jp')} reward token`,
+    });
+
+    expect(awardedToken).toHaveAccessibleDescription(
+      TOKEN_DEFINITIONS.red.description.jp
+    );
+    expect(within(rewardDialog).getByText(getTokenName('red', 'jp'))).toHaveClass(
+      'token-display-name',
+      'language-jp'
+    );
+  });
+
+  test('uses English awarded-item content when the player language is invalid', () => {
+    const rollChoicePotion = POTION_DEFINITIONS.find(
+      ({ id }) => id === 'roll-choice'
+    );
+
+    renderRewardPage([], (setup) => {
+      setup.players[0].language = 'invalid';
+    });
+
+    chooseReward(1);
+
+    const awardedPotion = screen.getByRole('group', {
+      name: 'Roll Choice potion',
+    });
+
+    expect(awardedPotion).toHaveAccessibleDescription(
+      getPotionDescription(rollChoicePotion, 'en')
+    );
+    expect(screen.getByText('Roll Choice')).toHaveClass(
+      'potion-icon-name',
+      'language-en'
+    );
+  });
 
   test('uses Japanese reward assignment labels, status, confirmation, and completion copy', () => {
     renderRewardPage([], (setup) => {

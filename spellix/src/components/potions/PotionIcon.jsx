@@ -10,19 +10,22 @@ function PotionIcon({
   language = 'en',
   potion,
   showName = true,
+  showTooltip = true,
 }) {
   const descriptionId = useId();
   const activeLanguage = language === 'jp' ? 'jp' : 'en';
   const description = getPotionDescription(potion, activeLanguage);
+  const tooltipDescription = showTooltip ? description : '';
   const name = getPotionName(potion, activeLanguage);
 
   return (
     <span
-      aria-describedby={descriptionId}
+      aria-describedby={tooltipDescription ? descriptionId : undefined}
       aria-label={`${name} potion`}
       className={`potion-icon potion-icon--glow potion-icon--${potion.colour}`}
       role="group"
-      tabIndex={focusable ? 0 : undefined}
+      tabIndex={tooltipDescription && focusable ? 0 : undefined}
+      title={tooltipDescription || undefined}
     >
       <span
         aria-hidden={iconOverlay ? undefined : 'true'}
@@ -34,13 +37,15 @@ function PotionIcon({
       {showName ? (
         <span className={`potion-icon-name language-${activeLanguage}`}>{name}</span>
       ) : null}
-      <span
-        className={`potion-icon-tooltip language-${activeLanguage}`}
-        id={descriptionId}
-        role="tooltip"
-      >
-        {description}
-      </span>
+      {tooltipDescription ? (
+        <span
+          className={`potion-icon-tooltip language-${activeLanguage}`}
+          id={descriptionId}
+          role="tooltip"
+        >
+          {tooltipDescription}
+        </span>
+      ) : null}
     </span>
   );
 }

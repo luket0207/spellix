@@ -36,6 +36,7 @@ const POTION_USAGE_TRANSLATIONS = {
       'You have no tokens in your token bag, so this potion cannot be used. The potion was added back to your potion slots.',
     descriptionTitle: 'Potion Description',
     no: 'No',
+    noBattlePotions: 'You have no battle potions at the moment',
     rollChoiceQuestion: 'What do you want the next roll of the dice to be?',
     tokensmithConfirmation:
       'Are you sure you want to move this token back to your token bag?',
@@ -65,6 +66,8 @@ const POTION_USAGE_TRANSLATIONS = {
     descriptionTitle:
       '\u30dd\u30fc\u30b7\u30e7\u30f3\u306e\u8aac\u660e',
     no: '\u3044\u3044\u3048',
+    noBattlePotions:
+      '\u73fe\u5728\u3001\u30d0\u30c8\u30eb\u7528\u30dd\u30fc\u30b7\u30e7\u30f3\u3092\u6301\u3063\u3066\u3044\u307e\u305b\u3093\u3002',
     rollChoiceQuestion:
       '\u6b21\u306e\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u3092\u3044\u304f\u3064\u306b\u3057\u307e\u3059\u304b\uff1f',
     tokensmithConfirmation:

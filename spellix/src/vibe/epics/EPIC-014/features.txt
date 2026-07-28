@@ -1,0 +1,1461 @@
+---
+
+Feature-001: Put battle potion reward panel inside a modal
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+* EPIC-011 Feature-003: Clean up Battle modals for turn display, loss punishment, and reward choice
+
+Goal
+
+* Clean up the battle reward panel when awarding a potion after battle.
+* The reward panel should be displayed inside a modal.
+* The text inside the reward panel should be centred.
+
+Scope
+
+* Update the battle reward panel used after battle when awarding a potion.
+* Wrap the reward panel content inside the normal modal presentation.
+* Centre the reward panel text.
+* Preserve existing battle reward logic.
+
+Reward Panel Modal Requirement
+
+* When a potion is awarded in the `reward-panel` after battle, the `reward-panel` should appear inside a modal.
+* The modal should use the existing modal style:
+
+  * wooden background.
+  * yellow text.
+  * correct English/Japanese fonts.
+  * centred content.
+  * no `ul` or `li`.
+
+Text Alignment Requirement
+
+* The text inside the reward panel should be centred.
+* This includes:
+
+  * reward heading.
+  * potion name.
+  * any explanatory text.
+  * any success/result text.
+
+Suggested CSS Direction
+
+```css id="d4w1sb"
+.reward-panel {
+  text-align: center;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the battle potion reward panel is inside a modal and its text is centred.
+
+Out Of Scope
+
+* No changes to battle reward generation.
+* No changes to potion reward odds.
+* No changes to potion replacement logic.
+* No changes to token rewards.
+* No unrelated battle reward redesign.
+
+Testing Checkpoints
+
+* Win a battle and receive a potion reward.
+* Confirm the reward panel appears inside a modal.
+* Confirm the modal uses the wooden background.
+* Confirm reward text is centred.
+* Confirm English font displays correctly.
+* Confirm Japanese font displays correctly.
+* Confirm the potion award flow still works.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing shared `Modal` for normal battle potion reward results and full-slot replacement choices.
+* Kept token rewards and cave/loot reward presentation unchanged.
+* Added the requested centred `.reward-panel` text rule without adding new visual decisions.
+* Preserved existing potion award, replacement, discard, Continue, and turn-advance logic.
+* Added focused English/Japanese, modal, alignment, list-free markup, and reward-flow coverage.
+* Created no new components, routes, dependencies, or abstractions.
+* Recorded the unrelated pre-existing full-slot styling test mismatch in `bugs.txt` rather than changing it in this feature.
+
+---
+
+Feature-002: Implement Ice Beam battle potion behaviour
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-006 Feature-002: Add dice-driven battle turns
+
+Goal
+
+* Implement the behaviour of the battle potion `Ice Beam`.
+* When used in battle, Ice Beam immediately freezes the opponent.
+* Frozen should behave exactly the same as it does from existing freeze effects.
+* The opponent should receive the usual frozen animation.
+* If Ice Beam has already frozen the opponent this turn, a rolled freeze token should not be consumed for doing nothing.
+
+Behaviour Summary
+
+```txt id="hr7as6"
+Ice Beam: immediately freeze your opponent.
+```
+
+Trigger Requirement
+
+* Ice Beam is a Battle potion.
+* It should be triggered from the battle potion section using the existing Use button and potion confirmation modal.
+* After the player confirms use:
+
+  * remove Ice Beam from the player’s potion slots.
+  * mark the battle potion use for this battle turn.
+  * immediately apply frozen status to the opponent.
+  * show the normal frozen animation on the opponent.
+
+Frozen Status Requirement
+
+* Ice Beam should apply the same frozen status used by existing freeze mechanics.
+* Frozen should last until:
+
+  * the opponent ends their turn.
+  * or the opponent successfully rolls to remove it, if that is already how frozen behaviour works.
+* Do not create a separate Ice Beam-only frozen state if the existing frozen state can be reused.
+
+Frozen Animation Requirement
+
+* The opponent should have the usual frozen animation applied.
+* Use the same visual effect that already happens when a freeze token freezes an opponent.
+* Do not create a separate Ice Beam animation unless technically necessary.
+
+Freeze Token Non-Consumption Requirement
+
+* If the player uses Ice Beam and then rolls a column that would also freeze the opponent, the freeze token should not be used up on that turn.
+* The freeze token is technically doing nothing because the opponent is already frozen.
+* Therefore, it should remain available for a future turn.
+
+Example
+
+```txt id="z9i6xd"
+Player uses Ice Beam.
+Opponent becomes frozen.
+
+Player then rolls a column containing a freeze token.
+The freeze token would normally freeze the opponent.
+However, the opponent is already frozen because of Ice Beam.
+
+Result:
+The freeze token is not consumed.
+```
+
+Suggested Logic Direction
+
+```js id="aqq9bw"
+if (tokenEffect === "freeze") {
+  if (target.isFrozen && battleTurnState.freezeAppliedByIceBeamThisTurn) {
+    return {
+      applyEffect: false,
+      consumeToken: false
+    };
+  }
+
+  return {
+    applyEffect: true,
+    consumeToken: true
+  };
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that freeze tokens are not consumed when Ice Beam has already made their effect redundant.
+
+Expected Behaviour
+
+* Ice Beam appears in the battle potion section when owned.
+* Ice Beam can be used during the player’s battle turn.
+* Confirming Ice Beam consumes the potion.
+* The opponent immediately becomes frozen.
+* The usual frozen animation appears on the opponent.
+* Frozen status behaves normally.
+* If a freeze column is rolled later that same turn, the freeze token is not consumed if it would do nothing.
+* Battle continues normally after Ice Beam is used.
+
+Out Of Scope
+
+* No changes to general frozen rules.
+* No changes to freeze token power.
+* No changes to battle dice logic.
+* No new Ice Beam-specific animation.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Give the player Ice Beam in battle.
+* Confirm Ice Beam appears in the battle potion section.
+* Use Ice Beam.
+* Confirm the potion confirmation modal appears.
+* Confirm choosing No does not consume Ice Beam.
+* Confirm choosing Yes consumes Ice Beam.
+* Confirm the opponent immediately becomes frozen.
+* Confirm the usual frozen animation appears.
+* Confirm the opponent’s frozen behaviour works normally.
+* Use Ice Beam, then roll a freeze-token column.
+* Confirm the freeze token is not consumed if the opponent is already frozen by Ice Beam.
+* Confirm freeze tokens still consume normally when they actually apply frozen status.
+* Confirm battle potion one-use-per-turn rules still apply.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing Battle potion list, potion confirmation modal, potion consumption path, `enemyFrozen` state, freeze checks, and snowflake overlay.
+* Confirming Ice Beam now consumes the potion, records the player's Battle potion use, and immediately freezes the opponent.
+* Added a turn-scoped `freezeAppliedByIceBeamThisTurn` marker so a redundant same-turn Light Blue freeze does not consume an available use.
+* Clear the marker when the player's battle turn ends, including a failed player freeze-check transition.
+* Preserved normal freeze-token consumption when the token actually applies frozen status.
+* Added no new animation, component, route, dependency, or unrelated battle UI change.
+
+---
+
+Feature-003: Implement Charger battle potion behaviour
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-006 Feature-002: Add dice-driven battle turns
+
+Goal
+
+* Implement the behaviour of the battle potion `Charger`.
+* When used in battle, it charges all columns for the current turn only.
+* At the end of the turn, once the additional bonus has been added, the charge is removed.
+* If the player already has their columns charged this turn, Charger should be disabled because the effect cannot stack.
+
+Behaviour Summary
+
+```txt id="ssmz50"
+Charger: charge all your attacks this turn.
+```
+
+Trigger Requirement
+
+* Charger is a Battle potion.
+* It should be triggered from the battle potion section using the existing Use button and potion confirmation modal.
+* After the player confirms use:
+
+  * remove Charger from the player’s potion slots.
+  * mark the battle potion use for this battle turn.
+  * charge all of the player’s columns for this turn only.
+
+Charge Requirement
+
+* Charger should apply the same charged state used by existing charge mechanics.
+* All player spell columns should become charged.
+* The player’s columns should change to the usual yellow colour that shows they are charged.
+* This should visually match the charge state caused by Charge tokens.
+
+Duration Requirement
+
+* Charger lasts only for the turn in which it is used.
+* At the end of the player’s current battle turn:
+
+  * apply the charge bonus as normal.
+  * then remove the charge.
+* The charge should not continue into the player’s next battle turn.
+
+Disable Requirement
+
+* If the player already has their columns charged this turn, the Use button for Charger should be disabled.
+* Disabled Charger should:
+
+  * remain visible if the player owns it.
+  * not open the confirmation modal.
+  * not consume the potion.
+  * not count as the player’s battle potion use.
+
+Suggested Check
+
+```js id="kev5zh"
+const canUseCharger = !playerBattleState.columnsChargedThisTurn;
+```
+
+Animation Requirement
+
+* No animation needs to happen.
+* The only visual update required is the normal yellow charged column state.
+
+Expected Behaviour
+
+* Charger appears in the battle potion section when owned.
+* Charger can be used on the player’s battle turn if columns are not already charged.
+* Confirming Charger consumes the potion.
+* All columns become charged.
+* Charged columns use the usual yellow styling.
+* Charge bonus is applied normally.
+* Charge is removed at the end of the current turn.
+* Charger Use button is disabled if columns are already charged.
+* Charger effect does not stack.
+
+Out Of Scope
+
+* No new charge animation.
+* No changes to Charge token logic.
+* No changes to charge bonus amount.
+* No changes to battle dice logic.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Give the player Charger in battle.
+* Confirm Charger appears in the battle potion section.
+* Use Charger while columns are not charged.
+* Confirm the potion is consumed.
+* Confirm all columns become yellow/charged.
+* Roll and resolve battle normally.
+* Confirm charge bonus is applied.
+* Confirm charge is removed at the end of the turn.
+* Start a turn where columns are already charged.
+* Confirm Charger Use button is disabled.
+* Confirm disabled Charger cannot be used.
+* Confirm disabled Charger is not consumed.
+* Confirm disabled Charger does not count as the battle potion used this turn.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing Battle potion list and confirmation flow for Charger.
+* Confirming Charger consumes the potion, records the Battle potion use, and sets the existing `playerCharged` battle state.
+* Reused the usual yellow charged-column styling, `+10` charge bonus, and current-turn cleanup.
+* Charger remains visible but its Use button is disabled when the player is already charged; other usable Battle potions remain enabled.
+* Added a context-level guard so a duplicate Charger request cannot consume the potion, record usage, or stack the charge.
+* Added no animation, route, dependency, charge-rule change, dice-rule change, or unrelated UI change.
+
+---
+
+Feature-004: Implement Cosmic Intervention battle potion behaviour
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-007 Feature-003: Add battle reward generation and reward assignment flow
+
+Goal
+
+* Implement the behaviour of the battle potion `Cosmic Intervention`.
+* When used in battle, it immediately applies 10 damage to the opponent.
+* Guard should absorb this damage before health is reduced.
+* If the potion kills the opponent, the battle should end as if a normal attack killed them.
+* A yellow lightning bolt animation should play before damage is applied.
+
+Behaviour Summary
+
+```txt id="6teieg"
+Cosmic Intervention: deal 10 damage to your opponent.
+```
+
+Trigger Requirement
+
+* Cosmic Intervention is a Battle potion.
+* It should be triggered from the battle potion section using the existing Use button and potion confirmation modal.
+* After the player confirms use:
+
+  * remove Cosmic Intervention from the player’s potion slots.
+  * mark the battle potion use for this battle turn.
+  * disable battle buttons.
+  * play the lightning animation over the opponent.
+  * apply 10 damage after the animation finishes.
+  * re-enable battle controls only if the battle continues and it is still appropriate.
+
+Damage Requirement
+
+* Cosmic Intervention deals:
+
+```txt id="0pgukq"
+10 damage
+```
+
+* Guard must be taken into account.
+* If the opponent has Guard, damage should reduce Guard before health.
+
+Example
+
+```txt id="epzeqd"
+Opponent Guard: 15
+Cosmic Intervention damage: 10
+
+Result:
+Opponent Guard becomes 5.
+Opponent health is unchanged.
+```
+
+* If Guard is lower than 10, remaining damage should apply to health.
+* If Guard is 0, all 10 damage applies to health.
+
+Lethal Damage Requirement
+
+* If Cosmic Intervention reduces the opponent’s health to 0:
+
+  * end battle using the normal battle death/win flow.
+  * apply the same reward/result behaviour as if a normal attack killed the opponent.
+* Do not create a separate potion-kill flow.
+
+Battle Button Disable Requirement
+
+* All battle buttons should be disabled while the Cosmic Intervention animation is playing.
+* This includes:
+
+  * dice roll buttons.
+  * potion Use buttons.
+  * any debug battle buttons if they would affect battle state.
+* Buttons should re-enable after the animation and damage resolution only if the battle has not ended.
+
+Animation Requirement
+
+* Use Font Awesome icon:
+
+```txt id="m70zdj"
+faBolt
+```
+
+* The icon should be yellow.
+* The icon should be centred over the opponent’s character image.
+* The icon should be `100px` high.
+* Total animation duration should be `1.5s`.
+
+Animation Sequence
+
+```txt id="pu5eco"
+0.0s to 1.0s:
+Jittery flashing like a lightning bolt.
+
+1.0s to 1.5s:
+Fade out.
+
+After 1.5s:
+Apply damage.
+```
+
+Suggested CSS Direction
+
+```css id="h7yhzt"
+.cosmic-intervention-bolt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  color: #F5FA00;
+  animation: cosmicInterventionBolt 1.5s linear forwards;
+  pointer-events: none;
+}
+
+@keyframes cosmicInterventionBolt {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-4deg);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translate(-48%, -52%) rotate(5deg);
+  }
+
+  20% {
+    opacity: 0.25;
+    transform: translate(-51%, -49%) rotate(-6deg);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translate(-49%, -51%) rotate(4deg);
+  }
+
+  40% {
+    opacity: 0.35;
+    transform: translate(-52%, -48%) rotate(-5deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(3deg);
+  }
+
+  66% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+}
+```
+
+* Exact keyframes can vary.
+* The important requirements are:
+
+  * yellow `faBolt`.
+  * `100px` height.
+  * centred on opponent image.
+  * 1 second of jittery flashing.
+  * 0.5 seconds of fade out.
+  * damage applied after the animation.
+
+Expected Behaviour
+
+* Cosmic Intervention appears in the battle potion section when owned.
+* Confirming use consumes the potion.
+* Battle buttons disable during animation.
+* A yellow `faBolt` flashes over the opponent.
+* Animation lasts 1.5 seconds.
+* Damage is applied after the animation.
+* Guard absorbs damage first.
+* Health is reduced only after Guard is depleted.
+* If damage kills the opponent, battle ends normally.
+* If battle continues, the player can continue their turn after resolution.
+
+Out Of Scope
+
+* No changes to normal attack damage.
+* No changes to Guard mechanics.
+* No changes to battle reward generation.
+* No new death flow.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Give the player Cosmic Intervention in battle.
+* Use Cosmic Intervention.
+* Confirm the potion is consumed.
+* Confirm battle buttons disable during animation.
+* Confirm yellow `faBolt` appears over the opponent.
+* Confirm the bolt is centred on the opponent image.
+* Confirm the bolt is 100px high.
+* Confirm the animation lasts 1.5 seconds.
+* Confirm damage is not applied until after the animation.
+* Test opponent with 15 Guard.
+* Confirm Guard becomes 5 and health is unchanged.
+* Test opponent with 5 Guard.
+* Confirm Guard becomes 0 and health loses 5.
+* Test opponent with no Guard.
+* Confirm health loses 10.
+* Test lethal damage.
+* Confirm battle ends using the normal battle win flow.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing Battle potion list and confirmation modal for Cosmic Intervention.
+* Confirming use consumes the potion, records Battle potion use, and stores a pending Cosmic Intervention effect in the active battle state.
+* Added the required yellow `faBolt` overlay to the existing enemy image wrapper with a 1.5-second jitter-and-fade animation.
+* Disabled the existing dice, potion, forced-roll, and battle debug controls while the effect is pending.
+* Resolving the animation applies 10 damage through enemy Guard before health and clears the pending effect.
+* Lethal damage reuses the normal won-battle setup and reward flow.
+* Added no new component, route, dependency, damage rule, Guard rule, reward flow, or unrelated UI change.
+
+---
+
+Feature-005: Implement Shields Down battle potion behaviour
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-006 Feature-002: Add dice-driven battle turns
+
+Goal
+
+* Implement the behaviour of the battle potion `Shields Down`.
+* When used in battle, it removes all Guard from the opponent.
+* It never deals actual health damage.
+* If the opponent has no Guard, the Use button should be disabled.
+* A yellow gavel animation should play before the Guard is removed.
+
+Behaviour Summary
+
+```txt id="h66mn1"
+Shields Down: remove all guard from your opponent this turn.
+```
+
+Trigger Requirement
+
+* Shields Down is a Battle potion.
+* It should be triggered from the battle potion section using the existing Use button and potion confirmation modal.
+* After the player confirms use:
+
+  * remove Shields Down from the player’s potion slots.
+  * mark the battle potion use for this battle turn.
+  * disable battle buttons.
+  * play the gavel animation over the opponent.
+  * remove all opponent Guard when the animation reaches the correct point.
+  * allow the player to continue their turn afterward.
+
+Guard Removal Requirement
+
+* Shields Down removes all Guard from the opponent.
+* It does not matter how much Guard the opponent has.
+* Examples:
+
+  * opponent has 5 Guard, Guard becomes 0.
+  * opponent has 50 Guard, Guard becomes 0.
+  * opponent has 100 Guard, Guard becomes 0.
+* Shields Down should never reduce health.
+
+Example
+
+```txt id="yowu2i"
+Opponent Guard: 50
+Opponent health: 10
+
+Shields Down result:
+Opponent Guard becomes 0.
+Opponent health remains 10.
+```
+
+Disable Requirement
+
+* If the opponent has no Guard, the Use button for Shields Down should be disabled.
+* Disabled Shields Down should:
+
+  * remain visible if the player owns it.
+  * not open the confirmation modal.
+  * not consume the potion.
+  * not count as the player’s battle potion use.
+
+Battle Button Disable Requirement
+
+* All battle buttons should be disabled while the Shields Down animation is playing.
+* This includes:
+
+  * dice roll buttons.
+  * potion Use buttons.
+  * any debug battle buttons if they would affect battle state.
+* Buttons should re-enable after the animation if battle continues and it is still the player’s turn.
+
+Animation Requirement
+
+* Use Font Awesome icon:
+
+```txt id="nf1n5h"
+faGavel
+```
+
+* The icon should be yellow.
+* The icon should be `100px` high.
+* The icon should animate over the opponent’s image.
+* Total animation duration should be `1.5s`.
+
+Animation Sequence
+
+```txt id="zu79nv"
+0.0s to 1.0s:
+The gavel fades in and travels down from the top of the opponent’s image to the centre.
+
+1.0s to 1.5s:
+The gavel flashes twice using quick fades.
+The opponent’s shield icon disappears with the gavel.
+```
+
+* Guard should be removed when the icon reaches the centre and flashes, or at the end of the animation.
+* The shield icon and gavel should disappear together in the final 0.5 seconds.
+
+Suggested CSS Direction
+
+```css id="bncdrn"
+.shields-down-gavel {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100px;
+  color: #F5FA00;
+  transform: translate(-50%, -100%);
+  animation: shieldsDownGavel 1.5s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes shieldsDownGavel {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  66% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  76% {
+    opacity: 0.15;
+    transform: translate(-50%, -50%);
+  }
+
+  86% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  94% {
+    opacity: 0.15;
+    transform: translate(-50%, -50%);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+```
+
+* Exact keyframes can vary.
+* The important requirements are:
+
+  * yellow `faGavel`.
+  * `100px` height.
+  * fade in.
+  * travel from top to centre for 1 second.
+  * flash twice in the final 0.5 seconds.
+  * shield icon disappears with it.
+
+Expected Behaviour
+
+* Shields Down appears in the battle potion section when owned.
+* Shields Down Use button is disabled if opponent has no Guard.
+* Confirming use consumes the potion.
+* Battle buttons disable during animation.
+* Yellow `faGavel` travels down over opponent image.
+* Gavel reaches centre after about 1 second.
+* Gavel flashes twice in the final 0.5 seconds.
+* Opponent Guard becomes 0.
+* Opponent health is unchanged.
+* Shield icon disappears with the gavel.
+* Player can continue their turn after the animation.
+
+Out Of Scope
+
+* No damage to health.
+* No changes to Guard generation.
+* No changes to normal attack behaviour.
+* No changes to battle win/loss logic.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Give the player Shields Down in battle.
+* Test opponent with no Guard.
+* Confirm Shields Down Use button is disabled.
+* Confirm disabled Shields Down cannot be used.
+* Test opponent with 5 Guard.
+* Use Shields Down.
+* Confirm the potion is consumed.
+* Confirm battle buttons disable during animation.
+* Confirm yellow `faGavel` appears.
+* Confirm the gavel is 100px high.
+* Confirm the gavel moves from top to centre.
+* Confirm the gavel flashes twice.
+* Confirm the animation lasts 1.5 seconds.
+* Confirm Guard becomes 0.
+* Confirm health is unchanged.
+* Test opponent with 50 Guard.
+* Confirm all Guard is removed.
+* Confirm the shield icon disappears with the gavel.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing Battle potion list, confirmation modal, potion consumption path, one-potion-per-turn state, enemy Guard state, opponent image wrapper, and battle control locking pattern.
+* Shields Down remains visible but is disabled when the opponent has no Guard; disabled use cannot open confirmation, consume the potion, or record potion use.
+* Confirming an eligible use consumes Shields Down, records Battle potion use, and starts a pending gavel effect.
+* Added the required yellow `faGavel` overlay at an actual SVG height of `100px`, with the specified 1.5-second top-to-centre travel and final two flashes.
+* Animation completion removes all enemy Guard and clears the shield and gavel together without changing enemy health.
+* Added no component, route, dependency, Guard-generation change, attack change, win/loss change, or unrelated battle UI work.
+
+---
+
+Feature-006: Implement Thaw battle potion behaviour
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* Feature-002: Implement Ice Beam battle potion behaviour
+
+Goal
+
+* Implement the behaviour of the battle potion `Thaw`.
+* Thaw allows the player to automatically unfreeze themselves if they are frozen.
+* It should be used before the normal roll check that decides whether the player can attack while frozen.
+* If the player is not currently frozen, the Use button should be disabled.
+
+Behaviour Summary
+
+```txt id="xzpgj6"
+Thaw: automatically unfreeze yourself.
+```
+
+Trigger Requirement
+
+* Thaw is a Battle potion.
+* It should be triggered from the battle potion section using the existing Use button and potion confirmation modal.
+* After the player confirms use:
+
+  * remove Thaw from the player’s potion slots.
+  * mark the battle potion use for this battle turn.
+  * remove frozen status from the player.
+  * allow the player to attack as if they had successfully passed the frozen roll check.
+
+Frozen Check Timing Requirement
+
+* Thaw should be usable before the roll check that determines whether a frozen player can attack.
+* If the player uses Thaw:
+
+  * do not perform the frozen escape roll.
+  * treat it as if the frozen escape roll was automatically successful.
+  * remove frozen status immediately.
+  * allow the player to continue their battle turn normally.
+
+Required Behaviour
+
+```txt id="r6ww94"
+Frozen player starts their battle turn.
+Player uses Thaw.
+Frozen status is removed.
+No frozen escape roll is needed.
+Player may attack normally.
+```
+
+Disable Requirement
+
+* If the player is not currently frozen, the Use button for Thaw should be disabled.
+* Disabled Thaw should:
+
+  * remain visible if the player owns it.
+  * not open the confirmation modal.
+  * not consume the potion.
+  * not count as the player’s battle potion use.
+
+Battle Potion Limit Requirement
+
+* If Thaw is successfully used, it counts as the player’s one battle potion for that battle turn.
+* If Thaw is disabled because the player is not frozen, it should not count as used.
+* If the player cancels the confirmation modal, it should not count as used.
+
+Animation Requirement
+
+* No new animation is required unless existing unfreeze behaviour already has one.
+* If the normal successful unfreeze effect has a visual cue, reuse it.
+* Do not create a new Thaw-specific animation in this feature.
+
+Expected Behaviour
+
+* Thaw appears in the battle potion section when owned.
+* Thaw Use button is enabled only when the player is frozen.
+* Using Thaw consumes the potion.
+* Using Thaw removes frozen status.
+* Using Thaw skips the frozen escape roll.
+* The player can attack normally after using Thaw.
+* If the player is not frozen, Thaw is disabled and cannot be consumed.
+
+Out Of Scope
+
+* No changes to general frozen rules.
+* No changes to Ice Beam except normal frozen interaction.
+* No changes to frozen animation unless reused.
+* No changes to battle dice logic except skipping the frozen escape roll after Thaw.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Give the player Thaw while they are not frozen.
+* Confirm Thaw appears but its Use button is disabled.
+* Confirm disabled Thaw cannot be used.
+* Freeze the player.
+* Confirm Thaw Use button becomes enabled.
+* Use Thaw.
+* Confirm the confirmation modal appears.
+* Confirm choosing No does not consume Thaw.
+* Confirm choosing Yes consumes Thaw.
+* Confirm frozen status is removed.
+* Confirm no frozen escape roll happens.
+* Confirm the player can attack normally.
+* Confirm Thaw counts as the battle potion used this turn after successful use.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing Battle potion list, confirmation modal, potion consumption path, one-potion-per-turn state, `playerFrozen` battle state, freeze-check prompt, and snowflake exit animation.
+* Thaw remains visible but its Use button is disabled while the player is not frozen; disabled use cannot open confirmation, consume the potion, or record potion use.
+* Cancelling the existing confirmation leaves Thaw, frozen state, the escape-check prompt, and potion-use availability unchanged.
+* Confirming Thaw consumes it, records Battle potion use, immediately clears `playerFrozen`, and removes the escape-check prompt while keeping the current actor on the player.
+* The next dice roll resolves as a normal attack without performing a frozen escape roll.
+* Added no state field, animation, component, route, dependency, general freeze-rule change, Ice Beam change, or unrelated battle UI work.
+
+
+---
+
+Feature-007: Make potion tooltips follow the same cursor-based behaviour as token tooltips
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-007 Feature-004: Add global TokenIcon component
+* EPIC-011 Feature-005: Replace potion data with revamped source-of-truth potion table
+* EPIC-012 Feature-003: Replace potion data with updated EPIC-012 source-of-truth table
+* EPIC-014 Bug-001: Battle reward modal should show the awarded potion or token component
+
+Goal
+
+* Improve potion tooltip behaviour.
+* Potion tooltips should appear next to the cursor.
+* Potion tooltips should behave in the same way token tooltips currently behave.
+* Potion tooltips should no longer appear at the bottom of the page.
+
+Bug / UX Summary
+
+* Potion tooltips currently appear at the bottom of the page for some reason.
+* This makes them feel disconnected from the potion being hovered.
+* Token tooltips already behave correctly by appearing next to the cursor.
+* Potion tooltips should use the same approach.
+
+Scope
+
+* Update potion tooltip positioning.
+* Reuse token tooltip logic where possible.
+* Ensure potion tooltips appear beside the cursor.
+* Ensure potion tooltips work in gameplay UI, battle UI, reward modals, Active Potion section, and potion selection modals.
+* Preserve potion tooltip content.
+* Preserve potion component visuals.
+
+Potion Tooltip Position Requirement
+
+* Potion tooltips should appear next to the cursor.
+* They should not appear at the bottom of the page.
+* The tooltip should follow the same positioning behaviour as token tooltips.
+* If the cursor moves while hovering the potion, the tooltip should update position in the same way token tooltips do.
+
+Expected Behaviour
+
+```txt id="5eln53"
+Hover over potion.
+Tooltip appears next to cursor.
+Move cursor.
+Tooltip follows or updates position like token tooltip.
+Stop hovering.
+Tooltip disappears.
+```
+
+Token Tooltip Parity Requirement
+
+* Potion tooltips should be implemented in the same way as token tooltips.
+* Prefer reusing:
+
+  * the same tooltip component.
+  * the same cursor tracking.
+  * the same portal/root rendering approach.
+  * the same viewport edge handling.
+  * the same z-index strategy.
+* Do not create a separate tooltip implementation if the token tooltip implementation can be made generic.
+
+Suggested Implementation Direction
+
+* Extract or reuse a shared tooltip component if needed.
+
+Suggested shape:
+
+```jsx id="zwsjl5"
+<GameTooltip
+  content={potionTooltipContent}
+  x={tooltipPosition.x}
+  y={tooltipPosition.y}
+/>
+```
+
+* Then both tokens and potions can use the same tooltip behaviour:
+
+```jsx id="8dzfx5"
+<TooltipTarget tooltipContent={tokenTooltipContent}>
+  <TokenIcon token={token} showName={true} />
+</TooltipTarget>
+
+<TooltipTarget tooltipContent={potionTooltipContent}>
+  <Potion potion={potion} showName={true} />
+</TooltipTarget>
+```
+
+* Exact implementation can vary.
+* The important requirement is that potion tooltips behave like token tooltips.
+
+Potion Component Requirement
+
+* The existing Potion component should support cursor-based tooltips.
+* Any prop such as `showTooltip={true}` should use the new tooltip behaviour.
+* Potion tooltip content should still include the correct potion details.
+* Potion name and description should use the current language.
+* English should show English potion data.
+* Japanese should show Japanese potion data.
+
+Places Potion Tooltips Must Work
+
+* Potion tooltips should work correctly in:
+
+  * gameplay potion slots.
+  * Active Potion section.
+  * battle potion section.
+  * battle reward modal.
+  * Cauldron choice modal.
+  * potion replacement modal.
+  * any other modal or panel where the Potion component is used with tooltip enabled.
+
+Modal / Portal Requirement
+
+* Potion tooltips must appear above modal content when hovering potions inside modals.
+* Do not let the tooltip be clipped by modal containers.
+* Use the same portal strategy as token tooltips if token tooltips already avoid clipping.
+* Tooltip z-index should be high enough to appear over the game UI and modals, but should not interfere with clicking buttons.
+
+Viewport Edge Requirement
+
+* Potion tooltips should not run off the screen if the cursor is near an edge.
+* Use the same edge handling as token tooltips.
+* If the cursor is near the right edge, shift the tooltip left.
+* If the cursor is near the bottom edge, shift the tooltip upward.
+* This should work on the mobile-first layout.
+
+Styling Requirement
+
+* Potion tooltip styling should be consistent with token tooltip styling.
+* Use the same:
+
+  * background style.
+  * border style.
+  * text colour.
+  * font rules.
+  * spacing.
+  * z-index pattern.
+* Potion-specific colours or icons can remain unchanged.
+* The key change is position and behaviour, not a full visual redesign.
+
+No Bottom-Page Tooltip Requirement
+
+* Potion tooltips should never be positioned at the bottom of the page by default.
+* Remove or replace any CSS that forces potion tooltips to:
+
+  * `bottom: 0`
+  * fixed bottom placement.
+  * full-width footer placement.
+  * page-bottom tooltip containers.
+* Tooltip position should come from cursor coordinates or the same logic used by token tooltips.
+
+Suggested CSS Direction
+
+```css id="i80ul3"
+.game-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+}
+```
+
+* Exact class names can vary.
+* The important requirement is that the tooltip is positioned relative to the cursor, not the page bottom.
+
+Translation Requirement
+
+* Potion tooltip text should continue to support English and Japanese.
+* Use potion data from the current source-of-truth table.
+* Do not auto-translate.
+* If language is missing or invalid, fall back to English.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li` in any newly created tooltip markup.
+* Use `div` elements with flex or grid layouts.
+
+Expected Behaviour
+
+* Potion tooltips appear next to the cursor.
+* Potion tooltips no longer appear at the bottom of the page.
+* Potion tooltips behave the same way as token tooltips.
+* Potion tooltips work inside modals.
+* Potion tooltips work in gameplay UI.
+* Potion tooltips work in battle UI.
+* Potion tooltips work in reward panels.
+* Potion tooltips do not get clipped by modal containers.
+* Potion tooltips avoid screen edges.
+* Potion tooltip content remains correct.
+* English potion tooltips display correctly.
+* Japanese potion tooltips display correctly.
+
+Out Of Scope
+
+* No changes to potion data.
+* No changes to potion names or descriptions.
+* No changes to token tooltip behaviour unless needed to share reusable logic.
+* No changes to potion effects.
+* No changes to potion reward generation.
+* No unrelated potion component redesign.
+* No unrelated modal redesign.
+
+Assumptions
+
+* Token tooltips already behave correctly.
+* Token tooltip logic can either be reused directly or extracted into a shared tooltip helper/component.
+* Potion components already have or can receive enough data to render tooltip content.
+* Potion tooltips should use the same language state as potion names and descriptions.
+
+Stop Point
+
+* Stop once potion tooltips appear next to the cursor, match token tooltip behaviour, work across board/battle/modal contexts, and no longer appear at the bottom of the page.
+
+Testing Checkpoints
+
+* Hover a potion in the gameplay potion section.
+* Confirm the tooltip appears next to the cursor.
+* Confirm the tooltip does not appear at the bottom of the page.
+* Move the cursor while hovering and confirm the tooltip follows or updates like token tooltips.
+* Hover a potion in the Active Potion section.
+* Confirm the tooltip appears next to the cursor.
+* Hover a potion in the battle potion section.
+* Confirm the tooltip appears next to the cursor.
+* Hover a potion in the battle reward modal.
+* Confirm the tooltip appears above modal content and is not clipped.
+* Hover a potion in the Cauldron choice modal.
+* Confirm the tooltip appears next to the cursor.
+* Hover near the right edge of the screen.
+* Confirm the tooltip does not run off-screen.
+* Hover near the bottom edge of the screen.
+* Confirm the tooltip does not run off-screen.
+* Confirm English potion tooltip text displays correctly.
+* Confirm Japanese potion tooltip text displays correctly.
+* Confirm token tooltips still behave correctly.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Confirmed the existing Token component uses the browser-native `title` tooltip with an off-screen accessible description; it does not use a custom portal or coordinate tracker.
+* Updated the shared `PotionIcon` to use that same native cursor-tooltip contract, including localized `title`, `aria-describedby`, keyboard focus, and English fallback behavior.
+* Replaced the fixed page-bottom potion tooltip CSS with the same off-screen accessible-description pattern used by tokens.
+* Added `showTooltip` support so callers can suppress the title, accessible description, tooltip node, and tooltip-only focus without removing an allowed potion name.
+* Because gameplay slots, Active Potion, battle potions, reward/replacement flows, Cauldron choices, and other potion displays already reuse `PotionIcon`, no call-site components or duplicate tooltip logic were added.
+* Native browser tooltip placement provides the existing token behavior beside the cursor, outside modal clipping, and within viewport edges.
+* Preserved potion data, names, descriptions, effects, icons, colors, reward generation, token behavior, and modal layouts.
+
+
+---
+
+Feature-008: Move battle potions bar into standalone title panel
+
+Status
+
+* done
+
+Related Feature
+
+* EPIC-012 Feature-001: Add potion trigger UI and confirmation flow for Board and Battle potions
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion gameplay section
+* EPIC-014 Feature-002: Implement Ice Beam battle potion behaviour
+* EPIC-014 Feature-003: Implement Charger battle potion behaviour
+* EPIC-014 Feature-004: Implement Cosmic Intervention battle potion behaviour
+* EPIC-014 Feature-005: Implement Shields Down battle potion behaviour
+* EPIC-014 Feature-006: Implement Thaw battle potion behaviour
+* EPIC-014 Feature-007: Make potion tooltips follow the same cursor-based behaviour as token tooltips
+
+Goal
+
+* Move the battle potions bar into its own standalone element.
+* The potions bar should sit directly underneath the battle title.
+* The battle title and potions bar should share a `modalBackground.png` background panel.
+* The potions area should always be visible, even when the player has no battle potions.
+* The fixed-height potions area should prevent the battle screen from jumping when potions are removed.
+
+Layout Summary
+
+* Create a battle header panel.
+* The panel should contain:
+
+  * the battle title at the top.
+  * the battle potions bar underneath.
+* The panel should use `modalBackground.png` as its background.
+* The background should visually surround both the title and the potions element.
+
+Battle Header Panel Requirement
+
+* The battle title and battle potions bar should be wrapped inside one standalone panel.
+* This panel should sit near the top of the battle screen where the title currently appears.
+* The panel should use:
+
+```txt id="7y4718"
+modalBackground.png
+```
+
+* The panel should be:
+
+```css id="uf2htf"
+width: 580px;
+padding: 40px;
+```
+
+* The background image should cover the whole panel area.
+* The panel should be centred horizontally.
+* The panel should visually match the wooden modal style used elsewhere.
+
+Suggested Structure
+
+```jsx id="ehpqba"
+<div className="battle-title-potions-panel">
+  <h1 className={`battle-title ${languageClass}`}>
+    {battleTitle}
+  </h1>
+
+  <div className="battle-potions-bar">
+    {battlePotions.length > 0 ? (
+      <div className="battle-potions-list">
+        {battlePotions.map((potion) => (
+          <PotionBattleButton
+            key={potion.id}
+            potion={potion}
+          />
+        ))}
+      </div>
+    ) : (
+      <p className={`battle-potions-empty-text ${languageClass}`}>
+        {noBattlePotionsText}
+      </p>
+    )}
+  </div>
+</div>
+```
+
+* Exact component names can vary.
+* The important requirement is that the title and potions bar are grouped together inside the same background panel.
+
+Battle Title Requirement
+
+* The battle title should now use the same yellow colour used in modals.
+* The title should sit at the top of the panel.
+* The title should be centred.
+* The title should have:
+
+```css id="pi3cf0"
+max-width: 500px;
+```
+
+* The title should remain readable in both English and Japanese.
+* The title should use the correct language font.
+
+Suggested CSS Direction
+
+```css id="tgk3uq"
+.battle-title {
+  max-width: 500px;
+  margin: 0 auto 24px;
+  color: #F5FA00;
+  text-align: center;
+}
+```
+
+Battle Potions Bar Requirement
+
+* The battle potions bar should sit underneath the battle title.
+* The potions bar should be present whether or not the player currently has battle potions.
+* The potions bar should be a fixed-height area to avoid layout jumps.
+* The total height of the potions area should be:
+
+```css id="fj1yzf"
+height: 170px;
+```
+
+* This allows for:
+
+  * the current potion/use button element height of about `130px`.
+  * `20px` leeway/padding above.
+  * `20px` leeway/padding below.
+
+Suggested CSS Direction
+
+```css id="d1licr"
+.battle-potions-bar {
+  height: 170px;
+  padding: 20px 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* The height should remain the same when:
+
+  * there are battle potions.
+  * there are no battle potions.
+  * a potion is removed after being used.
+  * a potion Use button becomes disabled.
+
+Empty Battle Potions Text Requirement
+
+* If the player has no battle potions, the potions bar should display:
+
+English:
+
+```txt id="x66tgi"
+You have no battle potions at the moment
+```
+
+Japanese:
+
+```txt id="vt2ix2"
+現在、バトル用ポーションを持っていません。
+```
+
+* This text should appear inside the fixed-height potions bar.
+* The text should be centred vertically and horizontally.
+* The text should use the correct language font.
+* The text should use the modal yellow colour.
+
+Suggested CSS Direction
+
+```css id="xvyfig"
+.battle-potions-empty-text {
+  margin: 0;
+  color: #F5FA00;
+  text-align: center;
+}
+```
+
+Potion Display Requirement
+
+* If the player has battle potions, display the battle potion components in the potions bar.
+* Potion components should keep:
+
+  * potion name.
+  * tooltip.
+  * Use button.
+  * disabled state rules.
+* Existing battle potion behaviour should continue to work.
+
+Panel Background Requirement
+
+* The background should use `modalBackground.png`.
+* It should surround both:
+
+  * the battle title.
+  * the battle potions bar.
+* The background should not only apply to the potions bar.
+* The panel should look like one connected wooden modal-style element.
+
+Suggested CSS Direction
+
+```css id="v8cda2"
+.battle-title-potions-panel {
+  width: 580px;
+  padding: 40px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  background-image: url("../../images/modalBackground.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+```
+
+* The relative path can vary depending on where the CSS file lives.
+* Use the existing project path convention for modal backgrounds.
+
+No Layout Jump Requirement
+
+* The battle screen should not jump when battle potions are used or removed.
+* The potions bar should keep its fixed `170px` height at all times.
+* Empty text should replace the potion list without changing the height of the area.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* No changes to battle potion effects.
+* No changes to potion data.
+* No changes to potion availability.
+* No changes to battle title text content.
+* No changes to battle turn logic.
+* No changes to battle reward logic.
+* No unrelated battle screen redesign.
+
+Testing Checkpoints
+
+* Open a battle with at least one battle potion.
+* Confirm the battle title and potions bar appear inside one `modalBackground.png` panel.
+* Confirm the panel is `580px` wide.
+* Confirm the panel has `40px` padding.
+* Confirm the battle title is at the top of the panel.
+* Confirm the battle title uses the modal yellow colour.
+* Confirm the battle title has `max-width: 500px`.
+* Confirm the potions bar appears directly beneath the title.
+* Confirm potion components still show names, tooltips, and Use buttons.
+* Use or remove a battle potion.
+* Confirm the potions area remains `170px` high.
+* Confirm the battle screen does not jump when a potion is removed.
+* Open a battle with no battle potions.
+* Confirm the potions bar is still visible.
+* Confirm English empty text says `You have no battle potions at the moment`.
+* Confirm Japanese empty text says `現在、バトル用ポーションを持っていません。`.
+* Confirm the empty text is centred vertically and horizontally.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Moved the existing `BattlePotionList` out of the dice panel and placed it directly beneath the existing battle title inside one `battle-title-potions-panel`.
+* Reused `src/images/misc/modalBackground.png` for the requested centred `580px` panel with `40px` padding and a covering background.
+* Updated the title only as specified: modal yellow, centred, and constrained to `500px`.
+* Added the fixed `170px` potion bar with `20px` vertical padding so its dimensions remain unchanged when potions are disabled, removed, or unavailable.
+* Updated `BattlePotionList` to keep its existing region mounted and show the required localized empty text when no Battle-compatible potion is available.
+* Added the English and Japanese empty-state copy to the existing potion usage translations with the existing English fallback.
+* Preserved potion names, cursor tooltips, Use controls, disabled rules, effects, title copy, turn logic, reward logic, and div-based markup.
+* Added no component, route, dependency, potion rule, or unrelated battle layout change.

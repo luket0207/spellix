@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../../data/potions';
 import PotionIcon from './PotionIcon';
@@ -95,5 +96,49 @@ describe('PotionIcon', () => {
     expect(screen.getByRole('group', { name: 'Roll Choice potion' })).toHaveAccessibleDescription(
       POTION_DEFINITIONS[0].description
     );
+  });
+
+  test('uses the same native cursor tooltip contract as tokens without bottom placement', () => {
+    const potion = POTION_DEFINITIONS[0];
+    const stylesheet = readFileSync(`${__dirname}/potionIcon.css`, 'utf8');
+
+    render(<PotionIcon potion={potion} />);
+
+    const icon = screen.getByRole('group', {
+      name: `${potion.name} potion`,
+    });
+    const tooltipRule = stylesheet.match(
+      /\.potion-icon-tooltip\s*\{([^}]*)\}/
+    )?.[1];
+
+    expect(icon).toHaveAttribute('title', potion.description);
+    expect(icon).toHaveAccessibleDescription(potion.description);
+    expect(tooltipRule).toMatch(/position:\s*absolute/);
+    expect(tooltipRule).toMatch(/width:\s*1px/);
+    expect(tooltipRule).toMatch(/height:\s*1px/);
+    expect(tooltipRule).toMatch(/overflow:\s*hidden/);
+    expect(tooltipRule).toMatch(/clip:\s*rect\(0,\s*0,\s*0,\s*0\)/);
+    expect(tooltipRule).not.toMatch(/bottom\s*:/);
+    expect(tooltipRule).not.toMatch(/right\s*:/);
+    expect(tooltipRule).not.toMatch(/left\s*:/);
+    expect(stylesheet).not.toMatch(
+      /\.potion-icon:hover\s+\.potion-icon-tooltip/
+    );
+  });
+
+  test('can suppress its cursor tooltip without removing an allowed name', () => {
+    const potion = POTION_DEFINITIONS[0];
+
+    render(<PotionIcon potion={potion} showTooltip={false} />);
+
+    const icon = screen.getByRole('group', {
+      name: `${potion.name} potion`,
+    });
+
+    expect(screen.getByText(potion.name)).toBeInTheDocument();
+    expect(icon).not.toHaveAttribute('title');
+    expect(icon).not.toHaveAttribute('aria-describedby');
+    expect(icon).not.toHaveAttribute('tabindex');
+    expect(within(icon).queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });

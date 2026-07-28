@@ -1,0 +1,513 @@
+---
+
+---
+
+---
+
+---
+
+Feature-008: Move battle potions bar into standalone title panel
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open a battle while the player owns at least one Battle-compatible potion.
+   Expected: One centred `modalBackground.png` panel contains the battle title first and the potion bar directly beneath it; the panel is `580px` wide with `40px` padding.
+2. Inspect the title and potion bar.
+   Expected: The title is centred modal-yellow text with a `500px` maximum width, and the potion area remains exactly `170px` high with `20px` vertical padding.
+3. Use the player's last Battle-compatible potion.
+   Expected: The same panel, bar, and Battle potions region stay mounted at the same dimensions; the potion card is replaced by the localized empty text without moving the dice into the panel.
+4. Open a battle with no potions or only non-Battle potions.
+   Expected: The bar remains visible and centred with `You have no battle potions at the moment`; Japanese players see `\u73fe\u5728\u3001\u30d0\u30c8\u30eb\u7528\u30dd\u30fc\u30b7\u30e7\u30f3\u3092\u6301\u3063\u3066\u3044\u307e\u305b\u3093\u3002`.
+5. Use each implemented Battle potion and inspect the panel markup.
+   Expected: Names, cursor tooltips, Use buttons, disabled rules, confirmations, and effects remain unchanged; no `ul` or `li` is introduced inside the title/potion panel.
+
+Automated Tests Completed
+
+* Added BattlePage coverage for shared panel structure, title/bar ordering, wooden background path, exact panel/title/bar measurements, modal-yellow text, empty rendering, language classes, and list-free panel markup.
+* Updated the Battle potion integration regression to require the potion region inside the header bar and outside the dice panel while preserving filtering, tooltips, controls, and use behavior.
+* Added a last-potion regression proving the same `170px` bar and region remain mounted when a potion is consumed and replaced by empty text.
+* Added Japanese BattlePage empty-state coverage and exact English/Japanese potion-usage translation coverage.
+* Updated BattlePotionList coverage for persistent empty rendering when no Battle-compatible potion is available.
+* Reproduced the old behavior before implementation: all four focused BattlePage tests failed, empty BattlePotionList tests failed, and the translation contract failed.
+* Focused BattlePage panel tests passed: 4 tests.
+* Focused BattlePotionList and translation suites passed: 19 tests.
+* EPIC-014 automated regression set passed: 113 tests across BattlePage, RewardPage, PotionIcon, BattlePotionList, GameSetupContext, and translations; the separately documented persistent battle dice baseline test was skipped.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-008.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+EPIC-014 Completion Regression
+
+Test Status
+
+* in progress
+
+Full Manual Regression Flow
+
+1. Complete potion and token battle rewards in English and Japanese, including full potion slots.
+   Expected: Wooden reward modals, exact awarded components, localized tooltips, replacement/discard actions, and Continue flow work without layout or assignment regressions.
+2. Use Ice Beam, Charger, Cosmic Intervention, Shields Down, and Thaw through their confirmation flows, including each disabled condition.
+   Expected: Potion consumption, one-use limits, freeze/charge/damage/Guard/unfreeze rules, animations, control locking, lethal flow, and turn continuation match each completed feature.
+3. Hover potion components in gameplay, Active Potion, battle, reward, replacement, and Cauldron/cave modal contexts.
+   Expected: Localized browser-native cursor tooltips match token behavior, remain unclipped, avoid page-bottom placement, and honor tooltip suppression.
+4. Exercise the battle title/potion panel with zero through three Battle potions, consume the final potion, and repeat in Japanese.
+   Expected: The wooden panel and `170px` bar remain stable, title and empty text stay localized, and the dice/battle areas do not jump.
+5. Watch the console throughout the complete flow.
+   Expected: No runtime errors or warnings are introduced by EPIC-014.
+
+Automated Regression Completed
+
+* 113 relevant tests passed across all six EPIC-014 implementation areas.
+* The production build passed.
+* The known unrelated persistent battle dice baseline remains excluded and separately documented.
+
+Remaining Gap
+
+* The full browser-based manual regression flow above has not been executed. Run it before treating the EPIC-014 completion gate as fully passed.
+
+---
+
+Feature-007: Make potion tooltips follow the same cursor-based behaviour as token tooltips
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Hover a potion in gameplay slots, Active Potion, and the battle potion section, then move the cursor.
+   Expected: The localized browser-native tooltip appears beside the cursor and follows the same behavior as token tooltips; no tooltip appears at the page bottom.
+2. Hover potions in the battle reward, replacement, Cauldron, and cave reward modals.
+   Expected: The tooltip appears above modal content without being clipped because it is rendered by the browser rather than inside the modal layout.
+3. Hover potions near the right and bottom viewport edges.
+   Expected: Browser-native placement keeps the tooltip within the available viewport in the same way as token tooltips.
+4. Repeat with English, Japanese, an invalid language, and potion data with missing Japanese text.
+   Expected: English and Japanese descriptions match the current source-of-truth data; invalid or missing Japanese text falls back to English.
+5. Inspect a potion rendered with `showTooltip={false}` and compare a token tooltip.
+   Expected: The potion keeps any allowed visible name but has no title, tooltip description, or tooltip-only focus; token behavior is unchanged and no `ul` or `li` markup is introduced.
+
+Automated Tests Completed
+
+* Added direct `PotionIcon` coverage for the token-style native `title`, accessible description, off-screen description CSS, removal of bottom/right/left positioning, and absence of the old hover-reveal rule.
+* Added `showTooltip={false}` coverage proving tooltip content and tooltip-only focus are removed without removing the visible potion name.
+* Reproduced the old behavior before implementation: focused tests failed because PotionIcon had no native title, ignored `showTooltip`, and retained fixed bottom placement.
+* Focused PotionIcon tests passed: 7 tests.
+* Cross-context potion and token regressions passed: 63 tests across Token, gameplay PotionList, ActivePotionSection, BattlePotionList, CauldronChoiceModal, CaveRewardChoiceModal, and RewardPage.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-007.
+
+Manual Execution
+
+* Not run in a browser during this automated pass, so native tooltip placement was verified by parity with the existing Token contract and removal of custom page positioning rather than visual browser inspection.
+
+---
+
+Feature-006: Implement Thaw battle potion behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current player Thaw during a battle turn while the player is not frozen.
+   Expected: Thaw remains visible, but its Use button is disabled; clicking it opens no confirmation, consumes nothing, and does not record a Battle potion use.
+2. Start a player battle turn while frozen and wait for the turn modal to close.
+   Expected: Thaw is enabled before rolling, the existing frozen snowflake is visible, and the normal escape-roll prompt is shown.
+3. Select Thaw and choose No in the existing confirmation modal.
+   Expected: Thaw remains owned, the player stays frozen, the escape-roll prompt remains, and the turn's Battle potion use remains available.
+4. Select Thaw again and choose Yes.
+   Expected: Thaw is consumed, Battle potion use is recorded, frozen state clears immediately, the snowflake uses its existing exit animation, the escape-roll prompt disappears, and the battle actor remains the player.
+5. Roll a battle column after using Thaw.
+   Expected: The selected spell column resolves as a normal attack without a separate frozen escape roll.
+
+Automated Tests Completed
+
+* Added an unfrozen-player regression proving Thaw remains visible but disabled while another eligible Battle potion remains usable.
+* Added a frozen-player regression proving pre-roll availability, cancellation, confirmation, potion consumption, one-use tracking, immediate unfreeze, existing snowflake exit, skipped escape prompt, retained player actor, and a normal post-Thaw spell-column result.
+* Reproduced the missing feature before implementation: both focused tests failed because Thaw was enabled while unfrozen and confirmation did not clear frozen state.
+* Focused Thaw tests passed: 2 tests.
+* BattlePage regressions passed: 44 tests, with the separately documented persistent battle dice baseline test excluded.
+* GameSetupContext regressions passed: 16 tests.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-006.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-002: Implement Ice Beam battle potion behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the battling player Ice Beam, start the player turn, and select its Use button.
+   Expected: Ice Beam appears in the Battle potions section and the existing confirmation modal shows its name and freeze description.
+2. Select No in the confirmation modal.
+   Expected: Ice Beam remains in the player's potion slots, the opponent is not frozen, and battle-potion use remains available.
+3. Open the confirmation again and select Yes.
+   Expected: Ice Beam is consumed, the battle-potion use is recorded, the opponent immediately becomes frozen, and the existing snowflake enter animation appears over the opponent image.
+4. Roll a column with an available Light Blue freeze token during the same turn.
+   Expected: Battle resolution continues normally, the already-frozen opponent remains frozen, and the redundant freeze-token use is not consumed.
+5. End the player turn and let the frozen opponent roll an odd freeze check.
+   Expected: The Ice Beam turn marker is cleared, the normal frozen check runs, the opponent unfreezes, skips its attack, and play returns to the player.
+6. Freeze an unfrozen opponent with a Light Blue token without using Ice Beam.
+   Expected: The existing freeze-token use is consumed normally.
+
+Automated Tests Completed
+
+* Added a BattlePage integration test covering Ice Beam visibility, confirmation copy, cancel, confirm, consumption, usage locking, immediate freeze, snowflake overlay, continued dice access, redundant freeze-token preservation, turn cleanup, and normal odd freeze resolution.
+* Focused Ice Beam integration test passed: 1 test.
+* Full BattlePage run passed 34 of 35 tests; the only failure is the pre-existing unrelated `dice result: 1` visibility assertion, which also fails in isolation.
+* `GameSetupContext.test.jsx` and `potionTurnUsageContext.test.jsx` passed: 20 tests.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+---
+
+Feature-005: Implement Shields Down battle potion behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current player Shields Down and start a player battle turn against an opponent with no Guard.
+   Expected: Shields Down remains visible, but its Use button is disabled; clicking it opens no confirmation, consumes nothing, and does not record a Battle potion use.
+2. Start a player battle turn against an opponent with Guard and confirm Shields Down from the existing potion confirmation modal.
+   Expected: Shields Down is consumed, the turn's Battle potion use is recorded, and a yellow `faGavel` appears over the opponent while Guard and health remain unchanged.
+3. During the animation, try the dice, other potion Use buttons, and battle debug controls.
+   Expected: All battle-changing controls remain disabled for the full 1.5-second animation.
+4. Observe the gavel animation.
+   Expected: The actual gavel SVG is `100px` high, fades in while moving from the top to the centre during the first second, then flashes twice during the final half-second.
+5. Let the animation finish with opponents holding 5, 50, and 100 Guard.
+   Expected: All Guard becomes 0 regardless of its starting amount, enemy health is unchanged, the shield and gavel disappear together, and the player can continue the turn.
+
+Automated Tests Completed
+
+* Added a zero-Guard regression proving Shields Down remains visible but disabled while another eligible Battle potion remains usable.
+* Added a positive-Guard regression proving confirmation, potion consumption, one-use tracking, direct `faGavel` SVG sizing, animation timing and keyframes, control locking, delayed Guard removal, unchanged health, shield removal, and turn continuation.
+* Reproduced the missing feature before implementation: both focused tests failed because Shields Down was enabled at zero Guard and no gavel animation was rendered.
+* Focused Shields Down tests passed: 2 tests.
+* BattlePage regressions passed: 42 tests, with the separately documented persistent battle dice baseline test excluded.
+* GameSetupContext regressions passed: 16 tests.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-003: Cosmic Intervention bolt SVG itself must match opponent image height
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Give the battling player Cosmic Intervention and confirm its use.
+   Expected: The visible yellow Font Awesome bolt SVG appears centred over the opponent image.
+2. Compare the visible bolt graphic with the opponent image.
+   Expected: The SVG itself fills the same image-wrapper height and keeps its natural width; a larger empty wrapper is not masking a small icon.
+3. Observe the complete animation.
+   Expected: The bolt still jitters and flashes for about one second, then fades over the final half-second.
+4. Use the potion against an opponent with Guard.
+   Expected: Damage remains delayed until animation completion and Guard absorbs damage before health.
+5. Use the potion for lethal damage.
+   Expected: The normal battle reward flow still opens after the animation.
+
+Automated Tests Completed
+
+* Added coverage proving the Cosmic Intervention animation node is an `svg` and that the actual SVG receives `height: 100%` and `width: auto`.
+* Reproduced Bug-003 before the CSS fix: the focused test failed because the direct SVG sizing rule was absent.
+* All focused Cosmic Intervention tests passed after the fix: 4 tests.
+* BattlePage regression run passed 40 tests with the documented unrelated forced-result baseline test excluded.
+* `npm run build` passed.
+* `git diff --check` passed.
+* The project does not define an `npm run lint` script, so no lint command could be completed.
+
+Automated Tests Still Needed
+
+* None for Bug-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-003: Implement Charger battle potion behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the battling player Charger and another Battle potion, then start an uncharged player turn.
+   Expected: Charger is visible in the Battle potion section and both Use buttons are enabled.
+2. Select Charger's Use button and confirm Yes in the existing potion confirmation modal.
+   Expected: Charger is consumed, Battle potion use is recorded, and all player spell columns use the usual yellow charged styling.
+3. Resolve a player attack from a charged Red column.
+   Expected: The existing `+10` charge bonus is included in damage without changing dice or Charge-token rules.
+4. Allow the player turn to end.
+   Expected: The player charge and yellow column styling are removed before the player's next battle turn.
+5. Start a player turn with columns already charged while Charger and another Battle potion are owned.
+   Expected: Charger stays visible with its Use button disabled, while the other Battle potion remains enabled.
+6. Try to select the disabled Charger button.
+   Expected: No confirmation opens, Charger is not consumed, Battle potion use remains unrecorded, and the charge does not stack.
+
+Automated Tests Completed
+
+* Added BattlePotionList coverage for state-specific disabling without disabling unrelated Battle potions.
+* Added BattlePage integration coverage for Charger visibility, confirmation, consumption, use tracking, all-column yellow styling, the existing `+10` damage bonus, current-turn expiry, and the already-charged disabled path.
+* Focused Charger tests passed: 3 tests.
+* BattlePotionList, GameSetupContext, potion-turn-usage, and battle-calculation regression suites passed: 56 tests.
+* BattlePage regression run passed 36 tests with the one documented unrelated forced-result baseline test excluded.
+* `npm run build` passed.
+* The project does not define an `npm run lint` script, so no lint command could be completed.
+
+Automated Tests Still Needed
+
+* None for Feature-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-004: Implement Cosmic Intervention battle potion behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the battling player Cosmic Intervention and another Battle potion, then start a player turn.
+   Expected: Cosmic Intervention appears in the Battle potion section and opens the existing confirmation modal from its Use button.
+2. Confirm Cosmic Intervention.
+   Expected: The potion is consumed, Battle potion use is recorded, and all dice, potion, forced-roll, and battle debug controls become disabled.
+3. Observe the opponent image for the full animation.
+   Expected: A yellow `faBolt`, matching the opponent image height and centred over it, jitters and flashes for about one second before fading out over the final half-second.
+4. Use Cosmic Intervention against an opponent with 15 Guard and 120 health.
+   Expected: No damage is applied before the 1.5-second animation finishes; afterward Guard becomes 5 and health remains 120.
+5. Repeat against 5 Guard and 120 health, then against 0 Guard and 120 health.
+   Expected: The first opponent finishes with 0 Guard and 115 health; the second finishes with 0 Guard and 110 health.
+6. Finish a nonlethal Cosmic Intervention animation.
+   Expected: The bolt disappears and battle controls re-enable where still appropriate; potion Use remains disabled because the turn's Battle potion was used.
+7. Use Cosmic Intervention against an opponent with 10 health and no Guard.
+   Expected: Health reaches 0 and the normal battle reward choices appear without a separate potion-kill flow.
+
+Automated Tests Completed
+
+* Added BattlePage integration coverage for confirmation copy, potion consumption, use tracking, pending-state control locking, bolt icon and placement, required CSS dimensions, colour, timing, jitter, and fade.
+* Added Guard-first damage coverage for 15, 5, and 0 Guard, including proof that damage waits for animation completion.
+* Added nonlethal control recovery and lethal normal-reward-flow coverage.
+* Focused Cosmic Intervention tests passed: 4 tests.
+* BattlePage regression run passed 40 tests with the one documented unrelated forced-result baseline test excluded.
+* GameSetupContext, BattlePotionList, potion-turn-usage, and battle-calculation regression suites passed: 56 tests.
+* `npm run build` passed.
+* The project does not define an `npm run lint` script, so no lint command could be completed.
+
+Automated Tests Still Needed
+
+* None for Feature-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-002: Cosmic Intervention bolt icon should match the height of the opponent image
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Give the battling player Cosmic Intervention and confirm its use.
+   Expected: The yellow bolt appears centred over the opponent image.
+2. Compare the bolt height with the opponent character image.
+   Expected: Both fill the same existing image wrapper height; the bolt is no longer limited to 100px.
+3. Observe the complete animation.
+   Expected: Jittery flashing continues for about one second and fades over the final half-second, with the total duration remaining 1.5 seconds.
+4. Use the potion against an opponent with Guard.
+   Expected: Damage waits until the animation finishes and Guard still absorbs damage before health.
+5. Use the potion for lethal damage.
+   Expected: The normal battle reward flow still opens after the animation.
+
+Automated Tests Completed
+
+* Updated the existing Cosmic Intervention regression to prove the bolt and enemy image use the same 100%-of-150px wrapper height.
+* Reproduced the bug before the CSS fix: the focused test failed because the bolt still used `height: 100px`.
+* All focused Cosmic Intervention tests passed after the fix: 4 tests.
+* BattlePage regression run passed 40 tests with the documented unrelated forced-result baseline test excluded.
+* `npm run build` passed.
+* `git diff --check` passed.
+* The project does not define an `npm run lint` script, so no lint command could be completed.
+
+Automated Tests Still Needed
+
+* None for Bug-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-001: Battle reward modal should show the awarded potion or token component
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Win a battle, choose a potion reward, and view the successful reward modal.
+   Expected: The exact awarded potion appears below the centred result text with its icon, visible localized name, and tooltip details.
+2. Complete a token reward assignment to the token bag, a spell slot, or discard.
+   Expected: The exact awarded token appears in the result modal with its icon, visible localized name, and tooltip details.
+3. Repeat the potion and token flows with a Japanese player.
+   Expected: Both item names and tooltip descriptions use Japanese; invalid or missing language continues to use the existing English fallback.
+4. Inspect each result modal and select Continue.
+   Expected: No `ul` or `li` elements are present, the content remains centred, and existing reward resolution and turn progression are unchanged.
+
+Automated Tests Completed
+
+* Added English potion coverage for the exact component, name, tooltip, result modal, and centred display container.
+* Added English token coverage for the exact token type, visible name, tooltip, result modal, and list-free markup.
+* Added Japanese potion and token result coverage for localized names, font classes, and tooltip descriptions.
+* Added invalid-language coverage for the existing English item-name and tooltip fallback.
+* Focused awarded-item tests passed: 6 tests.
+* RewardPage regression tests passed: 24 tests, with only the separately tracked full-slot styling bug skipped.
+* `src/AppMiniGames.test.jsx` passed: 18 tests.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for this bug.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-001: Full-slot potion assignment styling does not match its existing test contract
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Fill all three potion slots, win a battle, and choose a new potion reward.
+   Expected: The full-slot modal shows three replacement actions and one discard-new-potion action.
+2. Inspect the four actions.
+   Expected: All actions use the shared potion assignment button treatment, occupy four equal columns, and fill their grid column width.
+3. Select the second replacement action.
+   Expected: Only the second potion is replaced, the existing replacement result appears, and Continue becomes available.
+4. Repeat the full-slot flow and select Discard new potion.
+   Expected: Existing potions remain unchanged and the existing discard result and Continue flow still work.
+5. Repeat in Japanese.
+   Expected: Existing Japanese names, labels, and full-slot messages remain unchanged.
+
+Automated Tests Completed
+
+* Reproduced the bug with the complete RewardPage suite: 24 tests passed and 1 test failed on the discard action's missing shared class.
+* The focused full-slot replacement test passed after the fix: 1 test.
+* The complete RewardPage regression suite passed after the fix: 25 tests.
+* `npm run build` passed.
+* `git diff --check` passed.
+* The project does not define an `npm run lint` script, so no lint command could be completed.
+
+Automated Tests Still Needed
+
+* None for this bug.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-001: Put battle potion reward panel inside a modal
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Win a battle, choose a potion reward while the player has an open potion slot, and confirm the result panel appears in the normal wooden modal.
+   Expected: The modal uses yellow text, centred reward text, and the current player's English or Japanese font; Continue completes the existing reward flow.
+2. Fill all three potion slots, win a battle, and choose a potion reward.
+   Expected: The new potion, full-slots explanation, replacement controls, and discard control appear in the same centred wooden modal without `ul` or `li` markup.
+3. Replace an existing potion, repeat the flow and discard the new potion, then continue.
+   Expected: Existing replacement, discard, reward result, and turn-advance behavior is unchanged.
+4. Repeat the full-slots flow with a Japanese player.
+   Expected: The modal and potion content use the Japanese font and translated copy.
+
+Automated Tests Completed
+
+* Added RewardPage coverage for the immediate battle potion result modal, wooden modal classes, overlay, centred panel rule, language classes, full-slot content, potion name, and list-free markup.
+* `npx react-scripts test src/pages/RewardPage.test.jsx --watchAll=false --runInBand --testNamePattern="normal modal|adds a selected potion|Japanese potion text|required horizontal"` passed: 4 tests.
+* `npx react-scripts test src/pages/RewardPage.test.jsx --watchAll=false --runInBand --testNamePattern="^(?!.*replaces one selected potion).*$"` passed: 20 tests, 1 pre-existing test skipped.
+* `src/AppMiniGames.test.jsx` passed all 19 tests during the broader reward regression run.
+* `npm run build` passed.
+* `git diff --check` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-001.
+* The complete RewardPage suite still has a pre-existing full-slot button/layout assertion failure recorded in `bugs.txt`; it is unrelated to placing the reward panel in a modal.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
