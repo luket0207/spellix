@@ -73,6 +73,7 @@ export function createPlayers(playerCount, existingPlayers = []) {
         existingPlayer?.columnMergesUsed ?? existingPlayer?.mergedColumns?.length ?? 0,
       colour,
       currentHealth: existingPlayer?.currentHealth ?? 100,
+      diedLastTurn: Boolean(existingPlayer?.diedLastTurn),
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
       hasUnseenTokenBagTokens:
@@ -120,6 +121,7 @@ export function createInitialGameSetup() {
     miniGameResult: null,
     miniGameReturnNotice: null,
     pendingNextTurnModal: false,
+    pendingTurnRespawn: null,
     pendingPotionGrant: null,
     stormMasterEffect: null,
     stormMasterPendingPlayerId: null,

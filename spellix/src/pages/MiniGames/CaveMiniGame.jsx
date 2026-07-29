@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/common/Button/Button';
+import PotionIcon from '../../components/potions/PotionIcon';
 import { useGameSetup } from '../../features/gameSetup/GameSetupContext';
 import {
   getPieceImageSource,
@@ -32,6 +33,7 @@ function CaveMiniGame() {
     currentPlayer,
     gameSetup,
     miniGameResult,
+    removePlayerPotion,
     returnFromMiniGame,
   } = useGameSetup();
   const [caveRewards, setCaveRewards] = useState(() =>
@@ -77,6 +79,12 @@ function CaveMiniGame() {
   const hasUnopenedLootChest = Boolean(
     caveRewards.hasLootChest && !miniGameResult?.lootChestReward
   );
+  const caveRunnerPotionIndex =
+    miniGamePlayer?.potions?.findIndex(({ id }) => id === 'cave-runner') ?? -1;
+  const caveRunnerPotion =
+    caveRunnerPotionIndex >= 0
+      ? miniGamePlayer.potions[caveRunnerPotionIndex]
+      : null;
 
   const schedule = (callback, delay) => {
     const timerId = setTimeout(() => {
@@ -97,7 +105,12 @@ function CaveMiniGame() {
 
   const startOgreChase = () => {
     setPhase('chasing');
-    completeMiniGame('loss');
+    if (caveRunnerPotion && miniGamePlayer.currentHealth > 0) {
+      removePlayerPotion(miniGamePlayer.id, caveRunnerPotionIndex);
+      completeMiniGame('loss', { preventHealthLoss: true });
+    } else {
+      completeMiniGame('loss');
+    }
     schedule(() => navigate('/mini-game/lose'), OGRE_CHASE_DURATION);
   };
 
@@ -301,17 +314,15 @@ function CaveMiniGame() {
               >
                 {translations.goDeeper}
               </Button>
-              {currentDepth > 0 ? (
-                <Button
-                  className={languageClassName}
-                  disabled={decisionsDisabled}
-                  type="button"
-                  variant="secondary"
-                  onClick={handleRetreat}
-                >
-                  {translations.retreat}
-                </Button>
-              ) : null}
+              <Button
+                className={languageClassName}
+                disabled={decisionsDisabled || currentDepth === 0}
+                type="button"
+                variant="secondary"
+                onClick={handleRetreat}
+              >
+                {translations.retreat}
+              </Button>
             </>
           ) : (
             <Button
@@ -324,6 +335,18 @@ function CaveMiniGame() {
             </Button>
           )}
         </div>
+
+        {caveRunnerPotion ? (
+          <div
+            className="cave-runner-active-potion"
+            data-testid="cave-runner-active-potion"
+          >
+            <PotionIcon language={currentLanguage} potion={caveRunnerPotion} />
+            <p className={`cave-runner-active-text ${languageClassName}`}>
+              {translations.active}
+            </p>
+          </div>
+        ) : null}
 
         {isDecisionPhase ? (
           <CaveRewardList

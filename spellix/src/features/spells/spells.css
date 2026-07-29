@@ -158,6 +158,7 @@
 .spell-token-assignment--reward {
   color: #F5FA00;
   font-weight: 700;
+  margin-bottom: 30px;
 }
 
 .reward-token-section {
@@ -174,8 +175,9 @@
   box-sizing: border-box;
   display: flex;
   justify-content: center;
-  min-height: 110px;
-  width: 220px;
+  min-height: 80px;
+  width: 300px;
+  margin-top: 20px;
 }
 
 .new-reward-token-box.needs-placement {
@@ -189,7 +191,7 @@
 }
 
 .reward-token-instruction {
-  margin: 12px 0 0;
+  margin: 12px 0 30px;
 }
 
 .reward-token-status {

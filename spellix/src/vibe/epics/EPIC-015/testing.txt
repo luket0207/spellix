@@ -49,7 +49,7 @@ Automated Tests Still Needed
 Manual Execution
 
 * Not run in a browser during this automated pass.
-
+---
 
 Bug-001: Decision page should not show next player image before returning to board
 
@@ -307,6 +307,361 @@ Automated Tests Completed
 Automated Tests Still Needed
 
 * None for Bug-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Feature-003: Implement Good Decisions potion behaviour on Decision page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current Decision player Good Decisions, mark a board potion as already used this turn, and open the Decision page.
+   Expected: Good Decisions appears after the question and before the choices with its name, tooltip, and Use button; prior board potion use does not block it.
+2. Click Use and inspect the potion area.
+   Expected: The potion remains visible, Use changes to yellow Active text in a same-height area, and the modal layout does not jump.
+3. Select choices with good, neutral, and bad chances while Good Decisions is active.
+   Expected: Outcomes follow the relative good/neutral weighting and never resolve as bad.
+4. Select a choice whose neutral chance is zero while Good Decisions is active.
+   Expected: The outcome resolves as good and never displays an unavailable neutral result.
+5. Inspect the player inventory before and after choosing.
+   Expected: Good Decisions remains owned after activation and is consumed only after the choice outcome resolves.
+6. Inspect board potion tracking after the outcome resolves.
+   Expected: The existing board potion use flag is unchanged.
+7. Repeat the display and activation flow in English and Japanese.
+   Expected: Use/Active text is localized and uses the correct language font classes.
+8. Watch the browser console during valid play.
+   Expected: No runtime warnings or errors appear; invalid all-bad development data produces the explicit safe-fallback warning.
+
+Automated Tests Completed
+
+* `src/data/decisionQuestions.test.js` verifies proportional safe-outcome weighting, zero-neutral good resolution, and the invalid all-bad development warning/fallback.
+* `src/pages/DecisionPage.test.jsx` verifies placement, name, tooltip, localized Use/Active states, stable height, yellow Active text, board-use independence, delayed consumption, safe resolution, and existing outcome processing.
+* `src/i18n/translations.test.js` verifies the English and Japanese Decision potion labels.
+* `src/features/potions/potionUsage.test.js` verifies Mini potions remain unavailable in board and battle contexts.
+* Focused Feature-003 regression passed: 3 suites and 54 tests.
+* Mini potion context regression passed: 1 suite and 11 tests.
+* ESLint passed for all changed source and test files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Feature-004: Implement Cave Runner potion behaviour in Cave Mini Game
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current Cave player Cave Runner and start the Cave Mini Game.
+   Expected: Cave Runner appears beneath the Go Deeper/Retreat action area with its name, tooltip, and yellow Active text; there is no Use button or confirmation.
+2. Inspect the Cave Runner display in English and Japanese.
+   Expected: Active/発動中 and the potion name/tooltip use the correct localized copy and language font classes.
+3. Find one or more cave rewards, then trigger an ogre outcome while the player has health above zero.
+   Expected: Found cave rewards disappear, Cave Runner is consumed automatically when the chase begins, and the existing chase animation routes to Mini Game Failed.
+4. Observe the Mini Game Failed page after Cave Runner triggers.
+   Expected: It reports zero health lost, the health bar remains unchanged, no death-token penalty occurs, and the normal Continue/turn-return flow remains available.
+5. Trigger an ogre outcome without Cave Runner.
+   Expected: The existing randomly selected mini-game health loss is applied normally.
+6. Successfully retreat with Cave Runner still owned.
+   Expected: Cave rewards resolve normally and Cave Runner remains in the player's potion inventory.
+7. Trigger an ogre outcome while the Cave Runner owner already has zero health.
+   Expected: Cave Runner is not consumed because no health can be reduced.
+8. Watch the browser console and inspect the page markup.
+   Expected: No runtime errors appear and no `ul` or `li` elements were introduced by Cave Runner.
+
+Automated Tests Completed
+
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` verifies display order, 40px top margin, Potion name/tooltip, localized Active text, no Use button, no list markup, reward removal, automatic consumption, successful-retreat preservation, and zero-health non-consumption.
+* `src/pages/MiniGames/MiniGameResultPages.test.jsx` verifies Cave Runner preserves the shared failure-page delay and Continue flow while applying zero health loss.
+* `src/AppMiniGames.test.jsx` verifies real provider state consumes Cave Runner during the ogre chase and preserves the player's health through the shared loss route.
+* `src/i18n/translations.test.js` verifies exact English and Japanese Cave Active labels.
+* `src/features/potions/potionUsage.test.js` verifies Mini potion board/battle context boundaries remain unchanged.
+* Final Feature-004 regression passed: 5 suites and 64 tests.
+* ESLint passed for all changed JavaScript and JSX files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* The broader `src/features/miniGames/miniGameState.test.jsx` suite currently has 5 passing tests and 3 unrelated existing Cave reward-assignment expectation failures; Feature-004 does not change those reward paths.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-006: Decision health bar should not visually reset after health-loss Continue is clicked
+
+Test Status
+
+* passed
+
+Reproduction
+
+1. Resolve a Decision outcome that removes 20 health from a player with 40 health.
+   Expected before the fix: After the one-second delay the health bar reaches 20, but a stale player-data rerender during Continue restores the meter to 40.
+
+Manual Test Steps
+
+1. Trigger a Decision health-loss outcome.
+   Expected: The original Decision player image and health bar remain visible, and Continue starts disabled.
+2. Wait for the existing one-second health-loss delay.
+   Expected: The specified damage is applied, health is clamped at zero if necessary, the meter shows the reduced value, and Continue becomes enabled.
+3. Click Continue and observe the modal until navigation finishes.
+   Expected: The original player image remains visible and the meter stays at the reduced post-damage value without jumping to pre-damage health.
+4. Inspect the returned board and next-turn modal.
+   Expected: The turn advances normally and the board uses the correctly reduced global player health.
+5. Repeat with non-health Decision outcomes.
+   Expected: Potion, token, skip-turn, and neutral flows remain unchanged.
+6. Watch the browser console throughout the transition.
+   Expected: No runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/DecisionPage.test.jsx` reproduces a stale pre-damage player rerender after Continue, verifies the health bar remains locked to the resolved value, and preserves the original Decision player image while the live turn advances.
+* Existing Decision tests continue to verify the one-second delay, disabled/enabled Continue timing, zero clamp, outcomes, rewards, Good Decisions, and turn flow.
+* Complete Decision page regression passed: 1 suite and 31 tests.
+* `src/data/decisionQuestions.test.js`, `src/i18n/translations.test.js`, and `src/AppMiniGames.test.jsx` passed 43 adjacent regression tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for the Decision health-display Bug-006.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Bug-007: Cave Mini Game Retreat button should stay visible and Cave Runner damage message should be clearer
+
+Test Status
+
+* passed
+
+Reproduction
+
+1. Start the Cave Mini Game at depth zero.
+   Expected before the fix: Go Deeper is visible, but Retreat is absent and the action layout changes after moving deeper.
+2. Trigger an ogre chase with Cave Runner while the player has health above zero.
+   Expected before the fix: Cave Runner prevents damage, but the failure page displays `You lost 0 health`.
+
+Manual Test Steps
+
+1. Start the Cave Mini Game and inspect the first decision.
+   Expected: Go Deeper is visible and enabled; Retreat is visible but disabled.
+2. Click Go Deeper and wait for the existing movement to finish.
+   Expected: Retreat becomes enabled when the existing retreat rules allow it.
+3. Give the player Cave Runner, collect a cave prize, and trigger an ogre chase while the player has health above zero.
+   Expected: Cave Runner is consumed, found cave prizes are lost, and player health remains unchanged.
+4. Inspect the English Mini Game Failed paragraph.
+   Expected: It says `You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.` using the English font class, and does not say `You lost 0 health`.
+5. Repeat the prevented-damage flow with a Japanese player.
+   Expected: It says `洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。` using the Japanese font class.
+6. Trigger an ogre chase without Cave Runner.
+   Expected: The existing normal health-loss message and damage application remain unchanged.
+7. Inspect the Cave and failure markup and watch the browser console.
+   Expected: No `ul` or `li` elements were introduced and no runtime errors appear.
+
+Automated Tests Completed
+
+* `src/pages/MiniGames/CaveMiniGame.test.jsx` verifies first-turn Retreat visibility and disabled state, enabled Go Deeper, and Retreat enabling after movement.
+* `src/pages/MiniGames/MiniGameResultPages.test.jsx` verifies exact English and Japanese prevented-damage copy, language font classes, zero-health message suppression, unchanged health, and the shared Continue flow.
+* `src/AppMiniGames.test.jsx` verifies the real provider flow consumes Cave Runner, preserves health, and displays the clearer message while the existing no-potion failure still applies normal damage.
+* `src/i18n/translations.test.js` verifies the exact English and Japanese Cave Runner prevented-damage translations.
+* Focused Bug-007 regression passed: 4 suites and 54 tests.
+* ESLint passed for all Bug-007 source and test files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-007.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Feature-005: Implement Bridge Builder potion behaviour in River Mini Game
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current River player Bridge Builder and start the River Mini Game.
+   Expected: Bridge Builder appears beneath the player image in an absolutely positioned container without shifting the River instructions or rocks.
+2. Inspect the Bridge Builder display.
+   Expected: The existing Potion component shows its localized name and tooltip, with the localized Use button underneath and no `ul` or `li` markup.
+3. Click Use, then inspect the confirmation modal.
+   Expected: The reused potion confirmation shows the required larger-text question, Potion Description content, and localized Yes/No buttons.
+4. Click No.
+   Expected: The modal closes, the player remains at the same River row, Bridge Builder remains owned, and no success or failure route starts.
+5. Click Use again, then click Yes.
+   Expected: Bridge Builder is removed from its potion slot immediately and the Bridge Builder success modal opens.
+6. Inspect the English success modal.
+   Expected: `The potion created a bridge over the river for you` is centred, uses `larger-text` and the English font class, and one OK button appears.
+7. Repeat the display, confirmation, and success flow with a Japanese player.
+   Expected: Use reads `使用する`, confirmation reads `Bridge Builderを使用してもよろしいですか？`, and success reads `ポーションが川に橋を架けてくれました。` using Japanese font classes.
+8. Click OK.
+   Expected: The normal River win is completed and the existing Loot Chest success screen opens without River failure damage or forfeits.
+9. Mark Board and Battle potion usage as already consumed before entering River, then use Bridge Builder.
+   Expected: Bridge Builder remains usable and neither existing usage flag changes.
+10. Own Bridge Builder but complete a normal River win without using it.
+    Expected: Bridge Builder is not consumed and normal River success remains unchanged.
+11. Own Bridge Builder but complete a normal River failure without using it.
+    Expected: Bridge Builder is not consumed and normal River failure remains unchanged.
+12. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `src/pages/MiniGames/RiverMiniGame.test.jsx` verifies absolute display positioning, player/potion/button order, localized name/tooltip/Use, no list markup, confirmation No/Yes behavior, indexed consumption, bilingual success copy and font classes, normal win routing, and preservation when unused through normal win/loss.
+* `src/AppMiniGames.test.jsx` verifies the real provider removes Bridge Builder, preserves already-used Board and Battle flags, opens the success modal, and reaches the shared Loot Chest route.
+* `src/i18n/translations.test.js` verifies exact English and Japanese River success copy and OK labels.
+* `src/features/potions/potionUsage.test.js` continues to verify Mini potions are available only in Mini context and not in Board or Battle context.
+* Focused Feature-005 regression passed: 4 suites and 59 tests.
+* River page regression passed: 1 suite and 13 tests.
+* ESLint passed for all Feature-005 JavaScript and JSX files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Feature-006: Add respawn flow when a player starts their turn with 0 health
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Set the next active player's current health to 0, then advance to that player's turn.
+   Expected: The normal turn-change modal opens with the player's piece, but its action says `Respawn` instead of `OK`.
+2. While the turn-change modal is open, try the board controls.
+   Expected: Dice rolling, board movement, Spells, and Board potion use remain unavailable.
+3. Give the player a removable Black token and at least one other removable token, then click Respawn.
+   Expected: The Black token is removed first and a second modal says `This token has been removed`.
+4. Inspect the removed token in the second modal.
+   Expected: The existing Token component is centred beneath the message and includes its localized name and tooltip.
+5. Repeat with no removable Black token but multiple eligible non-starting tokens.
+   Expected: One eligible token is selected using the existing random battle-loss rule.
+6. Repeat with only protected starting tokens or no eligible tokens.
+   Expected: No token is removed and the modal says `No tokens were able to be removed`.
+7. Click OK on the token-removal result.
+   Expected: The same player moves to the first bottom-left start-area square, current health equals max health, and normal turn controls become available.
+8. Repeat with a Japanese player.
+   Expected: The action says `リスポーン`; removed and no-token messages use the required Japanese copy and Japanese font classes.
+9. Give a zero-health player a pending skip-turn effect, then complete respawn.
+   Expected: Respawn resolves first, the player is restored, then the existing skip-turn modal flow advances to the following player.
+10. Advance to a player whose health is above 0.
+    Expected: The existing turn-change modal still uses `OK` and behaves unchanged.
+11. Inspect the respawn modals' rendered markup.
+    Expected: No `ul` or `li` elements were introduced.
+12. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/GameSetupContext.test.jsx` verifies Black-first removal, random eligible removal, protected-token preservation, full-health/start-position restoration, same-player continuation, and respawn-before-skip ordering; the complete suite passed 20 tests.
+* `src/pages/GameplayPage.test.jsx` verifies English and Japanese zero-health flows, exact result copy, token name and tooltip, control locking, no-token handling, skip ordering, and unchanged positive-health behavior; all 4 focused tests passed.
+* `src/features/death/deathPenalty.test.js` verifies the reused token-removal priority and eligibility rules; all 4 tests passed.
+* `src/i18n/translations.test.js` verifies the exact English and Japanese gameplay labels; the complete suite passed 14 tests.
+* ESLint passed for all Feature-006 production files plus the context and translation tests.
+* The complete gameplay test file retains 13 existing `testing-library/no-node-access` lint errors outside the new Feature-006 tests; no new lint error was introduced.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-006.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+
+---
+
+Feature-007: Show death state in turn change modal before respawn
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Reduce the active player from positive health to 0 during their turn, finish that turn, and advance until the player becomes active again.
+   Expected: The existing turn-change modal appears first and still shows that player's image.
+2. Inspect the player image in the turn-change modal.
+   Expected: The Font Awesome skull-and-crossbones is centred over the image without moving the modal layout, is dark grey, and has the same width as the image.
+3. Watch the skull when the modal opens.
+   Expected: It grows from the centre, fades in, shakes several times, stops, and remains visible over the player.
+4. Inspect the English death message.
+   Expected: `You died in your last turn` appears above the modal action with the English font, centred yellow text, and 30px top and bottom margins.
+5. Repeat with a Japanese player.
+   Expected: `前のターンで死亡しました。` appears with the Japanese font and the same required positioning and colour.
+6. Inspect the modal action in both languages.
+   Expected: The action remains `Respawn` / `リスポーン`, not `OK`.
+7. Click Respawn.
+   Expected: The existing Feature-006 token-removal modal opens with unchanged removal behavior.
+8. Confirm the token-removal modal.
+   Expected: The player returns to the first start-area square, returns to full health, and `diedLastTurn` clears.
+9. Continue normal play after respawn.
+   Expected: The skull and death message no longer appear.
+10. Open the turn-change modal for an alive player, including one with a stale death flag.
+    Expected: The standard `OK` modal appears without the skull or death message.
+11. Open a zero-health respawn modal from setup data without `diedLastTurn`.
+    Expected: The Feature-006 Respawn action remains available, but Feature-007's skull and message do not appear.
+12. Inspect the modal markup and watch the browser console.
+    Expected: No `ul` or `li` elements were introduced and no runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/gameSetup.test.js`, `src/features/gameSetup/GameSetupContext.test.jsx`, and `src/i18n/translations.test.js` verify the default/preserved flag, lethal-health transition, respawn clearing, and exact bilingual copy; all 42 tests in the complete suites passed.
+* `src/pages/GameplayPage.test.jsx` verifies the English and Japanese death displays, Font Awesome skull, language classes, required CSS positioning/colours/margins, grow/fade/shake keyframes, Respawn preservation, post-respawn clearing, and both hidden-state gates.
+* `src/features/miniGames/miniGameState.test.jsx` verifies lethal mini-game health marks death and its existing immediate respawn clears the flag.
+* `src/pages/BattlePage.test.jsx` verifies both debug and automated battle deaths mark the flag and the existing battle respawn clears it.
+* Affected gameplay, battle-respawn, and mini-game-respawn regression passed 9 focused tests; the automated battle-effect lifecycle passed its additional focused test.
+* ESLint passed for all Feature-007 production files and focused game setup, context, mini-game, and translation tests.
+* The complete gameplay and battle test files retain existing `testing-library/no-node-access` lint violations outside the new Feature-007 assertions; no new lint violation was introduced.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-007.
 
 Manual Execution
 

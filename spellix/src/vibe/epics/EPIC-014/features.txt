@@ -1733,3 +1733,4 @@ Completion Notes
 * Reused the existing dice sequence and battle-resolution state so the dice remains visible while rolling, fades during result effects, and returns only after the sequence and effect queue finish.
 * Kept the dice mounted with reserved grid space and disabled interaction while faded; terminal reward and loss flows do not restore it.
 * Added only the required narrow-screen grid gap adjustment and did not change battle calculations, potion effects, rewards, images, title text, routes, or shared abstractions.
+

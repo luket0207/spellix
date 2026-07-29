@@ -1572,7 +1572,7 @@ Feature-003: Implement Good Decisions potion behaviour on Decision page
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -1863,13 +1863,29 @@ Testing Checkpoints
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
 
+Implementation Notes
+
+* The Decision page displays an owned Good Decisions potion between the question and choices with its existing name and tooltip.
+* Activating the potion replaces Use with a same-height yellow Active label without consuming the potion or changing board potion tracking.
+* Active resolution proportionally reweights good and neutral chances, guarantees good when neutral is zero, and warns in development before safely defaulting invalid all-bad data to good.
+* Good Decisions is consumed only after the selected outcome resolves, while the existing Decision reward and punishment flow continues unchanged.
+* `implementation.txt` was not created or updated because the project rules prohibit it.
+
+Verification
+
+* Focused Decision data, translation, and page tests passed: 3 suites and 54 tests.
+* Mini potion context regression passed: 1 suite and 11 tests.
+* ESLint passed for all changed source and test files.
+* `npm run build` passed.
+* Manual browser execution was not performed during this automated pass.
+
 ---
 
 Feature-004: Implement Cave Runner potion behaviour in Cave Mini Game
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -2079,13 +2095,30 @@ Testing Checkpoints
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
 
+Implementation Notes
+
+* The Cave Mini Game displays an owned Cave Runner beneath its action buttons using the existing Potion component, localized name/tooltip, and yellow Active text without a Use button.
+* Ogre chase resolution clears cave rewards through the existing flow, then automatically consumes Cave Runner only when the player has health that would otherwise be reduced.
+* Cave Runner records a cave-loss-only health prevention flag, allowing the shared Mini Game Failed page to continue normally with zero health loss.
+* Successful retreat, normal cave completion, and zero-health ogre encounters do not consume Cave Runner.
+* Existing cave reward odds, generation, chase animation, retreat behavior, and ordinary no-potion damage remain unchanged.
+* `implementation.txt` was not created or updated because the project rules prohibit it.
+
+Verification
+
+* Focused Cave Runner, shared failure, app integration, translation, and Mini potion regressions passed: 5 suites and 64 tests.
+* ESLint passed for all changed JavaScript and JSX files.
+* `npm run build` passed.
+* The broader `miniGameState.test.jsx` suite has 5 passing tests and 3 pre-existing Cave reward-assignment expectation failures outside Feature-004; no reward logic was changed.
+* Manual browser execution was not performed during this automated pass.
+
 ---
 
 Feature-005: Implement Bridge Builder potion behaviour in River Mini Game
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -2349,6 +2382,23 @@ Testing Checkpoints
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
 
+Implementation Notes
+
+* Reused `PotionIcon`, `PotionUseConfirmationModal`, `Modal`, `Button`, `removePlayerPotion`, and the existing River win completion route.
+* Bridge Builder is derived from the River player's potion slots and displayed in an absolutely positioned container beneath the player image.
+* No closes confirmation without mutation; Yes removes the exact Bridge Builder slot and opens the bilingual success modal.
+* OK calls the same `completeMiniGame('win')` and `/mini-game/loot-chest` path as a normal River crossing.
+* Board and Battle potion usage flags are neither read nor changed by this Mini potion flow.
+* Per the main project rules, `implementation.txt` was not created or updated.
+
+Verification
+
+* Focused Feature-005 regression passed: 4 suites and 59 tests.
+* The River page suite passed all 13 tests, including unused-potion preservation on normal River win and loss.
+* ESLint passed for all Feature-005 JavaScript and JSX files.
+* `npm run build` passed.
+* Manual browser execution was not performed during this automated pass.
+
 
 ---
 
@@ -2356,7 +2406,7 @@ Feature-006: Add respawn flow when a player starts their turn with 0 health
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -2591,3 +2641,320 @@ Testing Checkpoints
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added a two-stage start-of-turn respawn flow that keeps board actions locked until the active player acknowledges the token-removal result.
+* Reused the existing next-turn modal, shared Modal, Button, and Token components, battle-loss token-removal helper, Light Green max-health recalculation, and first start-area position helper.
+* Added only the required `pendingTurnRespawn` state and begin/complete context actions; no new route, component, dependency, or unrelated refactor was introduced.
+* A pending skip-turn effect is preserved during respawn, then resolved through the existing next-turn modal after health and position are restored.
+* Added exact English and Japanese removal-result copy and minimal centring required by the feature.
+* Per the current three-file vibe workflow, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed.
+
+---
+
+Feature-007: Show death state in turn change modal before respawn
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-006: Add respawn flow when a player starts their turn with 0 health
+* EPIC-011 Bug-004: Prevent visible player image changing prematurely before screen transition completes
+* EPIC-015 Bug-004: Decision health-loss outcome should not show next player before returning to board
+* EPIC-015 Bug-006: Decision health bar should not visually reset after health-loss Continue is clicked
+
+Goal
+
+* Extend the turn change modal so it clearly shows when a player died in their last turn.
+* If the player starts their turn with `0` health and must respawn, show a skull animation over their player image.
+* Display a clear bilingual death message above the modal button.
+* Preserve the respawn flow from Feature-006.
+
+Trigger Requirement
+
+* This display should appear when the player entering the turn change modal:
+
+  * has `0` health.
+  * is entering the respawn flow from Feature-006.
+  * died in their previous turn.
+
+* The modal should still use the Respawn button from Feature-006.
+
+* This feature only adds the death visual/message to that modal.
+
+Death Message Text
+
+English:
+
+```txt id="zbn5vm"
+You died in your last turn
+```
+
+Japanese:
+
+```txt id="g0vmyh"
+前のターンで死亡しました。
+```
+
+Text Styling Requirement
+
+* The death message should appear above the button.
+* It should have:
+
+```css id="mte8c8"
+margin-top: 30px;
+margin-bottom: 30px;
+```
+
+* The text should be yellow.
+* The text should be centred.
+* The text should use the correct English/Japanese font.
+
+Suggested CSS Direction
+
+```css id="hjiq6r"
+.turn-change-death-message {
+  margin: 30px 0;
+  color: #F5FA00;
+  text-align: center;
+}
+```
+
+Skull Icon Requirement
+
+* Use Font Awesome icon:
+
+```txt id="lg4h1s"
+faSkullCrossbones
+```
+
+* The icon should appear over the player’s image in the turn change modal.
+* The icon should be dark grey.
+* The icon should be the same width as the player’s image.
+* The icon should remain over the player image after the animation finishes.
+
+Suggested Colour
+
+```css id="q37cil"
+#333333
+```
+
+* Exact dark grey can vary slightly if the project already has a standard dark grey.
+
+Skull Position Requirement
+
+* The skull should be positioned over the player image.
+* It should be centred over the image.
+* The player image should remain visible behind it unless the final visual looks better with the skull mostly covering it.
+* The skull should not move the modal layout.
+
+Suggested Structure
+
+```jsx id="ovgzl5"
+<div className="turn-change-player-image-wrapper">
+  <PlayerImage
+    player={activePlayer}
+    className="turn-change-player-image"
+  />
+
+  {showDeathState && (
+    <FontAwesomeIcon
+      icon={faSkullCrossbones}
+      className="turn-change-death-skull"
+    />
+  )}
+</div>
+
+{showDeathState && (
+  <p className={`turn-change-death-message ${languageClass}`}>
+    {youDiedLastTurnText}
+  </p>
+)}
+```
+
+Suggested CSS Direction
+
+```css id="jqr0x2"
+.turn-change-player-image-wrapper {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.turn-change-death-skull {
+  position: absolute;
+  width: 100%;
+  height: auto;
+  color: #333333;
+  animation: deathSkullAppear 1.2s ease-out forwards;
+  pointer-events: none;
+}
+```
+
+Animation Requirement
+
+* The skull icon should animate in by:
+
+  * growing from the centre.
+  * fading in.
+  * shaking a few times.
+  * then coming to a stop.
+  * then remaining over the player.
+
+Suggested Animation Direction
+
+```css id="jcwmnl"
+@keyframes deathSkullAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1) translateX(-5px) rotate(-4deg);
+  }
+
+  55% {
+    transform: scale(1) translateX(5px) rotate(4deg);
+  }
+
+  65% {
+    transform: scale(1) translateX(-4px) rotate(-3deg);
+  }
+
+  75% {
+    transform: scale(1) translateX(4px) rotate(3deg);
+  }
+
+  85% {
+    transform: scale(1) translateX(-2px) rotate(-1deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0);
+  }
+}
+```
+
+* Exact timing can vary.
+* The important requirements are:
+
+  * fade in.
+  * grow from centre.
+  * shake a few times.
+  * stop.
+  * remain visible.
+
+Respawn Button Requirement
+
+* Preserve the Feature-006 button text.
+
+English:
+
+```txt id="i9h4ad"
+Respawn
+```
+
+Japanese:
+
+```txt id="a8ga3s"
+リスポーン
+```
+
+* The death message should appear above this button.
+* The button should still trigger the token-removal respawn flow from Feature-006.
+
+State Requirement
+
+* Add or reuse a state flag to know the player died in their last turn.
+* Suggested field:
+
+```js id="m09zfi"
+player.diedLastTurn = true;
+```
+
+* Set this when the player reaches `0` health during their own turn.
+* Clear it after the respawn flow is completed.
+* Do not show the skull/message forever after the player has respawned.
+
+Suggested Flow
+
+```txt id="1st97m"
+1. Player reaches 0 health during their turn.
+2. Store that they died in their last turn.
+3. Turn advances normally.
+4. When that player’s turn comes around again, the turn change modal appears.
+5. Because the player has 0 health, the Respawn button is shown.
+6. Because they died in their last turn, the skull animation and death message are shown.
+7. Player clicks Respawn.
+8. Token-removal modal appears.
+9. Player confirms.
+10. Player returns to start square and full health.
+11. diedLastTurn flag clears.
+```
+
+Interaction With Existing Turn Modal
+
+* The next-turn modal invariant must remain intact.
+* The turn change modal should still be the first thing shown when the active player changes.
+* This feature should not cause the modal to be skipped or replaced.
+* It only adds death-state visuals and text when the respawn condition applies.
+
+Out Of Scope
+
+* No changes to how death is detected.
+* No changes to how health reaches 0.
+* No changes to token-removal priority.
+* No changes to respawn position.
+* No changes to health restoration.
+* No changes to normal turn change modal for players who are alive.
+* No unrelated modal redesign.
+
+Testing Checkpoints
+
+* Reduce a player to 0 health during their turn.
+* Advance turns until that player’s turn starts again.
+* Confirm the turn change modal appears first.
+* Confirm the player image is shown.
+* Confirm `faSkullCrossbones` appears over the player image.
+* Confirm the skull is dark grey.
+* Confirm the skull is the same width as the player image.
+* Confirm the skull grows from the centre.
+* Confirm the skull fades in.
+* Confirm the skull shakes a few times.
+* Confirm the skull stops and remains over the player.
+* Confirm English text says `You died in your last turn`.
+* Confirm Japanese text says `前のターンで死亡しました。`.
+* Confirm the death message is yellow.
+* Confirm the death message has `30px` margin above and below.
+* Confirm the Respawn button still appears instead of OK.
+* Click Respawn.
+* Confirm the normal respawn token-removal flow begins.
+* Confirm after respawn the player moves to the starting square.
+* Confirm after respawn the player is restored to full health.
+* Confirm the skull/message no longer appear once the player is no longer in respawn state.
+* Confirm normal alive players still get the standard turn change modal.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added the required `diedLastTurn` player field. It is a required boolean that defaults to `false`, is stored on each player in game setup state, is set when existing health-update paths move a living player to 0 health, and is cleared by existing respawn completion paths.
+* Reused the existing turn-change modal, player image renderer, Feature-006 respawn condition and actions, gameplay translations, and installed Font Awesome package.
+* Added `faSkullCrossbones` only when the active player both requires start-of-turn respawn and has `diedLastTurn`; alive players and zero-health setups without the death flag retain their previous modal content.
+* Added the exact bilingual death message and only the requested overlay positioning, colour, margins, centring, and grow/fade/shake animation.
+* Feature-006 token removal, starting position, health restoration, skip-turn ordering, and normal turn-modal behavior were not changed.
+* Per the current three-file vibe workflow, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed.

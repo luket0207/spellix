@@ -14,6 +14,7 @@ describe('game setup player piece selection foundation', () => {
     expect(players[0].anywhereMode).toBe(false);
     expect(players[0].gender).toBe('boy');
     expect(players[0].currentHealth).toBe(100);
+    expect(players[0].diedLastTurn).toBe(false);
     expect(players[0].hasLeftStartArea).toBe(false);
     expect(players[0].maxHealth).toBe(100);
     expect(players[0].pieceImage).toBe('m-red.png');
@@ -72,5 +73,15 @@ describe('game setup player piece selection foundation', () => {
 
     expect(recreatedPlayers[0].hasUnseenTokenBagTokens).toBe(false);
     expect(recreatedPlayers[1].hasUnseenTokenBagTokens).toBe(true);
+  });
+
+  test('preserves whether a player died in their last turn', () => {
+    const existingPlayers = createPlayers(2);
+    existingPlayers[0].diedLastTurn = true;
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].diedLastTurn).toBe(true);
+    expect(recreatedPlayers[1].diedLastTurn).toBe(false);
   });
 });

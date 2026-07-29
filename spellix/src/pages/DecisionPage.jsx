@@ -119,11 +119,15 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
   );
   const [decisionPlayerId] = useState(() => currentPlayer?.id);
   const [decisionOutcome, setDecisionOutcome] = useState(null);
+  const [displayedDecisionHealth, setDisplayedDecisionHealth] = useState(
+    () => currentPlayer?.currentHealth ?? 0
+  );
   const [effectStatus, setEffectStatus] = useState(null);
   const [rewardPotion, setRewardPotion] = useState(null);
   const [rewardToken, setRewardToken] = useState(null);
   const [removedPotion, setRemovedPotion] = useState(null);
   const [removedToken, setRemovedToken] = useState(null);
+  const [isGoodDecisionsActive, setIsGoodDecisionsActive] = useState(false);
   const [isTokenAssignmentOpen, setIsTokenAssignmentOpen] = useState(false);
   const [isTokenBagStaged, setIsTokenBagStaged] = useState(false);
   const [isRewardTokenDiscardStaged, setIsRewardTokenDiscardStaged] =
@@ -171,6 +175,11 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
     selectedTokenBagReplacementIndex >= 0
       ? activeDecisionPlayer.tokenBag[selectedTokenBagReplacementIndex]
       : null;
+  const goodDecisionsPotionIndex = activeDecisionPlayer.potions.findIndex(
+    ({ id }) => id === 'good-decisions'
+  );
+  const goodDecisionsPotion =
+    activeDecisionPlayer.potions[goodDecisionsPotionIndex] ?? null;
   const isEffectComplete = effectStatus === EFFECT_STATUS.COMPLETE;
   const canConfirmTokenPlacement = Boolean(
     selectedSpellSlotIndex >= 0 ||
@@ -410,10 +419,13 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
     if (effect.type === 'loseHealth') {
       setEffectStatus(EFFECT_STATUS.PENDING);
       healthTimerRef.current = setTimeout(() => {
-        setPlayerHealth(
-          activeDecisionPlayer.id,
-          Math.max(0, activeDecisionPlayer.currentHealth - effect.amount)
+        const nextHealth = Math.max(
+          0,
+          activeDecisionPlayer.currentHealth - effect.amount
         );
+
+        setPlayerHealth(activeDecisionPlayer.id, nextHealth);
+        setDisplayedDecisionHealth(nextHealth);
         setEffectStatus(EFFECT_STATUS.COMPLETE);
       }, 1000);
       return;
@@ -460,7 +472,13 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
   };
 
   const handleChoice = (decisionChoice) => {
-    const outcome = resolveDecisionOutcome(decisionChoice, randomFn);
+    const outcome = resolveDecisionOutcome(decisionChoice, randomFn, {
+      preventBadOutcome: isGoodDecisionsActive,
+    });
+
+    if (isGoodDecisionsActive && goodDecisionsPotionIndex >= 0) {
+      removePlayerPotion(activeDecisionPlayer.id, goodDecisionsPotionIndex);
+    }
 
     setDecisionOutcome(outcome);
     applyOutcomeEffect(outcome);
@@ -554,7 +572,7 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
       return (
         <div className="decision-health-effect">
           <HealthBar
-            currentHealth={activeDecisionPlayer.currentHealth}
+            currentHealth={displayedDecisionHealth}
             maxHealth={activeDecisionPlayer.maxHealth}
           />
         </div>
@@ -682,6 +700,29 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
                 {currentDecision.question[currentLanguage] ??
                   currentDecision.question.en}
               </p>
+              {goodDecisionsPotion ? (
+                <section className="decision-mini-potion-section">
+                  <PotionIcon
+                    language={currentLanguage}
+                    potion={goodDecisionsPotion}
+                  />
+                  {isGoodDecisionsActive ? (
+                    <p
+                      className={`decision-mini-potion-active-text ${languageClassName}`}
+                    >
+                      {translations.goodDecisionsActive}
+                    </p>
+                  ) : (
+                    <Button
+                      className={`decision-mini-potion-use-button ${languageClassName}`}
+                      type="button"
+                      onClick={() => setIsGoodDecisionsActive(true)}
+                    >
+                      {translations.use}
+                    </Button>
+                  )}
+                </section>
+              ) : null}
               <div className="decision-choice-list">
                 {currentDecision.choices.map((decisionChoice) => (
                   <Button

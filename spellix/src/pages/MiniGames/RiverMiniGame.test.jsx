@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { POTION_DEFINITIONS } from '../../data/potions';
 import { useGameSetup } from '../../features/gameSetup/GameSetupContext';
 import RiverMiniGame from './RiverMiniGame';
 
@@ -38,13 +39,19 @@ jest.mock('../../features/miniGames/riverMiniGame', () => ({
 }));
 
 const completeMiniGame = jest.fn();
+const removePlayerPotion = jest.fn();
+const bridgeBuilderPotion = POTION_DEFINITIONS.find(
+  ({ id }) => id === 'bridge-builder'
+);
 
-function renderRiverMiniGame(language = 'en') {
+function renderRiverMiniGame(language = 'en', playerOverrides = {}) {
   const player = {
     colour: 'red',
     id: 'player-1',
     language,
     pieceImage: 'm-red.png',
+    potions: [],
+    ...playerOverrides,
   };
 
   useGameSetup.mockReturnValue({
@@ -57,6 +64,7 @@ function renderRiverMiniGame(language = 'en') {
       returnBehaviour: null,
       type: 'river',
     },
+    removePlayerPotion,
   });
 
   return render(
@@ -87,6 +95,7 @@ function finishRowTransition() {
 
 beforeEach(() => {
   completeMiniGame.mockClear();
+  removePlayerPotion.mockClear();
 });
 
 afterEach(() => {
@@ -111,6 +120,121 @@ test('shows only Row 1 as image rocks with the player character below it', () =>
   const playerImage = screen.getByRole('img', { name: /current player character/i });
   expect(row.compareDocumentPosition(playerImage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(playerImage).toHaveAttribute('src', 'm-red.png');
+});
+
+test('shows Bridge Builder beneath the player without changing the River layout', () => {
+  const stylesheet = readFileSync(`${__dirname}/RiverMiniGame.css`, 'utf8');
+
+  renderRiverMiniGame('en', {
+    potions: [bridgeBuilderPotion],
+    turnPotionUsage: { boardPotionUsedThisTurn: true },
+  });
+
+  const playerImage = screen.getByRole('img', { name: /current player character/i });
+  const potion = screen.getByRole('group', { name: /bridge builder potion/i });
+  const useButton = screen.getByRole('button', { name: 'Use' });
+
+  expect(potion).toHaveAttribute('title', 'Auto win a River Mini Game');
+  expect(within(potion).getByText('Bridge Builder')).toHaveClass('language-en');
+  expect(useButton).toHaveClass('language-en');
+  expect(
+    playerImage.compareDocumentPosition(potion) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    potion.compareDocumentPosition(useButton) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(stylesheet).toMatch(/\.river-player-area\s*{[^}]*position:\s*relative;/s);
+  expect(stylesheet).toMatch(
+    /\.river-bridge-builder-potion\s*{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100% \+ 16px\);/s
+  );
+  expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+});
+
+test('cancels Bridge Builder confirmation without consuming it or leaving River', () => {
+  renderRiverMiniGame('en', { potions: [bridgeBuilderPotion] });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+
+  const confirmation = screen.getByRole('dialog', {
+    name: 'Use potion confirmation',
+  });
+  expect(
+    within(confirmation).getByText(
+      'Are you sure you want to use Bridge Builder?'
+    )
+  ).toHaveClass('larger-text', 'language-en');
+  expect(within(confirmation).getByText('Potion Description')).toBeInTheDocument();
+  expect(
+    within(confirmation).getByText('Auto win a River Mini Game')
+  ).toBeInTheDocument();
+
+  fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
+
+  expect(
+    screen.queryByRole('dialog', { name: 'Use potion confirmation' })
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('group', { name: /river row 1/i })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: /bridge builder potion/i })).toBeInTheDocument();
+  expect(removePlayerPotion).not.toHaveBeenCalled();
+  expect(completeMiniGame).not.toHaveBeenCalled();
+});
+
+test('consumes Bridge Builder on confirmation and uses the normal River win route after OK', () => {
+  renderRiverMiniGame('en', { potions: [bridgeBuilderPotion] });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  fireEvent.click(
+    within(screen.getByRole('dialog')).getByRole('button', { name: 'Yes' })
+  );
+
+  expect(removePlayerPotion).toHaveBeenCalledWith('player-1', 0);
+  expect(screen.queryByRole('group', { name: /bridge builder potion/i })).not.toBeInTheDocument();
+  expect(completeMiniGame).not.toHaveBeenCalled();
+  const successDialog = screen.getByRole('dialog', {
+    name: 'Bridge Builder success',
+  });
+  expect(
+    within(successDialog).getByText(
+      'The potion created a bridge over the river for you'
+    )
+  ).toHaveClass('larger-text', 'language-en');
+  expect(screen.queryByText(/lose destination/i)).not.toBeInTheDocument();
+
+  fireEvent.click(within(successDialog).getByRole('button', { name: 'OK' }));
+
+  expect(completeMiniGame).toHaveBeenCalledWith('win');
+  expect(screen.getByText(/loot destination/i)).toBeInTheDocument();
+});
+
+test('localizes the Bridge Builder display, confirmation, and success modal in Japanese', () => {
+  renderRiverMiniGame('jp', { potions: [bridgeBuilderPotion] });
+
+  const potion = screen.getByRole('group', { name: '橋職人 potion' });
+  expect(within(potion).getByText('橋職人')).toHaveClass('language-jp');
+  expect(potion).toHaveAttribute('title', '川のミニゲームに自動的に勝利する。');
+  expect(screen.getByRole('button', { name: '使用する' })).toHaveClass('language-jp');
+
+  fireEvent.click(screen.getByRole('button', { name: '使用する' }));
+  const confirmation = screen.getByRole('dialog', {
+    name: 'Use potion confirmation',
+  });
+  expect(
+    within(confirmation).getByText(
+      'Bridge Builderを使用してもよろしいですか？'
+    )
+  ).toHaveClass('larger-text', 'language-jp');
+  fireEvent.click(within(confirmation).getByRole('button', { name: 'はい' }));
+
+  const successDialog = screen.getByRole('dialog', {
+    name: 'Bridge Builder success',
+  });
+  expect(
+    within(successDialog).getByText('ポーションが川に橋を架けてくれました。')
+  ).toHaveClass('larger-text', 'language-jp');
+  expect(within(successDialog).getByRole('button', { name: 'OK' })).toHaveClass(
+    'language-jp'
+  );
 });
 
 test('does not reveal safe or unsafe status before a rock is selected', () => {
@@ -215,7 +339,7 @@ test('animates safe rows out and the next row in while preventing clicks', () =>
 
 test('replaces the final row with Continue and waits for it before routing to Loot Chest', () => {
   jest.useFakeTimers();
-  renderRiverMiniGame();
+  renderRiverMiniGame('en', { potions: [bridgeBuilderPotion] });
 
   fireEvent.click(screen.getByRole('button', { name: /row 1 rock 1/i }));
   finishRowTransition();
@@ -241,12 +365,13 @@ test('replaces the final row with Continue and waits for it before routing to Lo
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   expect(completeMiniGame).toHaveBeenCalledWith('win');
+  expect(removePlayerPotion).not.toHaveBeenCalled();
   expect(screen.getByText(/loot destination/i)).toBeInTheDocument();
 });
 
 test('finishes the unsafe animation, then waits for localized Continue before loss navigation', () => {
   jest.useFakeTimers();
-  renderRiverMiniGame('jp');
+  renderRiverMiniGame('jp', { potions: [bridgeBuilderPotion] });
 
   expect(screen.getByText('3列の岩を越えて、反対岸にたどり着いてください。')).toHaveClass(
     'language-jp'
@@ -280,6 +405,7 @@ test('finishes the unsafe animation, then waits for localized Continue before lo
 
   fireEvent.click(screen.getByRole('button', { name: '続ける' }));
   expect(completeMiniGame).toHaveBeenCalledWith('loss');
+  expect(removePlayerPotion).not.toHaveBeenCalled();
   expect(screen.getByText(/lose destination/i)).toBeInTheDocument();
 });
 

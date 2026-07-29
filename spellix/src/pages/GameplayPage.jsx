@@ -1,3 +1,5 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSkullCrossbones } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import { POTION_DEFINITIONS } from '../data/potions';
 import Button from '../components/common/Button/Button';
@@ -5,6 +7,7 @@ import DiceRoll from '../components/dice/DiceRoll';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
 import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
+import Token from '../components/tokens/Token';
 import BoardGrid from '../features/gameBoard/BoardGrid';
 import {
   getAnywhereModeHighlightedNodeIds,
@@ -55,6 +58,7 @@ import {
   getCaveMiniGameTranslations,
   getGameplayLanguage,
   getGameplayTranslations,
+  getMiniGameFailureTranslations,
   getNextTurnMessage,
   getPotionUsageTranslations,
   getRiverMiniGameTranslations,
@@ -65,10 +69,12 @@ import './GameplayPage.css';
 function GameplayPage() {
   const {
     advanceTurn,
+    beginTurnRespawn,
     clearPlayerBoardDiceEffect,
     clearPlayerForcedRoll,
     completeStormMasterForcedTurn,
     completeBuyAndSell,
+    completeTurnRespawn,
     currentPlayer,
     dismissDevineChanceResult,
     dismissTroublemakerResult,
@@ -80,6 +86,7 @@ function GameplayPage() {
     markPlayerTokenBagSeen,
     miniGameReturnNotice,
     pendingNextTurnModal,
+    pendingTurnRespawn,
     setPlayerPosition,
     updatePlayerSpells,
     consumePlayerPotion,
@@ -118,11 +125,22 @@ function GameplayPage() {
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
+  const failureTranslations = getMiniGameFailureTranslations(currentLanguage);
   const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
   const riverMiniGameTranslations = getRiverMiniGameTranslations(currentLanguage);
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
+  const requiresTurnRespawn = Boolean(
+    pendingNextTurnModal && currentPlayer?.currentHealth === 0
+  );
+  const showTurnDeathState = Boolean(
+    requiresTurnRespawn && currentPlayer?.diedLastTurn
+  );
+  const isTurnStartBlocked =
+    pendingNextTurnModal || Boolean(pendingTurnRespawn);
+  const removedRespawnToken =
+    pendingTurnRespawn?.removedTokens?.[0]?.token ?? null;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
   const showSpellsNotification = Boolean(
     currentPlayer?.hasUnseenTokenBagTokens &&
@@ -403,7 +421,7 @@ function GameplayPage() {
   }, [gameSetup.board, gameSetup.players.length, initializeBoard]);
 
   useEffect(() => {
-    if (currentPlayer && isForcedSpellSetup && !pendingNextTurnModal) {
+    if (currentPlayer && isForcedSpellSetup && !isTurnStartBlocked) {
       markPlayerTokenBagSeen(currentPlayer.id);
       setShowSpellsModal(true);
     }
@@ -411,7 +429,7 @@ function GameplayPage() {
     currentPlayer,
     isForcedSpellSetup,
     markPlayerTokenBagSeen,
-    pendingNextTurnModal,
+    isTurnStartBlocked,
   ]);
 
   useEffect(() => {
@@ -433,7 +451,7 @@ function GameplayPage() {
       !currentPlayer.hasCommittedInitialSpells ||
       showDiceModal ||
       showSpellsModal ||
-      pendingNextTurnModal ||
+      isTurnStartBlocked ||
       stormMasterResult ||
       currentDiceRoll !== null
     ) {
@@ -542,7 +560,7 @@ function GameplayPage() {
       !currentPlayer ||
       showDiceModal ||
       showSpellsModal ||
-      pendingNextTurnModal ||
+      isTurnStartBlocked ||
       devineChanceResult ||
       stormMasterResult ||
       troublemakerResult ||
@@ -820,7 +838,7 @@ function GameplayPage() {
             !currentPlayer?.hasCommittedInitialSpells ||
             showDiceModal ||
             showSpellsModal ||
-            pendingNextTurnModal ||
+            isTurnStartBlocked ||
             devineChanceResult ||
             stormMasterResult ||
             troublemakerResult ||
@@ -834,7 +852,7 @@ function GameplayPage() {
         <div className="spells-button-wrapper">
           <Button
             className={languageClassName}
-            disabled={!currentPlayer || showDiceModal || showSpellsModal || pendingNextTurnModal}
+            disabled={!currentPlayer || showDiceModal || showSpellsModal || isTurnStartBlocked}
             type="button"
             onClick={handleOpenSpellsModal}
           >
@@ -863,7 +881,8 @@ function GameplayPage() {
         <PotionList
           context="board"
           disabled={Boolean(
-            currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
+            isTurnStartBlocked ||
+              currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
               blocksBoardPotionUse(currentPlayer?.activePotion)
           )}
           language={currentLanguage}
@@ -1088,11 +1107,16 @@ function GameplayPage() {
         <Modal
           actions={
             <Button
+              className={languageClassName}
               type="button"
               variant="secondary"
-              onClick={dismissNextTurnModal}
+              onClick={
+                requiresTurnRespawn
+                  ? beginTurnRespawn
+                  : dismissNextTurnModal
+              }
             >
-              OK
+              {requiresTurnRespawn ? failureTranslations.respawn : 'OK'}
             </Button>
           }
           ariaLabel="Turn change"
@@ -1102,13 +1126,29 @@ function GameplayPage() {
           <h1 className={languageClassName}>
             {getNextTurnMessage(currentLanguage, currentPlayer.colour)}
           </h1>
-          {renderPlayerPiece({
-            ariaLabel: 'Turn change player piece',
-            className: 'turn-change-player-piece',
-            height: '200px',
-            player: currentPlayer,
-          })}
-          {currentPlayer.skipNextTurn ? (
+          <div className="turn-change-player-image-wrapper">
+            {renderPlayerPiece({
+              ariaLabel: 'Turn change player piece',
+              className: 'turn-change-player-piece',
+              height: '200px',
+              player: currentPlayer,
+            })}
+            {showTurnDeathState ? (
+              <FontAwesomeIcon
+                aria-label="Death state skull"
+                className="turn-change-death-skull"
+                icon={faSkullCrossbones}
+              />
+            ) : null}
+          </div>
+          {showTurnDeathState ? (
+            <p
+              className={`larger-text turn-change-death-message ${languageClassName}`}
+            >
+              {gameplayTranslations.deathLastTurn}
+            </p>
+          ) : null}
+          {currentPlayer.skipNextTurn && !requiresTurnRespawn ? (
             <p className={`larger-text ${languageClassName}`}>
               {gameplayTranslations.skipTurnMessage}
             </p>
@@ -1116,6 +1156,37 @@ function GameplayPage() {
           </div>
         </Modal>
       ) : null}
+
+      <Modal
+        actions={
+          <Button
+            className={languageClassName}
+            type="button"
+            variant="secondary"
+            onClick={completeTurnRespawn}
+          >
+            OK
+          </Button>
+        }
+        ariaLabel="Respawn token removal"
+        isOpen={Boolean(pendingTurnRespawn)}
+      >
+        <div className="respawn-token-modal-content">
+          <p className={`larger-text ${languageClassName}`}>
+            {removedRespawnToken
+              ? gameplayTranslations.respawnTokenRemoved
+              : gameplayTranslations.respawnNoTokenRemoved}
+          </p>
+          {removedRespawnToken ? (
+            <Token
+              ariaLabel="Respawn removed token"
+              language={currentLanguage}
+              showName
+              tokenType={removedRespawnToken.type}
+            />
+          ) : null}
+        </div>
+      </Modal>
 
       <Modal
         actions={

@@ -110,6 +110,67 @@ test('Mini Game Failed applies one generated punishment after one second and con
   expect(screen.getByText(/gameplay destination/i)).toBeInTheDocument();
 });
 
+test('Cave Runner explains prevented damage while preserving the shared failure flow', () => {
+  const preventedDamageMessage =
+    'You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.';
+
+  renderResultPage('/mini-game/lose', <MiniGameLosePage randomFn={() => 0.99} />, {
+    context: {
+      miniGameResult: {
+        playerId: 'player-1',
+        preventHealthLoss: true,
+        result: 'loss',
+        returnBehaviour: 'nextPlayerTurn',
+        type: 'cave',
+      },
+    },
+  });
+
+  expect(screen.getByText(preventedDamageMessage)).toHaveClass(
+    'mini-game-failure-punishment',
+    'language-en'
+  );
+  expect(screen.queryByText('You lost 0 health')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
+
+  act(() => {
+    jest.advanceTimersByTime(1000);
+  });
+
+  expect(applyMiniGameFailurePunishment).toHaveBeenCalledWith('player-1', 0);
+  expect(screen.getByRole('meter', { name: /health bar/i })).toHaveAttribute(
+    'aria-valuenow',
+    '100'
+  );
+  expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+});
+
+test('Cave Runner prevented-damage message uses the Japanese copy and font class', () => {
+  const preventedDamageMessage =
+    '洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。';
+
+  renderResultPage('/mini-game/lose', <MiniGameLosePage randomFn={() => 0.99} />, {
+    context: {
+      miniGameResult: {
+        playerId: 'player-1',
+        preventHealthLoss: true,
+        result: 'loss',
+        returnBehaviour: 'nextPlayerTurn',
+        type: 'cave',
+      },
+    },
+    player: {
+      language: 'jp',
+    },
+  });
+
+  expect(screen.getByText(preventedDamageMessage)).toHaveClass(
+    'mini-game-failure-punishment',
+    'language-jp'
+  );
+  expect(screen.queryByText(/体力を0失いました。/)).not.toBeInTheDocument();
+});
+
 test('Mini Game Failed clamps health to zero and respawns with Japanese text', () => {
   renderResultPage('/mini-game/lose', <MiniGameLosePage randomFn={() => 0.99} />, {
     player: {

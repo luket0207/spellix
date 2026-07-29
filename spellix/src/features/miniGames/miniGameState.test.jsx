@@ -57,6 +57,7 @@ function MiniGameStateProbe() {
     <div>
       <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
       <p>{`Player 1 health: ${playerOne?.currentHealth ?? 'none'}`}</p>
+      <p>{`Player 1 died last turn: ${playerOne?.diedLastTurn ? 'yes' : 'no'}`}</p>
       <p>{`Mini game: ${miniGameResult?.type ?? 'none'}`}</p>
       <p>{`Result: ${miniGameResult?.result ?? 'none'}`}</p>
       <p>{`Return: ${miniGameResult?.returnBehaviour ?? 'none'}`}</p>
@@ -148,6 +149,7 @@ function ReturnedGameStateProbe() {
     <div>
       <p>{`Current player: ${currentPlayer?.id ?? 'none'}`}</p>
       <p>{`Player 1 health: ${playerOne?.currentHealth ?? 'none'}`}</p>
+      <p>{`Player 1 died last turn: ${playerOne?.diedLastTurn ? 'yes' : 'no'}`}</p>
       <p>{`Player 1 position: ${JSON.stringify(playerOne?.position ?? null)}`}</p>
       <p>{`Player 1 slot tokens: ${playerOne?.spellSlots.flatMap(({ tokens }) => tokens).length ?? 0}`}</p>
       <p>{`Next turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
@@ -188,6 +190,7 @@ test('mini game failure punishment applies health and death-token loss only once
   fireEvent.click(screen.getByRole('button', { name: /apply failure punishment/i }));
 
   expect(screen.getByText('Player 1 health: 0')).toBeInTheDocument();
+  expect(screen.getByText('Player 1 died last turn: yes')).toBeInTheDocument();
   expect(screen.getByText('Punishment health: 25')).toBeInTheDocument();
   expect(screen.getByText('Removed tokens: 1')).toBeInTheDocument();
   expect(screen.getByText('Player 1 slot tokens: 0')).toBeInTheDocument();
@@ -251,6 +254,7 @@ test('Mini Game Failed respawns at full health in Start Area and advances the tu
 
   expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
   expect(screen.getByText('Player 1 health: 100')).toBeInTheDocument();
+  expect(screen.getByText('Player 1 died last turn: no')).toBeInTheDocument();
   expect(
     screen.getByText(
       `Player 1 position: ${JSON.stringify(getFirstStartAreaPosition(gameSetup.board))}`

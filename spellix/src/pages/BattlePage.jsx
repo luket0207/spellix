@@ -331,6 +331,7 @@ function BattlePage() {
   const handleRespawn = () => {
     setPlayerPosition(battlePlayer.id, getFirstStartAreaPosition(gameSetup.board), {
       currentHealth: battlePlayer.maxHealth,
+      diedLastTurn: false,
     });
     clearActiveBattle();
     advanceTurn();

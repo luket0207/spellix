@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { DECISION_QUESTIONS } from '../data/decisionQuestions';
@@ -83,6 +83,8 @@ function DecisionStateProbe() {
       {JSON.stringify({
         health: decisionPlayer.currentHealth,
         potions: decisionPlayer.potions.map(({ id }) => id),
+        boardPotionUsedThisTurn:
+          decisionPlayer.turnPotionUsage.boardPotionUsedThisTurn,
         skipNextTurn: decisionPlayer.skipNextTurn,
         spellTokens: decisionPlayer.spellSlots.flatMap(({ tokens }) =>
           tokens.map(({ type }) => type)
@@ -97,6 +99,22 @@ function CurrentPlayerProbe() {
   const { currentPlayer } = useGameSetup();
 
   return <p>{`Live current player: ${currentPlayer.id}`}</p>;
+}
+
+function StaleDecisionHealthAfterTurnProbe({ staleHealth }) {
+  const { currentPlayer, setPlayerHealth } = useGameSetup();
+  const hasRestoredStaleHealth = useRef(false);
+
+  useEffect(() => {
+    if (currentPlayer.id !== 'player-2' || hasRestoredStaleHealth.current) {
+      return;
+    }
+
+    hasRestoredStaleHealth.current = true;
+    setPlayerHealth('player-1', staleHealth);
+  }, [currentPlayer.id, setPlayerHealth, staleHealth]);
+
+  return null;
 }
 
 function renderDecision({
@@ -249,6 +267,136 @@ test('keeps the selected question stable when the page rerenders', () => {
 
   expect(screen.getByText(/old lantern glowing/i)).toBeInTheDocument();
   expect(randomFn).toHaveBeenCalledTimes(1);
+});
+
+test('activates and consumes Good Decisions only after safe outcome resolution', () => {
+  const goodDecisionsPotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'good-decisions'
+  );
+  const randomFn = jest
+    .fn()
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(0.9999);
+
+  renderDecision({
+    mutateSetup: (setup) => {
+      setup.players[0].potions.push({ ...goodDecisionsPotion });
+      setup.players[0].turnPotionUsage.boardPotionUsedThisTurn = true;
+    },
+    randomFn,
+  });
+
+  const goodDecisions = screen.getByRole('group', {
+    name: 'Good Decisions potion',
+  });
+  const useButton = screen.getByRole('button', { name: 'Use' });
+  const stylesheet = readFileSync(`${__dirname}/DecisionPage.css`, 'utf8');
+
+  expect(goodDecisions).toHaveAttribute(
+    'title',
+    'Remove any forfeits from a decision'
+  );
+  expect(screen.getByText('Good Decisions')).toHaveClass(
+    'potion-icon-name',
+    'language-en'
+  );
+  expect(useButton).toHaveClass(
+    'decision-mini-potion-use-button',
+    'language-en'
+  );
+  expect(
+    JSON.parse(screen.getByTestId('decision-state').textContent)
+  ).toMatchObject({
+    boardPotionUsedThisTurn: true,
+    potions: ['small-heal', 'good-decisions'],
+  });
+
+  fireEvent.click(useButton);
+
+  const activeText = screen.getByText('Active');
+
+  expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
+  expect(activeText).toHaveClass(
+    'decision-mini-potion-active-text',
+    'language-en'
+  );
+  expect(goodDecisions).toBeInTheDocument();
+  expect(
+    JSON.parse(screen.getByTestId('decision-state').textContent).potions
+  ).toContain('good-decisions');
+  expect(stylesheet).toMatch(
+    /\.decision-mini-potion-active-text\s*\{[^}]*color:\s*#F5FA00;[^}]*min-height:\s*40px;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.decision-mini-potion-use-button\s*\{[^}]*min-height:\s*40px;/s
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Ask the voice who it is' }));
+
+  expect(
+    screen.getByText('The voice fades away without answering.')
+  ).toBeInTheDocument();
+  expect(screen.queryByText('The voice deceives you and steals one of your tokens.'))
+    .not.toBeInTheDocument();
+  expect(
+    JSON.parse(screen.getByTestId('decision-state').textContent)
+  ).toMatchObject({
+    boardPotionUsedThisTurn: true,
+    potions: ['small-heal'],
+  });
+});
+
+test('uses Good Decisions to force good when neutral chance is zero', () => {
+  const goodDecisionsPotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'good-decisions'
+  );
+  const randomFn = jest
+    .fn()
+    .mockReturnValueOnce(0.9999)
+    .mockReturnValueOnce(0.9999)
+    .mockReturnValue(0);
+
+  renderDecision({
+    mutateSetup: (setup) => {
+      setup.players[0].potions.push({ ...goodDecisionsPotion });
+    },
+    randomFn,
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Accept the trade' }));
+
+  expect(screen.getByText('Gain a common potion')).toBeInTheDocument();
+  expect(screen.queryByText('N/A')).not.toBeInTheDocument();
+  expect(
+    JSON.parse(screen.getByTestId('decision-state').textContent).potions
+  ).not.toContain('good-decisions');
+});
+
+test('uses Japanese Good Decisions controls and font classes', () => {
+  const goodDecisionsPotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'good-decisions'
+  );
+
+  renderDecision({
+    language: 'jp',
+    mutateSetup: (setup) => {
+      setup.players[0].potions.push({ ...goodDecisionsPotion });
+    },
+  });
+
+  expect(
+    screen.getByRole('group', { name: '賢明な選択 potion' })
+  ).toHaveAttribute('title', '選択によって受けるペナルティをすべて無効にする。');
+
+  const useButton = screen.getByRole('button', { name: '使用する' });
+
+  expect(useButton).toHaveClass('language-jp');
+  fireEvent.click(useButton);
+  expect(screen.getByText('発動中')).toHaveClass(
+    'decision-mini-potion-active-text',
+    'language-jp'
+  );
 });
 
 test('keeps the entering player image while the Decision page remains mounted', () => {
@@ -490,7 +638,7 @@ test('delays health loss for one second and clamps health at zero', () => {
   );
 });
 
-test('keeps the damaged Decision player visible after the live turn advances', () => {
+test('locks the damaged Decision health display after Continue rerenders stale player data', () => {
   jest.useFakeTimers();
   const selection = getOutcomeSelection('lose20Health');
   const randomFn = jest
@@ -507,6 +655,7 @@ test('keeps the damaged Decision player visible after the live turn advances', (
       <MemoryRouter>
         <DecisionPage randomFn={randomFn} />
         <CurrentPlayerProbe />
+        <StaleDecisionHealthAfterTurnProbe staleHealth={40} />
       </MemoryRouter>
     </GameSetupProvider>
   );

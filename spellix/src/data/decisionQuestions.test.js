@@ -97,6 +97,54 @@ describe('decision questions', () => {
     expect(resolveDecisionOutcome(decisionChoice, () => 0.7).type).toBe('bad');
   });
 
+  test('proportionally removes bad outcomes while Good Decisions is active', () => {
+    const decisionChoice = DECISION_QUESTIONS[0].choices[0];
+    const options = { preventBadOutcome: true };
+
+    expect(resolveDecisionOutcome(decisionChoice, () => 0.7142, options).type).toBe(
+      'good'
+    );
+    expect(resolveDecisionOutcome(decisionChoice, () => 0.7143, options).type).toBe(
+      'neutral'
+    );
+    expect(resolveDecisionOutcome(decisionChoice, () => 0.9999, options).type).toBe(
+      'neutral'
+    );
+  });
+
+  test('selects good instead of a zero-chance N/A neutral outcome', () => {
+    const decisionChoice = DECISION_QUESTIONS[11].choices[0];
+    const outcome = resolveDecisionOutcome(decisionChoice, () => 0.9999, {
+      preventBadOutcome: true,
+    });
+
+    expect(outcome.type).toBe('good');
+    expect(outcome.result.en).not.toBe('N/A');
+  });
+
+  test('warns and defaults to good when no safe outcome chance exists', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const decisionChoice = {
+      chances: { bad: 100, good: 0, neutral: 0 },
+      id: 'invalid-all-bad-choice',
+      outcomes: {
+        bad: { result: { en: 'Bad' } },
+        good: { result: { en: 'Good' } },
+        neutral: { result: { en: 'Neutral' } },
+      },
+    };
+
+    const outcome = resolveDecisionOutcome(decisionChoice, () => 0.5, {
+      preventBadOutcome: true,
+    });
+
+    expect(outcome.type).toBe('good');
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Good Decisions found no good or neutral chance for invalid-all-bad-choice; defaulting to good.'
+    );
+    warnSpy.mockRestore();
+  });
+
   test('warns clearly when a choice chance total is invalid', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 

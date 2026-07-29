@@ -27,13 +27,17 @@ describe('gameplay translations', () => {
       continue: 'Continue',
       decision: 'Decision',
       environment: 'Decision Environment',
+      goodDecisionsActive: 'Active',
       startDecision: 'Start Decision',
+      use: 'Use',
     });
     expect(japanese).toEqual({
       continue: '続ける',
       decision: '決断',
       environment: '決断の背景',
+      goodDecisionsActive: '発動中',
       startDecision: '決断を開始',
+      use: '使用する',
     });
     expect(getDecisionTranslations('invalid')).toBe(english);
   });
@@ -63,9 +67,15 @@ describe('gameplay translations', () => {
     const japanese = getMiniGameFailureTranslations('jp');
 
     expect(english.continue).toBe('Continue');
+    expect(english.caveRunnerPreventedDamage).toBe(
+      'You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.'
+    );
     expect(english.punishment(25)).toBe('You lost 25 health');
     expect(english.respawn).toBe('Respawn');
     expect(japanese.continue).toBe('続ける');
+    expect(japanese.caveRunnerPreventedDamage).toBe(
+      '洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。'
+    );
     expect(japanese.punishment(25)).toBe('体力を25失いました。');
     expect(japanese.respawn).toBe('リスポーン');
     expect(getMiniGameFailureTranslations('invalid')).toBe(english);
@@ -76,6 +86,7 @@ describe('gameplay translations', () => {
     const japanese = getCaveMiniGameTranslations('jp');
 
     expect(english).toMatchObject({
+      active: 'Active',
       continue: 'Continue',
       goDeeper: 'Go Deeper',
       openLoot: 'Open Loot',
@@ -102,6 +113,7 @@ describe('gameplay translations', () => {
       },
     });
     expect(japanese.goDeeper).toBe('さらに奥へ進む');
+    expect(japanese.active).toBe('発動中');
     expect(japanese.retreat).toBe('引き返す');
     expect(japanese.continue).toBe('続ける');
     expect(japanese.openLoot).toBe('戦利品を開ける');
@@ -133,8 +145,11 @@ describe('gameplay translations', () => {
 
   test('returns the exact English and Japanese gameplay labels', () => {
     expect(getGameplayTranslations('en')).toEqual({
+      deathLastTurn: 'You died in your last turn',
       heavyWeightDiceResult: expect.any(Function),
       potions: 'Potions',
+      respawnNoTokenRemoved: 'No tokens were able to be removed',
+      respawnTokenRemoved: 'This token has been removed',
       rollDice: 'Roll Dice',
       rollEvenToUnfreeze: 'Roll even to unfreeze',
       skipTurnMessage: 'You miss your turn this turn',
@@ -144,8 +159,11 @@ describe('gameplay translations', () => {
       targetPlayerPrompt: 'Choose a player to target',
     });
     expect(getGameplayTranslations('jp')).toEqual({
+      deathLastTurn: '前のターンで死亡しました。',
       heavyWeightDiceResult: expect.any(Function),
       potions: 'ポーション',
+      respawnNoTokenRemoved: 'トークンを取り除くことができませんでした。',
+      respawnTokenRemoved: 'このトークンは取り除かれました。',
       rollDice: 'サイコロを振る',
       spells: '呪文',
       spellsNew: '新規',
@@ -207,9 +225,12 @@ describe('gameplay translations', () => {
 
   test('returns every River Mini Game instruction and result in English and Japanese', () => {
     expect(getRiverMiniGameTranslations('en')).toEqual({
+      bridgeBuilderSuccess:
+        'The potion created a bridge over the river for you',
       continue: 'Continue',
       loss: 'You fell in the river and had to swim to the riverbank.',
       mainInstruction: 'Get over the 3 rows of rocks to make it to the other side.',
+      ok: 'OK',
       returnNotice: 'You crossed the river! You may roll again.',
       rowInstructions: [
         'Choose a safe rock in the first row.',
@@ -219,9 +240,11 @@ describe('gameplay translations', () => {
       win: 'You made it to the other side! Take your reward and roll again.',
     });
     expect(getRiverMiniGameTranslations('jp')).toEqual({
+      bridgeBuilderSuccess: 'ポーションが川に橋を架けてくれました。',
       continue: '続ける',
       loss: '川に落ちてしまい、岸まで泳がなければなりませんでした。',
       mainInstruction: '3列の岩を越えて、反対岸にたどり着いてください。',
+      ok: 'OK',
       returnNotice: '川を渡り切りました！もう一度サイコロを振ることができます。',
       rowInstructions: [
         '1列目から安全な岩を選んでください。',

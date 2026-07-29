@@ -35,6 +35,7 @@ jest.mock('../features/gameBoard/board', () => ({
     squares: [],
     width: 0,
   }),
+  getFirstStartAreaPosition: () => ({ x: 0, y: 29 }),
 }));
 
 function createCommittedGameplaySetup() {
@@ -118,6 +119,294 @@ function renderGameplayPage() {
     </GameSetupProvider>
   );
 }
+
+function RespawnStateProbe() {
+  const { currentPlayer, pendingTurnRespawn } = useGameSetup();
+
+  return (
+    <div>
+      <p>{`Respawn probe player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Respawn probe health: ${currentPlayer?.currentHealth ?? 'none'}/${currentPlayer?.maxHealth ?? 'none'}`}</p>
+      <p>{`Respawn probe died last turn: ${currentPlayer?.diedLastTurn ? 'yes' : 'no'}`}</p>
+      <p>{`Respawn probe position: ${currentPlayer?.position?.x ?? 'none'},${currentPlayer?.position?.y ?? 'none'}`}</p>
+      <p>{`Respawn probe removed: ${pendingTurnRespawn?.removedTokens.map(({ token }) => token.id).join(',') || 'none'}`}</p>
+    </div>
+  );
+}
+
+function createTurnRespawnGameplaySetup({
+  diedLastTurn = false,
+  language = 'en',
+  removableTokens = [],
+  skipNextTurn = false,
+} = {}) {
+  const setup = createCommittedGameplaySetup();
+  const player = setup.players[0];
+
+  setup.pendingNextTurnModal = true;
+  setup.players[0] = {
+    ...player,
+    currentHealth: 0,
+    diedLastTurn,
+    language,
+    position: { x: 10, y: 10 },
+    potions: [POTION_DEFINITIONS.find(({ id }) => id === 'heal')],
+    skipNextTurn,
+    spellSlots: player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens:
+        index === 0
+          ? [
+              {
+                committed: true,
+                id: 'starting-red',
+                protected: true,
+                type: 'red',
+              },
+              ...removableTokens,
+            ]
+          : [],
+    })),
+  };
+
+  return setup;
+}
+
+test('requires English start-of-turn respawn, shows the removed Black token, then unlocks the recovered player', () => {
+  const setup = createTurnRespawnGameplaySetup({
+    removableTokens: [
+      { committed: true, id: 'green-1', type: 'green' },
+      { committed: true, id: 'black-1', type: 'black' },
+    ],
+  });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <RespawnStateProbe />
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  const turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  expect(within(turnDialog).getByRole('button', { name: 'Respawn' })).toHaveClass(
+    'language-en'
+  );
+  expect(within(turnDialog).queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Roll Dice' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Spells' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+
+  fireEvent.click(within(turnDialog).getByRole('button', { name: 'Respawn' }));
+
+  const tokenDialog = screen.getByRole('dialog', { name: 'Respawn token removal' });
+  expect(
+    within(tokenDialog).getByText('This token has been removed')
+  ).toHaveClass('larger-text', 'language-en');
+  expect(within(tokenDialog).getByText('Sacrifice')).toHaveClass('language-en');
+  expect(within(tokenDialog).getByRole('img', { name: /removed token/i })).toHaveAttribute(
+    'title',
+    'This token will be the first token to be removed if you lose a battle'
+  );
+  expect(within(tokenDialog).queryByRole('list')).not.toBeInTheDocument();
+  expect(within(tokenDialog).queryByRole('listitem')).not.toBeInTheDocument();
+  expect(screen.getByText('Respawn probe removed: black-1')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Roll Dice' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+
+  fireEvent.click(within(tokenDialog).getByRole('button', { name: 'OK' }));
+
+  expect(screen.queryByRole('dialog', { name: 'Respawn token removal' })).not.toBeInTheDocument();
+  expect(screen.getByText('Respawn probe health: 100/100')).toBeInTheDocument();
+  expect(screen.getByText('Respawn probe position: 0,29')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Roll Dice' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+});
+
+test('localizes start-of-turn respawn and explains when no token can be removed', () => {
+  const setup = createTurnRespawnGameplaySetup({ language: 'jp' });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <RespawnStateProbe />
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  const turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  expect(within(turnDialog).getByRole('button', { name: 'リスポーン' })).toHaveClass(
+    'language-jp'
+  );
+
+  fireEvent.click(
+    within(turnDialog).getByRole('button', { name: 'リスポーン' })
+  );
+
+  const tokenDialog = screen.getByRole('dialog', { name: 'Respawn token removal' });
+  expect(
+    within(tokenDialog).getByText('トークンを取り除くことができませんでした。')
+  ).toHaveClass('larger-text', 'language-jp');
+  expect(within(tokenDialog).queryByRole('img')).not.toBeInTheDocument();
+  expect(within(tokenDialog).getByRole('button', { name: 'OK' })).toHaveClass(
+    'language-jp'
+  );
+});
+
+test('resolves start-of-turn respawn before preserving the existing skip-turn flow', () => {
+  const setup = createTurnRespawnGameplaySetup({ skipNextTurn: true });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <RespawnStateProbe />
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  let turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  expect(within(turnDialog).queryByText('You miss your turn this turn')).not.toBeInTheDocument();
+  fireEvent.click(within(turnDialog).getByRole('button', { name: 'Respawn' }));
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: 'Respawn token removal' }))
+      .getByRole('button', { name: 'OK' })
+  );
+
+  turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  expect(within(turnDialog).getByText('You miss your turn this turn')).toHaveClass(
+    'larger-text',
+    'language-en'
+  );
+  expect(within(turnDialog).getByRole('button', { name: 'OK' })).toBeInTheDocument();
+  expect(within(turnDialog).queryByRole('button', { name: 'Respawn' })).not.toBeInTheDocument();
+  expect(screen.getByText('Respawn probe health: 100/100')).toBeInTheDocument();
+
+  fireEvent.click(within(turnDialog).getByRole('button', { name: 'OK' }));
+
+  expect(screen.getByText('Respawn probe player: player-2')).toBeInTheDocument();
+});
+
+test('keeps the normal next-turn OK flow for a positive-health player', () => {
+  const setup = createCommittedGameplaySetup();
+  setup.pendingNextTurnModal = true;
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  const turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  expect(within(turnDialog).getByRole('button', { name: 'OK' })).toBeInTheDocument();
+  expect(within(turnDialog).queryByRole('button', { name: 'Respawn' })).not.toBeInTheDocument();
+
+  fireEvent.click(within(turnDialog).getByRole('button', { name: 'OK' }));
+  expect(screen.getByRole('button', { name: 'Roll Dice' })).toBeEnabled();
+});
+
+test('shows the English death state over the player until respawn completes', () => {
+  const setup = createTurnRespawnGameplaySetup({ diedLastTurn: true });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <RespawnStateProbe />
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  const turnDialog = screen.getByRole('dialog', { name: 'Turn change' });
+  const deathMessage = within(turnDialog).getByText('You died in your last turn');
+  const skull = within(turnDialog).getByRole('img', { name: 'Death state skull' });
+  const stylesheet = readFileSync(`${__dirname}/GameplayPage.css`, 'utf8');
+
+  expect(deathMessage).toHaveClass(
+    'larger-text',
+    'turn-change-death-message',
+    'language-en'
+  );
+  expect(skull).toHaveClass('turn-change-death-skull');
+  expect(within(turnDialog).getByRole('button', { name: 'Respawn' })).toBeInTheDocument();
+  expect(stylesheet).toMatch(
+    /\.turn-change-player-image-wrapper\s*{[^}]*position:\s*relative;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-skull\s*{[^}]*animation:\s*deathSkullAppear[^;]*forwards;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-skull\s*{[^}]*color:\s*#333333;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-skull\s*{[^}]*position:\s*absolute;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-skull\s*{[^}]*width:\s*100%;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-message\s*{[^}]*color:\s*#F5FA00;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-message\s*{[^}]*margin-bottom:\s*30px;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-message\s*{[^}]*margin-top:\s*30px;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.turn-change-death-message\s*{[^}]*text-align:\s*center;/s
+  );
+  expect(stylesheet).toMatch(
+    /@keyframes deathSkullAppear\s*{[\s\S]*0%\s*{[^}]*opacity:\s*0;[^}]*transform:\s*scale\(0\);[\s\S]*100%\s*{[^}]*opacity:\s*1;[^}]*transform:\s*scale\(1\) translateX\(0\) rotate\(0\);/s
+  );
+
+  fireEvent.click(within(turnDialog).getByRole('button', { name: 'Respawn' }));
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: 'Respawn token removal' }))
+      .getByRole('button', { name: 'OK' })
+  );
+
+  expect(screen.getByText('Respawn probe died last turn: no')).toBeInTheDocument();
+  expect(screen.queryByText('You died in your last turn')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: 'Death state skull' })).not.toBeInTheDocument();
+});
+
+test('localizes the death state and hides it without both death and respawn conditions', () => {
+  const japaneseSetup = createTurnRespawnGameplaySetup({
+    diedLastTurn: true,
+    language: 'jp',
+  });
+  const { unmount } = render(
+    <GameSetupProvider initialGameSetup={japaneseSetup}>
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+
+  const deathMessage = within(
+    screen.getByRole('dialog', { name: 'Turn change' })
+  ).getByText('前のターンで死亡しました。');
+  expect(deathMessage).toHaveClass('turn-change-death-message', 'language-jp');
+  expect(
+    screen.getByRole('button', { name: 'リスポーン' })
+  ).toBeInTheDocument();
+  unmount();
+
+  const noDeathFlagSetup = createTurnRespawnGameplaySetup();
+  const { unmount: unmountNoDeathFlag } = render(
+    <GameSetupProvider initialGameSetup={noDeathFlagSetup}>
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+  expect(screen.queryByText('You died in your last turn')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: 'Death state skull' })).not.toBeInTheDocument();
+  unmountNoDeathFlag();
+
+  const aliveSetup = createCommittedGameplaySetup();
+  aliveSetup.pendingNextTurnModal = true;
+  aliveSetup.players[0].diedLastTurn = true;
+  render(
+    <GameSetupProvider initialGameSetup={aliveSetup}>
+      <GameplayPage />
+    </GameSetupProvider>
+  );
+  expect(screen.queryByText('You died in your last turn')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: 'Death state skull' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'OK' })).toBeInTheDocument();
+});
 
 test.each([
   ['en', 'You miss your turn this turn'],

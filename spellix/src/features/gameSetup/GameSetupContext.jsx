@@ -53,7 +53,11 @@ import {
   resolveLootChestAssignment,
 } from '../miniGames/lootChest';
 import { getPlayerPieceImageName } from './pieceImages';
-import { assignStartingPositions, createBoard } from '../gameBoard/board';
+import {
+  assignStartingPositions,
+  createBoard,
+  getFirstStartAreaPosition,
+} from '../gameBoard/board';
 import {
   applyColumnMerge,
   applyLightGreenHealthBonus,
@@ -470,6 +474,18 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         ? { ...setup.devineChanceResult }
         : null,
       pendingNextTurnModal: Boolean(setup.pendingNextTurnModal),
+      pendingTurnRespawn: setup.pendingTurnRespawn
+        ? {
+            ...setup.pendingTurnRespawn,
+            removedTokens:
+              setup.pendingTurnRespawn.removedTokens?.map(
+                ({ columnNumber, token }) => ({
+                  columnNumber,
+                  token: { ...token },
+                })
+              ) ?? [],
+          }
+        : null,
       stormMasterEffect: setup.stormMasterEffect
         ? {
             ...setup.stormMasterEffect,
@@ -672,6 +688,85 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
+  const beginTurnRespawn = () => {
+    setGameSetup((currentSetup) => {
+      const currentPlayerId =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] ?? null;
+      const player = currentSetup.players.find(
+        ({ id }) => id === currentPlayerId
+      );
+
+      if (
+        !currentSetup.pendingNextTurnModal ||
+        currentSetup.pendingTurnRespawn ||
+        !player ||
+        player.currentHealth !== 0
+      ) {
+        return currentSetup;
+      }
+
+      const penaltyResult = applyDeathTokenPenalty({
+        removalCount: getDeathTokenPenalty({ deathType: 'miniGame' }),
+        spellSlots: player.spellSlots,
+      });
+
+      return {
+        ...currentSetup,
+        pendingNextTurnModal: false,
+        pendingTurnRespawn: {
+          playerId: player.id,
+          removedTokens: penaltyResult.removedTokens,
+        },
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === player.id
+            ? applyLightGreenHealthBonus(
+                {
+                  ...currentPlayer,
+                  spellSlots: penaltyResult.spellSlots,
+                },
+                penaltyResult.spellSlots
+              )
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const completeTurnRespawn = () => {
+    setGameSetup((currentSetup) => {
+      const pendingTurnRespawn = currentSetup.pendingTurnRespawn;
+      const currentPlayerId =
+        currentSetup.turnOrder[currentSetup.currentTurnIndex] ?? null;
+      const player = currentSetup.players.find(
+        ({ id }) => id === currentPlayerId
+      );
+
+      if (
+        !pendingTurnRespawn ||
+        pendingTurnRespawn.playerId !== currentPlayerId ||
+        !player
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        pendingNextTurnModal: Boolean(player.skipNextTurn),
+        pendingTurnRespawn: null,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === player.id
+            ? {
+                ...currentPlayer,
+                currentHealth: currentPlayer.maxHealth,
+                diedLastTurn: false,
+                position: getFirstStartAreaPosition(currentSetup.board),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
   const startMiniGame = (type, playerId) => {
     setGameSetup((currentSetup) => {
       const playerExists = currentSetup.players.some((player) => player.id === playerId);
@@ -701,6 +796,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
       const isCaveRetreat =
         currentSetup.miniGameResult.type === 'cave' && result === 'win';
+      const preventHealthLoss = Boolean(
+        currentSetup.miniGameResult.type === 'cave' &&
+          result === 'loss' &&
+          options.preventHealthLoss
+      );
       const rollAgain = Boolean(isCaveRetreat && options.rollAgain);
       const cavePlayer = isCaveRetreat
         ? currentSetup.players.find(
@@ -728,6 +828,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         activeBattle: isCaveRetreat ? null : currentSetup.activeBattle,
         miniGameResult: {
           ...currentSetup.miniGameResult,
+          ...(preventHealthLoss ? { preventHealthLoss: true } : {}),
           ...(isCaveRetreat
             ? {
                 caveRewardGrant:
@@ -998,6 +1099,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 {
                   ...currentPlayer,
                   currentHealth: nextHealth,
+                  diedLastTurn:
+                    currentPlayer.diedLastTurn ||
+                    (currentPlayer.currentHealth > 0 && nextHealth === 0),
                   spellSlots: penaltyResult?.spellSlots ?? currentPlayer.spellSlots,
                 },
                 penaltyResult?.spellSlots ?? currentPlayer.spellSlots
@@ -1074,7 +1178,15 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
       players: currentSetup.players.map((player) =>
-        player.id === playerId ? { ...player, currentHealth } : player
+        player.id === playerId
+          ? {
+              ...player,
+              currentHealth,
+              diedLastTurn:
+                player.diedLastTurn ||
+                (player.currentHealth > 0 && currentHealth <= 0),
+            }
+          : player
       ),
     }));
   };
@@ -2277,11 +2389,21 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       if (isPlayerTarget) {
         return {
           ...currentSetup,
-          players: currentSetup.players.map((player) =>
-            player.id === activeBattle.playerId
-              ? { ...player, currentHealth: Math.max(0, player.currentHealth - damage) }
-              : player
-          ),
+          players: currentSetup.players.map((player) => {
+            if (player.id !== activeBattle.playerId) {
+              return player;
+            }
+
+            const nextHealth = Math.max(0, player.currentHealth - damage);
+
+            return {
+              ...player,
+              currentHealth: nextHealth,
+              diedLastTurn:
+                player.diedLastTurn ||
+                (player.currentHealth > 0 && nextHealth === 0),
+            };
+          }),
         };
       }
 
@@ -2771,6 +2893,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         clearPlayerForcedRoll,
         claimLootChestReward,
         completeBuyAndSell,
+        completeTurnRespawn,
         completeStormMasterForcedTurn,
         continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
@@ -2782,6 +2905,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         discardSelectedRewardToken,
         grantPotionToPlayer,
         advanceTurn,
+        beginTurnRespawn,
         initializeBoard,
         initializeTurnOrder,
         miniGameResult: gameSetup.miniGameResult ?? null,
@@ -2789,6 +2913,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         markPlayerTokenBagSeen,
         markPlayerToSkipNextTurn,
         pendingNextTurnModal: gameSetup.pendingNextTurnModal ?? false,
+        pendingTurnRespawn: gameSetup.pendingTurnRespawn ?? null,
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,
         removePlayerPotion,

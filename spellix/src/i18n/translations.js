@@ -2,9 +2,12 @@ import { DEFAULT_PLAYER_LANGUAGE, PLAYER_LANGUAGES } from '../features/gameSetup
 
 const GAMEPLAY_TRANSLATIONS = {
   en: {
+    deathLastTurn: 'You died in your last turn',
     heavyWeightDiceResult: (roll) =>
       `${roll} - Dice roll is halved because you are weighed down.`,
     potions: 'Potions',
+    respawnNoTokenRemoved: 'No tokens were able to be removed',
+    respawnTokenRemoved: 'This token has been removed',
     rollDice: 'Roll Dice',
     rollEvenToUnfreeze: 'Roll even to unfreeze',
     skipTurnMessage: 'You miss your turn this turn',
@@ -14,8 +17,14 @@ const GAMEPLAY_TRANSLATIONS = {
     targetPlayerPrompt: 'Choose a player to target',
   },
   jp: {
+    deathLastTurn:
+      '\u524d\u306e\u30bf\u30fc\u30f3\u3067\u6b7b\u4ea1\u3057\u307e\u3057\u305f\u3002',
     heavyWeightDiceResult: (roll) =>
       `${roll} - \u91cd\u3057\u3092\u304b\u3051\u3089\u308c\u3066\u3044\u308b\u305f\u3081\u3001\u30b5\u30a4\u30b3\u30ed\u306e\u51fa\u76ee\u304c\u534a\u5206\u306b\u306a\u308a\u307e\u3059\u3002`,
+    respawnNoTokenRemoved:
+      '\u30c8\u30fc\u30af\u30f3\u3092\u53d6\u308a\u9664\u304f\u3053\u3068\u304c\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002',
+    respawnTokenRemoved:
+      '\u3053\u306e\u30c8\u30fc\u30af\u30f3\u306f\u53d6\u308a\u9664\u304b\u308c\u307e\u3057\u305f\u3002',
     potions: 'ポーション',
     rollDice: 'サイコロを振る',
     spells: '呪文',
@@ -35,13 +44,17 @@ const DECISION_TRANSLATIONS = {
     continue: 'Continue',
     decision: 'Decision',
     environment: 'Decision Environment',
+    goodDecisionsActive: 'Active',
     startDecision: 'Start Decision',
+    use: 'Use',
   },
   jp: {
     continue: '続ける',
     decision: '決断',
     environment: '決断の背景',
+    goodDecisionsActive: '\u767a\u52d5\u4e2d',
     startDecision: '決断を開始',
+    use: '\u4f7f\u7528\u3059\u308b',
   },
 };
 
@@ -145,9 +158,12 @@ const LOOT_CHEST_TRANSLATIONS = {
 
 const RIVER_MINI_GAME_TRANSLATIONS = {
   en: {
+    bridgeBuilderSuccess:
+      'The potion created a bridge over the river for you',
     continue: 'Continue',
     loss: 'You fell in the river and had to swim to the riverbank.',
     mainInstruction: 'Get over the 3 rows of rocks to make it to the other side.',
+    ok: 'OK',
     returnNotice: 'You crossed the river! You may roll again.',
     rowInstructions: [
       'Choose a safe rock in the first row.',
@@ -157,9 +173,11 @@ const RIVER_MINI_GAME_TRANSLATIONS = {
     win: 'You made it to the other side! Take your reward and roll again.',
   },
   jp: {
+    bridgeBuilderSuccess: 'ポーションが川に橋を架けてくれました。',
     continue: '続ける',
     loss: '川に落ちてしまい、岸まで泳がなければなりませんでした。',
     mainInstruction: '3列の岩を越えて、反対岸にたどり着いてください。',
+    ok: 'OK',
     returnNotice: '川を渡り切りました！もう一度サイコロを振ることができます。',
     rowInstructions: [
       '1列目から安全な岩を選んでください。',
@@ -172,6 +190,7 @@ const RIVER_MINI_GAME_TRANSLATIONS = {
 
 const CAVE_MINI_GAME_TRANSLATIONS = {
   en: {
+    active: 'Active',
     continue: 'Continue',
     goDeeper: 'Go Deeper',
     openLoot: 'Open Loot',
@@ -213,6 +232,7 @@ const CAVE_MINI_GAME_TRANSLATIONS = {
     },
   },
   jp: {
+    active: '\u767a\u52d5\u4e2d',
     continue: '続ける',
     goDeeper: 'さらに奥へ進む',
     openLoot: '戦利品を開ける',
@@ -256,11 +276,15 @@ const CAVE_MINI_GAME_TRANSLATIONS = {
 
 const MINI_GAME_FAILURE_TRANSLATIONS = {
   en: {
+    caveRunnerPreventedDamage:
+      'You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.',
     continue: 'Continue',
     punishment: (healthLost) => `You lost ${healthLost} health`,
     respawn: 'Respawn',
   },
   jp: {
+    caveRunnerPreventedDamage:
+      '洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。',
     continue: '続ける',
     punishment: (healthLost) => `体力を${healthLost}失いました。`,
     respawn: 'リスポーン',

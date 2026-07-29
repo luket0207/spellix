@@ -4,7 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { POTION_DEFINITIONS } from './data/potions';
 import { createPlayers } from './features/gameSetup/gameSetup';
-import { GameSetupProvider } from './features/gameSetup/GameSetupContext';
+import {
+  GameSetupProvider,
+  useGameSetup,
+} from './features/gameSetup/GameSetupContext';
 import {
   getCaveMiniGameTranslations,
   getGameplayTranslations,
@@ -97,6 +100,82 @@ test('debug Mini Games section starts River for the current player', () => {
   );
   expect(screen.queryByRole('heading', { name: /river mini game/i })).not.toBeInTheDocument();
   expect(screen.queryByText(/current player: red/i)).not.toBeInTheDocument();
+});
+
+test('Bridge Builder ignores Board and Battle usage and is consumed through the real River win flow', () => {
+  const gameSetup = createGameplayReadySetup({
+    activeBattle: {
+      playerPotionUsedThisTurn: true,
+      source: 'battle',
+    },
+    miniGameResult: {
+      playerId: 'player-1',
+      result: null,
+      returnBehaviour: null,
+      type: 'river',
+    },
+  });
+  const bridgeBuilder = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'bridge-builder'
+  );
+  gameSetup.players[0] = {
+    ...gameSetup.players[0],
+    potions: [bridgeBuilder],
+    turnPotionUsage: {
+      ...gameSetup.players[0].turnPotionUsage,
+      boardPotionUsedThisTurn: true,
+    },
+  };
+
+  function GameSetupProbe() {
+    const { gameSetup: currentSetup } = useGameSetup();
+    const player = currentSetup.players.find(({ id }) => id === 'player-1');
+
+    return (
+      <div
+        data-battle-used={String(
+          currentSetup.activeBattle?.playerPotionUsedThisTurn
+        )}
+        data-board-used={String(
+          player.turnPotionUsage?.boardPotionUsedThisTurn
+        )}
+        data-testid="bridge-builder-setup"
+      >
+        {player.potions.map(({ id }) => id).join(',') || 'none'}
+      </div>
+    );
+  }
+
+  render(
+    <GameSetupProvider initialGameSetup={gameSetup}>
+      <GameSetupProbe />
+      <MemoryRouter initialEntries={['/mini-game/river']}>
+        <App />
+      </MemoryRouter>
+    </GameSetupProvider>
+  );
+
+  const setupProbe = screen.getByTestId('bridge-builder-setup');
+  expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+  expect(setupProbe).toHaveTextContent('bridge-builder');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  fireEvent.click(
+    within(screen.getByRole('dialog')).getByRole('button', { name: 'Yes' })
+  );
+
+  expect(setupProbe).toHaveTextContent('none');
+  expect(setupProbe).toHaveAttribute('data-board-used', 'true');
+  expect(setupProbe).toHaveAttribute('data-battle-used', 'true');
+  expect(
+    screen.getByText('The potion created a bridge over the river for you')
+  ).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+
+  expect(screen.getByRole('heading', { name: /choose your loot/i })).toBeInTheDocument();
+  expect(setupProbe).toHaveAttribute('data-board-used', 'true');
+  expect(setupProbe).toHaveAttribute('data-battle-used', 'true');
 });
 
 test('debug Mini Games section starts Cave for the current player', () => {
@@ -233,6 +312,57 @@ test('Cave ogre loss discards roll again and returns through the shared loss flo
   expect(
     screen.queryByText(getCaveMiniGameTranslations('en').rollAgainNotice)
   ).not.toBeInTheDocument();
+});
+
+test('Cave Runner is consumed by an ogre and keeps health through the shared loss flow', () => {
+  jest.useFakeTimers();
+  jest.spyOn(Math, 'random').mockReturnValue(0.99);
+  const gameSetup = createGameplayReadySetup({
+    miniGameResult: {
+      playerId: 'player-1',
+      result: null,
+      returnBehaviour: null,
+      type: 'cave',
+    },
+  });
+  const caveRunner = POTION_DEFINITIONS.find(({ id }) => id === 'cave-runner');
+  gameSetup.players[0] = {
+    ...gameSetup.players[0],
+    currentHealth: 100,
+    potions: [caveRunner],
+  };
+
+  renderApp('/mini-game/cave', gameSetup);
+
+  expect(screen.getByRole('group', { name: /cave runner potion/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^go deeper$/i }));
+  act(() => {
+    jest.advanceTimersByTime(500);
+  });
+  fireEvent.click(screen.getByRole('button', { name: /^go deeper$/i }));
+  act(() => {
+    jest.advanceTimersByTime(500);
+  });
+
+  expect(screen.queryByRole('group', { name: /cave runner potion/i })).not.toBeInTheDocument();
+
+  act(() => {
+    jest.advanceTimersByTime(1500);
+  });
+
+  expect(
+    screen.getByText(
+      'You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.'
+    )
+  ).toBeInTheDocument();
+  expect(screen.queryByText('You lost 0 health')).not.toBeInTheDocument();
+  act(() => {
+    jest.advanceTimersByTime(1000);
+  });
+  expect(screen.getByRole('meter', { name: /health bar/i })).toHaveAttribute(
+    'aria-valuenow',
+    '100'
+  );
 });
 
 test('Cave loot retreat uses the shared Loot Chest page then advances the turn', () => {

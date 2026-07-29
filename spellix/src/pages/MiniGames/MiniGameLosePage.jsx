@@ -32,7 +32,9 @@ function MiniGameLosePage({ randomFn = Math.random }) {
     (currentPlayer?.id === failingPlayerId ? currentPlayer : null);
   const existingPunishment = miniGameResult?.failurePunishment;
   const [healthLost] = useState(
-    () => existingPunishment?.healthLost ?? selectMiniGameHealthLoss(randomFn)
+    () =>
+      existingPunishment?.healthLost ??
+      (miniGameResult?.preventHealthLoss ? 0 : selectMiniGameHealthLoss(randomFn))
   );
   const [displayedHealth, setDisplayedHealth] = useState(
     () => existingPunishment?.nextHealth ?? failingPlayer?.currentHealth ?? 0
@@ -73,7 +75,10 @@ function MiniGameLosePage({ randomFn = Math.random }) {
     setPlayerPosition(
       failingPlayer.id,
       getFirstStartAreaPosition(gameSetup.board),
-      { currentHealth: failingPlayer.maxHealth }
+      {
+        currentHealth: failingPlayer.maxHealth,
+        diedLastTurn: false,
+      }
     );
     handleReturnToBoard();
   };
@@ -107,7 +112,9 @@ function MiniGameLosePage({ randomFn = Math.random }) {
         </div>
 
         <p className={`mini-game-failure-punishment ${languageClassName}`}>
-          {translations.punishment(healthLost)}
+          {miniGameResult?.preventHealthLoss
+            ? translations.caveRunnerPreventedDamage
+            : translations.punishment(healthLost)}
         </p>
 
         {isDamageApplied && isPlayerDead ? (

@@ -125,6 +125,7 @@ function GameStateSnapshot() {
       <p>{`Battle phase: ${activeBattle?.phase ?? 'none'}`}</p>
       <p>{`Stored level: ${activeBattle?.level ?? 'none'}`}</p>
       <p>{`Player 1 health: ${playerOne.currentHealth}`}</p>
+      <p>{`Player 1 died last turn: ${playerOne.diedLastTurn ? 'yes' : 'no'}`}</p>
       <p>{`Player 1 next forced roll: ${playerOne.nextForcedRoll?.value ?? 'none'}`}</p>
       <p>{`Player 1 active potion: ${playerOne.activePotion?.id ?? 'none'}`}</p>
       <p>{`Player 1 spell tokens: ${playerOneSpellTokenIds || 'none'}`}</p>
@@ -2565,6 +2566,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByText(/battle player health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/player 1 died last turn: yes/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
@@ -2582,6 +2584,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/current player: player-2/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 0,29/i)).toBeInTheDocument();
+    expect(screen.getByText(/player 1 died last turn: no/i)).toBeInTheDocument();
   });
 
   test('automatically rolls a lethal enemy turn into the existing loss flow once', () => {

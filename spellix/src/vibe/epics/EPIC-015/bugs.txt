@@ -729,7 +729,7 @@ Bug-006: Decision health bar should not visually reset after health-loss Continu
 
 Status
 
-* not started
+* fixed
 
 Related Feature(s)
 
@@ -840,3 +840,205 @@ Testing Required
 * Confirm the board shows the correctly reduced health.
 * Confirm there are no console errors.
 * Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* Added a focused transition probe that restores stale pre-damage player data immediately after Continue advances the live turn.
+* Before the fix, the Decision health bar changed from the resolved value of `20` back to the stale value of `40`.
+
+Final Fix
+
+* Added a Decision-local displayed health value initialized from the entering player.
+* Health-loss resolution updates both global player health and the local display to the same clamped post-damage value after the existing one-second delay.
+* The Decision health bar now renders from the locked local value, so stale player-context rerenders during Continue cannot visually restore pre-damage health.
+* Existing damage amounts, timing, turn advancement, navigation, board health, and non-health outcomes remain unchanged.
+
+Verification
+
+* Complete Decision page regression passed: 1 suite and 31 tests.
+* Adjacent Decision data, translation, and app integration regressions passed: 3 suites and 43 tests.
+* ESLint passed for `DecisionPage.jsx` and `DecisionPage.test.jsx`.
+* `npm run build` passed.
+* Manual browser execution was not performed during this automated pass.
+
+
+---
+
+Bug-007: Cave Mini Game Retreat button should stay visible and Cave Runner damage message should be clearer
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-004: Implement Cave Runner potion behaviour in Cave Mini Game
+* EPIC-010 Feature-011: Refine Cave Mini Game movement and ogre chase
+* EPIC-010 Feature-013: Add Mini Game Failed screen
+
+Bug Summary
+
+* Two Cave Mini Game issues need fixing.
+* First, the Retreat button should always be visible.
+* On the first cave turn, Retreat should be disabled instead of absent.
+* Second, when Cave Runner prevents ogre damage, the game should not say `You lost 0 health`.
+* It should show a clearer bilingual message explaining that Cave Runner prevented the damage.
+
+Fix 1: Retreat Button Visibility
+
+* The Retreat button should always be present in the Cave Mini Game.
+* On the first cave turn, Retreat should be disabled.
+* On later cave turns, Retreat should become enabled according to the existing cave rules.
+* Do not remove or conditionally hide the Retreat button on the first turn.
+* Keeping the button visible prevents layout shifting and makes the rule clearer to the player.
+
+Expected Retreat Button Behaviour
+
+```txt id="nx3b0q"
+First cave turn:
+Go Deeper button visible and enabled.
+Retreat button visible but disabled.
+
+Later cave turns:
+Go Deeper button visible and enabled.
+Retreat button visible and enabled when retreat is allowed.
+```
+
+Suggested Logic Direction
+
+```jsx id="hcf0uu"
+<button
+  className={`cave-retreat-button ${languageClass}`}
+  disabled={isFirstCaveTurn}
+  onClick={handleRetreat}
+>
+  {retreatText}
+</button>
+```
+
+* Exact implementation can vary.
+* The important requirement is that Retreat remains mounted and visible.
+
+Fix 2: Cave Runner Prevented-Damage Message
+
+* If the player has Cave Runner active and gets chased out by the ogre, Cave Runner prevents the health loss.
+* The game currently shows something like:
+
+```txt id="cy2sq3"
+You lost 0 health
+```
+
+* This should not be shown.
+* Instead, display a specific Cave Runner message.
+
+Required Text
+
+English:
+
+```txt id="og2vm5"
+You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.
+```
+
+Japanese:
+
+```txt id="f3xf3h"
+洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。
+```
+
+Display Requirement
+
+* Show this message only when:
+
+  * the player had Cave Runner active.
+  * the ogre chase would normally have caused health loss.
+  * Cave Runner prevented that health loss.
+* Do not show `You lost 0 health`.
+* Do not show the normal health-loss message with `0`.
+* The message should appear in the same place where the cave failure health-loss text normally appears.
+* Use the correct English/Japanese font.
+* The text should follow the existing cave failure modal styling.
+
+Suggested State Direction
+
+```js id="91yel7"
+const caveFailureResult = {
+  healthLost: 0,
+  preventedByCaveRunner: true
+};
+```
+
+Suggested Display Direction
+
+```jsx id="jwwmas"
+<p className={`larger-text ${languageClass}`}>
+  {caveFailureResult.preventedByCaveRunner
+    ? caveRunnerPreventedDamageText
+    : lostHealthText}
+</p>
+```
+
+Cave Runner Consumption Requirement
+
+* Preserve Feature-004 behaviour.
+* Cave Runner should still be consumed when it prevents ogre damage.
+* The player should still lose any cave prizes they had gained.
+* Only the health damage is prevented.
+
+Out Of Scope
+
+* No changes to Cave Runner trigger rules.
+* No changes to Cave Runner consumption rules.
+* No changes to cave reward generation.
+* No changes to ogre chase chance.
+* No changes to Go Deeper behaviour.
+* No changes to normal Retreat behaviour after the first cave turn.
+* No unrelated Cave Mini Game redesign.
+
+Testing Required
+
+* Start the Cave Mini Game.
+* Confirm the Retreat button is visible on the first cave turn.
+* Confirm the Retreat button is disabled on the first cave turn.
+* Confirm the Go Deeper button is still enabled on the first cave turn.
+* Advance past the first cave turn.
+* Confirm the Retreat button becomes enabled when retreat is allowed.
+* Give the player Cave Runner.
+* Trigger an ogre chase failure.
+* Confirm Cave Runner prevents health loss.
+* Confirm the game does not display `You lost 0 health`.
+* Confirm English text says `You didn’t lose any health because the Cave Runner potion helped you get out before the ogre reached you.`
+* Confirm Japanese text says `洞窟ランナーのポーションのおかげで、オーガに追いつかれる前に脱出できたため、HPを失いませんでした。`
+* Confirm Cave Runner is consumed.
+* Confirm cave prizes are still lost.
+* Trigger an ogre chase failure without Cave Runner.
+* Confirm normal health-loss text still works.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Reproduction
+
+* The first Cave Mini Game turn rendered Go Deeper but omitted Retreat entirely.
+* A Cave Runner ogre escape correctly prevented health loss but the shared failure page displayed `You lost 0 health`.
+* Focused pre-fix regression run: 4 suites ran, 48 tests passed, and 6 Bug-007 assertions failed for the missing Retreat control and missing bilingual prevented-damage copy.
+
+Attempted Fixes
+
+* Added regressions before the production change for first-turn Retreat visibility, disabled/enabled state transitions, exact English and Japanese copy, language font classes, and suppression of the zero-health message.
+
+Final Fix
+
+* Retreat now remains mounted during the Cave decision phase and is disabled at depth zero in addition to the existing decision lock.
+* The shared failure paragraph now uses dedicated English or Japanese Cave Runner prevented-damage copy only when `miniGameResult.preventHealthLoss` is true.
+* Existing Cave Runner consumption, cave prize loss, zero-damage application, normal damage, Go Deeper, and later retreat behaviour remain unchanged.
+
+Verification
+
+* Focused Bug-007 regression passed: 4 suites and 54 tests.
+* Coverage confirms first-turn Retreat is visible and disabled, Go Deeper remains enabled, Retreat enables after movement, exact bilingual prevented-damage copy uses the correct language class, and `You lost 0 health` is absent.
+* Existing integration coverage confirms Cave Runner is consumed, health remains unchanged, cave prizes are discarded on the ogre path, and failures without Cave Runner still apply normal health loss.
+* ESLint passed for all Bug-007 source and test files.
+* `npm run build` passed.
+* Manual browser execution was not performed during this automated pass.

@@ -108,6 +108,27 @@
   pointer-events: none;
 }
 
+.river-player-area {
+  position: relative;
+}
+
+.river-bridge-builder-potion {
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  color: #F5FA00;
+}
+
+.river-bridge-builder-success-text {
+  text-align: center;
+}
+
 .river-result-actions {
   width: 100%;
   min-height: 190px;

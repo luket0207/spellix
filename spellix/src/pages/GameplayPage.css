@@ -94,7 +94,79 @@
   gap: 16px;
 }
 
+.turn-change-player-image-wrapper {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  margin-bottom: 40px;
+  position: relative;
+}
+
 .turn-change-player-piece {
   display: block;
-  margin-bottom: 40px;
+}
+
+.turn-change-death-skull {
+  animation: deathSkullAppear 1.2s ease-out forwards;
+  color: #333333;
+  height: auto;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+.turn-change-death-message {
+  color: #F5FA00;
+  margin-bottom: 30px;
+  margin-top: 30px;
+  text-align: center;
+}
+
+@keyframes deathSkullAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1) translateX(-5px) rotate(-4deg);
+  }
+
+  55% {
+    transform: scale(1) translateX(5px) rotate(4deg);
+  }
+
+  65% {
+    transform: scale(1) translateX(-4px) rotate(-3deg);
+  }
+
+  75% {
+    transform: scale(1) translateX(4px) rotate(3deg);
+  }
+
+  85% {
+    transform: scale(1) translateX(-2px) rotate(-1deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0);
+  }
+}
+
+.respawn-token-modal-content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.respawn-token-modal-content > p {
+  margin: 0;
 }

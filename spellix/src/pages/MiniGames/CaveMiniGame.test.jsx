@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { POTION_DEFINITIONS } from '../../data/potions';
 import { useGameSetup } from '../../features/gameSetup/GameSetupContext';
 import {
   generateCavePotionReward,
@@ -12,7 +13,9 @@ import CaveMiniGame from './CaveMiniGame';
 
 const mockNavigate = jest.fn();
 const completeMiniGame = jest.fn();
+const removePlayerPotion = jest.fn();
 const returnFromMiniGame = jest.fn();
+const caveRunnerPotion = POTION_DEFINITIONS.find(({ id }) => id === 'cave-runner');
 const generatedPotion = {
   id: 'small-heal',
   japaneseName: '小回復',
@@ -41,13 +44,16 @@ jest.mock('../../features/miniGames/caveMiniGame', () => ({
   selectCaveOutcome: jest.fn(),
 }));
 
-function renderCave(language = 'en') {
+function renderCave(language = 'en', playerOverrides = {}) {
   const player = {
     colour: 'red',
+    currentHealth: 100,
     gender: 'boy',
     id: 'player-1',
     language,
     pieceImage: 'm-red.png',
+    potions: [],
+    ...playerOverrides,
   };
 
   useGameSetup.mockReturnValue({
@@ -55,6 +61,7 @@ function renderCave(language = 'en') {
     currentPlayer: player,
     gameSetup: { players: [player] },
     miniGameResult: { playerId: 'player-1', type: 'cave' },
+    removePlayerPotion,
     returnFromMiniGame,
   });
 
@@ -75,6 +82,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   completeMiniGame.mockClear();
   mockNavigate.mockClear();
+  removePlayerPotion.mockClear();
   returnFromMiniGame.mockClear();
   generateCavePotionReward.mockReset().mockReturnValue(generatedPotion);
   generateCaveTokenReward.mockReset().mockReturnValue(generatedToken);
@@ -86,7 +94,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('starts with the current player at depth zero and hides Retreat', () => {
+test('starts with Go Deeper enabled and Retreat visible but disabled at depth zero', () => {
   const translations = getCaveMiniGameTranslations('en');
   const stylesheet = readFileSync(`${__dirname}/CaveMiniGame.css`, 'utf8');
 
@@ -96,8 +104,8 @@ test('starts with the current player at depth zero and hides Retreat', () => {
   const progressPosition = screen.getByTestId('cave-player-position');
 
   expect(screen.getByText(translations.messages.initial)).toHaveClass('language-en');
-  expect(screen.getByRole('button', { name: translations.goDeeper })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: translations.retreat })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: translations.goDeeper })).toBeEnabled();
+  expect(screen.getByRole('button', { name: translations.retreat })).toBeDisabled();
   expect(player).toHaveAttribute('src', 'm-red.png');
   expect(player).toHaveClass('is-flipped');
   expect(progressPosition).toHaveAttribute('data-depth', '0');
@@ -109,6 +117,50 @@ test('starts with the current player at depth zero and hides Retreat', () => {
   expect(stylesheet).toMatch(
     /\.cave-debug-rewards\s*{[^}]*left:\s*8px;[^}]*position:\s*absolute;[^}]*top:\s*8px;[^}]*z-index:\s*20;/s
   );
+});
+
+test('shows owned Cave Runner below the actions as an automatic active potion', () => {
+  const stylesheet = readFileSync(`${__dirname}/CaveMiniGame.css`, 'utf8');
+  const componentSource = readFileSync(`${__dirname}/CaveMiniGame.jsx`, 'utf8');
+  const translations = getCaveMiniGameTranslations('en');
+
+  renderCave('en', { potions: [caveRunnerPotion] });
+
+  const potion = screen.getByRole('group', { name: /cave runner potion/i });
+  const display = screen.getByTestId('cave-runner-active-potion');
+
+  expect(potion).toHaveAccessibleDescription(caveRunnerPotion.description);
+  expect(within(potion).getByText(caveRunnerPotion.name)).toHaveClass('language-en');
+  expect(screen.getByText('Active')).toHaveClass(
+    'cave-runner-active-text',
+    'language-en'
+  );
+  expect(display).toHaveClass('cave-runner-active-potion');
+  expect(screen.getByRole('button', { name: translations.goDeeper })).toBeInTheDocument();
+  expect(componentSource.indexOf('className="cave-mini-game-actions"')).toBeLessThan(
+    componentSource.indexOf('className="cave-runner-active-potion"')
+  );
+  expect(screen.queryByRole('button', { name: /^use$/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+  expect(stylesheet).toMatch(
+    /\.cave-runner-active-potion\s*{[^}]*margin-top:\s*40px;/s
+  );
+  expect(stylesheet).toMatch(
+    /\.cave-runner-active-text\s*{[^}]*color:\s*#F5FA00;/s
+  );
+});
+
+test('localizes the Cave Runner name and Active text in Japanese', () => {
+  renderCave('jp', { potions: [caveRunnerPotion] });
+
+  expect(
+    screen.getByRole('group', {
+      name: `${caveRunnerPotion.japaneseName} potion`,
+    })
+  ).toHaveAccessibleDescription(caveRunnerPotion.japaneseDescription);
+  expect(screen.getByText(caveRunnerPotion.japaneseName)).toHaveClass('language-jp');
+  expect(screen.getByText('発動中')).toHaveClass('language-jp');
 });
 
 test('moves one depth over 500ms and prevents repeated decisions while moving', () => {
@@ -347,6 +399,56 @@ test('plays the ogre chase before navigating and discards found rewards', () => 
   expect(mockNavigate).toHaveBeenCalledWith('/mini-game/lose');
 });
 
+test('automatically consumes Cave Runner on an ogre chase and prevents only health loss', () => {
+  const translations = getCaveMiniGameTranslations('en');
+  selectCaveOutcome.mockReturnValueOnce('token').mockReturnValueOnce('ogre');
+
+  renderCave('en', { potions: [caveRunnerPotion] });
+  fireEvent.click(screen.getByRole('button', { name: translations.goDeeper }));
+  finishMovement();
+
+  expect(screen.getByTestId('cave-found-rewards')).toHaveTextContent('Token: Damage');
+
+  fireEvent.click(screen.getByRole('button', { name: translations.goDeeper }));
+  expect(screen.queryByTestId('cave-found-rewards')).not.toBeInTheDocument();
+  expect(removePlayerPotion).not.toHaveBeenCalled();
+
+  finishMovement();
+
+  expect(removePlayerPotion).toHaveBeenCalledWith('player-1', 0);
+  expect(completeMiniGame).toHaveBeenCalledWith('loss', {
+    preventHealthLoss: true,
+  });
+});
+
+test('does not consume Cave Runner after a successful retreat', () => {
+  const translations = getCaveMiniGameTranslations('en');
+  selectCaveOutcome.mockReturnValue('nothing');
+
+  renderCave('en', { potions: [caveRunnerPotion] });
+  fireEvent.click(screen.getByRole('button', { name: translations.goDeeper }));
+  finishMovement();
+  fireEvent.click(screen.getByRole('button', { name: translations.retreat }));
+
+  expect(removePlayerPotion).not.toHaveBeenCalled();
+  expect(screen.getByRole('group', { name: /cave runner potion/i })).toBeInTheDocument();
+});
+
+test('does not consume Cave Runner when an ogre cannot reduce zero health', () => {
+  const translations = getCaveMiniGameTranslations('en');
+  selectCaveOutcome.mockReturnValue('ogre');
+
+  renderCave('en', {
+    currentHealth: 0,
+    potions: [caveRunnerPotion],
+  });
+  fireEvent.click(screen.getByRole('button', { name: translations.goDeeper }));
+  finishMovement();
+
+  expect(removePlayerPotion).not.toHaveBeenCalled();
+  expect(completeMiniGame).toHaveBeenCalledWith('loss');
+});
+
 test('localizes found rewards in Japanese and falls back to English', () => {
   const japanese = getCaveMiniGameTranslations('jp');
   selectCaveOutcome.mockReturnValueOnce('token').mockReturnValueOnce('loot');
@@ -372,5 +474,5 @@ test('localizes found rewards in Japanese and falls back to English', () => {
 
   const english = getCaveMiniGameTranslations('en');
   expect(screen.getByText(english.messages.initial)).toHaveClass('language-en');
-  expect(screen.queryByRole('button', { name: english.retreat })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: english.retreat })).toBeDisabled();
 });

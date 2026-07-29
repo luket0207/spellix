@@ -21,6 +21,74 @@ function TurnAdvanceProbe() {
   );
 }
 
+function TurnRespawnProbe() {
+  const {
+    beginTurnRespawn,
+    completeTurnRespawn,
+    currentPlayer,
+    dismissNextTurnModal,
+    pendingNextTurnModal,
+    pendingTurnRespawn,
+    setPlayerHealth,
+  } = useGameSetup();
+
+  return (
+    <div>
+      <p>{`Respawn player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Respawn health: ${currentPlayer?.currentHealth ?? 'none'}/${currentPlayer?.maxHealth ?? 'none'}`}</p>
+      <p>{`Respawn died last turn: ${currentPlayer?.diedLastTurn ? 'yes' : 'no'}`}</p>
+      <p>{`Respawn position: ${currentPlayer?.position?.x ?? 'none'},${currentPlayer?.position?.y ?? 'none'}`}</p>
+      <p>{`Respawn spell tokens: ${currentPlayer?.spellSlots.flatMap(({ tokens }) => tokens.map(({ id }) => id)).join(',') || 'none'}`}</p>
+      <p>{`Respawn removed: ${pendingTurnRespawn?.removedTokens.map(({ token }) => token.id).join(',') || 'none'}`}</p>
+      <p>{`Respawn pending: ${pendingTurnRespawn ? 'yes' : 'no'}`}</p>
+      <p>{`Respawn turn modal: ${pendingNextTurnModal ? 'pending' : 'clear'}`}</p>
+      <p>{`Respawn skip: ${currentPlayer?.skipNextTurn ? 'set' : 'clear'}`}</p>
+      <button type="button" onClick={beginTurnRespawn}>Begin Respawn</button>
+      <button type="button" onClick={completeTurnRespawn}>Complete Respawn</button>
+      <button type="button" onClick={dismissNextTurnModal}>Dismiss Respawn Turn</button>
+      <button type="button" onClick={() => setPlayerHealth(currentPlayer.id, 0)}>
+        Apply Lethal Health
+      </button>
+    </div>
+  );
+}
+
+function createRespawnSetup({
+  diedLastTurn = false,
+  randomTokens = [],
+  skipNextTurn = false,
+} = {}) {
+  const setup = createFreezeSetup();
+  const player = setup.players[0];
+
+  setup.pendingNextTurnModal = true;
+  setup.players[0] = {
+    ...player,
+    currentHealth: 0,
+    diedLastTurn,
+    maxHealth: 100,
+    position: { x: 12, y: 12 },
+    skipNextTurn,
+    spellSlots: player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens:
+        index === 0
+          ? [
+              {
+                committed: true,
+                id: 'starting-red',
+                protected: true,
+                type: 'red',
+              },
+              ...randomTokens,
+            ]
+          : [],
+    })),
+  };
+
+  return setup;
+}
+
 test('queues one dismissible next-turn modal whenever advanceTurn changes players', () => {
   render(
     <GameSetupProvider initialGameSetup={createFreezeSetup()}>
@@ -61,6 +129,111 @@ test('clears a one-time skip flag and immediately queues the following player mo
   expect(screen.getByText('Current player: player-1')).toBeInTheDocument();
   expect(screen.getByText('Next turn modal: pending')).toBeInTheDocument();
   expect(screen.getByText('Skip flag: clear')).toBeInTheDocument();
+});
+
+test('start-of-turn respawn removes Black first, then restores the same player at full health on the first start square', () => {
+  const setup = createRespawnSetup({
+    randomTokens: [
+      { committed: true, id: 'green-1', type: 'green' },
+      { committed: true, id: 'black-1', type: 'black' },
+    ],
+  });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <TurnRespawnProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Begin Respawn' }));
+
+  expect(screen.getByText('Respawn removed: black-1')).toBeInTheDocument();
+  expect(
+    screen.getByText('Respawn spell tokens: starting-red,green-1')
+  ).toBeInTheDocument();
+  expect(screen.getByText('Respawn turn modal: clear')).toBeInTheDocument();
+  expect(screen.getByText('Respawn pending: yes')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Complete Respawn' }));
+
+  expect(screen.getByText('Respawn player: player-1')).toBeInTheDocument();
+  expect(screen.getByText('Respawn health: 100/100')).toBeInTheDocument();
+  expect(screen.getByText('Respawn position: 0,29')).toBeInTheDocument();
+  expect(screen.getByText('Respawn pending: no')).toBeInTheDocument();
+  expect(screen.getByText('Respawn turn modal: clear')).toBeInTheDocument();
+});
+
+test('start-of-turn respawn randomly removes an eligible non-Black token', () => {
+  jest.spyOn(Math, 'random').mockReturnValue(0.99);
+  const setup = createRespawnSetup({
+    randomTokens: [
+      { committed: true, id: 'green-1', type: 'green' },
+      { committed: true, id: 'orange-1', type: 'orange' },
+    ],
+  });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <TurnRespawnProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Begin Respawn' }));
+
+  expect(screen.getByText('Respawn removed: orange-1')).toBeInTheDocument();
+  expect(
+    screen.getByText('Respawn spell tokens: starting-red,green-1')
+  ).toBeInTheDocument();
+});
+
+test('start-of-turn respawn preserves protected tokens and resolves a pending skip only after recovery', () => {
+  const setup = createRespawnSetup({ skipNextTurn: true });
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <TurnRespawnProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Begin Respawn' }));
+
+  expect(screen.getByText('Respawn removed: none')).toBeInTheDocument();
+  expect(screen.getByText('Respawn spell tokens: starting-red')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Complete Respawn' }));
+
+  expect(screen.getByText('Respawn health: 100/100')).toBeInTheDocument();
+  expect(screen.getByText('Respawn skip: set')).toBeInTheDocument();
+  expect(screen.getByText('Respawn turn modal: pending')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss Respawn Turn' }));
+
+  expect(screen.getByText('Respawn player: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Respawn skip: clear')).toBeInTheDocument();
+});
+
+test('lethal health marks the current player as dead until start-of-turn respawn completes', () => {
+  const setup = createRespawnSetup();
+  setup.players[0].currentHealth = 5;
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <TurnRespawnProbe />
+    </GameSetupProvider>
+  );
+
+  expect(screen.getByText('Respawn died last turn: no')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Apply Lethal Health' }));
+
+  expect(screen.getByText('Respawn health: 0/100')).toBeInTheDocument();
+  expect(screen.getByText('Respawn died last turn: yes')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Begin Respawn' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Complete Respawn' }));
+
+  expect(screen.getByText('Respawn health: 100/100')).toBeInTheDocument();
+  expect(screen.getByText('Respawn died last turn: no')).toBeInTheDocument();
 });
 
 function createFreezeSetup({ activeBattle = null } = {}) {

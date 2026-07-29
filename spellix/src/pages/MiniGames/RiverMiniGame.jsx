@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/common/Button/Button';
+import Modal from '../../components/Modal';
+import PotionIcon from '../../components/potions/PotionIcon';
 import { useGameSetup } from '../../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../../features/gameSetup/pieceImages';
 import { createRiverRows } from '../../features/miniGames/riverMiniGame';
+import PotionUseConfirmationModal from '../../features/potions/PotionUseConfirmationModal';
 import {
   getGameplayLanguage,
+  getPotionUsageTranslations,
   getRiverMiniGameTranslations,
 } from '../../i18n/translations';
 import './RiverMiniGame.css';
@@ -16,20 +20,41 @@ const UNSAFE_DURATION = 1000;
 
 function RiverMiniGame() {
   const navigate = useNavigate();
-  const { completeMiniGame, currentPlayer, gameSetup, miniGameResult } = useGameSetup();
+  const {
+    completeMiniGame,
+    currentPlayer,
+    gameSetup,
+    miniGameResult,
+    removePlayerPotion,
+  } = useGameSetup();
   const [activeRow, setActiveRow] = useState(1);
+  const [isBridgeBuilderConsumed, setIsBridgeBuilderConsumed] = useState(false);
   const [phase, setPhase] = useState('idle');
   const [riverRows] = useState(() => createRiverRows());
   const [selectedRockId, setSelectedRockId] = useState('');
+  const [showBridgeBuilderConfirmation, setShowBridgeBuilderConfirmation] =
+    useState(false);
+  const [showBridgeBuilderSuccess, setShowBridgeBuilderSuccess] = useState(false);
   const timersRef = useRef(new Set());
   const miniGamePlayer =
     gameSetup?.players?.find((player) => player.id === miniGameResult?.playerId) ??
     currentPlayer;
   const currentLanguage = getGameplayLanguage(miniGamePlayer?.language);
   const translations = getRiverMiniGameTranslations(currentLanguage);
+  const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
   const currentRow = riverRows[activeRow - 1];
   const playerImageSource = getPieceImageSource(miniGamePlayer?.pieceImage);
+  const bridgeBuilderPotionIndex =
+    miniGamePlayer?.potions?.findIndex(({ id }) => id === 'bridge-builder') ?? -1;
+  const bridgeBuilderPotion =
+    !isBridgeBuilderConsumed && bridgeBuilderPotionIndex >= 0
+      ? miniGamePlayer.potions[bridgeBuilderPotionIndex]
+      : null;
+  const confirmationPotion =
+    bridgeBuilderPotion && currentLanguage === 'jp'
+      ? { ...bridgeBuilderPotion, japaneseName: bridgeBuilderPotion.name }
+      : bridgeBuilderPotion;
   const resultText =
     phase === 'won'
       ? translations.win
@@ -99,6 +124,18 @@ function RiverMiniGame() {
     }
   };
 
+  const handleConfirmBridgeBuilder = () => {
+    if (!bridgeBuilderPotion || !miniGamePlayer?.id) {
+      setShowBridgeBuilderConfirmation(false);
+      return;
+    }
+
+    removePlayerPotion(miniGamePlayer.id, bridgeBuilderPotionIndex);
+    setIsBridgeBuilderConsumed(true);
+    setShowBridgeBuilderConfirmation(false);
+    setShowBridgeBuilderSuccess(true);
+  };
+
   const rowClassName = [
     'river-row',
     phase === 'exiting' ? 'river-row--exiting' : '',
@@ -164,13 +201,58 @@ function RiverMiniGame() {
         ) : null}
 
         {playerImageSource ? (
-          <img
-            alt="Current player character"
-            className="river-mini-game-player"
-            src={playerImageSource}
-          />
+          <div className="river-player-area">
+            <img
+              alt="Current player character"
+              className="river-mini-game-player"
+              src={playerImageSource}
+            />
+            {bridgeBuilderPotion ? (
+              <div className="river-bridge-builder-potion">
+                <PotionIcon
+                  language={currentLanguage}
+                  potion={bridgeBuilderPotion}
+                />
+                <Button
+                  className={languageClassName}
+                  type="button"
+                  onClick={() => setShowBridgeBuilderConfirmation(true)}
+                >
+                  {potionUsageTranslations.use}
+                </Button>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </section>
+
+      <PotionUseConfirmationModal
+        isOpen={showBridgeBuilderConfirmation}
+        language={currentLanguage}
+        onCancel={() => setShowBridgeBuilderConfirmation(false)}
+        onConfirm={handleConfirmBridgeBuilder}
+        potion={confirmationPotion}
+      />
+
+      <Modal
+        actions={
+          <Button
+            className={languageClassName}
+            type="button"
+            onClick={() => finishMiniGame('win', '/mini-game/loot-chest')}
+          >
+            {translations.ok}
+          </Button>
+        }
+        ariaLabel="Bridge Builder success"
+        isOpen={showBridgeBuilderSuccess}
+      >
+        <p
+          className={`river-bridge-builder-success-text larger-text ${languageClassName}`}
+        >
+          {translations.bridgeBuilderSuccess}
+        </p>
+      </Modal>
     </main>
   );
 }

@@ -1033,10 +1033,32 @@ export function selectRandomDecision(decisions = DECISION_QUESTIONS, randomFn = 
   return decisions[index];
 }
 
-export function resolveDecisionOutcome(choiceToResolve, randomFn = Math.random) {
-  const roll = randomFn() * 100;
+export function resolveDecisionOutcome(
+  choiceToResolve,
+  randomFn = Math.random,
+  { preventBadOutcome = false } = {}
+) {
   const { good, neutral } = choiceToResolve.chances;
-  const outcomeType = roll < good ? 'good' : roll < good + neutral ? 'neutral' : 'bad';
+  let outcomeType;
+
+  if (preventBadOutcome) {
+    const safeChanceTotal = good + neutral;
+
+    if (safeChanceTotal <= 0) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `Good Decisions found no good or neutral chance for ${choiceToResolve.id}; defaulting to good.`
+        );
+      }
+      outcomeType = 'good';
+    } else {
+      const safeRoll = randomFn() * safeChanceTotal;
+      outcomeType = safeRoll < good ? 'good' : 'neutral';
+    }
+  } else {
+    const roll = randomFn() * 100;
+    outcomeType = roll < good ? 'good' : roll < good + neutral ? 'neutral' : 'bad';
+  }
 
   return {
     ...choiceToResolve.outcomes[outcomeType],
