@@ -1039,3 +1039,942 @@ Completion Notes
 * Clicking any highlighted footprint cell resolves one logical feature landing and performs one existing position update/turn advance. The current board has no feature encounter dispatcher, so no encounter outcome or route was added; the stored logical `featureId` is available to the existing landing flow when such dispatch exists.
 * Board generation, feature geometry/artwork, dice values, player image size, normal one-square movement, and encounter outcomes were not changed.
 * Per the current three-file vibe workflow, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed.
+
+
+---
+
+Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-002: Treat multi-square board features as one logical landing and movement square
+* EPIC-015 Feature-006: Add respawn flow when a player starts their turn with 0 health
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-014 Feature-009: Rearrange battle page with dice between characters
+
+Goal
+
+* Implement the behaviour when a player lands on:
+
+  * Elite Tower Gravel
+  * Elite Tower Woods
+  * Boss Battle
+* Randomly assign three different level 4 enemies at the start of the game.
+* Track each player’s Elite Tower victories.
+* Prevent Boss Battle access until that player has defeated both Elite Towers.
+* Implement the temporary win screen when a player defeats the Boss Battle.
+
+Enemy Assignment Requirement
+
+* At the start of a new game, choose exactly 3 enemies from the level 4 enemies list.
+* All 3 enemies must be different.
+* Assign them to:
+
+  * Elite Tower Gravel
+  * Elite Tower Woods
+  * Boss Battle
+
+Suggested assignment shape:
+
+```js id="889vrm"
+eliteAndBossAssignments = {
+  eliteTowerGravel: enemyA,
+  eliteTowerWoods: enemyB,
+  bossBattle: enemyC
+};
+```
+
+* This assignment should remain fixed for the whole game.
+* Do not reroll these enemies during the game.
+* Do not reroll them when language changes, the page rerenders, or the debug menu opens.
+
+Debug Menu Requirement
+
+* Show the Elite Tower and Boss enemy assignment in the debug menu.
+* This is for debugging only.
+* The debug menu should show:
+
+  * Elite Tower Gravel enemy name
+  * Elite Tower Woods enemy name
+  * Boss Battle enemy name
+
+Suggested debug display:
+
+```txt id="seqs2r"
+Elite / Boss Enemies
+
+Elite Tower Gravel: Enemy Name
+Elite Tower Woods: Enemy Name
+Boss Battle: Enemy Name
+```
+
+Gameplay UI Requirement
+
+* Add a new information section above the player’s `committed-spell-slot-display`.
+* This section should show the two Elite Tower enemies only.
+* Do not show the Boss enemy in this gameplay UI section.
+* The section should be styled the same as `committed-spell-slot-display`.
+* The section should have:
+
+```css id="7ddnx8"
+max-height: 100px;
+```
+
+* The section should contain:
+
+  * the Elite Tower Gravel enemy name.
+  * an empty feedback checkbox next to it if not defeated.
+  * a checked feedback checkbox next to it if defeated.
+  * the Elite Tower Woods enemy name.
+  * an empty feedback checkbox next to it if not defeated.
+  * a checked feedback checkbox next to it if defeated.
+
+Checkbox Requirement
+
+* These checkboxes are not real checkbox inputs.
+* They are just visual feedback.
+* Do not use `<input type="checkbox">`.
+* Use a styled `div`, icon, or text marker.
+* The checkbox state is based on whether the current player has defeated that Elite Tower.
+
+Suggested structure:
+
+```jsx id="982xiu"
+<div className="elite-progress-display">
+  <div className="elite-progress-row">
+    <span className="elite-progress-name">
+      {eliteTowerGravelEnemy.name[language]}
+    </span>
+
+    <span className="elite-progress-checkbox">
+      {playerEliteProgress.gravel ? "✓" : ""}
+    </span>
+  </div>
+
+  <div className="elite-progress-row">
+    <span className="elite-progress-name">
+      {eliteTowerWoodsEnemy.name[language]}
+    </span>
+
+    <span className="elite-progress-checkbox">
+      {playerEliteProgress.woods ? "✓" : ""}
+    </span>
+  </div>
+</div>
+```
+
+Player Progress Requirement
+
+* Elite Tower progress is tracked per player.
+* If Player 1 defeats Elite Tower Gravel, only Player 1 gets that checkbox ticked.
+* Other players still need to defeat that tower themselves.
+* Once a player has defeated an Elite Tower, that checkbox remains ticked for the rest of the game.
+
+Suggested player state:
+
+```js id="gdh3s9"
+player.eliteProgress = {
+  eliteTowerGravel: false,
+  eliteTowerWoods: false
+};
+```
+
+Elite Tower Landing Behaviour
+
+* When a player lands on Elite Tower Gravel:
+
+  * start a battle against the assigned Elite Tower Gravel enemy.
+  * use the Elite Tower Gravel feature background from `src/images/featureBackgrounds/`.
+
+* When a player lands on Elite Tower Woods:
+
+  * start a battle against the assigned Elite Tower Woods enemy.
+  * use the Elite Tower Woods feature background from `src/images/featureBackgrounds/`.
+
+* These battles trigger every time a player lands on the tower.
+
+* Even if the player has already defeated that tower, they may battle it again if they land there again.
+
+* If they win again, the checkbox simply remains ticked.
+
+* If they lose, the normal battle loss sequence applies.
+
+Elite Tower Win Requirement
+
+* If the player wins the Elite Tower Gravel battle:
+
+  * mark `player.eliteProgress.eliteTowerGravel = true`.
+  * keep it true for the rest of the game.
+  * run the usual battle win reward flow.
+* If the player wins the Elite Tower Woods battle:
+
+  * mark `player.eliteProgress.eliteTowerWoods = true`.
+  * keep it true for the rest of the game.
+  * run the usual battle win reward flow.
+
+Elite Tower Loss Requirement
+
+* If the player loses an Elite Tower battle:
+
+  * run the normal battle loss sequence.
+  * do not tick the tower checkbox.
+  * do not update that player’s Elite Tower progress.
+
+Elite Tower Background Requirement
+
+* Elite Tower battles should not use a normal environment battle background.
+* They should use the matching feature background from:
+
+```txt id="osz9cp"
+src/images/featureBackgrounds/
+```
+
+* Suggested asset names if available:
+
+```txt id="mgbau1"
+elite-tower-gravel.png
+elite-tower-woods.png
+```
+
+* If current asset names differ, use the existing matching tower background files.
+
+Boss Battle Access Requirement
+
+* A player may only fight the Boss Battle if that same player has defeated both Elite Towers.
+* Required state:
+
+```js id="qthdpl"
+player.eliteProgress.eliteTowerGravel === true
+player.eliteProgress.eliteTowerWoods === true
+```
+
+* If either tower is not complete, the player is not ready.
+
+Boss Not Ready Requirement
+
+* If a player lands on the Boss Battle feature before defeating both Elite Towers:
+
+  * do not start the boss battle.
+  * show a modal over:
+
+```txt id="neec0t"
+src/images/featureBackgrounds/boss-castle.png
+```
+
+* The modal should display this text:
+
+English:
+
+```txt id="vgksqt"
+You are not ready to be here. A powerful force rises from the castle and strikes you down. Complete the Elite Towers before trying to visit here again.
+```
+
+Japanese:
+
+```txt id="1q4wg9"
+まだここに来る準備ができていません。城から強大な力が立ち上り、あなたを打ち倒しました。再びここを訪れる前に、エリートタワーをすべて攻略してください。
+```
+
+* Below the text, show:
+
+  * the current player image.
+  * the current player health bar.
+  * an OK button underneath.
+
+Boss Not Ready Health Sequence
+
+* The OK button should start disabled.
+* Wait 1 second.
+* Remove all of the player’s current health.
+* The player’s health should become:
+
+```txt id="1tkxss"
+0
+```
+
+* Update the health bar to show `0`.
+
+* Enable the OK button.
+
+* Clicking OK should:
+
+  * return to the board.
+  * advance to the next player’s turn.
+  * preserve the next-turn modal invariant.
+
+* The player should not respawn immediately from this modal.
+
+* They should use the normal 0-health respawn flow when their next turn begins.
+
+Boss Battle Requirement
+
+* If the player has defeated both Elite Towers:
+
+  * start the Boss Battle.
+  * use the assigned Boss Battle enemy.
+  * use this background:
+
+```txt id="s7mxhu"
+src/images/featureBackgrounds/boss-castle.png
+```
+
+* At the start of the Boss Battle, set the enemy’s health to:
+
+```txt id="b5ar9j"
+150 / 150
+```
+
+* This applies no matter which level 4 enemy was selected as the boss.
+* Only the boss battle version of the enemy should receive this health override.
+* Do not mutate the base enemy data permanently.
+
+Suggested boss enemy instance:
+
+```js id="ra8t4w"
+const bossEnemyForBattle = {
+  ...assignedBossEnemy,
+  currentHealth: 150,
+  maxHealth: 150
+};
+```
+
+Boss Loss Requirement
+
+* If the player loses the Boss Battle:
+
+  * run the normal battle loss sequence.
+  * do not end the game.
+  * do not clear Elite Tower progress.
+
+Boss Win Requirement
+
+* If the player wins the Boss Battle:
+
+  * the player wins the game.
+  * the game is over.
+  * do not continue to the usual board turn flow.
+  * do not show the next-turn modal.
+  * show the temporary winner screen.
+
+Winner Screen Requirement
+
+* For now, use a simple winner screen.
+* Show:
+
+  * starry background.
+  * title above the player image.
+  * winning player image.
+  * Back to Start button below the player image.
+
+Title text:
+
+English:
+
+```txt id="u1owii"
+WINNER!
+```
+
+Japanese:
+
+```txt id="rwfji0"
+WINNER!
+```
+
+* The title should:
+
+  * be yellow.
+  * be centred.
+  * have `margin-bottom: 60px`.
+
+Back button text:
+
+English:
+
+```txt id="0s1fy0"
+Back to Start
+```
+
+Japanese:
+
+```txt id="yd5jwp"
+スタートに戻る
+```
+
+* The button should:
+
+  * appear below the player image.
+  * have `margin-top: 60px`.
+  * do the same thing as the End Game button in the settings modal.
+
+Suggested winner structure:
+
+```jsx id="2yha0e"
+<div className="winner-screen">
+  <h1 className={`winner-title ${languageClass}`}>
+    WINNER!
+  </h1>
+
+  <PlayerImage player={winningPlayer} />
+
+  <button
+    className={`modal-button winner-back-button ${languageClass}`}
+    onClick={endGame}
+  >
+    {backToStartText}
+  </button>
+</div>
+```
+
+Suggested winner CSS:
+
+```css id="47g5zi"
+.winner-title {
+  margin-bottom: 60px;
+  color: #F5FA00;
+  text-align: center;
+}
+
+.winner-back-button {
+  margin-top: 60px;
+}
+```
+
+Battle Reward Requirement
+
+* Elite Tower victories should still grant the usual battle rewards.
+* Boss Battle victory should skip normal battle rewards and show the winner screen instead.
+* Elite Tower losses and Boss Battle losses should still use the normal battle loss sequence.
+
+Player Display Lock Requirement
+
+* Store the encounter player when the Elite Tower or Boss feature is entered.
+* Do not let the image or health bar switch to the next player before navigation completes.
+* This is especially important for:
+
+  * Boss not-ready health reduction.
+  * Boss Battle loss.
+  * Boss Battle win.
+  * Elite Tower battle loss.
+
+Out Of Scope
+
+* No changes to normal random battle enemy selection.
+* No changes to level 4 enemy data except boss instance HP override.
+* No new boss victory animation.
+* No final credits screen.
+* No changes to village behaviour.
+* No changes to multi-square feature movement beyond Feature-002.
+* No automatic hazard connection.
+
+Testing Checkpoints
+
+* Start a new game.
+* Confirm exactly 3 different level 4 enemies are selected.
+* Confirm one is assigned to Elite Tower Gravel.
+* Confirm one is assigned to Elite Tower Woods.
+* Confirm one is assigned to Boss Battle.
+* Confirm assignments are visible in the debug menu.
+* Confirm the gameplay UI shows the two tower enemy names above committed spells.
+* Confirm the boss enemy is not shown in the gameplay tower progress section.
+* Confirm the tower progress section has max height `100px`.
+* Confirm checkboxes are visual feedback only and not checkbox inputs.
+* Land on Elite Tower Gravel.
+* Confirm a battle starts with the assigned Gravel Tower enemy.
+* Confirm the correct feature background is used.
+* Win the battle.
+* Confirm the Gravel Tower checkbox becomes checked for that player.
+* Confirm normal battle rewards happen.
+* Land on Elite Tower Woods.
+* Confirm a battle starts with the assigned Woods Tower enemy.
+* Lose the battle.
+* Confirm the Woods Tower checkbox is not checked.
+* Confirm normal battle loss sequence happens.
+* Land on a tower already completed.
+* Confirm the battle still triggers again.
+* Land on Boss Battle before both towers are completed.
+* Confirm the boss-castle background appears.
+* Confirm the not-ready text appears.
+* Confirm player image and health bar appear.
+* Confirm OK starts disabled.
+* Confirm after 1 second health is reduced to 0.
+* Confirm OK becomes enabled.
+* Click OK.
+* Confirm the game returns to board and advances turn.
+* Complete both Elite Towers for one player.
+* Land that player on Boss Battle.
+* Confirm Boss Battle starts.
+* Confirm boss-castle background is used.
+* Confirm boss enemy has `150 / 150` health.
+* Lose the Boss Battle.
+* Confirm normal battle loss sequence happens.
+* Win the Boss Battle.
+* Confirm the winner screen appears.
+* Confirm title says `WINNER!`.
+* Confirm title is yellow and has `margin-bottom: 60px`.
+* Confirm winning player image appears.
+* Confirm Back to Start button appears with `margin-top: 60px`.
+* Click Back to Start.
+* Confirm it behaves like End Game.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added one fixed per-game assignment for three distinct level-4 enemies: Elite Tower Gravel, Elite Tower Woods, and Boss Battle.
+* Added per-player Gravel/Woods completion state and the two-enemy gameplay progress display with visual-only completion boxes.
+* Added all three localized assigned enemy names to the `Elite / Boss Enemies` debug section.
+* Elite tower landings now resolve the generated tower image identity, start the assigned battle every visit, use the matching feature background, mark only the encounter player's victory, and continue through normal rewards or losses.
+* Boss landings now check only the encounter player's elite progress. Unready players use the exact bilingual lockout flow, delayed zero-health result, locked display, turn advance, and existing next-turn modal invariant without immediate respawn.
+* Ready players battle the fixed boss assignment over the castle background with an encounter-only `150 / 150` health override; the base enemy record remains unchanged.
+* Boss losses retain the normal loss flow and elite progress. Boss victories skip rewards and turn advance, lock the winning player, and open the required starry winner screen.
+* Back to Start delegates to the same reset/navigation action used by End Game.
+
+---
+
+Feature-004: Implement village visits, village rewards, and village healing
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-016 Feature-002: Treat multi-square board features as one logical landing and movement square
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* EPIC-011 Feature-001: Loot Chest page
+* EPIC-011 Feature-002: Global Cave reward resolution order
+* EPIC-015 Feature-002: Implement Decision page rewards and punishments
+
+Goal
+
+* Implement the behaviour when a player lands on a village.
+* Both villages use the same reward and healing rules.
+* The villages are:
+
+  * Field Village
+  * Forest Village
+* Each village has independent one-time reward progression.
+* Every village visit heals the player to full health.
+* A reward modal appears only when the player receives a village reward.
+* A heal modal appears every time the player visits a village.
+
+Village Background Requirement
+
+* Use the matching village background from:
+
+```txt id="p5pgu2"
+src/images/featureBackgrounds/field-village.png
+src/images/featureBackgrounds/forest-village.png
+```
+
+* The village modals should be laid over these backgrounds.
+* Field Village should use `field-village.png`.
+* Forest Village should use `forest-village.png`.
+
+Village Reward Rules
+
+* Each village is tracked independently per player.
+* A player can receive rewards from both villages.
+* The available reward depends on how many Elite Towers that player has defeated at the time they visit the village.
+
+Reward tiers:
+
+```txt id="y0h8m7"
+0 defeated Elite Towers: Loot Chest
+1 defeated Elite Tower: Random Potion
+2 defeated Elite Towers: Random Token
+```
+
+* Each reward tier can happen only once per village per player.
+* Rewards do not stack.
+* Missed earlier rewards are skipped permanently for that village.
+
+Important Examples
+
+* At the start of the game, a player can get 2 loot chests by visiting both villages before defeating any Elite Towers.
+* If a player does not visit Field Village, defeats 1 Elite Tower, then visits Field Village:
+
+  * they get the random potion.
+  * they do not get the missed loot chest.
+  * the Field Village loot chest can never be gained by that player.
+* If a player never visits Forest Village, defeats both Elite Towers, then visits Forest Village:
+
+  * they get the random token.
+  * they do not get the loot chest.
+  * they do not get the potion.
+  * those missed rewards can never be gained by that player.
+
+Suggested Village Reward State
+
+```js id="g51br9"
+player.villageProgress = {
+  fieldVillage: {
+    lootChestResolved: false,
+    potionResolved: false,
+    tokenResolved: false,
+    highestVisitedEliteCount: null
+  },
+  forestVillage: {
+    lootChestResolved: false,
+    potionResolved: false,
+    tokenResolved: false,
+    highestVisitedEliteCount: null
+  }
+};
+```
+
+Better simpler option:
+
+```js id="5lan77"
+player.villageProgress = {
+  fieldVillage: {
+    claimedEliteCounts: []
+  },
+  forestVillage: {
+    claimedEliteCounts: []
+  }
+};
+```
+
+* In this model:
+
+  * `0` means the village loot chest tier was already handled.
+  * `1` means the village potion tier was already handled.
+  * `2` means the village token tier was already handled.
+* When visiting with 1 Elite Tower already defeated, do not backfill tier `0`.
+* When visiting with 2 Elite Towers already defeated, do not backfill tiers `0` or `1`.
+
+Elite Defeat Count Requirement
+
+* Count only the current player’s completed Elite Towers.
+* Possible values:
+
+```txt id="ugtm0s"
+0
+1
+2
+```
+
+* This count comes from the player’s Elite Tower progress from Feature-003.
+
+Suggested helper:
+
+```js id="1vrx8h"
+function getDefeatedEliteTowerCount(player) {
+  return [
+    player.eliteProgress.eliteTowerGravel,
+    player.eliteProgress.eliteTowerWoods
+  ].filter(Boolean).length;
+}
+```
+
+Village Visit Flow
+
+* When a player lands on a village:
+
+  * determine which village was visited.
+  * determine that player’s defeated Elite Tower count.
+  * determine whether the matching reward tier has already been claimed for that village.
+  * if a reward is available, show the reward modal first.
+  * after the reward flow finishes, show the heal modal.
+  * if no reward is available, skip straight to the heal modal.
+  * after the heal modal finishes, return to board and advance to the next player.
+
+Flow summary:
+
+```txt id="p8xhhb"
+1. Player lands on village.
+2. Village background appears.
+3. If eligible reward exists, show reward modal.
+4. Resolve reward.
+5. Show heal modal.
+6. Heal player to full health.
+7. Continue returns to board.
+8. Turn advances to next player.
+9. Next-turn modal appears first.
+```
+
+Reward Modal: Loot Chest
+
+Trigger:
+
+```txt id="4iuwwu"
+Player visits this village with 0 defeated Elite Towers and has not already received this village's loot chest tier.
+```
+
+Modal text:
+
+English:
+
+```txt id="zpb43g"
+Thank you for visiting our village traveller. We have this old chest here if you wish to open it.
+```
+
+Japanese:
+
+```txt id="ofcccr"
+私たちの村へようこそ、旅人さん。ここに古い宝箱があります。よろしければ、開けてみませんか？
+```
+
+Button text:
+
+English:
+
+```txt id="8cnnhh"
+Open Loot Chest
+```
+
+Japanese:
+
+```txt id="40vicx"
+戦利品の宝箱を開ける
+```
+
+* Clicking the button should start the existing Loot Chest sequence.
+* When the Loot Chest sequence has fully finished:
+
+  * return to the village flow.
+  * show the heal modal.
+* The loot chest tier should be marked as claimed when the reward flow begins or when it is completed.
+* Do not allow the player to reopen the same village loot chest on future visits.
+
+Reward Modal: Potion
+
+Trigger:
+
+```txt id="0sd3zz"
+Player visits this village with exactly 1 defeated Elite Tower and has not already received this village's potion tier.
+```
+
+Modal text:
+
+English:
+
+```txt id="mjckpb"
+Thank you for defeating {enemyName}! The village will be much safer with you around. Please take this as a sign of our appreciation.
+```
+
+Japanese:
+
+```txt id="0lfoc5"
+{enemyName}を倒してくれてありがとう！あなたがいてくれれば、この村もずっと安全になります。感謝のしるしに、こちらをお受け取りください。
+```
+
+* `{enemyName}` should be the enemy that is checked off in the player’s Elite Tower UI.
+* If only one Elite Tower has been defeated, use that defeated tower enemy.
+* Generate a random potion.
+* Use the usual potion grant/replacement flow.
+* If potion slots are full, allow the player to:
+
+  * discard a current potion and keep the new one.
+  * or discard the new potion.
+* After the potion grant flow is resolved, show a Continue button.
+* Clicking Continue should move to the heal modal.
+* Do not show the heal modal until the potion grant/replacement flow is complete.
+
+Reward Modal: Token
+
+Trigger:
+
+```txt id="tvp935"
+Player visits this village with exactly 2 defeated Elite Towers and has not already received this village's token tier.
+```
+
+Modal text:
+
+English:
+
+```txt id="oe0niy"
+Wow, you really are powerful. Now you have defeated both of the towers, take this to help you defeat the main boss in his castle, north east of here.
+```
+
+Japanese:
+
+```txt id="1jxy44"
+すごい、本当に強いんですね。これで2つの塔を両方攻略しました。ここから北東にある城のボスを倒すために、これを役立ててください。
+```
+
+* Generate a random token.
+* Show the selected token in the reward modal using the Token component.
+* Include token name and tooltip.
+* Show a Continue button.
+* Clicking Continue should open the token assignment modal.
+* The token assignment modal should use the existing reward token assignment flow.
+* When the token has been assigned or trashed:
+
+  * return to the village flow.
+  * show the heal modal.
+* Do not return to the board before the token is handled.
+* Do not advance the turn before the token is handled.
+
+Heal Modal Requirement
+
+* The heal modal is always shown every time a player visits a village.
+* This happens whether or not they received a reward.
+* The heal modal should say:
+
+English:
+
+```txt id="5dn87r"
+Take a rest and recover in our village.
+```
+
+Japanese:
+
+```txt id="hcj4eq"
+私たちの村で休んで、体力を回復してください。
+```
+
+* Below the text, show:
+
+  * the current player’s image.
+  * the current player’s health bar.
+  * a Continue button underneath.
+
+Heal Sequence Requirement
+
+* Continue should start disabled.
+* Wait 1 second.
+* Restore the player to full health.
+* Update the health bar to show full health.
+* Enable Continue.
+* Clicking Continue should:
+
+  * return to the board.
+  * advance to the next player’s turn.
+  * preserve the next-turn modal invariant.
+
+Suggested heal sequence:
+
+```txt id="447swj"
+1. Heal modal opens.
+2. Player image appears.
+3. Health bar appears.
+4. Continue button is disabled.
+5. Wait 1 second.
+6. Player is healed to full health.
+7. Health bar updates.
+8. Continue becomes enabled.
+9. Continue returns to board and advances turn.
+```
+
+Reward Claim Timing Requirement
+
+* A village reward tier should not be claimable more than once.
+* To avoid duplicate rewards from navigation or rerender bugs, mark the reward as in progress before starting external flows such as:
+
+  * Loot Chest
+  * Potion replacement
+  * Token assignment
+
+Suggested safe state:
+
+```js id="ge0g7b"
+villageRewardState = {
+  status: "inProgress",
+  villageId: "fieldVillage",
+  rewardTier: 1,
+  rewardType: "potion"
+};
+```
+
+* Once the full reward flow is complete, mark it as claimed.
+* If the game has an existing robust reward resolution system, use that instead.
+
+Player Display Lock Requirement
+
+* Store the village player when the village visit starts.
+* The village modals should continue displaying the same player until the village flow is complete.
+* Do not let the image or health bar switch to the next player before returning to the board.
+
+Suggested state:
+
+```js id="owc1cn"
+const [villagePlayerId] = useState(currentPlayer.id);
+```
+
+Turn Flow Requirement
+
+* Village visits end the player’s board turn.
+
+* Once reward and healing are complete:
+
+  * return to board.
+  * advance to the next player.
+  * show the next-turn modal first.
+
+* If the village heals a player from 0 to full health, they do not need to respawn because they are no longer at 0 health.
+
+No Reward Available Requirement
+
+* If the player has already claimed the reward tier for their current defeated Elite Tower count:
+
+  * skip the reward modal.
+  * show only the heal modal.
+* If the player missed an earlier tier:
+
+  * do not show the missed earlier tier.
+  * only check the current defeated Elite Tower count.
+
+Out Of Scope
+
+* No changes to Elite Tower victory tracking.
+* No changes to Boss Battle logic.
+* No changes to Loot Chest reward odds.
+* No changes to random potion generation odds unless an existing source of truth already controls them.
+* No changes to random token generation odds unless an existing source of truth already controls them.
+* No new village animations.
+* No unrelated village NPC systems.
+* No automatic dialogue variations.
+
+Testing Checkpoints
+
+* Start a new game.
+* Visit Field Village before defeating any Elite Tower.
+* Confirm the Field Village background appears.
+* Confirm the loot chest reward modal appears.
+* Confirm the text says `Thank you for visiting our village traveller. We have this old chest here if you wish to open it.`
+* Confirm the button says `Open Loot Chest` / `戦利品の宝箱を開ける`.
+* Complete the Loot Chest sequence.
+* Confirm the flow returns to the village heal modal.
+* Confirm the heal modal always appears.
+* Confirm the player heals to full health after 1 second.
+* Confirm Continue becomes enabled.
+* Confirm Continue returns to board and advances turn.
+* Visit Field Village again before defeating any Elite Tower.
+* Confirm no second loot chest is offered.
+* Confirm the heal modal still appears.
+* Visit Forest Village before defeating any Elite Tower.
+* Confirm a separate loot chest can still be gained there.
+* Defeat one Elite Tower.
+* Visit a village that has not given its potion reward.
+* Confirm the potion reward modal appears.
+* Confirm the defeated enemy name is inserted into the text.
+* Confirm a random potion is granted.
+* Fill potion slots and test replacement.
+* Confirm current potion replacement/discard-new flow works.
+* Confirm the heal modal appears after potion handling.
+* Defeat both Elite Towers.
+* Visit a village that has not given its token reward.
+* Confirm the token reward modal appears.
+* Confirm a random token is shown with name and tooltip.
+* Click Continue.
+* Confirm token assignment opens.
+* Confirm the heal modal appears after token assignment is complete.
+* Visit a village for the first time after defeating both Elite Towers.
+* Confirm the player receives the token only.
+* Confirm they do not receive the missed loot chest or potion.
+* Confirm Field Village and Forest Village track rewards independently.
+* Confirm player image and health bar do not switch to the next player before navigation completes.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

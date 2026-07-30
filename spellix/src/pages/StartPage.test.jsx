@@ -3,11 +3,11 @@ import { readFileSync } from 'fs';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import StartPage from './StartPage';
 
-function renderStartPage() {
+function renderStartPage(onStart = () => {}) {
   return render(
     <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <Routes>
-        <Route path="/" element={<StartPage />} />
+        <Route path="/" element={<StartPage onStart={onStart} />} />
         <Route path="/setup" element={<p>Game setup destination</p>} />
       </Routes>
     </MemoryRouter>
@@ -26,7 +26,9 @@ describe('StartPage', () => {
   });
 
   test('shows only the required central title and bespoke Start action', () => {
-    renderStartPage();
+    const onStart = jest.fn();
+
+    renderStartPage(onStart);
 
     expect(screen.getByRole('heading', { name: 'Spellix' })).toBeInTheDocument();
     expect(screen.queryByText(/start a new game/i)).not.toBeInTheDocument();
@@ -37,6 +39,7 @@ describe('StartPage', () => {
 
     fireEvent.click(startButton);
 
+    expect(onStart).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Game setup destination')).toBeInTheDocument();
   });
 

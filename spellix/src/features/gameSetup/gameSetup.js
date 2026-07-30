@@ -1,5 +1,6 @@
 import { DEFAULT_PLAYER_GENDER, getPlayerPieceImageName } from './pieceImages';
 import { applyLightGreenHealthBonus } from '../spells/nonBattleSpellEffects';
+import { selectEliteBossEnemyAssignments } from '../gameBoard/eliteBossEncounters';
 
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
@@ -74,6 +75,14 @@ export function createPlayers(playerCount, existingPlayers = []) {
       colour,
       currentHealth: existingPlayer?.currentHealth ?? 100,
       diedLastTurn: Boolean(existingPlayer?.diedLastTurn),
+      eliteProgress: {
+        eliteTowerGravel: Boolean(
+          existingPlayer?.eliteProgress?.eliteTowerGravel
+        ),
+        eliteTowerWoods: Boolean(
+          existingPlayer?.eliteProgress?.eliteTowerWoods
+        ),
+      },
       gender,
       hasLeftStartArea: existingPlayer?.hasLeftStartArea ?? false,
       hasUnseenTokenBagTokens:
@@ -132,6 +141,8 @@ export function createInitialGameSetup() {
     turnOrder: [],
     currentTurnIndex: 0,
     board: null,
+    eliteBossEnemyAssignments: selectEliteBossEnemyAssignments(),
+    winnerDisplay: null,
   };
 }
 

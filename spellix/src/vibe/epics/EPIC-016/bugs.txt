@@ -188,3 +188,641 @@ Final Fix
 * Changed the health effect to use a cleanup-safe timer driven by stable encounter values and resolved state. Strict Mode can now recreate its cleaned-up development timer, while resolved state prevents a second damage application.
 * Kept the existing locked player ID, starting health, displayed health, `setPlayerHealth`, turn advance, navigation, and respawn behavior.
 * Hazard data, weighting, skip behavior, modal layout, and respawn rules were not changed.
+
+
+---
+
+Bug-002: Winner screen starry background should match gameplay page exactly
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Bug Summary
+
+* The Winner screen currently shows the starry sky animations.
+* However, the background colour is missing or incorrect.
+* The Winner screen background should look exactly the same as the gameplay page background.
+* This includes both:
+
+  * the animated star layers.
+  * the base background colour / gradient.
+
+Current Problem
+
+* The star animations are visible.
+* The colour behind the stars does not match the gameplay page.
+* This makes the Winner screen look visually unfinished compared with the normal gameplay screen.
+
+Required Behaviour
+
+* The Winner screen should reuse the same background styling as the gameplay page.
+* Do not recreate a separate slightly different starry background style.
+* The Winner screen should visually match the gameplay page background exactly.
+
+Suggested Fix Direction
+
+* Reuse the same wrapper class, shared component, or shared CSS variables used by the gameplay page background.
+* If gameplay uses a class such as:
+
+```css id="bsw03v"
+.gameplay-page-background
+```
+
+* then the Winner screen should either:
+
+  * use that same class directly.
+  * or use a shared class extracted from it.
+
+Suggested Structure
+
+```jsx id="j895ot"
+<div className="gameplay-page-background winner-screen">
+  <h1 className={`winner-title ${languageClass}`}>
+    WINNER!
+  </h1>
+
+  <PlayerImage player={winningPlayer} />
+
+  <button
+    className={`modal-button winner-back-button ${languageClass}`}
+    onClick={endGame}
+  >
+    {backToStartText}
+  </button>
+</div>
+```
+
+* Exact class names can vary.
+* The important requirement is that the Winner screen uses the same complete background treatment as gameplay.
+
+CSS Requirement
+
+* Make sure the Winner screen includes:
+
+  * the same base colour.
+  * the same gradient, if gameplay uses one.
+  * the same star animation layers.
+  * the same page sizing.
+  * the same overflow behaviour.
+  * the same positioning setup needed for the stars to appear correctly.
+
+Potential Cause To Check
+
+* The Winner screen may only be using the star animation pseudo-elements.
+* The base `background`, `background-color`, or gradient from the gameplay page may not have been copied.
+* The Winner screen may be missing the parent class that defines the colour.
+* The star layers may be absolutely positioned correctly, but the parent container background may be transparent.
+
+Out Of Scope
+
+* No changes to the Winner screen layout.
+* No changes to the `WINNER!` title.
+* No changes to the winning player image.
+* No changes to the Back to Start button.
+* No changes to gameplay page background.
+* No new Winner screen animation.
+* No unrelated end-game behaviour changes.
+
+Testing Required
+
+* Win the Boss Battle.
+* Confirm the Winner screen appears.
+* Confirm the star animations are visible.
+* Confirm the background colour matches the gameplay page exactly.
+* Compare against the gameplay page directly.
+* Confirm there is no transparent or plain black background behind the stars unless that is exactly what gameplay uses.
+* Confirm the title, player image, and Back to Start button still display correctly.
+* Confirm Back to Start still behaves like End Game.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a focused winner-page regression that reproduced the missing shared background class while the existing star layers still rendered.
+* Compared the Winner and Gameplay wrappers and confirmed the base radial/linear background, full-height sizing, isolation, and overflow declarations existed only on `.gameplay-layout`.
+
+Final Fix
+
+* Moved the unchanged complete sky-page wrapper declarations into the shared `.magical-night-sky-page` class beside the existing `MagicalNightSky` styles.
+* Applied that shared class to both Gameplay and Winner page wrappers.
+* Kept the existing star component, gameplay background values, winner layout, title, player image, Back to Start button, and end-game behavior unchanged.
+
+---
+
+Bug-003: Winner screen Back to Start button should return to homepage, not start a new game
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* Bug-002: Winner screen starry background should match gameplay page exactly
+
+Bug Summary
+
+* The `Back to Start` button on the Winner screen currently starts a new game.
+* This is incorrect.
+* It should take the user back to the homepage/start screen.
+* The target page is the page with:
+
+  * the Spellix logo.
+  * the `Start` button.
+
+Current Problem
+
+* Clicking `Back to Start` behaves as though the player is starting or restarting a game immediately.
+* It bypasses the actual homepage/start screen.
+
+Required Behaviour
+
+* Clicking `Back to Start` on the Winner screen should:
+
+  * clear/end the current game state as needed.
+  * navigate to the homepage/start screen.
+  * show the Spellix logo.
+  * show the `Start` button.
+* It should not immediately create or enter a new game.
+* It should not navigate directly to Game Setup or Gameplay unless that is what the normal homepage Start button does later.
+
+Button Text
+
+English:
+
+```txt id="r44rb2"
+Back to Start
+```
+
+Japanese:
+
+```txt id="5q7ezp"
+スタートに戻る
+```
+
+Navigation Target
+
+* The destination should be the same route used for the initial homepage/start screen.
+* This is the page with only the Spellix logo and Start button.
+* Do not route directly to gameplay.
+* Do not route directly to the game setup page unless the homepage itself is implemented at that route.
+
+Suggested Fix Direction
+
+```js id="9f3gj6"
+function handleWinnerBackToStart() {
+  resetGameState();
+  navigate("/");
+}
+```
+
+* Exact route can vary depending on the app’s routing.
+* The important requirement is that it returns to the initial homepage screen, not a newly started game.
+
+State Reset Requirement
+
+* The existing game should be ended or cleared.
+* Any active winner state should be cleared.
+* Any current board, players, turn state, encounters, battle state, and temporary feature state should not leak into the next game.
+* The next game should only begin when the user presses the normal `Start` button from the homepage flow.
+
+Out Of Scope
+
+* No changes to Winner screen layout.
+* No changes to Winner screen background.
+* No changes to `WINNER!` title.
+* No changes to boss battle win logic.
+* No changes to the homepage design.
+* No changes to the Start button behaviour.
+
+Testing Required
+
+* Win the Boss Battle.
+* Confirm the Winner screen appears.
+* Click `Back to Start`.
+* Confirm the app returns to the homepage/start screen.
+* Confirm the Spellix logo is visible.
+* Confirm the `Start` button is visible.
+* Confirm a new game does not start automatically.
+* Confirm old winner state is cleared.
+* Press the normal `Start` button.
+* Confirm the normal start/game setup flow begins.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Traced the Winner button through `WinnerPage` to App's existing `handleEndGame` callback.
+* Confirmed that callback already resets game state and navigates to the homepage route `/`.
+* Added a route-level regression using the real reset order under React Strict Mode. The reported redirect to a new game or Gameplay could not be reproduced.
+
+Final Fix
+
+* No production navigation change was required because the current implementation already matches the required behavior.
+* Added regression coverage proving Back to Start clears `activeBattle`, renders the homepage Spellix heading and Start button, and does not render Gameplay.
+* Kept Winner layout/background, boss victory behavior, homepage design, and normal Start button behavior unchanged.
+
+---
+
+Bug-004: Winner screen should clear game state on load and Back to Start must not redirect to gameplay
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* Bug-003: Winner screen Back to Start button should return to homepage, not start a new game
+
+Bug Summary
+
+* Bug-003 is still broken.
+* The `Back to Start` button on the Winner screen is still redirecting to:
+
+```txt id="yywpwv"
+/gameplay
+```
+
+* It is also trying to start a new game.
+* This should never happen from the Winner screen.
+* The game is already over when the Winner screen loads, so active game state can be cleared immediately on Winner screen load.
+
+Required Behaviour
+
+* When the Winner screen loads:
+
+  * clear active game state.
+  * clear board state.
+  * clear player state.
+  * clear turn state.
+  * clear battle state.
+  * clear encounter state.
+  * clear winner/end-game temporary state if it is no longer needed for display.
+
+* Preserve only the minimal data needed to display the Winner screen, such as:
+
+  * winning player image.
+  * winning player colour.
+  * winning player name, if shown.
+
+* Clicking `Back to Start` should:
+
+  * navigate to the homepage/start screen.
+  * show the Spellix logo.
+  * show the normal `Start` button.
+  * not start a new game.
+  * not navigate to `/gameplay`.
+  * not trigger game setup automatically.
+
+Important Correction
+
+* Do not reuse any helper that starts a new game.
+* Do not reuse any helper that navigates to `/gameplay`.
+* Do not call a function such as:
+
+```txt id="r3icv4"
+startGame()
+restartGame()
+beginNewGame()
+goToGameplay()
+handleStart()
+```
+
+* The Winner screen button needs a separate handler that only resets/clears state and navigates home.
+
+Suggested Button Handler
+
+```js id="antnbd"
+function handleWinnerBackToStart() {
+  clearActiveGameState();
+  navigate("/");
+}
+```
+
+* Exact route can vary.
+* The destination must be the real homepage/start screen with the Spellix logo and Start button.
+* It must not be `/gameplay`.
+
+Clear Game State On Winner Screen Load
+
+* Because the game is over when the Winner screen appears, clear active game state as soon as the Winner screen loads.
+* This prevents route guards, stale gameplay state, or automatic game-start logic from redirecting the app back to `/gameplay`.
+
+Suggested Direction
+
+```js id="a1bj0q"
+useEffect(() => {
+  clearActiveGameStateButKeepWinnerDisplay();
+}, []);
+```
+
+* If the winner screen needs winner data, store that separately before clearing the game.
+* Do not depend on normal gameplay state to render the Winner screen after the game has ended.
+
+Suggested Winner Data Shape
+
+```js id="m1ixxc"
+winnerDisplay = {
+  playerId: winningPlayer.id,
+  colour: winningPlayer.colour,
+  image: winningPlayer.image,
+  name: winningPlayer.name
+};
+```
+
+* The Winner screen should render from `winnerDisplay`, not live gameplay/player state.
+
+Route Guard Requirement
+
+* Check any route guard or auto-redirect logic around `/gameplay`.
+* Clearing the game state should not cause an automatic redirect to `/gameplay`.
+* If the app has logic like this, it must not run from the Winner screen:
+
+```js id="qk7c17"
+if (!gameStarted) {
+  navigate("/gameplay");
+}
+```
+
+* If there is an auth/start guard, it should redirect missing game state to the homepage, not gameplay.
+
+Back To Start Button Requirement
+
+Button text:
+
+English:
+
+```txt id="rku929"
+Back to Start
+```
+
+Japanese:
+
+```txt id="mswvod"
+スタートに戻る
+```
+
+* Clicking the button must only go to the homepage/start screen.
+* It should not initialise players.
+* It should not regenerate the board.
+* It should not choose new enemies.
+* It should not set the current player.
+* It should not open the next-turn modal.
+* It should not start gameplay.
+
+Expected Behaviour
+
+* Player wins Boss Battle.
+* Winner screen loads.
+* Active game state is cleared.
+* Winner screen still displays correctly using stored winner display data.
+* The starry background still appears.
+* `WINNER!` still appears.
+* Winning player image still appears.
+* `Back to Start` button appears.
+* Clicking `Back to Start` takes the user to the homepage/start screen.
+* The homepage shows the Spellix logo and Start button.
+* The app does not redirect to `/gameplay`.
+* A new game does not start until the user clicks the normal Start button.
+
+Out Of Scope
+
+* No changes to Boss Battle win detection.
+* No changes to winner screen layout.
+* No changes to winner screen background.
+* No changes to the homepage design.
+* No changes to the normal Start button.
+* No changes to Game Setup.
+* No unrelated routing changes.
+
+Testing Required
+
+* Win the Boss Battle.
+* Confirm the Winner screen appears.
+* Confirm active game state is cleared when the Winner screen loads.
+* Confirm the Winner screen still has enough stored winner data to display correctly.
+* Click `Back to Start`.
+* Confirm the app does not navigate to `/gameplay`.
+* Confirm the app does not start a new game.
+* Confirm the app navigates to the homepage/start screen.
+* Confirm the Spellix logo appears.
+* Confirm the normal Start button appears.
+* Confirm no next-turn modal appears.
+* Confirm no board is generated until the normal Start flow begins.
+* Click the normal Start button.
+* Confirm the normal start/setup flow begins from a clean state.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a focused winner-route regression that reproduced the stale live game state remaining after the Winner screen loaded.
+* Traced Back to Start through the shared End Game callback and confirmed it reused `resetGame()`, which initialized a fresh setup before navigating home.
+* Verified the Winner screen depended on live battle and player state, so clearing gameplay state immediately would previously have removed the data required to render the winner.
+
+Final Fix
+
+* Captured a minimal winner display snapshot when the Boss Battle is won and changed the Winner screen to render only from that snapshot.
+* Added an idempotent Winner-screen load action that clears the board, players, turn order, battle, encounter, and temporary game state while preserving only the winner display snapshot.
+* Added a dedicated Back to Start handler that clears the winner snapshot and navigates to `/` without resetting or starting a game.
+* Moved fresh game initialization to the normal homepage Start button and changed an invalid Winner route to return to the homepage.
+* Kept the Winner layout, starry background, copy, Boss Battle win detection, homepage design, and existing setup flow unchanged.
+
+
+---
+
+Bug-005: Revert Winner screen state-clearing change and only fix Back to Start navigation
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* Bug-003: Winner screen Back to Start button should return to homepage, not start a new game
+* Bug-004: Winner screen should clear game state on load and Back to Start must not redirect to gameplay
+
+Bug Summary
+
+* The previous Winner screen fix caused a runtime error when landing on the Winner page.
+* The error happens because `eliteBossEnemyAssignments` becomes `null`, but `DebugModal` still tries to access:
+
+```txt id="lx5riu"
+eliteBossEnemyAssignments.eliteTowerGravel
+```
+
+* Revert the last state-clearing change from Bug-004.
+* Do not clear active game state when the Winner screen loads.
+* The only required fix is that the `Back to Start` button navigates to the first homepage, not `/gameplay`.
+
+Runtime Error
+
+```txt id="d8gicd"
+can't access property "eliteTowerGravel", eliteBossEnemyAssignments is null
+DebugModal
+```
+
+Current Problem
+
+* The Winner screen now crashes because game state is cleared too early.
+* Components still mounted on or around the Winner screen expect game state to exist.
+* `DebugModal` expects `eliteBossEnemyAssignments` to be available.
+* Clearing the state on Winner screen load makes that value `null`.
+
+Required Fix
+
+* Revert the change that clears active game state when the Winner screen loads.
+* Do not call any state-clearing helper in the Winner screen `useEffect`.
+* Do not set `eliteBossEnemyAssignments` to `null` when the Winner screen loads.
+* Do not clear board/player/enemy/debug state just because the Winner screen appears.
+
+Remove / Revert This Kind Of Logic
+
+```js id="qj91yy"
+useEffect(() => {
+  clearActiveGameStateButKeepWinnerDisplay();
+}, []);
+```
+
+* The Winner screen should be allowed to render while the final game state still exists.
+
+Back To Start Requirement
+
+* The `Back to Start` button should still be fixed.
+
+* Clicking it should navigate to the first homepage/start screen.
+
+* This is the page with:
+
+  * Spellix logo.
+  * Start button.
+
+* It must not navigate to:
+
+```txt id="lrqpif"
+/gameplay
+```
+
+* It must not automatically start a new game.
+
+Button Handler Requirement
+
+* The Winner screen button should use its own simple handler.
+* Do not reuse a function that starts or restarts gameplay.
+* Do not call any function that eventually navigates to `/gameplay`.
+
+Avoid using handlers like:
+
+```txt id="mwzdsx"
+startGame()
+restartGame()
+beginNewGame()
+goToGameplay()
+handleStart()
+```
+
+Suggested Correct Handler
+
+```js id="5rgfpo"
+function handleWinnerBackToStart() {
+  navigate("/");
+}
+```
+
+* If the homepage route is not `/`, use the actual route for the first homepage/start screen.
+* The important requirement is that this goes to the homepage, not gameplay.
+
+State Reset Timing
+
+* Do not clear game state on Winner screen load.
+* If the game needs to be reset, it can be reset as part of the normal Start flow when the user starts a new game from the homepage.
+* Alternatively, reset only after navigation has reached the homepage, but only if doing so does not trigger route guards or `/gameplay` redirects.
+* The safest fix for this bug is:
+
+```txt id="2agg3d"
+Winner screen loads with game state intact.
+Back to Start only navigates home.
+New game state is rebuilt only when the user presses Start again.
+```
+
+DebugModal Safety Requirement
+
+* Even after reverting the state-clearing change, add a safe null guard in `DebugModal` if needed.
+* `DebugModal` should not crash if assignments are temporarily null during future transitions.
+
+Suggested guard:
+
+```jsx id="7crrtv"
+{eliteBossEnemyAssignments && (
+  <div className="debug-section">
+    {/* elite/boss assignment debug content */}
+  </div>
+)}
+```
+
+* This guard is defensive.
+* It should not replace the main requirement to stop clearing the assignments on Winner screen load.
+
+Expected Behaviour
+
+* Player wins Boss Battle.
+* Winner screen loads without runtime errors.
+* `DebugModal` does not crash.
+* Winner screen displays normally.
+* Starry background still works.
+* `WINNER!` title still appears.
+* Winning player image still appears.
+* `Back to Start` button appears.
+* Clicking `Back to Start` goes to the first homepage/start screen.
+* The app does not redirect to `/gameplay`.
+* A new game does not start automatically.
+* The normal Start button on the homepage still begins the usual start flow.
+
+Out Of Scope
+
+* No new Winner screen state-clearing system.
+* No changes to boss win detection.
+* No changes to Elite Tower assignment generation.
+* No changes to DebugModal layout.
+* No changes to the homepage design.
+* No changes to the normal Start button behaviour.
+* No unrelated route guard rewrite unless required to stop `/gameplay` navigation.
+
+Testing Required
+
+* Win the Boss Battle.
+* Confirm the Winner screen loads.
+* Confirm there is no `eliteBossEnemyAssignments is null` runtime error.
+* Confirm `DebugModal` does not crash.
+* Confirm the Winner screen still shows the correct winning player.
+* Click `Back to Start`.
+* Confirm the app goes to the first homepage/start screen.
+* Confirm the Spellix logo is visible.
+* Confirm the Start button is visible.
+* Confirm the app does not navigate to `/gameplay`.
+* Confirm the app does not automatically start a new game.
+* Press the normal Start button.
+* Confirm the normal game start flow begins.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a Winner regression requiring the final battle, board, players, and turn order to remain available after the Winner screen loads; it failed because the mount effect cleared them.
+* Added a DebugModal regression with `eliteBossEnemyAssignments={null}`; it reproduced the reported `eliteTowerGravel` runtime error.
+* Traced Back to Start and confirmed the dedicated App handler still cleared winner state before navigation rather than performing navigation alone.
+
+Final Fix
+
+* Removed the Winner-screen mount state-clearing call and removed the now-unused finished-game clearing actions from game context.
+* Changed the dedicated Winner Back to Start handler to navigate directly to `/` without clearing, resetting, or starting game state.
+* Kept new-game rebuilding in the existing normal homepage Start flow.
+* Added a null guard that omits the existing Elite / Boss Enemies debug section when assignments are unavailable.
+* Kept boss win detection, winner display, starry background, homepage design, assignment generation, and all unrelated routing unchanged.

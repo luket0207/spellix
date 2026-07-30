@@ -34,6 +34,52 @@ const potionPlayers = [
 ];
 
 describe('DebugModal', () => {
+  test('shows all three fixed Elite and Boss enemy assignments', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        eliteBossEnemyAssignments={{
+          bossBattle: 'mossroot-elder',
+          eliteTowerGravel: 'crowned-lichlord',
+          eliteTowerWoods: 'amethyst-ogre',
+        }}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Elite / Boss Enemies' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Elite Tower Gravel: Crowned Lichlord')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Elite Tower Woods: Amethyst Ogre')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Boss Battle: Mossroot Elder')
+    ).toBeInTheDocument();
+  });
+
+  test('does not crash when Elite and Boss assignments are unavailable', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        eliteBossEnemyAssignments={null}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('Debug')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Elite / Boss Enemies' })
+    ).not.toBeInTheDocument();
+  });
+
   test('offers localized Hazard controls with every required environment', () => {
     const handleEnvironmentChange = jest.fn();
     const handleStartHazard = jest.fn();

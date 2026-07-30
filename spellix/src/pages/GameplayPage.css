@@ -1,17 +1,10 @@
 .gameplay-layout {
   display: grid;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
   grid-template-columns: 940px 360px;
   gap: 20px;
-  height: 100vh;
   align-items: center;
   justify-content: center;
   margin: auto;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(48, 40, 104, 0.72), transparent 48%),
-    linear-gradient(180deg, #050617 0%, #10102a 60%, #050617 100%);
 }
 
 .gameplay-layout > .board-panel,
@@ -38,6 +31,40 @@
   flex-direction: column;
   gap: 8px;
   justify-content: center;
+}
+
+.elite-progress-display {
+  max-height: 100px;
+}
+
+.elite-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.elite-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elite-progress-checkbox {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #715231;
+  background: rgba(255, 248, 229, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.elite-progress-checkbox--complete {
+  background: #d7c080;
 }
 
 .gameplay-current-player-image {

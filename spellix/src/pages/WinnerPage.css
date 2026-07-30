@@ -1,0 +1,30 @@
+.winner-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.winner-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.winner-title {
+  margin: 0 0 60px;
+  color: #f5fa00;
+  text-align: center;
+}
+
+.winner-player-image {
+  height: 240px;
+  width: auto;
+}
+
+.winner-back-button {
+  margin-top: 60px;
+}

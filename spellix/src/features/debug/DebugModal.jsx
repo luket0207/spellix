@@ -2,8 +2,10 @@ import Modal from '../../components/Modal';
 import Token from '../../components/tokens/Token';
 import { HAZARD_ENVIRONMENTS } from '../../data/hazards';
 import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
+import { getEnemyById } from '../battle/enemies';
 import {
   getDecisionTranslations,
+  getEnemyDisplayName,
   getGameplayLanguage,
   getHazardTranslations,
 } from '../../i18n/translations';
@@ -13,6 +15,7 @@ import './debug.css';
 
 function DebugModal({
   currentPlayer,
+  eliteBossEnemyAssignments = {},
   enemyOptions = [],
   isOpen,
   message,
@@ -59,6 +62,13 @@ function DebugModal({
   const decisionTranslations = getDecisionTranslations(currentLanguage);
   const hazardTranslations = getHazardTranslations(currentLanguage);
   const decisionLanguageClassName = `language-${currentLanguage}`;
+  const eliteBossEnemies = eliteBossEnemyAssignments
+    ? [
+        ['Elite Tower Gravel', eliteBossEnemyAssignments.eliteTowerGravel],
+        ['Elite Tower Woods', eliteBossEnemyAssignments.eliteTowerWoods],
+        ['Boss Battle', eliteBossEnemyAssignments.bossBattle],
+      ]
+    : [];
 
   return (
     <Modal
@@ -78,6 +88,19 @@ function DebugModal({
             ? `Current player: ${currentPlayer.colour}`
             : 'No current player is available outside gameplay turns.'}
         </p>
+        {eliteBossEnemyAssignments ? (
+          <div className="debug-elite-boss-enemies">
+            <h2>Elite / Boss Enemies</h2>
+            {eliteBossEnemies.map(([label, enemyId]) => (
+              <div key={label}>
+                {`${label}: ${getEnemyDisplayName(
+                  currentLanguage,
+                  getEnemyById(enemyId)
+                )}`}
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="debug-anywhere-mode-controls">
           <p>Anywhere Mode applies to the current player only.</p>
           <p>{`Anywhere Mode: ${isAnywhereModeEnabled ? 'Enabled' : 'Disabled'}`}</p>

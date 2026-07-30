@@ -59,6 +59,12 @@ import {
   getFirstStartAreaPosition,
 } from '../gameBoard/board';
 import {
+  BOSS_BATTLE,
+  ELITE_TOWER_GRAVEL,
+  ELITE_TOWER_WOODS,
+  selectEliteBossEnemyAssignments,
+} from '../gameBoard/eliteBossEncounters';
+import {
   applyColumnMerge,
   applyLightGreenHealthBonus,
   getEffectiveSpellColumnIndex,
@@ -399,6 +405,37 @@ function createLostBattleSetup(currentSetup, activeBattle) {
 }
 
 function createWonBattleSetup(currentSetup, activeBattle) {
+  if (activeBattle.encounterType === BOSS_BATTLE) {
+    const winner = currentSetup.players.find(
+      ({ id }) => id === activeBattle.playerId
+    );
+
+    return {
+      ...currentSetup,
+      activeBattle: {
+        ...activeBattle,
+        isResolvingTurn: false,
+        outcome: 'win',
+        pendingEffects: [],
+        phase: 'wonGame',
+        rewardChoices: null,
+      },
+      winnerDisplay: winner
+        ? {
+            colour: winner.colour,
+            id: winner.id,
+            language: winner.language,
+            pieceImage: winner.pieceImage,
+          }
+        : null,
+    };
+  }
+
+  const isEliteTowerBattle = [
+    ELITE_TOWER_GRAVEL,
+    ELITE_TOWER_WOODS,
+  ].includes(activeBattle.encounterType);
+
   return {
     ...currentSetup,
     activeBattle: {
@@ -410,6 +447,19 @@ function createWonBattleSetup(currentSetup, activeBattle) {
       rewardChoices:
         activeBattle.rewardChoices ?? generateBattleRewardChoices(activeBattle.level),
     },
+    players: isEliteTowerBattle
+      ? currentSetup.players.map((player) =>
+          player.id === activeBattle.playerId
+            ? {
+                ...player,
+                eliteProgress: {
+                  ...player.eliteProgress,
+                  [activeBattle.encounterType]: true,
+                },
+              }
+            : player
+        )
+      : currentSetup.players,
   };
 }
 
@@ -456,6 +506,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
     return {
       ...setup,
+      eliteBossEnemyAssignments: {
+        ...(setup.eliteBossEnemyAssignments ??
+          selectEliteBossEnemyAssignments()),
+      },
+      winnerDisplay: setup.winnerDisplay
+        ? { ...setup.winnerDisplay }
+        : null,
       buyAndSellTransaction: setup.buyAndSellTransaction
         ? {
             ...setup.buyAndSellTransaction,
@@ -518,6 +575,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           baseMaxHealth: player.baseMaxHealth ?? player.maxHealth ?? 100,
           columnMergesUsed:
             player.columnMergesUsed ?? player.mergedColumns?.length ?? 0,
+          eliteProgress: {
+            eliteTowerGravel: Boolean(
+              player.eliteProgress?.eliteTowerGravel
+            ),
+            eliteTowerWoods: Boolean(
+              player.eliteProgress?.eliteTowerWoods
+            ),
+          },
           hasUnseenTokenBagTokens:
             player.hasUnseenTokenBagTokens ??
             Boolean(player.tokenBag?.length),
@@ -2215,7 +2280,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
-  const startBattle = (playerId, level, enemyId, environment = 'fields') => {
+  const startBattle = (
+    playerId,
+    level,
+    enemyId,
+    environment = 'fields',
+    options = {}
+  ) => {
     const enemy = getEnemyById(enemyId);
 
     if (!enemy) {
@@ -2234,7 +2305,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           currentBattleActor: 'player',
           enemyChargeUses: createTokenUses(enemy.spellSlots, 'yellow'),
           enemyCharged: false,
-          enemyCurrentHealth: enemy.currentHealth,
+          enemyCurrentHealth:
+            options.enemyMaxHealth ?? enemy.currentHealth,
+          enemyMaxHealth: options.enemyMaxHealth ?? enemy.maxHealth,
           enemyFreezeUses: createTokenUses(enemy.spellSlots, 'light-blue'),
           enemyFrozen: false,
           freezeAppliedByIceBeamThisTurn: false,
@@ -2244,6 +2317,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           enemyNextPurpleBuffs: null,
           enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
           environment: normalizeBattleEnvironment(environment),
+          encounterType: options.encounterType ?? null,
           isResolvingTurn: false,
           level,
           outcome: null,
@@ -2270,6 +2344,17 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           : currentSetup.players,
       };
     });
+  };
+
+  const startBossNotReadyEncounter = (playerId) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      activeBattle: {
+        encounterType: 'bossNotReady',
+        phase: 'bossNotReady',
+        playerId,
+      },
+    }));
   };
 
   const applyBattleDiceResult = (diceResult) => {
@@ -2877,6 +2962,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 ? {
                     ...enemy,
                     currentHealth: gameSetup.activeBattle.enemyCurrentHealth ?? enemy.currentHealth,
+                    maxHealth:
+                      gameSetup.activeBattle.enemyMaxHealth ??
+                      enemy.maxHealth,
                   }
                 : null;
             })()
@@ -2947,6 +3035,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         setPlayerLanguage,
         setPlayerCount,
         startBattle,
+        startBossNotReadyEncounter,
         startMiniGame,
         updatePlayerSpells,
         consumePlayerPotion,

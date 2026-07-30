@@ -45,7 +45,7 @@ function getRandomEnemyPosition(safeZoneElement) {
   return null;
 }
 
-function StartPage() {
+function StartPage({ onStart = () => {} }) {
   const navigate = useNavigate();
   const safeZoneRef = useRef(null);
   const [decorativeEnemy, setDecorativeEnemy] = useState(null);
@@ -149,7 +149,10 @@ function StartPage() {
         <button
           className="start-page-button"
           type="button"
-          onClick={() => navigate('/setup')}
+          onClick={() => {
+            onStart();
+            navigate('/setup');
+          }}
         >
           Start
         </button>

@@ -16,6 +16,7 @@ import { getBattleBackgroundSource } from '../features/battle/battleEnvironments
 import { getEnemyImageSource } from '../features/battle/enemyImages';
 import DeathResult from '../features/death/DeathResult';
 import { getFirstStartAreaPosition } from '../features/gameBoard/board';
+import { getFeatureBackgroundSource } from '../features/gameBoard/featureBackgrounds';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import BattlePotionList from '../features/potions/BattlePotionList';
@@ -225,6 +226,8 @@ function BattlePage() {
       navigate('/reward');
     } else if (activeBattle?.phase === 'lost') {
       setShowLoseModal(true);
+    } else if (activeBattle?.phase === 'wonGame') {
+      navigate('/winner');
     }
   }, [activeBattle?.phase, navigate]);
 
@@ -320,7 +323,6 @@ function BattlePage() {
 
   const handleWin = () => {
     setActiveBattlePhase('reward');
-    navigate('/reward');
   };
 
   const handleLose = () => {
@@ -420,7 +422,12 @@ function BattlePage() {
   return (
     <main
       className="battle-page"
-      style={{ backgroundImage: `url(${getBattleBackgroundSource(activeBattle.environment)})` }}
+      style={{
+        backgroundImage: `url(${
+          getFeatureBackgroundSource(activeBattle.encounterType) ||
+          getBattleBackgroundSource(activeBattle.environment)
+        })`,
+      }}
     >
       <div className="battle-title-potions-panel">
         <h1 className={`battle-title ${languageClassName}`}>{battleTitle}</h1>

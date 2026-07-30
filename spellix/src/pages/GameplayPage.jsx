@@ -9,6 +9,14 @@ import HealthBar from '../components/health/HealthBar';
 import Modal from '../components/Modal';
 import Token from '../components/tokens/Token';
 import BoardGrid from '../features/gameBoard/BoardGrid';
+import { getEnemyById } from '../features/battle/enemies';
+import {
+  BOSS_BATTLE,
+  ELITE_TOWER_GRAVEL,
+  ELITE_TOWER_WOODS,
+  getEliteBossEncounterType,
+  hasCompletedEliteTowers,
+} from '../features/gameBoard/eliteBossEncounters';
 import {
   getAnywhereModeHighlightedNodeIds,
   getHighlightedNodeIds,
@@ -57,6 +65,7 @@ import {
 } from '../features/spells/nonBattleSpellEffects';
 import {
   getCaveMiniGameTranslations,
+  getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
   getMiniGameFailureTranslations,
@@ -67,7 +76,7 @@ import {
 } from '../i18n/translations';
 import './GameplayPage.css';
 
-function GameplayPage() {
+function GameplayPage({ onNavigate = () => {} }) {
   const {
     advanceTurn,
     beginTurnRespawn,
@@ -101,6 +110,8 @@ function GameplayPage() {
     resolveTokensmithPotion,
     startBuyAndSell,
     startCauldronChoice,
+    startBattle,
+    startBossNotReadyEncounter,
     startStormMasterBlockedTurn,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
@@ -132,6 +143,20 @@ function GameplayPage() {
   const spellAssignmentTranslations = getSpellAssignmentTranslations(currentLanguage);
   const potionUsageTranslations = getPotionUsageTranslations(currentLanguage);
   const languageClassName = `language-${currentLanguage}`;
+  const eliteTowerEnemies = [
+    {
+      encounterType: ELITE_TOWER_GRAVEL,
+      enemy: getEnemyById(
+        gameSetup.eliteBossEnemyAssignments?.[ELITE_TOWER_GRAVEL]
+      ),
+    },
+    {
+      encounterType: ELITE_TOWER_WOODS,
+      enemy: getEnemyById(
+        gameSetup.eliteBossEnemyAssignments?.[ELITE_TOWER_WOODS]
+      ),
+    },
+  ];
   const requiresTurnRespawn = Boolean(
     pendingNextTurnModal && currentPlayer?.currentHealth === 0
   );
@@ -605,6 +630,28 @@ function GameplayPage() {
     );
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
+
+    const encounterType = getEliteBossEncounterType(
+      gameSetup.board,
+      destinationNodeId
+    );
+    const enemyId = gameSetup.eliteBossEnemyAssignments?.[encounterType];
+
+    if (encounterType === BOSS_BATTLE && !hasCompletedEliteTowers(currentPlayer)) {
+      startBossNotReadyEncounter(currentPlayer.id);
+      onNavigate('/boss-not-ready');
+      return;
+    }
+
+    if (enemyId) {
+      startBattle(currentPlayer.id, 4, enemyId, 'fields', {
+        encounterType,
+        enemyMaxHealth: encounterType === BOSS_BATTLE ? 150 : undefined,
+      });
+      onNavigate('/battle');
+      return;
+    }
+
     advanceTurn();
   };
 
@@ -801,7 +848,7 @@ function GameplayPage() {
   };
 
   return (
-    <main className="gameplay-layout">
+    <main className="gameplay-layout magical-night-sky-page">
       <MagicalNightSky />
       {gameSetup.board ? (
         <BoardGrid
@@ -879,6 +926,47 @@ function GameplayPage() {
             </span>
           ) : null}
         </div>
+
+        {currentPlayer ? (
+          <div
+            aria-label="Elite Tower progress"
+            className="committed-spell-slot-display elite-progress-display"
+          >
+            <p
+              className={`committed-spell-slot-display-title ${languageClassName}`}
+            >
+              {currentLanguage === 'jp' ? 'エリートタワー' : 'Elite Towers'}
+            </p>
+            <div className="elite-progress-list">
+              {eliteTowerEnemies.map(({ encounterType, enemy }) => {
+                const isComplete = Boolean(
+                  currentPlayer.eliteProgress?.[encounterType]
+                );
+
+                return (
+                  <div className="elite-progress-row" key={encounterType}>
+                    <span
+                      aria-label={
+                        isComplete
+                          ? 'Elite Tower defeated'
+                          : 'Elite Tower not defeated'
+                      }
+                      className={`elite-progress-checkbox${
+                        isComplete ? ' elite-progress-checkbox--complete' : ''
+                      }`}
+                      role="img"
+                    >
+                      {isComplete ? 'X' : ''}
+                    </span>
+                    <span className={languageClassName}>
+                      {getEnemyDisplayName(currentLanguage, enemy)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {currentPlayer?.hasCommittedInitialSpells ? (
           <CommittedSpellSlots

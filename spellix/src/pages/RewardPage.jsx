@@ -13,6 +13,7 @@ import {
   getDebugTokenTypeLabel,
 } from '../features/debug/tokenBagAdmin';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
+import { getFeatureBackgroundSource } from '../features/gameBoard/featureBackgrounds';
 import { getPendingCaveReward } from '../features/miniGames/caveRewardGrant';
 import {
   getBagTokenDiscardReplacementId,
@@ -91,7 +92,8 @@ function RewardPage() {
   const isSelectedTokenReward = selectedReward?.itemType === 'token';
   const rewardBackground = isCaveRewardAssignment
     ? caveBackground
-    : getBattleBackgroundSource(activeBattle.environment);
+    : getFeatureBackgroundSource(activeBattle.encounterType) ||
+      getBattleBackgroundSource(activeBattle.environment);
   const usesNightSkyRewardFlow =
     isSelectedTokenReward ||
     isCaveRewardAssignment ||

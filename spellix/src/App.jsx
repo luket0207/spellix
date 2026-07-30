@@ -28,6 +28,8 @@ import CaveMiniGame from './pages/MiniGames/CaveMiniGame';
 import LootChestPage from './pages/MiniGames/LootChestPage';
 import MiniGameLosePage from './pages/MiniGames/MiniGameLosePage';
 import RiverMiniGame from './pages/MiniGames/RiverMiniGame';
+import BossNotReadyPage from './pages/BossNotReadyPage';
+import WinnerPage from './pages/WinnerPage';
 
 function App() {
   const navigate = useNavigate();
@@ -74,6 +76,10 @@ function App() {
     setIsDebugOpen(false);
     setActiveHazard(null);
     resetDebugState();
+    navigate('/');
+  };
+
+  const handleWinnerBackToStart = () => {
     navigate('/');
   };
 
@@ -362,10 +368,14 @@ function App() {
       </button>
 
       <Routes>
-        <Route path="/" element={<StartPage />} />
+        <Route path="/" element={<StartPage onStart={resetGame} />} />
         <Route path="/setup" element={<GameSetupPage />} />
-        <Route path="/gameplay" element={<GameplayPage />} />
+        <Route
+          path="/gameplay"
+          element={<GameplayPage onNavigate={navigate} />}
+        />
         <Route path="/battle" element={<BattlePage />} />
+        <Route path="/boss-not-ready" element={<BossNotReadyPage />} />
         <Route
           path="/decision"
           element={<DecisionPage environment={selectedDecisionEnvironment} />}
@@ -384,6 +394,12 @@ function App() {
         <Route path="/mini-game/river" element={<RiverMiniGame />} />
         <Route path="/mini-game/loot-chest" element={<LootChestPage />} />
         <Route path="/mini-game/lose" element={<MiniGameLosePage />} />
+        <Route
+          path="/winner"
+          element={
+            <WinnerPage onBackToStart={handleWinnerBackToStart} />
+          }
+        />
       </Routes>
 
       <Modal
@@ -408,6 +424,7 @@ function App() {
 
       <DebugModal
         currentPlayer={currentPlayer}
+        eliteBossEnemyAssignments={gameSetup.eliteBossEnemyAssignments}
         isOpen={isDebugOpen}
         message={debugMessage}
         onEnableAnywhereMode={handleEnableAnywhereMode}

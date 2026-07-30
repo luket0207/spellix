@@ -55,6 +55,227 @@ Manual Execution
 
 ---
 
+Bug-002: Winner screen starry background should match gameplay page exactly
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. View the Gameplay page and note the complete background behind its animated stars.
+   Expected: The existing radial and linear dark sky gradients fill the viewport.
+2. Win the Boss Battle and compare the Winner page directly with Gameplay.
+   Expected: The Winner page uses the exact same base gradients, full-height sizing, overflow behavior, isolation, and animated star layers.
+3. Inspect the Winner page content.
+   Expected: `WINNER!`, the locked winning player image, and Back to Start remain unchanged and visible above the stars.
+4. Click Back to Start.
+   Expected: The existing End Game reset and start-page navigation still run.
+5. Watch the browser console throughout the flow.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* The focused `WinnerPage.test.jsx` regression failed before the fix because the winner wrapper did not have the shared sky-page background class.
+* The regression now verifies Winner uses `.magical-night-sky-page`.
+* The same suite verifies the shared class retains relative positioning, isolation, hidden overflow, `100vh` height, radial gradient, and linear gradient, and verifies Gameplay uses the same class.
+* Existing winner title, locked player image, English/Japanese Back to Start copy, and End Game action delegation tests remain passing.
+* The focused Winner, Gameplay encounter, and Magical Night Sky run passed all 13 tests across 3 suites.
+* Direct ESLint passed for the scoped JSX production and test files.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-003: Winner screen Back to Start button should return to homepage, not start a new game
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Win the Boss Battle and wait for the Winner screen.
+   Expected: The locked winner, `WINNER!`, and Back to Start button appear.
+2. Click Back to Start.
+   Expected: The current game and winner state clear, and the homepage route `/` appears.
+3. Inspect the destination.
+   Expected: The Spellix heading/logo and normal Start button are visible; Game Setup and Gameplay are not entered automatically.
+4. Click the normal Start button.
+   Expected: The existing homepage flow proceeds to Game Setup only after this click.
+5. Watch the browser console throughout the flow.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* Added a `WinnerPage.test.jsx` route-level regression using `resetGame()` followed by navigation to `/`, matching App's current End Game callback.
+* The regression passes under React Strict Mode and verifies the Spellix homepage heading, Start button, cleared winner state, and absence of Gameplay.
+* The existing Winner callback, English/Japanese button copy, shared background, and locked winner tests remain passing.
+* `StartPage.test.jsx` confirms the existing homepage behavior remains passing.
+* The focused Winner and Start page run passed all 9 tests across 2 suites.
+* Direct ESLint passed for the changed regression test.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-004: Winner screen should clear game state on load and Back to Start must not redirect to gameplay
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Win the Boss Battle and wait for the Winner screen.
+   Expected: The starry Winner screen, `WINNER!`, winning player image, and localized Back to Start button still render.
+2. Inspect game state after the Winner screen loads.
+   Expected: Board, players, turn order, active battle, encounter, and temporary game state are cleared while only the minimal winner display snapshot remains.
+3. Click Back to Start.
+   Expected: The winner snapshot clears and route `/` shows the Spellix homepage and normal Start button.
+4. Remain on the homepage without clicking Start.
+   Expected: No players or board are initialized, no next-turn modal appears, and the app never redirects to `/gameplay`.
+5. Click the normal Start button.
+   Expected: A fresh game initializes only now and the existing Game Setup flow opens.
+6. Open `/winner` without a winner display snapshot.
+   Expected: The app redirects to the homepage, not Gameplay.
+7. Watch the browser console throughout the flow.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* A focused `WinnerPage.test.jsx` regression failed before the fix because the Winner screen retained the active battle, board, players, and turn order.
+* Winner regressions now verify live-state clearing with snapshot rendering, Strict Mode-safe Back to Start behavior, no automatic game initialization, normal Start-only initialization, invalid-route homepage fallback, localized copy, and the shared starry background.
+* `StartPage.test.jsx` verifies the normal Start button invokes game initialization before navigating to Game Setup.
+* `EliteBossGameSetupContext.test.jsx` verifies Boss victory captures the winning player's display snapshot.
+* The focused Bug-004 run passed all 15 tests across 3 suites.
+* Direct ESLint passed for every touched Bug-004 production and test file.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-005: Revert Winner screen state-clearing change and only fix Back to Start navigation
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Win the Boss Battle and wait for the Winner screen.
+   Expected: The screen loads without a runtime error and still shows the starry background, `WINNER!`, winning player image, and localized Back to Start button.
+2. Inspect final game state while the Winner screen is displayed.
+   Expected: The final battle, board, players, turn order, and Elite/Boss assignments remain intact.
+3. Temporarily provide no Elite/Boss assignments to DebugModal.
+   Expected: DebugModal remains usable and omits only the Elite / Boss Enemies section instead of crashing.
+4. Click Back to Start.
+   Expected: Route `/` shows the Spellix homepage and normal Start button without navigating to `/gameplay`.
+5. Remain on the homepage without clicking Start.
+   Expected: The final game state remains unchanged and no new game starts automatically.
+6. Click the normal Start button.
+   Expected: Fresh game state is created now and the existing Game Setup flow opens.
+7. Watch the browser console throughout the flow.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* Winner and DebugModal regressions failed before the fix by proving the final game state was cleared and reproducing the null assignment runtime error.
+* `WinnerPage.test.jsx` now verifies intact final game state, navigation-only Back to Start behavior under Strict Mode, no `/gameplay` redirect, no automatic reset, normal Start-only rebuilding, winner rendering, invalid-route fallback, localized copy, and the shared starry background.
+* `DebugModal.test.jsx` verifies null assignments do not crash or render the assignment section while existing assignment, hazard, battle, token, and potion controls remain passing.
+* `StartPage.test.jsx` and `EliteBossGameSetupContext.test.jsx` verify normal Start initialization and the existing Boss victory winner snapshot.
+* The focused Bug-005 run passed all 30 tests across 4 suites.
+* Direct ESLint passed for every touched Bug-005 production and test file.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Bug-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a new game and open Debug several times.
+   Expected: Exactly three distinct level-4 enemies remain fixed under `Elite / Boss Enemies` for Gravel, Woods, and Boss.
+2. Inspect the gameplay panel for multiple players.
+   Expected: Only the two localized elite enemy names appear above committed spells, the boss is omitted, progress is player-specific, the panel is no taller than `100px`, and no checkbox input is present.
+3. Land on both generated elite tower locations, including a tower already completed.
+   Expected: The tower image identity selects the matching fixed enemy every visit and the matching feature background appears.
+4. Win one elite battle and lose the other.
+   Expected: Only the winning tower is marked for the encounter player, the win enters normal rewards, and the loss enters the normal loss/respawn flow.
+5. Land on Boss Battle before the same player completes both towers.
+   Expected: No battle starts; the exact localized lockout copy, boss-castle background, locked player image, health bar, and disabled OK appear.
+6. Wait one second on the lockout page, then click OK.
+   Expected: The locked player's health becomes zero, OK enables, gameplay returns with the next player and pending next-turn modal, and no immediate respawn occurs.
+7. Complete both towers for one player and land on Boss Battle.
+   Expected: The assigned boss starts over the castle background at `150 / 150`, without changing its base enemy data.
+8. Lose the boss battle.
+   Expected: Normal battle loss runs and both elite completion values remain true.
+9. Win the boss battle.
+   Expected: Rewards and turn advance are skipped; the starry winner page shows the locked winner, yellow `WINNER!` title, and localized Back to Start button with the required spacing.
+10. Click Back to Start.
+    Expected: The same reset and start-page navigation as End Game runs.
+11. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `eliteBossEncounters.test.js` verifies three distinct level-4 assignments, generated Gravel/Woods image identity resolution, boss identity, and both-tower readiness.
+* `gameSetup.test.js` verifies default and preserved per-player elite progress.
+* `EliteBossGameSetupContext.test.jsx` verifies player-scoped elite victory, normal elite rewards, boss `150 / 150` override, unchanged base health, reward-free boss victory, normal boss loss, progress preservation, and locked-boss state.
+* `GameplayEliteBoss.test.jsx` verifies the two-enemy visual-only progress UI, `100px` maximum height, repeated completed-tower battles, assigned enemy selection, unready boss routing, and ready boss routing.
+* `DebugModal.test.jsx` verifies the exact `Elite / Boss Enemies` heading and all three assigned names.
+* `BossNotReadyPage.test.jsx` verifies exact English/Japanese copy, the disabled one-second timer under React Strict Mode, zero health, locked player, turn advance, and pending next-turn modal.
+* `WinnerPage.test.jsx` verifies the locked winner, `WINNER!`, localized Back to Start copy, and delegation to the End Game action.
+* The focused Feature-003 run passed all 38 tests across 7 suites.
+* Existing `RewardPage.test.jsx` and `GameSetupContext.test.jsx` regression suites passed.
+* The complete Gameplay suite passed 56 tests and retained 6 unrelated baseline failures for existing spell warning copy, dice result copy, and image styles.
+* The complete Battle suite passed 49 tests and retained 3 unrelated baseline failures for existing CSS expectations and dice result copy.
+* Direct ESLint passed for every touched Feature-003 production and test file.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 Feature-002: Treat multi-square board features as one logical landing and movement square
 
 Test Status

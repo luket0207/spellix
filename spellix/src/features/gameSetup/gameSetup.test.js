@@ -36,6 +36,10 @@ describe('game setup player piece selection foundation', () => {
     );
     expect(players[0].tokenBag.every((token) => token.protected)).toBe(true);
     expect(players[0].hasUnseenTokenBagTokens).toBe(true);
+    expect(players[0].eliteProgress).toEqual({
+      eliteTowerGravel: false,
+      eliteTowerWoods: false,
+    });
   });
 
   test('maps boy and girl selections to the expected piece filenames', () => {
@@ -83,5 +87,21 @@ describe('game setup player piece selection foundation', () => {
 
     expect(recreatedPlayers[0].diedLastTurn).toBe(true);
     expect(recreatedPlayers[1].diedLastTurn).toBe(false);
+  });
+
+  test('preserves independent elite progress when recreating players', () => {
+    const existingPlayers = createPlayers(2);
+    existingPlayers[0].eliteProgress.eliteTowerGravel = true;
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].eliteProgress).toEqual({
+      eliteTowerGravel: true,
+      eliteTowerWoods: false,
+    });
+    expect(recreatedPlayers[1].eliteProgress).toEqual({
+      eliteTowerGravel: false,
+      eliteTowerWoods: false,
+    });
   });
 });
