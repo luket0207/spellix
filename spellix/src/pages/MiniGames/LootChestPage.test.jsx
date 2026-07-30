@@ -33,6 +33,7 @@ function renderPage({ language = 'en', randomFn = () => 0 } = {}) {
         />
         <Route path="/reward" element={<p>Reward assignment destination</p>} />
         <Route path="/gameplay" element={<p>Gameplay destination</p>} />
+        <Route path="/village" element={<p>Village destination</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -162,6 +163,23 @@ test('completes Nothing directly when the shared reward action returns Gameplay'
 
   expect(returnFromMiniGame).toHaveBeenCalledTimes(1);
   expect(screen.getByText('Gameplay destination')).toBeInTheDocument();
+});
+
+test('returns a completed village Loot Chest directly to the village flow', () => {
+  claimLootChestReward.mockReturnValue('/village');
+  renderPage({ randomFn: () => 0.999 });
+
+  act(() => {
+    jest.advanceTimersByTime(4900);
+  });
+
+  const nothingChest = screen.getAllByLabelText(/loot chest choice \d/i)[2];
+
+  fireEvent.click(within(nothingChest).getByRole('button', { name: 'Choose' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+  expect(screen.getByText('Village destination')).toBeInTheDocument();
+  expect(returnFromMiniGame).not.toHaveBeenCalled();
 });
 
 test('defines the requested chest sizing, gradient, glow, positioning, and animation states', () => {

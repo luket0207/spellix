@@ -55,6 +55,64 @@ Manual Execution
 
 ---
 
+Feature-005: Replace enemy "J" placeholders with joined spell columns
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start or debug a Crowned Lichlord battle.
+   Expected: The enemy table shows `1+2`, `3`, `4`, `5`, and `6`; no `J` or duplicate Slot 2 appears, and `1+2` contains 2 Red and 2 Orange.
+2. Force Crowned Lichlord rolls of `1` and `2`.
+   Expected: Both rolls resolve `1+2` once for 20 raw Red damage; the attack is not duplicated.
+3. Start or debug a Hellcrown Reaper battle.
+   Expected: The enemy table shows `1`, `2+3`, `4`, and `5+6`; no `J`, Slot 3, or Slot 6 duplicate appears.
+4. Inspect Hellcrown Reaper's joined token stacks.
+   Expected: Both `2+3` and `5+6` contain 3 Red and 2 Green.
+5. Force Hellcrown Reaper rolls of `2`, `3`, `5`, and `6`.
+   Expected: Each roll resolves its joined column once for 30 raw Red damage, and its Green tokens participate from either joined number when Hellcrown Reaper is defending.
+6. Apply Purple and charged bonuses to a joined enemy column and trigger it through either number.
+   Expected: The effective joined column receives and consumes the existing bonus once, and the displayed merged column carries the established buff/charge state.
+7. Open normal enemies with filled and Miss slots.
+   Expected: They retain six independent columns, existing token behavior, and normal misses.
+8. Assign Crowned Lichlord and Hellcrown Reaper as the Boss Battle enemy in turn.
+   Expected: Each keeps the existing 150/150 Boss Battle health override.
+9. Repeat a battle in English and Japanese, inspect the joined tables, and watch the browser console.
+   Expected: Established language fonts remain active, no new `ul` or `li` elements were introduced, and no runtime errors appear.
+
+Automated Tests Completed
+
+* `enemies.test.js` verifies both structural merge definitions, retained token stacks, empty removed slots, unchanged Miss data, and absence of serialized `J` placeholders.
+* `battleTurn.test.js` verifies Crowned Lichlord rolls `1`/`2` and Hellcrown Reaper rolls `2`/`3`/`5`/`6` resolve the retained joined column exactly once, including Purple, charge, adjacency, and normal miss regressions.
+* `GameSetupContext.test.jsx` verifies all six required joined rolls through stored battle state and confirms Hellcrown Reaper's Green tokens defend from either `2` or `3`.
+* `BattlePage.test.jsx` verifies exact effective-column labels, one rendered token stack per merge, two-column spans, no visible `J`, normal-enemy six-column rendering, and effective charged-column presentation.
+* `AppSettingsButton.test.jsx` verifies the debug enemy selector opens Hellcrown Reaper with `2+3` and `5+6` and no `J`.
+* `GameplayEliteBoss.test.jsx` verifies both joined-column enemies retain the 150/150 Boss Battle health override.
+* The consolidated enemy data, battle engine, context, and Elite/Boss run passed all 77 tests across 4 suites.
+* The final focused battle UI and debug-entry run passed all 8 selected tests across 2 suites.
+* The existing battle-language regression passed for English/Japanese title, dice control, and actor font handling.
+* A source audit found no obsolete `displayLabel: 'J'`, `joinedWith`, or `createJoinedSlot` references outside the epic records.
+* Scoped ESLint passed for all Feature-005 production files and changed tests except the existing `BattlePage.test.jsx` baseline.
+* `BattlePage.test.jsx` retains 97 pre-existing `testing-library/no-node-access` findings; the new Feature-005 assertions use Testing Library queries and add no direct-DOM lint findings.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-005.
+
+Known Unrelated Baseline Failures
+
+* The complete touched UI-suite run retains four stale assertions unrelated to Feature-005: `BattlePage.test.jsx` expects old modal background sizing, old battle spacing, and removed dice-result copy; `AppSettingsButton.test.jsx` expects removed Battle level text in the Level 3 shortcut test.
+* All Feature-005-focused assertions pass despite those broader baseline failures.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 Bug-002: Winner screen starry background should match gameplay page exactly
 
 Test Status
@@ -269,6 +327,66 @@ Automated Tests Completed
 Automated Tests Still Needed
 
 * None for Feature-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-004: Implement village visits, village rewards, and village healing
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Visit Field Village before defeating an Elite Tower.
+   Expected: The Field Village background and exact localized Loot Chest invitation appear, and Open Loot Chest starts the existing chest sequence.
+2. Finish the Loot Chest sequence, including Nothing, a directly added potion, a full-slot potion replacement/discard, and a token assignment/discard.
+   Expected: Every outcome returns to the village heal modal; the turn does not advance while a reward remains unresolved.
+3. Revisit Field Village before defeating an Elite Tower.
+   Expected: No second Loot Chest appears, but the heal modal still opens.
+4. Visit Forest Village before defeating an Elite Tower.
+   Expected: Its separate Loot Chest tier appears over the Forest Village background.
+5. Defeat one Elite Tower and visit each village.
+   Expected: Each village can independently award its tier-1 random potion once, and the gratitude text names the defeated tower enemy.
+6. Repeat a tier-1 visit with full potion slots.
+   Expected: The existing replace-current-potion or discard-new-potion flow must finish before village healing appears.
+7. Defeat both Elite Towers and visit each village.
+   Expected: Each village can independently award its tier-2 random token once, displaying the token name and tooltip before the existing assignment flow.
+8. First visit a village only after both Elite Towers are defeated.
+   Expected: Only the token is offered; missed Loot Chest and potion tiers are not backfilled.
+9. Revisit any village after claiming the current tier.
+   Expected: Reward presentation is skipped and the heal modal opens immediately.
+10. Enter a village below maximum health, including at zero health.
+    Expected: The locked player image and health bar remain visible, Continue stays disabled for one second, then health becomes full and Continue enables without requiring respawn.
+11. Click the enabled heal Continue button.
+    Expected: Gameplay returns with the next player active and the next-turn modal shown first.
+12. Repeat reward and healing checks in Japanese.
+    Expected: Required Japanese text and font class appear, and potion enemy interpolation uses the localized enemy name.
+13. Inspect village modal markup and watch the browser console.
+    Expected: No `ul` or `li` elements, runtime warnings, or errors appear.
+
+Automated Tests Completed
+
+* `villageVisits.test.js` verifies generated Field/Forest identity, player-scoped Elite counts, current-tier selection, independent progression, no backfilling, defeated enemy locking, and random potion/token generation.
+* `gameSetup.test.js` verifies default and cloned independent village progress for every player.
+* `VillageGameSetupContext.test.jsx` verifies claim-before-external-flow safety, repeated visits, independent villages, current-tier rewards, direct and assigned Loot Chest outcomes, full potion replacement, healing from zero, lethal-state clearing, turn advance, and the next-turn modal.
+* `GameplayEliteBoss.test.jsx` verifies generated village landings route into village visits while existing Elite and Boss routes remain passing.
+* `VillagePage.test.jsx` verifies exact English/Japanese copy, both required backgrounds, no list markup, enemy interpolation, named token tooltip, existing reward destinations, locked player image, one-second Strict Mode-safe healing, and final navigation.
+* `RewardPage.test.jsx` verifies direct village rewards and village Loot Chest assignments return to the heal phase without advancing the turn; all 27 Reward page tests pass.
+* `LootChestPage.test.jsx` verifies a resolved village chest navigates back to the village flow without invoking normal mini-game return behavior.
+* `translations.test.js` verifies every required village string in both languages and English fallback.
+* The complete focused Feature-004 run passed all 78 tests across 8 suites.
+* Direct ESLint passed for all touched production files, all new Feature-004 tests, and the other scoped test files.
+* `RewardPage.test.jsx` retains 7 pre-existing `testing-library/no-node-access` lint errors outside the Feature-004 edits; its complete behavioral suite passes.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-004.
 
 Manual Execution
 

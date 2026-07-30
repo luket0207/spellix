@@ -64,6 +64,12 @@ function EncounterProbe() {
   );
 }
 
+function VillageProbe() {
+  const { gameSetup } = useGameSetup();
+
+  return <p>{`Village: ${gameSetup.villageVisit?.villageId ?? 'none'}`}</p>;
+}
+
 function GameplayRoute() {
   const navigate = useNavigate();
 
@@ -82,6 +88,10 @@ function createGameplaySetup() {
       {
         id: 'elite-bottom-right',
         imageName: 'elite-tower-woods.png',
+      },
+      {
+        id: 'feature-1',
+        imageName: 'village-field.png',
       },
     ],
     height: 31,
@@ -110,6 +120,7 @@ function renderGameplay(setup = createGameplaySetup()) {
           <Route path="/gameplay" element={<GameplayRoute />} />
           <Route path="/battle" element={<EncounterProbe />} />
           <Route path="/boss-not-ready" element={<EncounterProbe />} />
+          <Route path="/village" element={<VillageProbe />} />
         </Routes>
       </GameSetupProvider>
     </MemoryRouter>
@@ -161,6 +172,14 @@ test('starts the assigned battle every time an elite tower is landed on', () => 
   expect(screen.getByText('Enemy: crowned-lichlord')).toBeInTheDocument();
 });
 
+test('routes a generated village landing into the village visit flow', () => {
+  mockDestinationNodeId = 'board-feature-feature-1';
+  renderGameplay();
+  rollAndLand();
+
+  expect(screen.getByText('Village: fieldVillage')).toBeInTheDocument();
+});
+
 test('routes an unready player to the locked boss encounter', () => {
   mockDestinationNodeId = 'boss-battle';
   renderGameplay();
@@ -185,3 +204,22 @@ test('starts the assigned 150 health boss for a ready player', () => {
   expect(screen.getByText('Enemy: mossroot-elder')).toBeInTheDocument();
   expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
 });
+
+test.each(['crowned-lichlord', 'hellcrown-reaper'])(
+  'keeps the 150 health boss override for joined-column enemy %s',
+  (enemyId) => {
+    const setup = createGameplaySetup();
+
+    mockDestinationNodeId = 'boss-battle';
+    setup.eliteBossEnemyAssignments.bossBattle = enemyId;
+    setup.players[0].eliteProgress = {
+      eliteTowerGravel: true,
+      eliteTowerWoods: true,
+    };
+    renderGameplay(setup);
+    rollAndLand();
+
+    expect(screen.getByText(`Enemy: ${enemyId}`)).toBeInTheDocument();
+    expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
+  }
+);

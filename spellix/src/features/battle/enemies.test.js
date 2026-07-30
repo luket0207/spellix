@@ -23,26 +23,42 @@ describe('battle enemy data', () => {
     expect(selectRandomEnemyForLevel(9, () => 0)).toBeNull();
   });
 
-  test('stores joined spell columns as display-only J slots and miss slots without tokens', () => {
+  test('stores joined enemy spell columns as effective merged columns without placeholders', () => {
     const crownedLichlord = getEnemyById('crowned-lichlord');
     const hellcrownReaper = getEnemyById('hellcrown-reaper');
     const vilewhiskerRat = getEnemyById('vilewhisker-rat');
 
-    expect(crownedLichlord.spellSlots[1]).toMatchObject({
-      displayLabel: 'J',
-      joinedWith: 1,
-      tokens: [],
-    });
-    expect(hellcrownReaper.spellSlots[2]).toMatchObject({
-      displayLabel: 'J',
-      joinedWith: 2,
-      tokens: [],
-    });
-    expect(hellcrownReaper.spellSlots[5]).toMatchObject({
-      displayLabel: 'J',
-      joinedWith: 5,
-      tokens: [],
-    });
+    expect(crownedLichlord.mergedColumns).toEqual([
+      { activeColumn: 1, columns: [1, 2], removedColumn: 2 },
+    ]);
+    expect(crownedLichlord.spellSlots[0].tokens.map(({ type }) => type)).toEqual([
+      'red',
+      'red',
+      'orange',
+      'orange',
+    ]);
+    expect(crownedLichlord.spellSlots[1].tokens).toEqual([]);
+    expect(hellcrownReaper.mergedColumns).toEqual([
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+      { activeColumn: 5, columns: [5, 6], removedColumn: 6 },
+    ]);
+    expect(hellcrownReaper.spellSlots[1].tokens.map(({ type }) => type)).toEqual([
+      'red',
+      'red',
+      'red',
+      'green',
+      'green',
+    ]);
+    expect(hellcrownReaper.spellSlots[2].tokens).toEqual([]);
+    expect(hellcrownReaper.spellSlots[4].tokens.map(({ type }) => type)).toEqual([
+      'red',
+      'red',
+      'red',
+      'green',
+      'green',
+    ]);
+    expect(hellcrownReaper.spellSlots[5].tokens).toEqual([]);
+    expect(JSON.stringify([crownedLichlord, hellcrownReaper])).not.toContain('"J"');
     expect(vilewhiskerRat.spellSlots[0].tokens).toEqual([]);
   });
 

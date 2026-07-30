@@ -26,6 +26,7 @@ import { chooseVisualPositionForFeature } from '../features/gameBoard/multiSquar
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
+import { getVillageIdFromDestination } from '../features/villages/villageVisits';
 import PotionList from '../features/potions/PotionList';
 import ActivePotionSection from '../features/potions/ActivePotionSection';
 import HeavyWeightDiceResult from '../features/potions/HeavyWeightDiceResult';
@@ -113,6 +114,7 @@ function GameplayPage({ onNavigate = () => {} }) {
     startBattle,
     startBossNotReadyEncounter,
     startStormMasterBlockedTurn,
+    startVillageVisit,
   } = useGameSetup();
   const [currentDiceRoll, setCurrentDiceRoll] = useState(null);
   const [diceCountForCurrentRoll, setDiceCountForCurrentRoll] = useState(1);
@@ -635,6 +637,17 @@ function GameplayPage({ onNavigate = () => {} }) {
       gameSetup.board,
       destinationNodeId
     );
+    const villageId = getVillageIdFromDestination(
+      gameSetup.board,
+      destinationNodeId
+    );
+
+    if (villageId) {
+      startVillageVisit(currentPlayer.id, villageId);
+      onNavigate('/village');
+      return;
+    }
+
     const enemyId = gameSetup.eliteBossEnemyAssignments?.[encounterType];
 
     if (encounterType === BOSS_BATTLE && !hasCompletedEliteTowers(currentPlayer)) {

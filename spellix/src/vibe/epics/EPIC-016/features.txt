@@ -1542,7 +1542,7 @@ Feature-004: Implement village visits, village rewards, and village healing
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -1978,3 +1978,548 @@ Testing Checkpoints
 * Confirm no `ul` or `li` elements are introduced.
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added per-player `villageProgress` with independent `claimedEliteCounts` arrays for Field Village and Forest Village.
+* Added transient `villageVisit` game state that locks the player, village, defeated Elite count, defeated enemy, generated reward, reward type, and current reward/heal phase until the visit finishes.
+* Generated board village image identity now starts the shared village flow before normal empty-square turn advancement.
+* The current Elite defeat count alone selects Loot Chest, potion, or token; claimed current tiers are skipped and missed earlier tiers are never backfilled.
+* Reward tiers are claimed when the visit starts so rerenders and external reward routes cannot duplicate them.
+* Reused the existing Loot Chest sequence, potion add/replacement/discard flow, token assignment/discard/replacement flow, spell merge handling, Modal, Token, PotionIcon, HealthBar, player image, and turn transition logic.
+* Loot Chest and assignment completion return to village healing rather than Gameplay, and no reward advances the turn before it is resolved.
+* Both village backgrounds and all required English/Japanese text are selected from the locked visit and player.
+* Healing waits one second, restores the locked player to maximum health, clears their lethal state, enables Continue, then atomically advances the turn with the next-turn modal pending.
+* Random village potions and tokens reuse the existing Board-compatible Cave reward generators and their established rarity selection rather than introducing new reward odds.
+* No changes were made to Elite victory tracking, Boss Battle logic, Loot Chest odds, homepage design, or unrelated encounters.
+
+---
+
+Feature-005: Replace enemy “J” placeholders with joined spell columns
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-011 Feature-004: Add non-battle token effects
+* EPIC-011 Bug-008: Spell Token Assignment must display and treat merged columns as one effective droppable column
+* EPIC-011 Bug-009: Merged columns should be adjacent to neighbouring effective columns
+* EPIC-011 Bug-010: Battle buffs applied to merged columns must trigger from either merged column number
+* EPIC-011 Bug-011: Directional buffs on merged columns should apply correctly from either side
+
+Goal
+
+* Update enemy spell tables so enemies no longer use the old `J` placeholder.
+* Replace `J` / joined placeholder slots with actual joined spell-column data.
+* Enemy joined columns should use the same logical battle behaviour as player merged columns.
+* The battle UI should show joined enemy columns as one merged column, not as a placeholder.
+
+Problem Summary
+
+* Some enemies still have old placeholder values for joined columns.
+* These may currently appear as:
+
+```txt id="8bkohl"
+J
+Joined
+Joined with X
+```
+
+* This should now be converted into real joined-column data.
+* The battle system already supports joined/merged columns properly, so enemy data should use that system directly.
+
+Required Joined Column Updates
+
+* Most enemies have normal 6-slot spell tables.
+* Only the following enemies need joined spell-column behaviour:
+
+```txt id="qt0uh6"
+Crowned Lichlord
+Hellcrown Reaper
+```
+
+Crowned Lichlord Requirement
+
+Enemy:
+
+```txt id="5it2ba"
+Crowned Lichlord / 冠のリッチ王 / CL.png / Level 4 / 120 HP
+```
+
+Spell table:
+
+```txt id="2nf1xq"
+Slot 1: 2 Red, 2 Orange
+Slot 2: Joined with Slot 1
+Slot 3: 4 Purple
+Slot 4: 3 Red
+Slot 5: 2 Blue, 2 Green
+Slot 6: 2 Blue, 2 Green
+```
+
+Required behaviour:
+
+* Slots 1 and 2 should be one joined column.
+* Slot 2 should not show a separate spell column.
+* Slot 2 should not show `J`.
+* The joined column should display as:
+
+```txt id="k0cx2p"
+1+2
+```
+
+* The joined `1+2` column should contain the tokens from Slot 1:
+
+```txt id="r3ypiv"
+2 Red, 2 Orange
+```
+
+* If the enemy rolls either `1` or `2`, the joined `1+2` column should trigger.
+* Slot 3, Slot 4, Slot 5, and Slot 6 remain normal independent columns.
+
+Hellcrown Reaper Requirement
+
+Enemy:
+
+```txt id="rfvd27"
+Hellcrown Reaper / 地獄冠の死神 / HR.png / Level 4 / 120 HP
+```
+
+Spell table:
+
+```txt id="qyjf90"
+Slot 1: 5 Blue
+Slot 2: 3 Red, 2 Green
+Slot 3: Joined with Slot 2
+Slot 4: 2 Purple
+Slot 5: 3 Red, 2 Green
+Slot 6: Joined with Slot 5
+```
+
+Required behaviour:
+
+* Slots 2 and 3 should be one joined column.
+* Slots 5 and 6 should be one joined column.
+* Slot 3 should not show a separate spell column.
+* Slot 6 should not show a separate spell column.
+* Slot 3 and Slot 6 should not show `J`.
+* The joined columns should display as:
+
+```txt id="b4gh7y"
+2+3
+5+6
+```
+
+* The joined `2+3` column should contain the tokens from Slot 2:
+
+```txt id="crpp4t"
+3 Red, 2 Green
+```
+
+* The joined `5+6` column should contain the tokens from Slot 5:
+
+```txt id="nbt5ay"
+3 Red, 2 Green
+```
+
+* If the enemy rolls either `2` or `3`, the joined `2+3` column should trigger.
+* If the enemy rolls either `5` or `6`, the joined `5+6` column should trigger.
+* Slot 1 and Slot 4 remain normal independent columns.
+
+Enemy Spell Table Source Of Truth
+
+* Update the enemy list so the following table is represented accurately.
+
+```txt id="qto2hd"
+Vilewhisker Rat / 毒ヒゲネズミ / VR.png / Level 1 / 40 HP
+Slot 1: Miss
+Slot 2: 1 Orange
+Slot 3: 1 Red
+Slot 4: 1 Red
+Slot 5: 2 Orange
+Slot 6: Miss
+
+Emberhorn Imp / 火角インプ / EI.png / Level 1 / 40 HP
+Slot 1: 2 Red
+Slot 2: Miss
+Slot 3: 1 Red
+Slot 4: Miss
+Slot 5: Miss
+Slot 6: 2 Red
+
+Boneveil Acolyte / 骨衣の使徒 / BA.png / Level 1 / 40 HP
+Slot 1: 1 Green
+Slot 2: 1 Blue
+Slot 3: 1 Red
+Slot 4: 1 Red
+Slot 5: Miss
+Slot 6: 1 Green
+
+Nightplume Raven / 夜羽ガラス / NR.png / Level 1 / 40 HP
+Slot 1: 1 Blue
+Slot 2: 1 Red
+Slot 3: 1 Purple
+Slot 4: 1 Red
+Slot 5: Miss
+Slot 6: Miss
+
+Flaskwick Goblin / 薬瓶ゴブリン / FG.png / Level 1 / 40 HP
+Slot 1: Miss
+Slot 2: 1 Red
+Slot 3: 1 Green
+Slot 4: 2 Orange
+Slot 5: 1 Red
+Slot 6: Miss
+
+Hexmaw Hag / 呪牙の魔女 / HH.png / Level 2 / 60 HP
+Slot 1: 1 Red
+Slot 2: 2 Purple
+Slot 3: 1 Blue
+Slot 4: 1 Blue
+Slot 5: 2 Purple
+Slot 6: 1 Red
+
+Runefang Wolf / 魔紋狼 / RW.png / Level 2 / 60 HP
+Slot 1: 2 Orange
+Slot 2: 1 Blue, 2 Orange
+Slot 3: Miss
+Slot 4: 1 Red
+Slot 5: 2 Orange
+Slot 6: 1 Red
+
+Frostwisp Spirit / 氷霊ウィスプ / FS.png / Level 2 / 60 HP
+Slot 1: Miss
+Slot 2: 1 Blue, 1 Orange
+Slot 3: 1 Light Blue
+Slot 4: 1 Blue, 1 Orange
+Slot 5: 2 Red
+Slot 6: 1 Orange
+
+Harvestrot Scarecrow / 腐れ案山子 / HS.png / Level 2 / 60 HP
+Slot 1: 1 Blue, 1 Green
+Slot 2: 1 Red
+Slot 3: 2 Yellow
+Slot 4: 1 Blue
+Slot 5: 1 Red
+Slot 6: 1 Blue, 1 Green
+
+Wartback Brute / イボ背の巨漢 / WB.png / Level 2 / 60 HP
+Slot 1: 3 Red
+Slot 2: 1 Green
+Slot 3: Miss
+Slot 4: Miss
+Slot 5: 3 Red
+Slot 6: 1 Green
+
+Gravechant Necromancer / 墓歌の屍術師 / GN.png / Level 3 / 80 HP
+Slot 1: 1 Red
+Slot 2: 3 Purple, 2 Green
+Slot 3: 2 Red
+Slot 4: 2 Red
+Slot 5: 3 Purple, 2 Green
+Slot 6: 1 Red
+
+Dreadsteel Knight / 恐鋼の騎士 / DK.png / Level 3 / 80 HP
+Slot 1: 5 Red
+Slot 2: Miss
+Slot 3: 2 Blue, 1 Orange
+Slot 4: 2 Blue, 1 Orange
+Slot 5: Miss
+Slot 6: 5 Red
+
+Skullclub Warlord / 髑髏棍の戦王 / SW.png / Level 3 / 80 HP
+Slot 1: 3 Blue, 1 Orange
+Slot 2: 1 Green, 3 Orange
+Slot 3: 2 Red
+Slot 4: 2 Red
+Slot 5: 1 Green, 3 Orange
+Slot 6: 3 Blue, 1 Orange
+
+Venomglyph Serpent / 毒紋の大蛇 / VS.png / Level 3 / 80 HP
+Slot 1: 2 Light Blue
+Slot 2: 1 Orange, 1 Green
+Slot 3: 3 Red
+Slot 4: 3 Red
+Slot 5: 1 Orange, 1 Green
+Slot 6: 2 Light Blue
+
+Cinderveil Demon / 炎灰の悪魔 / CD.png / Level 3 / 80 HP
+Slot 1: 2 Red, 1 Orange
+Slot 2: 1 Yellow
+Slot 3: 1 Red, 2 Orange
+Slot 4: 1 Red, 2 Orange
+Slot 5: 1 Yellow
+Slot 6: 2 Red, 1 Orange
+
+Crowned Lichlord / 冠のリッチ王 / CL.png / Level 4 / 120 HP
+Slot 1: 2 Red, 2 Orange
+Slot 2: Joined with 1
+Slot 3: 4 Purple
+Slot 4: 3 Red
+Slot 5: 2 Blue, 2 Green
+Slot 6: 2 Blue, 2 Green
+
+Amethyst Ogre / 紫晶のオーガ / AO.png / Level 4 / 120 HP
+Slot 1: 5 Red
+Slot 2: 3 Blue, 2 Green
+Slot 3: 3 Blue, 2 Green
+Slot 4: 2 Red
+Slot 5: 5 Red
+Slot 6: 2 Red
+
+Mossroot Elder / 苔根の古老 / ME.png / Level 4 / 120 HP
+Slot 1: 2 Blue, 3 Yellow
+Slot 2: 1 Red, 4 Orange
+Slot 3: 3 Blue, 1 Red
+Slot 4: 3 Blue, 1 Red
+Slot 5: 1 Red, 4 Orange
+Slot 6: 2 Blue, 3 Yellow
+
+Duskwyrm Warlock / 黄昏竜の魔導士 / DW.png / Level 4 / 120 HP
+Slot 1: 1 Light Blue, 3 Red
+Slot 2: 1 Light Blue, 3 Blue
+Slot 3: 1 Light Blue, 4 Orange
+Slot 4: 1 Light Blue, 3 Red
+Slot 5: 1 Light Blue, 3 Blue
+Slot 6: 1 Light Blue, 4 Orange
+
+Hellcrown Reaper / 地獄冠の死神 / HR.png / Level 4 / 120 HP
+Slot 1: 5 Blue
+Slot 2: 3 Red, 2 Green
+Slot 3: Joined with 2
+Slot 4: 2 Purple
+Slot 5: 3 Red, 2 Green
+Slot 6: Joined with 5
+```
+
+Suggested Data Shape
+
+* Prefer storing joined enemy spell columns structurally rather than as display strings.
+
+Example:
+
+```js id="rmjzcm"
+{
+  id: "crowned-lichlord",
+  name: {
+    en: "Crowned Lichlord",
+    jp: "冠のリッチ王"
+  },
+  image: "CL.png",
+  level: 4,
+  health: 120,
+  spellSlots: [
+    {
+      slot: 1,
+      tokens: [
+        { colour: "Red", count: 2 },
+        { colour: "Orange", count: 2 }
+      ],
+      joinedWith: [2]
+    },
+    {
+      slot: 2,
+      joinedTo: 1
+    },
+    {
+      slot: 3,
+      tokens: [
+        { colour: "Purple", count: 4 }
+      ]
+    },
+    {
+      slot: 4,
+      tokens: [
+        { colour: "Red", count: 3 }
+      ]
+    },
+    {
+      slot: 5,
+      tokens: [
+        { colour: "Blue", count: 2 },
+        { colour: "Green", count: 2 }
+      ]
+    },
+    {
+      slot: 6,
+      tokens: [
+        { colour: "Blue", count: 2 },
+        { colour: "Green", count: 2 }
+      ]
+    }
+  ]
+}
+```
+
+Alternative Effective Column Shape
+
+```js id="ea3nq4"
+{
+  id: "hellcrown-reaper",
+  effectiveSpellColumns: [
+    {
+      numbers: [1],
+      label: "1",
+      tokens: [{ colour: "Blue", count: 5 }]
+    },
+    {
+      numbers: [2, 3],
+      label: "2+3",
+      tokens: [
+        { colour: "Red", count: 3 },
+        { colour: "Green", count: 2 }
+      ]
+    },
+    {
+      numbers: [4],
+      label: "4",
+      tokens: [{ colour: "Purple", count: 2 }]
+    },
+    {
+      numbers: [5, 6],
+      label: "5+6",
+      tokens: [
+        { colour: "Red", count: 3 },
+        { colour: "Green", count: 2 }
+      ]
+    }
+  ]
+}
+```
+
+* Either structure is acceptable.
+* The important requirement is that the battle system can derive effective columns cleanly.
+
+Battle UI Requirement
+
+* Enemy joined columns should display as one wider joined column.
+* Do not render a visible `J` placeholder.
+* Do not render an empty duplicate column for the joined slot.
+* The displayed column label should be:
+
+  * `1+2` for Crowned Lichlord’s joined first column.
+  * `2+3` and `5+6` for Hellcrown Reaper’s joined columns.
+* The joined column should visually span the width of the joined slots if the battle layout supports this.
+* If the current enemy spell display cannot physically span yet, it should at least render as one effective column with the combined label and no placeholder.
+
+Battle Roll Requirement
+
+* If an enemy rolls any number inside a joined column, trigger the joined column.
+
+* Crowned Lichlord:
+
+  * rolling `1` triggers `1+2`.
+  * rolling `2` triggers `1+2`.
+
+* Hellcrown Reaper:
+
+  * rolling `2` triggers `2+3`.
+  * rolling `3` triggers `2+3`.
+  * rolling `5` triggers `5+6`.
+  * rolling `6` triggers `5+6`.
+
+* The triggered joined column should resolve exactly once.
+
+* Do not duplicate the attack because the column covers two numbers.
+
+Miss Requirement
+
+* Normal `Miss` slots should continue working as misses.
+* This feature should not alter miss behaviour for enemies without joined columns.
+
+Token Behaviour Requirement
+
+* Tokens inside joined enemy columns should behave the same as tokens in normal enemy columns.
+* Existing battle token behaviours should still apply:
+
+  * Red damage
+  * Blue guard
+  * Orange counter
+  * Green weaken / healing behaviour if already implemented for enemies
+  * Yellow charge
+  * Purple buff
+  * Light Blue freeze
+
+Merged / Joined Column Buff Requirement
+
+* If enemy columns can be buffed or charged, joined enemy columns should use the same effective-column logic as player merged columns.
+* Buffs or charge applied to a joined enemy column should apply to the effective group.
+* If a joined enemy column is triggered from either number, the buff should still apply.
+
+Example:
+
+```txt id="87sixl"
+Hellcrown Reaper has joined column 2+3.
+
+If 2+3 is charged and the enemy rolls 3, the charged 2+3 column should trigger with the charge bonus.
+```
+
+No Placeholder Requirement
+
+* After this feature, there should be no visible `J` placeholder in:
+
+  * battle UI.
+  * debug enemy displays.
+  * enemy spell table displays.
+  * enemy data shown in development tools, where practical.
+* The data may internally say `joinedTo`, but the player-facing UI should not display `J`.
+
+Out Of Scope
+
+* No changes to player-created White token merging.
+* No changes to enemy levels.
+* No changes to enemy health, except existing Boss Battle override from Feature-003.
+* No changes to enemy images.
+* No changes to random enemy selection.
+* No changes to battle reward logic.
+* No new enemy attacks.
+* No changes to level 4 elite/boss assignment logic.
+
+Testing Checkpoints
+
+* Open or debug Crowned Lichlord.
+* Confirm Slot 2 no longer displays `J`.
+* Confirm Slots 1 and 2 display as joined column `1+2`.
+* Confirm the joined `1+2` column contains `2 Red, 2 Orange`.
+* Force Crowned Lichlord to roll `1`.
+* Confirm the `1+2` column triggers once.
+* Force Crowned Lichlord to roll `2`.
+* Confirm the `1+2` column triggers once.
+* Open or debug Hellcrown Reaper.
+* Confirm Slot 3 no longer displays `J`.
+* Confirm Slot 6 no longer displays `J`.
+* Confirm Slots 2 and 3 display as joined column `2+3`.
+* Confirm Slots 5 and 6 display as joined column `5+6`.
+* Confirm `2+3` contains `3 Red, 2 Green`.
+* Confirm `5+6` contains `3 Red, 2 Green`.
+* Force Hellcrown Reaper to roll `2`.
+* Confirm `2+3` triggers once.
+* Force Hellcrown Reaper to roll `3`.
+* Confirm `2+3` triggers once.
+* Force Hellcrown Reaper to roll `5`.
+* Confirm `5+6` triggers once.
+* Force Hellcrown Reaper to roll `6`.
+* Confirm `5+6` triggers once.
+* Confirm no joined column attack is duplicated.
+* Confirm enemies without joined columns still display normally.
+* Confirm normal Miss columns still miss.
+* Confirm battle buffs/charges still work on joined enemy columns.
+* Confirm boss health override still works if Crowned Lichlord or Hellcrown Reaper is selected as the boss.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Crowned Lichlord now stores the established player-compatible `mergedColumns` shape for effective column `1+2`, retaining the Slot 1 tokens and removing the old Slot 2 placeholder data.
+* Hellcrown Reaper now stores the same effective-column shape for `2+3` and `5+6`, retaining the Slot 2 and Slot 5 token stacks once each.
+* Enemy spell rendering now receives enemy merge data, so joined columns use the existing two-column span, combined number label, token consolidation, Purple buff, and charged-column presentation.
+* Battle roll resolution now resolves either number in an enemy joined column through the retained active slot exactly once.
+* Existing effective-column indexing also applies per-column limited uses and Purple buffs from either joined number without adding enemy-specific combat logic.
+* Normal six-column enemies, empty Miss slots, token effects, random enemy selection, images, health, rewards, and level assignment logic remain unchanged.
+* Existing Boss Battle maximum-health overrides continue to apply to both joined-column enemies.
+* The obsolete `J` display-label, `joinedWith`, and joined-placeholder creation paths were removed; no new list markup, routes, styling, abstractions, or player merge behavior were added.

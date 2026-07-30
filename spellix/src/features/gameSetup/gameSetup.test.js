@@ -40,6 +40,10 @@ describe('game setup player piece selection foundation', () => {
       eliteTowerGravel: false,
       eliteTowerWoods: false,
     });
+    expect(players[0].villageProgress).toEqual({
+      fieldVillage: { claimedEliteCounts: [] },
+      forestVillage: { claimedEliteCounts: [] },
+    });
   });
 
   test('maps boy and girl selections to the expected piece filenames', () => {
@@ -103,5 +107,29 @@ describe('game setup player piece selection foundation', () => {
       eliteTowerGravel: false,
       eliteTowerWoods: false,
     });
+  });
+
+  test('preserves independent village progress when recreating players', () => {
+    const existingPlayers = createPlayers(2);
+    existingPlayers[0].villageProgress.fieldVillage.claimedEliteCounts = [
+      0,
+      1,
+    ];
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].villageProgress).toEqual({
+      fieldVillage: { claimedEliteCounts: [0, 1] },
+      forestVillage: { claimedEliteCounts: [] },
+    });
+    expect(recreatedPlayers[1].villageProgress).toEqual({
+      fieldVillage: { claimedEliteCounts: [] },
+      forestVillage: { claimedEliteCounts: [] },
+    });
+    expect(
+      recreatedPlayers[0].villageProgress.fieldVillage.claimedEliteCounts
+    ).not.toBe(
+      existingPlayers[0].villageProgress.fieldVillage.claimedEliteCounts
+    );
   });
 });

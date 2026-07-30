@@ -1,4 +1,5 @@
 import { calculateBattleTurn, createAdjacentPurpleBuffs } from './battleTurn';
+import { getEnemyById } from './enemies';
 
 function createToken(type, index) {
   return { committed: true, id: `${type}-${index}`, type };
@@ -171,25 +172,11 @@ test.each([
   });
 });
 
-test('treats empty and joined actor slots as misses and expires opponent guard', () => {
+test('treats empty actor slots as misses and expires opponent guard', () => {
   const emptyResult = calculateBattleTurn({
     currentActor: createActor(),
     diceResult: 1,
     opponent: createActor({ guard: 30 }),
-  });
-  const joinedResult = calculateBattleTurn({
-    currentActor: createActor({
-      spellSlots: createSpellSlots(
-        createSlot([createToken('red', 1)], { displayLabel: 'J', joinedWith: 1 })
-      ),
-    }),
-    diceResult: 1,
-    opponent: createActor({
-      guard: 20,
-      spellSlots: createSpellSlots(
-        createSlot([createToken('orange', 1)], { displayLabel: 'J', joinedWith: 1 })
-      ),
-    }),
   });
 
   expect(emptyResult).toMatchObject({
@@ -198,12 +185,60 @@ test('treats empty and joined actor slots as misses and expires opponent guard',
     nextCurrentActor: { currentHealth: 100, guard: 0 },
     nextOpponent: { currentHealth: 100, guard: 0 },
   });
-  expect(joinedResult).toMatchObject({
-    effects: [],
-    isMiss: true,
-    nextCurrentActor: { currentHealth: 100, guard: 0 },
-    nextOpponent: { currentHealth: 100, guard: 0 },
+});
+
+test.each([
+  ['crowned-lichlord', 1, 20],
+  ['crowned-lichlord', 2, 20],
+  ['hellcrown-reaper', 2, 30],
+  ['hellcrown-reaper', 3, 30],
+  ['hellcrown-reaper', 5, 30],
+  ['hellcrown-reaper', 6, 30],
+])(
+  '%s resolves joined enemy roll %i from its retained column exactly once',
+  (enemyId, diceResult, expectedDamage) => {
+    const result = calculateBattleTurn({
+      currentActor: getEnemyById(enemyId),
+      diceResult,
+      opponent: createActor({ currentHealth: 120 }),
+    });
+
+    expect(result.damage.rawRed).toBe(expectedDamage);
+    expect(result.damage.outgoing).toBe(expectedDamage);
+    expect(result.nextOpponent.currentHealth).toBe(120 - expectedDamage);
+    expect(result.effects.filter(({ type }) => type === 'redDamage')).toHaveLength(1);
+  }
+);
+
+test('applies Purple and charged bonuses once when a joined enemy column is rolled', () => {
+  const result = calculateBattleTurn({
+    currentActor: getEnemyById('hellcrown-reaper'),
+    diceResult: 3,
+    opponent: createActor({ currentHealth: 120 }),
+    purpleBuff: 5,
+    yellowCharged: true,
   });
+
+  expect(result.damage).toMatchObject({
+    outgoing: 45,
+    rawRed: 45,
+  });
+  expect(result.effects.filter(({ type }) => type === 'redDamage')).toEqual([
+    expect.objectContaining({ amount: 45 }),
+  ]);
+});
+
+test('treats effective joined enemy columns as single neighbours for Purple buffs', () => {
+  const crownedLichlord = getEnemyById('crowned-lichlord');
+
+  expect(createAdjacentPurpleBuffs(3, 20, crownedLichlord)).toEqual([
+    20,
+    0,
+    0,
+    20,
+    0,
+    0,
+  ]);
 });
 
 test.each(['light-green', 'black', 'white', 'grey'])(

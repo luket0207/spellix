@@ -15,27 +15,12 @@ function createMissSlot() {
   };
 }
 
-function createJoinedSlot(joinedWith) {
-  return {
-    joinedWith,
-    kind: 'joined',
-  };
-}
-
 function createEnemySpellSlot(enemyId, slotIndex, slotData) {
   const baseSlot = {
     id: `${enemyId}-slot-${slotIndex + 1}`,
     maxTokens: 5,
     tokens: [],
   };
-
-  if (slotData.kind === 'joined') {
-    return {
-      ...baseSlot,
-      displayLabel: 'J',
-      joinedWith: slotData.joinedWith,
-    };
-  }
 
   if (slotData.kind === 'miss') {
     return baseSlot;
@@ -301,9 +286,12 @@ const ENEMY_DEFINITIONS = [
     japaneseName: '冠のリッチ王',
     level: 4,
     maxHealth: 120,
+    mergedColumns: [
+      { activeColumn: 1, columns: [1, 2], removedColumn: 2 },
+    ],
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 2), createSpellEntry('orange', 2)),
-      createJoinedSlot(1),
+      createMissSlot(),
       createTokenSlot(createSpellEntry('purple', 4)),
       createTokenSlot(createSpellEntry('red', 3)),
       createTokenSlot(createSpellEntry('blue', 2), createSpellEntry('green', 2)),
@@ -365,13 +353,17 @@ const ENEMY_DEFINITIONS = [
     japaneseName: '地獄冠の死神',
     level: 4,
     maxHealth: 120,
+    mergedColumns: [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+      { activeColumn: 5, columns: [5, 6], removedColumn: 6 },
+    ],
     spellSlots: [
       createTokenSlot(createSpellEntry('blue', 5)),
       createTokenSlot(createSpellEntry('red', 3), createSpellEntry('green', 2)),
-      createJoinedSlot(2),
+      createMissSlot(),
       createTokenSlot(createSpellEntry('purple', 2)),
       createTokenSlot(createSpellEntry('red', 3), createSpellEntry('green', 2)),
-      createJoinedSlot(5),
+      createMissSlot(),
     ],
   },
 ];

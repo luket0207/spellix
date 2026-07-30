@@ -596,6 +596,7 @@ function BattlePage() {
           <CommittedSpellSlotList
             language={currentLanguage}
             lightBlueUses={activeBattle.enemyFreezeUses}
+            mergedColumns={battleEnemy.mergedColumns}
             purpleBuffs={activeBattle.enemyPurpleBuffs}
             spellSlots={battleEnemy.spellSlots}
             title=""

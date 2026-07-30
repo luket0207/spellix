@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button/Button';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
@@ -46,6 +46,7 @@ function RewardPage() {
     advanceTurn,
     battlePlayer,
     clearActiveBattle,
+    completeVillageReward,
     continueCaveRewardResolution,
     discardSelectedRewardToken,
     miniGameResult,
@@ -60,6 +61,7 @@ function RewardPage() {
   const [selectedSpellSlotId, setSelectedSpellSlotId] = useState('');
   const [selectedTokenBagReplacementId, setSelectedTokenBagReplacementId] = useState('');
   const [pendingRewardMerge, setPendingRewardMerge] = useState(null);
+  const isLeavingForVillageRef = useRef(false);
   const isRewardPageReady = Boolean(activeBattle);
   const currentLanguage = getGameplayLanguage(battlePlayer?.language);
   const rewardPageTranslations = getRewardPageTranslations(currentLanguage);
@@ -70,13 +72,17 @@ function RewardPage() {
   const languageClassName = `language-${currentLanguage}`;
   const isCaveRewardAssignment = activeBattle?.source === 'cave';
   const isLootChestRewardAssignment = activeBattle?.source === 'lootChest';
+  const isVillageRewardAssignment =
+    activeBattle?.source === 'village' ||
+    (isLootChestRewardAssignment &&
+      miniGameResult?.type === 'villageLootChest');
   const pendingCaveReward = getPendingCaveReward(miniGameResult?.caveRewardGrant);
   const caveHasLootChest = Boolean(
     miniGameResult?.caveRewards?.hasLootChest && !miniGameResult?.lootChestReward
   );
 
   useEffect(() => {
-    if (!isRewardPageReady) {
+    if (!isRewardPageReady && !isLeavingForVillageRef.current) {
       navigate('/gameplay', { replace: true });
     }
   }, [isRewardPageReady, navigate]);
@@ -112,6 +118,14 @@ function RewardPage() {
   };
 
   const handleContinue = () => {
+    if (isVillageRewardAssignment) {
+      resetTokenPlacementDraft();
+      isLeavingForVillageRef.current = true;
+      completeVillageReward();
+      navigate('/village', { replace: true });
+      return;
+    }
+
     if (miniGameResult?.caveRewardResolution) {
       resetTokenPlacementDraft();
       const destination = continueCaveRewardResolution();

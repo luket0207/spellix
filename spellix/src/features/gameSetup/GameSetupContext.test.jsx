@@ -470,6 +470,87 @@ function ChargeResolutionProbe() {
   );
 }
 
+function JoinedEnemyResolutionProbe({ diceResult }) {
+  const {
+    activeBattle,
+    applyBattleDiceResult,
+    applyBattleEffect,
+    battlePlayer,
+  } = useGameSetup();
+
+  return (
+    <div>
+      <button type="button" onClick={() => applyBattleDiceResult(diceResult)}>
+        Apply joined roll
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          applyBattleEffect(
+            activeBattle?.pendingEffects?.find(({ type }) => type === 'redDamage')
+          )
+        }
+      >
+        Apply joined damage
+      </button>
+      <p>{`Player health after joined roll: ${battlePlayer?.currentHealth}`}</p>
+      <p>{`Joined pending effects: ${activeBattle?.pendingEffects?.length ?? 0}`}</p>
+    </div>
+  );
+}
+
+test.each([
+  ['crowned-lichlord', 1, 80],
+  ['crowned-lichlord', 2, 80],
+  ['hellcrown-reaper', 2, 70],
+  ['hellcrown-reaper', 3, 70],
+  ['hellcrown-reaper', 5, 70],
+  ['hellcrown-reaper', 6, 70],
+])(
+  'resolves %s joined enemy roll %i exactly once through battle state',
+  (enemyId, diceResult, expectedHealth) => {
+    const initialGameSetup = createFreezeSetup({
+      activeBattle: {
+        currentBattleActor: 'enemy',
+        enemyChargeUses: [0, 0, 0, 0, 0, 0],
+        enemyCharged: false,
+        enemyCurrentHealth: 120,
+        enemyFreezeUses: [0, 0, 0, 0, 0, 0],
+        enemyFrozen: false,
+        enemyGuard: 0,
+        enemyId,
+        enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
+        isResolvingTurn: false,
+        level: 4,
+        outcome: null,
+        pendingEffects: [],
+        phase: 'active',
+        playerChargeUses: [0, 0, 0, 0, 0, 0],
+        playerCharged: false,
+        playerFreezeUses: [0, 0, 0, 0, 0, 0],
+        playerFrozen: false,
+        playerGuard: 0,
+        playerId: 'player-1',
+        playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
+      },
+    });
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <JoinedEnemyResolutionProbe diceResult={diceResult} />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /apply joined roll/i }));
+    expect(screen.getByText('Joined pending effects: 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /apply joined damage/i }));
+
+    expect(
+      screen.getByText(`Player health after joined roll: ${expectedHealth}`)
+    ).toBeInTheDocument();
+  }
+);
+
 test('defaults missing player languages to English and updates one player independently', () => {
   const initialGameSetup = createFreezeSetup();
 
@@ -671,7 +752,7 @@ test('stores stacked Purple on effective adjacent columns until the caster next 
 
 test.each([
   [2, 115],
-  [3, 105],
+  [3, 115],
 ])(
   'applies one Purple buff when merged column 2+3 is rolled as %i',
   (diceResult, expectedEnemyHealth) => {

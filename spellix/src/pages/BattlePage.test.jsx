@@ -1460,8 +1460,30 @@ describe('BattlePage flows', () => {
     expect(within(playerPanel).getByLabelText('2 red tokens in slot 1')).toBeInTheDocument();
     expect(within(playerPanel).getByLabelText('blue token in slot 2')).toBeInTheDocument();
     expect(playerPanel.querySelectorAll('.committed-spell-slot-number')).toHaveLength(6);
-    expect(enemyPanel.querySelectorAll('.committed-spell-slot-number')).toHaveLength(6);
-    expect(screen.getAllByText('J')).toHaveLength(2);
+    expect(
+      within(enemyPanel).getAllByText(/./, {
+        selector: '.committed-spell-slot-number',
+      })
+    ).toHaveLength(4);
+    ['1', '2+3', '4', '5+6'].forEach((columnLabel) => {
+      expect(
+        within(enemyPanel).getByText(columnLabel, {
+          selector: '.committed-spell-slot-number',
+        })
+      ).toBeInTheDocument();
+    });
+    expect(
+      within(enemyPanel).getAllByText(/./, {
+        selector: '[data-column-span="2"] .committed-spell-slot-number',
+      })
+    ).toHaveLength(2);
+    expect(within(enemyPanel).queryByText('J')).not.toBeInTheDocument();
+    expect(
+      within(enemyPanel).getAllByLabelText('3 red tokens in slot 2 and 3')
+    ).toHaveLength(1);
+    expect(
+      within(enemyPanel).getAllByLabelText('2 green tokens in slot 5 and 6')
+    ).toHaveLength(1);
     expect(screen.getByLabelText(/dice roller/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
     expect(screen.getByText('Red Turn')).toBeInTheDocument();
@@ -1747,7 +1769,7 @@ describe('BattlePage flows', () => {
     ).toHaveLength(6);
     expect(
       enemyPanel.querySelectorAll('.committed-spell-slot-column--yellow-charged')
-    ).toHaveLength(6);
+    ).toHaveLength(4);
     expect(playerColumns[0]).toHaveClass('committed-spell-slot-column--purple-buffed');
     expect(playerColumns[0]).toHaveClass('committed-spell-slot-column--yellow-charged');
 
@@ -2043,32 +2065,79 @@ describe('BattlePage flows', () => {
   });
 
   test.each([
-    { enemyId: 'vilewhisker-rat', level: 1 },
-    { enemyId: 'harvestrot-scarecrow', level: 2 },
-    { enemyId: 'gravechant-necromancer', level: 3 },
-    { enemyId: 'hellcrown-reaper', level: 4 },
-  ])('renders the selected Level $level enemy image and battle data', ({ enemyId, level }) => {
-    const enemy = getEnemyById(enemyId);
-    const selectedEnemySetup = createBattleSetup();
-    selectedEnemySetup.activeBattle = {
-      ...selectedEnemySetup.activeBattle,
-      enemyCurrentHealth: enemy.currentHealth,
-      enemyId,
-      level,
-    };
-    renderBattleFlow(['/battle'], selectedEnemySetup);
+    {
+      columnLabels: ['1', '2', '3', '4', '5', '6'],
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    },
+    {
+      columnLabels: ['1', '2', '3', '4', '5', '6'],
+      enemyId: 'harvestrot-scarecrow',
+      level: 2,
+    },
+    {
+      columnLabels: ['1', '2', '3', '4', '5', '6'],
+      enemyId: 'gravechant-necromancer',
+      level: 3,
+    },
+    {
+      columnLabels: ['1+2', '3', '4', '5', '6'],
+      enemyId: 'crowned-lichlord',
+      level: 4,
+    },
+    {
+      columnLabels: ['1', '2+3', '4', '5+6'],
+      enemyId: 'hellcrown-reaper',
+      level: 4,
+    },
+  ])(
+    'renders the selected Level $level enemy image and effective spell columns',
+    ({ columnLabels, enemyId, level }) => {
+      const enemy = getEnemyById(enemyId);
+      const selectedEnemySetup = createBattleSetup();
+      selectedEnemySetup.activeBattle = {
+        ...selectedEnemySetup.activeBattle,
+        enemyCurrentHealth: enemy.currentHealth,
+        enemyId,
+        level,
+      };
+      renderBattleFlow(['/battle'], selectedEnemySetup);
 
-    const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
-    const enemyImage = within(enemyPanel).getByRole('img', {
-      name: `Battle enemy ${enemy.englishName}`,
-    });
+      const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
+      const enemyImage = within(enemyPanel).getByRole('img', {
+        name: `Battle enemy ${enemy.englishName}`,
+      });
 
-    expect(enemyImage).toHaveAttribute('src', expect.stringContaining(enemy.imageFileName));
-    expect(within(enemyPanel).queryByLabelText(/battle enemy fallback/i)).not.toBeInTheDocument();
-    expect(within(enemyPanel).getByText(`${enemy.currentHealth} / ${enemy.maxHealth}`)).toBeInTheDocument();
-    expect(enemyPanel.querySelectorAll('.committed-spell-slot-number')).toHaveLength(6);
-    expect(screen.getByRole('img', { name: /battle player piece/i })).toBeInTheDocument();
-  });
+      expect(enemyImage).toHaveAttribute(
+        'src',
+        expect.stringContaining(enemy.imageFileName)
+      );
+      expect(
+        within(enemyPanel).queryByLabelText(/battle enemy fallback/i)
+      ).not.toBeInTheDocument();
+      expect(
+        within(enemyPanel).getByText(
+          `${enemy.currentHealth} / ${enemy.maxHealth}`
+        )
+      ).toBeInTheDocument();
+      expect(
+        within(enemyPanel).getAllByText(/./, {
+          selector: '.committed-spell-slot-number',
+        })
+      ).toHaveLength(columnLabels.length);
+      columnLabels.forEach((columnLabel) => {
+        expect(
+          within(enemyPanel).getByText(columnLabel, {
+            selector: '.committed-spell-slot-number',
+          })
+        ).toBeInTheDocument();
+      });
+      expect(within(enemyPanel).queryByText('J')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('img', { name: /battle player piece/i })
+      ).toBeInTheDocument();
+    }
+  );
 
   test('applies dice results and alternates between player and enemy turns', () => {
     jest

@@ -105,6 +105,7 @@ function RewardStateSnapshot() {
       <p>{`Player 1 potions: ${gameSetup.players[0].potions.map(({ name }) => name).join(',') || 'empty'}`}</p>
       <p>{`Player 1 token bag: ${gameSetup.players[0].tokenBag.map(({ id }) => id).join(',') || 'empty'}`}</p>
       <p>{`Player 1 slot 3: ${gameSetup.players[0].spellSlots[2].tokens.map(({ committed, id }) => `${id}:${committed}`).join(',') || 'empty'}`}</p>
+      <p>{`Village phase: ${gameSetup.villageVisit?.phase ?? 'none'}`}</p>
     </div>
   );
 }
@@ -151,6 +152,15 @@ function renderRewardPage(tokenBag, configureSetup = () => {}) {
             element={
               <>
                 <p>Gameplay</p>
+                <RewardStateSnapshot />
+              </>
+            }
+          />
+          <Route
+            path="/village"
+            element={
+              <>
+                <p>Village</p>
                 <RewardStateSnapshot />
               </>
             }
@@ -397,6 +407,99 @@ describe('RewardPage choice flow', () => {
     );
     expect(within(potionRewardDialog).getByText('Potion slots are full.')).toBeInTheDocument();
     expect(within(potionRewardDialog).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  test('returns a resolved village reward to the village heal phase', () => {
+    renderRewardPage([], (setup) => {
+      const potion = POTION_DEFINITIONS.find(
+        ({ id }) => id === 'roll-choice'
+      );
+
+      setup.activeBattle = {
+        encounterType: 'fieldVillage',
+        environment: 'fields',
+        phase: 'reward',
+        playerId: 'player-1',
+        rewardChoices: [
+          {
+            category: 'Rare Potion',
+            id: 'village-potion',
+            item: potion,
+            itemType: 'potion',
+          },
+        ],
+        rewardResolution: {
+          choiceId: 'village-potion',
+          destination: 'potionSlot',
+        },
+        selectedRewardChoiceId: 'village-potion',
+        source: 'village',
+      };
+      setup.villageVisit = {
+        defeatedEliteCount: 1,
+        defeatedEnemyId: 'crowned-lichlord',
+        phase: 'rewardFlow',
+        playerId: 'player-1',
+        rewardItem: potion,
+        rewardType: 'potion',
+        villageId: 'fieldVillage',
+      };
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(screen.getByText('Village')).toBeInTheDocument();
+    expect(screen.getByText('Village phase: heal')).toBeInTheDocument();
+    expect(screen.getByText('Selected choice: none')).toBeInTheDocument();
+    expect(screen.getByText('Current player: player-1')).toBeInTheDocument();
+    expect(screen.getByText('Next turn modal: clear')).toBeInTheDocument();
+  });
+
+  test('returns a resolved village Loot Chest assignment to healing', () => {
+    renderRewardPage([], (setup) => {
+      setup.activeBattle = {
+        environment: 'fields',
+        phase: 'reward',
+        playerId: 'player-1',
+        rewardChoices: [
+          {
+            category: 'Common Token',
+            id: 'village-loot-token',
+            item: { label: 'Red', rarity: 'Common', type: 'red' },
+            itemType: 'token',
+          },
+        ],
+        rewardResolution: {
+          choiceId: 'village-loot-token',
+          destination: 'discarded',
+        },
+        selectedRewardChoiceId: 'village-loot-token',
+        source: 'lootChest',
+      };
+      setup.miniGameResult = {
+        lootChestReward: {
+          status: 'processing',
+        },
+        playerId: 'player-1',
+        result: 'win',
+        type: 'villageLootChest',
+      };
+      setup.villageVisit = {
+        defeatedEliteCount: 0,
+        defeatedEnemyId: null,
+        phase: 'rewardFlow',
+        playerId: 'player-1',
+        rewardItem: null,
+        rewardType: 'lootChest',
+        villageId: 'fieldVillage',
+      };
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(screen.getByText('Village')).toBeInTheDocument();
+    expect(screen.getByText('Village phase: heal')).toBeInTheDocument();
+    expect(screen.getByText('Selected choice: none')).toBeInTheDocument();
   });
 
   test('replaces one selected potion when all potion slots are full', () => {

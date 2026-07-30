@@ -70,6 +70,10 @@ import {
   getEffectiveSpellColumnIndex,
   getSpellColumnCapacity,
 } from '../spells/nonBattleSpellEffects';
+import {
+  createVillageProgress,
+  createVillageVisit,
+} from '../villages/villageVisits';
 
 const GameSetupContext = createContext(null);
 
@@ -513,6 +517,14 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       winnerDisplay: setup.winnerDisplay
         ? { ...setup.winnerDisplay }
         : null,
+      villageVisit: setup.villageVisit
+        ? {
+            ...setup.villageVisit,
+            rewardItem: setup.villageVisit.rewardItem
+              ? { ...setup.villageVisit.rewardItem }
+              : null,
+          }
+        : null,
       buyAndSellTransaction: setup.buyAndSellTransaction
         ? {
             ...setup.buyAndSellTransaction,
@@ -583,6 +595,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
               player.eliteProgress?.eliteTowerWoods
             ),
           },
+          villageProgress: createVillageProgress(player.villageProgress),
           hasUnseenTokenBagTokens:
             player.hasUnseenTokenBagTokens ??
             Boolean(player.tokenBag?.length),
@@ -984,6 +997,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
     const isCaveReward =
       miniGameResult.type === 'cave' && miniGameResult.caveRewardResolution;
+    const isVillageLootChest =
+      miniGameResult.type === 'villageLootChest' &&
+      gameSetup.villageVisit?.phase === 'rewardFlow';
 
     if (isCaveReward) {
       const nextResolution = addLootChestReward(
@@ -1043,6 +1059,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     );
     const destination = rewardAssignment
       ? '/reward'
+      : isVillageLootChest
+        ? '/village'
       : gameSetup.activeBattle?.source === 'cave'
         ? '/reward'
         : pendingCaveReward
@@ -1068,6 +1086,35 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           ? createLootChestRewardAssignment(currentPlayer.id, reward)
           : null;
       const status = currentAssignment ? 'processing' : 'resolved';
+      const nextPlayers =
+        reward.itemType === 'potion' && !currentPotionResult.pendingPotion
+          ? currentSetup.players.map((currentSetupPlayer) =>
+              currentSetupPlayer.id === currentPlayer.id
+                ? {
+                    ...currentSetupPlayer,
+                    potions: currentPotionResult.potions,
+                  }
+                : currentSetupPlayer
+            )
+          : currentSetup.players;
+
+      if (
+        currentResult.type === 'villageLootChest' &&
+        !currentAssignment
+      ) {
+        return {
+          ...currentSetup,
+          activeBattle: null,
+          miniGameResult: null,
+          players: nextPlayers,
+          villageVisit: currentSetup.villageVisit
+            ? {
+                ...currentSetup.villageVisit,
+                phase: 'heal',
+              }
+            : null,
+        };
+      }
 
       return {
         ...currentSetup,
@@ -1086,14 +1133,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             status,
           },
         },
-        players:
-          reward.itemType === 'potion' && !currentPotionResult.pendingPotion
-            ? currentSetup.players.map((currentSetupPlayer) =>
-                currentSetupPlayer.id === currentPlayer.id
-                  ? { ...currentSetupPlayer, potions: currentPotionResult.potions }
-                  : currentSetupPlayer
-              )
-            : currentSetup.players,
+        players: nextPlayers,
       };
     });
 
@@ -2357,6 +2397,217 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     }));
   };
 
+  const startVillageVisit = (
+    playerId,
+    villageId,
+    randomFn = Math.random
+  ) => {
+    setGameSetup((currentSetup) => {
+      const player = currentSetup.players.find(({ id }) => id === playerId);
+      const villageVisit = createVillageVisit({
+        assignments: currentSetup.eliteBossEnemyAssignments,
+        player,
+        randomFn,
+        villageId,
+      });
+
+      if (!villageVisit) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        villageVisit,
+        players: villageVisit.rewardType
+          ? currentSetup.players.map((currentPlayer) =>
+              currentPlayer.id === playerId
+                ? {
+                    ...currentPlayer,
+                    villageProgress: {
+                      ...currentPlayer.villageProgress,
+                      [villageId]: {
+                        claimedEliteCounts: [
+                          ...(currentPlayer.villageProgress?.[villageId]
+                            ?.claimedEliteCounts ?? []),
+                          villageVisit.defeatedEliteCount,
+                        ],
+                      },
+                    },
+                  }
+                : currentPlayer
+            )
+          : currentSetup.players,
+      };
+    });
+  };
+
+  const startVillageReward = () => {
+    setGameSetup((currentSetup) => {
+      const villageVisit = currentSetup.villageVisit;
+      const player = currentSetup.players.find(
+        ({ id }) => id === villageVisit?.playerId
+      );
+
+      if (
+        villageVisit?.phase !== 'reward' ||
+        !villageVisit.rewardType ||
+        !player
+      ) {
+        return currentSetup;
+      }
+
+      if (villageVisit.rewardType === 'lootChest') {
+        return {
+          ...currentSetup,
+          miniGameResult: {
+            playerId: player.id,
+            result: 'win',
+            returnBehaviour: null,
+            type: 'villageLootChest',
+          },
+          villageVisit: {
+            ...villageVisit,
+            phase: 'rewardFlow',
+          },
+        };
+      }
+
+      if (!villageVisit.rewardItem) {
+        return {
+          ...currentSetup,
+          villageVisit: {
+            ...villageVisit,
+            phase: 'heal',
+            rewardType: null,
+          },
+        };
+      }
+
+      const rewardChoice = {
+        category: villageVisit.rewardItem.rarity,
+        id: `village-${villageVisit.villageId}-${villageVisit.defeatedEliteCount}`,
+        item: { ...villageVisit.rewardItem },
+        itemType: villageVisit.rewardType,
+      };
+      const activeBattle = {
+        encounterType: villageVisit.villageId,
+        environment: 'fields',
+        phase: 'reward',
+        playerId: player.id,
+        rewardChoices: [rewardChoice],
+        selectedRewardChoiceId: rewardChoice.id,
+        source: 'village',
+      };
+      const potionResult =
+        villageVisit.rewardType === 'potion'
+          ? gainPotion(player.potions, villageVisit.rewardItem)
+          : null;
+
+      return {
+        ...currentSetup,
+        activeBattle:
+          potionResult && !potionResult.pendingPotion
+            ? {
+                ...activeBattle,
+                rewardResolution: {
+                  choiceId: rewardChoice.id,
+                  destination: 'potionSlot',
+                },
+              }
+            : activeBattle,
+        players:
+          potionResult && !potionResult.pendingPotion
+            ? currentSetup.players.map((currentPlayer) =>
+                currentPlayer.id === player.id
+                  ? { ...currentPlayer, potions: potionResult.potions }
+                  : currentPlayer
+              )
+            : currentSetup.players,
+        villageVisit: {
+          ...villageVisit,
+          phase: 'rewardFlow',
+        },
+      };
+    });
+  };
+
+  const completeVillageReward = () => {
+    setGameSetup((currentSetup) => {
+      if (
+        currentSetup.villageVisit?.phase !== 'rewardFlow' ||
+        (currentSetup.activeBattle &&
+          !currentSetup.activeBattle.rewardResolution)
+      ) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        activeBattle: null,
+        miniGameResult: null,
+        villageVisit: {
+          ...currentSetup.villageVisit,
+          phase: 'heal',
+        },
+      };
+    });
+  };
+
+  const healVillagePlayer = () => {
+    setGameSetup((currentSetup) => {
+      const villageVisit = currentSetup.villageVisit;
+      const playerExists = currentSetup.players.some(
+        ({ id }) => id === villageVisit?.playerId
+      );
+
+      if (villageVisit?.phase !== 'heal' || !playerExists) {
+        return currentSetup;
+      }
+
+      return {
+        ...currentSetup,
+        players: currentSetup.players.map((player) =>
+          player.id === villageVisit.playerId
+            ? {
+                ...player,
+                currentHealth: player.maxHealth,
+                diedLastTurn: false,
+              }
+            : player
+        ),
+        villageVisit: {
+          ...villageVisit,
+          phase: 'healed',
+        },
+      };
+    });
+  };
+
+  const finishVillageVisit = () => {
+    setGameSetup((currentSetup) => {
+      const villageVisit = currentSetup.villageVisit;
+      const playerTurnIndex = currentSetup.turnOrder.indexOf(
+        villageVisit?.playerId
+      );
+
+      if (
+        villageVisit?.phase !== 'healed' ||
+        playerTurnIndex < 0 ||
+        currentSetup.turnOrder.length === 0
+      ) {
+        return currentSetup;
+      }
+
+      return transitionToPlayerTurn(
+        {
+          ...currentSetup,
+          villageVisit: null,
+        },
+        (playerTurnIndex + 1) % currentSetup.turnOrder.length
+      );
+    });
+  };
+
   const applyBattleDiceResult = (diceResult) => {
     setGameSetup((currentSetup) => {
       const activeBattle = currentSetup.activeBattle;
@@ -2983,6 +3234,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         completeBuyAndSell,
         completeTurnRespawn,
         completeStormMasterForcedTurn,
+        completeVillageReward,
         continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
         completeMiniGame,
@@ -2992,6 +3244,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         dismissNextTurnModal,
         discardSelectedRewardToken,
         grantPotionToPlayer,
+        healVillagePlayer,
         advanceTurn,
         beginTurnRespawn,
         initializeBoard,
@@ -3016,6 +3269,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         resolveTokensmithPotion,
         resolveSelectedPotionReward,
         finalizeBattleEffects,
+        finishVillageVisit,
         resetGame,
         returnFromMiniGame,
         resolveBattleFreezeCheck,
@@ -3037,6 +3291,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         startBattle,
         startBossNotReadyEncounter,
         startMiniGame,
+        startVillageReward,
+        startVillageVisit,
         updatePlayerSpells,
         consumePlayerPotion,
       }}

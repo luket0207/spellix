@@ -30,6 +30,7 @@ import MiniGameLosePage from './pages/MiniGames/MiniGameLosePage';
 import RiverMiniGame from './pages/MiniGames/RiverMiniGame';
 import BossNotReadyPage from './pages/BossNotReadyPage';
 import WinnerPage from './pages/WinnerPage';
+import VillagePage from './pages/VillagePage';
 
 function App() {
   const navigate = useNavigate();
@@ -376,6 +377,7 @@ function App() {
         />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/boss-not-ready" element={<BossNotReadyPage />} />
+        <Route path="/village" element={<VillagePage />} />
         <Route
           path="/decision"
           element={<DecisionPage environment={selectedDecisionEnvironment} />}

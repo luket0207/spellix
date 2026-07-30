@@ -18,7 +18,7 @@ function getBattleSlotTokens(actor, diceResult) {
   );
   const slot = actor?.spellSlots?.[effectiveColumnIndex];
 
-  if (!slot || slot.displayLabel === 'J' || slot.joinedWith !== undefined) {
+  if (!slot) {
     return [];
   }
 
