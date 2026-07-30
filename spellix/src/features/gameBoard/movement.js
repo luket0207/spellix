@@ -76,7 +76,15 @@ function getConnectedRiverNodeIds(startingNodeId, adjacentRiverNodeIdsByNodeId) 
   return connectedRiverNodeIds;
 }
 
-export function getMovementNodeIdFromCoordinates(x, y) {
+export function getMovementNodeIdFromCoordinates(x, y, board) {
+  const square = board?.squares?.find(
+    (candidateSquare) => candidateSquare.x === x && candidateSquare.y === y
+  );
+
+  if (square) {
+    return getMovementNodeIdFromSquare(square);
+  }
+
   const groupedAreaNodeId = getGroupedAreaNodeId(x, y);
 
   if (groupedAreaNodeId) {
@@ -86,8 +94,24 @@ export function getMovementNodeIdFromCoordinates(x, y) {
   return `square-${x}-${y}`;
 }
 
-export function getMovementNodeIdFromPosition(position) {
-  return getMovementNodeIdFromCoordinates(position.x, position.y);
+export function getMovementNodeIdFromSquare(square) {
+  const groupedAreaNodeId = getGroupedAreaNodeId(square.x, square.y);
+
+  if (groupedAreaNodeId) {
+    return groupedAreaNodeId;
+  }
+
+  return square.featureId
+    ? `board-feature-${square.featureId}`
+    : `square-${square.x}-${square.y}`;
+}
+
+export function getMovementNodeIdFromPosition(position, board) {
+  if (position.type === 'feature' && position.featureId) {
+    return position.featureId;
+  }
+
+  return getMovementNodeIdFromCoordinates(position.x, position.y, board);
 }
 
 export function getAnywhereModeHighlightedNodeIds(board, position) {
@@ -95,11 +119,11 @@ export function getAnywhereModeHighlightedNodeIds(board, position) {
     return [];
   }
 
-  const startingNodeId = getMovementNodeIdFromPosition(position);
+  const startingNodeId = getMovementNodeIdFromPosition(position, board);
 
   return Array.from(
     new Set(
-      board.squares.map((square) => getMovementNodeIdFromCoordinates(square.x, square.y))
+      board.squares.map(getMovementNodeIdFromSquare)
     )
   ).filter((nodeId) => nodeId !== startingNodeId);
 }
@@ -110,7 +134,7 @@ export function getHighlightedNodeIds(board, position, steps, options = {}) {
   }
 
   const { blockedNodeIds = [] } = options;
-  const startingNodeId = getMovementNodeIdFromPosition(position);
+  const startingNodeId = getMovementNodeIdFromPosition(position, board);
   const squareByCoordinateKey = new Map(
     board.squares.map((square) => [`${square.x}-${square.y}`, square])
   );
@@ -120,7 +144,7 @@ export function getHighlightedNodeIds(board, position, steps, options = {}) {
   const riverNodeIds = new Set();
 
   board.squares.forEach((square) => {
-    const nodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
+    const nodeId = getMovementNodeIdFromSquare(square);
 
     if (!adjacencyByNodeId.has(nodeId)) {
       adjacencyByNodeId.set(nodeId, new Set());
@@ -134,18 +158,19 @@ export function getHighlightedNodeIds(board, position, steps, options = {}) {
     }
 
     getAdjacentCoordinates(square.x, square.y, board).forEach((adjacentCoordinate) => {
-      const adjacentNodeId = getMovementNodeIdFromCoordinates(
-        adjacentCoordinate.x,
-        adjacentCoordinate.y
+      const adjacentSquare = squareByCoordinateKey.get(
+        `${adjacentCoordinate.x}-${adjacentCoordinate.y}`
       );
+      const adjacentNodeId = adjacentSquare
+        ? getMovementNodeIdFromSquare(adjacentSquare)
+        : getMovementNodeIdFromCoordinates(
+            adjacentCoordinate.x,
+            adjacentCoordinate.y
+          );
 
       if (adjacentNodeId !== nodeId) {
         adjacencyByNodeId.get(nodeId).add(adjacentNodeId);
       }
-
-      const adjacentSquare = squareByCoordinateKey.get(
-        `${adjacentCoordinate.x}-${adjacentCoordinate.y}`
-      );
 
       if (
         square.environmentType === 'river' &&

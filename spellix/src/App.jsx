@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import Button from './components/common/Button/Button';
 import Modal from './components/Modal';
+import { HAZARDS, selectHazardForEnvironment } from './data/hazards';
 import { POTION_DEFINITIONS } from './data/potions';
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
@@ -19,6 +20,7 @@ import './App.css';
 import BattlePage from './pages/BattlePage';
 import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
+import HazardPage from './pages/HazardPage';
 import RewardPage from './pages/RewardPage';
 import StartPage from './pages/StartPage';
 import DecisionPage from './pages/DecisionPage';
@@ -55,6 +57,8 @@ function App() {
   const [selectedDebugEnemyId, setSelectedDebugEnemyId] = useState(ENEMIES[0]?.id ?? '');
   const [selectedBattleEnvironment, setSelectedBattleEnvironment] = useState('fields');
   const [selectedDecisionEnvironment, setSelectedDecisionEnvironment] = useState('fields');
+  const [selectedHazardEnvironment, setSelectedHazardEnvironment] = useState('field');
+  const [activeHazard, setActiveHazard] = useState(null);
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
@@ -68,6 +72,7 @@ function App() {
     resetGame();
     setIsSettingsOpen(false);
     setIsDebugOpen(false);
+    setActiveHazard(null);
     resetDebugState();
     navigate('/');
   };
@@ -317,6 +322,33 @@ function App() {
     navigate('/decision');
   };
 
+  const handleStartHazard = () => {
+    if (!currentPlayer) {
+      setDebugMessage('Debug hazards are only available during gameplay turns.');
+      return;
+    }
+
+    const hazard = selectHazardForEnvironment(
+      selectedHazardEnvironment,
+      HAZARDS
+    );
+
+    if (!hazard) {
+      setDebugMessage('No hazard is available for the selected environment.');
+      return;
+    }
+
+    setActiveHazard({
+      environment: selectedHazardEnvironment,
+      hazard,
+      playerId: currentPlayer.id,
+    });
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/hazard');
+  };
+
   return (
     <>
       <button
@@ -337,6 +369,15 @@ function App() {
         <Route
           path="/decision"
           element={<DecisionPage environment={selectedDecisionEnvironment} />}
+        />
+        <Route
+          path="/hazard"
+          element={
+            <HazardPage
+              encounter={activeHazard}
+              onComplete={() => setActiveHazard(null)}
+            />
+          }
         />
         <Route path="/reward" element={<RewardPage />} />
         <Route path="/mini-game/cave" element={<CaveMiniGame />} />
@@ -382,6 +423,7 @@ function App() {
         onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
         onStartCaveMiniGame={handleStartCaveMiniGame}
         onStartDecision={handleStartDecision}
+        onStartHazard={handleStartHazard}
         onStartBattle={handleStartBattle}
         onStartRiverMiniGame={handleStartRiverMiniGame}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
@@ -390,6 +432,7 @@ function App() {
         onReplacePendingToken={handleReplacePendingToken}
         onSelectedEnvironmentChange={setSelectedBattleEnvironment}
         onSelectedEnemyIdChange={setSelectedDebugEnemyId}
+        onSelectedHazardEnvironmentChange={setSelectedHazardEnvironment}
         onSelectedDecisionEnvironmentChange={setSelectedDecisionEnvironment}
         onSelectedPotionIdChange={setSelectedDebugPotionId}
         onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
@@ -400,6 +443,7 @@ function App() {
         selectedEnemyId={selectedDebugEnemyId}
         selectedDecisionEnvironment={selectedDecisionEnvironment}
         selectedEnvironment={selectedBattleEnvironment}
+        selectedHazardEnvironment={selectedHazardEnvironment}
         selectedPotionId={selectedDebugPotionId}
         selectedPotionPlayerId={selectedDebugPotionPlayerId}
         selectedReplacementPotionIndex={selectedReplacementPotionIndex}

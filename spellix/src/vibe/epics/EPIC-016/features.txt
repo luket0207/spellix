@@ -1,0 +1,1041 @@
+---
+
+Feature-001: Add hazard debug trigger and hazard result modal
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-015 Feature-002: Implement Decision page rewards and punishments
+* EPIC-015 Feature-006: Add respawn flow when a player starts their turn with 0 health
+* EPIC-015 Feature-007: Show death state in turn change modal before respawn
+* EPIC-014 Feature-008: Move battle potions bar into standalone title panel
+
+Goal
+
+* Implement the first version of hazards.
+* For now, hazards should be triggered from the debug menu only.
+* The debug menu should have a dedicated Hazards section.
+* The player should be able to select an environment from a dropdown and trigger a random hazard based on that environment’s weighted chance table.
+* When a hazard is triggered, show a hazard result screen/modal using the correct environment background.
+* Hazard effects should either:
+
+  * make the player lose health.
+  * or make the player lose their next turn.
+
+Debug Menu Requirement
+
+* Add a new debug menu section:
+
+```txt id="e06ern"
+Hazards
+```
+
+* This section should contain:
+
+  * an environment dropdown.
+  * a button to trigger the hazard.
+
+Environment Dropdown Requirement
+
+* The dropdown should include:
+
+```txt id="lu7nti"
+Field
+Hills
+Gravel
+Mud
+Stream
+River
+Woods
+Forest
+Mountains
+```
+
+* These should map to the hazard chance columns from the hazard table.
+* The selected environment determines which weighted hazard pool is used.
+
+Trigger Button Requirement
+
+Suggested button text:
+
+English:
+
+```txt id="uceka6"
+Trigger Hazard
+```
+
+Japanese:
+
+```txt id="dltdia"
+ハザードを発生させる
+```
+
+* Clicking the button should:
+
+  * read the selected environment.
+  * generate one hazard using the weighted chances for that environment.
+  * navigate to or display the hazard encounter UI.
+
+Hazard Chance Rule
+
+* Each environment has its own chance column.
+* The chance values determine how likely each hazard is to be produced for that selected environment.
+* Example:
+
+  * If `Field` is selected, `Landslide` has `0` chance.
+  * If `Field` is selected, `Wildfire` has `18` chance.
+* Hazards with `0` chance for the selected environment should not be selected.
+* The chance values should be treated as weights.
+* They do not need to total 100.
+* Select randomly based on the total weight for the selected environment.
+
+Suggested Weighted Selection Logic
+
+```js id="fwvhw7"
+function selectHazardForEnvironment(environment, hazards) {
+  const weightedHazards = hazards
+    .map((hazard) => ({
+      ...hazard,
+      weight: hazard.chances[environment] ?? 0
+    }))
+    .filter((hazard) => hazard.weight > 0);
+
+  const totalWeight = weightedHazards.reduce(
+    (total, hazard) => total + hazard.weight,
+    0
+  );
+
+  if (totalWeight <= 0) {
+    return null;
+  }
+
+  const roll = Math.random() * totalWeight;
+
+  let runningTotal = 0;
+
+  for (const hazard of weightedHazards) {
+    runningTotal += hazard.weight;
+
+    if (roll < runningTotal) {
+      return hazard;
+    }
+  }
+
+  return weightedHazards[weightedHazards.length - 1];
+}
+```
+
+Hazard Data Source Of Truth
+
+* Add the hazard table as structured data.
+* Suggested file:
+
+```txt id="5pa8so"
+src/data/hazards.js
+```
+
+* Exact path can vary, but hazard data should be separate from the page/component if practical.
+
+Suggested Hazard Data Shape
+
+```js id="ftbkqa"
+{
+  id: "landslide",
+  name: {
+    en: "Landslide",
+    jp: "土砂崩れ"
+  },
+  chances: {
+    field: 0,
+    hills: 12,
+    gravel: 8,
+    mud: 3,
+    stream: 0,
+    river: 0,
+    woods: 0,
+    forest: 0,
+    mountains: 18
+  },
+  effect: {
+    type: "loseHealth",
+    amount: 10
+  }
+}
+```
+
+Hazard Table
+
+* Implement the following hazards exactly.
+
+```txt id="thq62m"
+Landslide / 土砂崩れ
+Field 0 / Hills 12 / Gravel 8 / Mud 3 / Stream 0 / River 0 / Woods 0 / Forest 0 / Mountains 18
+Effect: Lose 10 health
+
+Rockfall / 落石
+Field 0 / Hills 10 / Gravel 20 / Mud 0 / Stream 0 / River 0 / Woods 0 / Forest 0 / Mountains 16
+Effect: Lose 10 health
+
+Flash Flood / 鉄砲水
+Field 8 / Hills 8 / Gravel 3 / Mud 10 / Stream 14 / River 18 / Woods 0 / Forest 0 / Mountains 3
+Effect: Lose your next turn
+
+Quicksand / 流砂
+Field 5 / Hills 2 / Gravel 8 / Mud 22 / Stream 4 / River 2 / Woods 0 / Forest 2 / Mountains 0
+Effect: Lose your next turn
+
+Thorn Snare / 茨の罠
+Field 12 / Hills 8 / Gravel 0 / Mud 4 / Stream 0 / River 0 / Woods 15 / Forest 18 / Mountains 0
+Effect: Lose 10 health
+
+Falling Branches / 落下する枝
+Field 2 / Hills 4 / Gravel 0 / Mud 0 / Stream 0 / River 0 / Woods 18 / Forest 17 / Mountains 2
+Effect: Lose 10 health
+
+Wildfire / 山火事
+Field 18 / Hills 12 / Gravel 5 / Mud 0 / Stream 0 / River 0 / Woods 12 / Forest 8 / Mountains 3
+Effect: Lose your next turn
+
+Poisonous Spores / 毒胞子
+Field 3 / Hills 3 / Gravel 0 / Mud 12 / Stream 4 / River 0 / Woods 14 / Forest 18 / Mountains 0
+Effect: Lose 10 health
+
+Swamp Gas / 沼の毒ガス
+Field 0 / Hills 0 / Gravel 0 / Mud 15 / Stream 8 / River 5 / Woods 2 / Forest 5 / Mountains 0
+Effect: Lose 10 health
+
+Strong Current / 急流
+Field 0 / Hills 0 / Gravel 0 / Mud 0 / Stream 28 / River 40 / Woods 0 / Forest 0 / Mountains 2
+Effect: Lose 10 health
+
+Avalanche / 雪崩
+Field 0 / Hills 2 / Gravel 0 / Mud 0 / Stream 0 / River 0 / Woods 0 / Forest 0 / Mountains 20
+Effect: Lose 10 health
+
+Dense Enchanted Fog / 濃密な魔法の霧
+Field 10 / Hills 8 / Gravel 5 / Mud 8 / Stream 10 / River 8 / Woods 10 / Forest 8 / Mountains 5
+Effect: Lose your next turn
+
+Lightning Strike / 落雷
+Field 15 / Hills 10 / Gravel 5 / Mud 2 / Stream 4 / River 4 / Woods 5 / Forest 3 / Mountains 10
+Effect: Lose 10 health
+
+Mudslide / 泥流
+Field 0 / Hills 8 / Gravel 5 / Mud 10 / Stream 5 / River 3 / Woods 0 / Forest 0 / Mountains 6
+Effect: Lose 5 health
+
+Hidden Sinkhole / 隠れた陥没穴
+Field 12 / Hills 5 / Gravel 15 / Mud 5 / Stream 0 / River 0 / Woods 3 / Forest 2 / Mountains 2
+Effect: Lose 5 health
+
+Cursed Brambles / 呪われた茨
+Field 5 / Hills 3 / Gravel 0 / Mud 3 / Stream 0 / River 0 / Woods 10 / Forest 12 / Mountains 0
+Effect: Lose 10 health
+
+Wandering Will-o'-Wisps / さまよう鬼火
+Field 3 / Hills 2 / Gravel 0 / Mud 4 / Stream 10 / River 7 / Woods 4 / Forest 4 / Mountains 0
+Effect: Lose 5 health
+
+Frozen Ground / 凍った地面
+Field 0 / Hills 1 / Gravel 3 / Mud 0 / Stream 3 / River 3 / Woods 0 / Forest 0 / Mountains 8
+Effect: Lose your next turn
+
+Mana Storm / マナの嵐
+Field 7 / Hills 1 / Gravel 8 / Mud 2 / Stream 10 / River 10 / Woods 7 / Forest 3 / Mountains 2
+Effect: Lose 5 health
+
+Crumbling Cliff Edge / 崩れかけた崖の縁
+Field 0 / Hills 1 / Gravel 15 / Mud 0 / Stream 0 / River 0 / Woods 0 / Forest 0 / Mountains 3
+Effect: Lose your next turn
+```
+
+Hazard Background Requirement
+
+* When a hazard is produced, use the corresponding background image from:
+
+```txt id="vw4hbi"
+src/images/battleBackgrounds
+```
+
+* The background should correspond to the selected environment.
+* Example:
+
+  * selected environment `Field` should use the field battle background.
+  * selected environment `Forest` should use the forest battle background.
+  * selected environment `Mountains` should use the mountains battle background.
+* Use the same background handling pattern as battle screens where possible.
+
+Hazard Modal Requirement
+
+* Over the background, show the usual modal component.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct English/Japanese fonts.
+  * centred content.
+  * no `ul` or `li`.
+
+Hazard Title Requirement
+
+* At the top of the modal, show the title:
+
+English:
+
+```txt id="uvgda7"
+Hazard
+```
+
+Japanese:
+
+```txt id="7w7ncm"
+ハザード
+```
+
+* The title should:
+
+  * use `larger-text`.
+  * be centred.
+  * use the yellow modal text colour.
+  * have Font Awesome `faTriangleExclamation` icons on both sides.
+  * have `20px` padding between the title text and each icon.
+  * have `margin-bottom: 60px`.
+
+Suggested Title Structure
+
+```jsx id="ahobz5"
+<div className="hazard-title-row larger-text">
+  <FontAwesomeIcon
+    icon={faTriangleExclamation}
+    className="hazard-title-icon"
+  />
+
+  <span className={`hazard-title-text ${languageClass}`}>
+    {hazardTitleText}
+  </span>
+
+  <FontAwesomeIcon
+    icon={faTriangleExclamation}
+    className="hazard-title-icon"
+  />
+</div>
+```
+
+Suggested Title CSS
+
+```css id="goob5k"
+.hazard-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 60px;
+  color: #F5FA00;
+  text-align: center;
+}
+
+.hazard-title-icon {
+  color: #F5FA00;
+}
+
+.hazard-title-text {
+  padding: 0 20px;
+}
+```
+
+Hazard Name Requirement
+
+* Below the title, show the name of the generated hazard.
+* This should use:
+
+  * same yellow text colour.
+  * correct English/Japanese font.
+  * centred alignment.
+  * `font-size: 24px`.
+  * `margin-bottom: 30px`.
+
+Suggested CSS
+
+```css id="x654qw"
+.hazard-name {
+  margin-bottom: 30px;
+  color: #F5FA00;
+  font-size: 24px;
+  text-align: center;
+}
+```
+
+Hazard Effect Text Requirement
+
+* Below the hazard name, show the effect text.
+* This should be:
+
+  * normal text size.
+  * centred.
+  * yellow modal text colour.
+  * `margin-bottom: 30px`.
+
+Effect Text
+
+* Use the effect data to display bilingual text.
+
+English examples:
+
+```txt id="scfch6"
+Lose 5 health
+Lose 10 health
+Lose your next turn
+```
+
+Japanese examples:
+
+```txt id="z9c2tm"
+HPを5失う
+HPを10失う
+次のターンを失う
+```
+
+Suggested CSS
+
+```css id="lwgoaq"
+.hazard-effect {
+  margin-bottom: 30px;
+  color: #F5FA00;
+  text-align: center;
+}
+```
+
+Lose Next Turn Effect Requirement
+
+* If the hazard effect is `Lose your next turn`:
+
+  * apply the same skip-next-turn mechanism built for Decision outcomes.
+  * set the current player’s one-time skip-turn flag.
+  * show an OK button at the bottom of the hazard modal.
+* Clicking OK should:
+
+  * return to the board.
+  * advance to the next player’s turn.
+  * preserve the next-turn modal invariant.
+
+Skip Turn Mechanism Requirement
+
+* Reuse the existing Decision skip-turn mechanism.
+* The next time the affected player’s turn comes around:
+
+  * the next-turn modal should show the miss-turn text.
+  * OK should immediately move to the player after them.
+  * the skip flag should then clear.
+
+Existing miss-turn text:
+
+English:
+
+```txt id="wkehkw"
+You miss your turn this turn
+```
+
+Japanese:
+
+```txt id="27uitk"
+このターンは行動できません。
+```
+
+Lose Health Effect Requirement
+
+* If the hazard effect is health loss:
+
+  * show the player’s image in the modal.
+  * show the player’s health bar in the modal.
+  * disable the OK button initially.
+  * wait `1 second`.
+  * remove the hazard health amount from the player.
+  * update the health bar.
+  * then enable the OK button.
+* Clicking OK should:
+
+  * return to the board.
+  * advance to the next player’s turn.
+  * preserve the next-turn modal invariant.
+
+Health Loss Amounts
+
+* Health-loss hazards can remove:
+
+  * `5` health.
+  * `10` health.
+
+Health Loss Sequence
+
+```txt id="9q2iiy"
+1. Hazard modal opens.
+2. Hazard title appears.
+3. Hazard name appears.
+4. Hazard effect appears.
+5. Player image and health bar appear.
+6. OK button is disabled.
+7. Wait 1 second.
+8. Remove the correct amount of health.
+9. Health bar updates.
+10. OK button becomes enabled.
+11. OK returns to board and advances turn.
+```
+
+Player Image / Health Bar Layout Requirement
+
+* The player image and health bar should appear beneath the hazard effect text.
+* There should be:
+
+```css id="k0zcqt"
+20px
+```
+
+between the player’s health bar and the OK button.
+
+Suggested Structure
+
+```jsx id="xc77v8"
+{hazard.effect.type === "loseHealth" && (
+  <div className="hazard-player-status">
+    <PlayerImage
+      player={hazardPlayer}
+      className="hazard-player-image"
+    />
+
+    <HealthBar
+      currentHealth={displayHealth}
+      maxHealth={hazardPlayer.maxHealth}
+    />
+  </div>
+)}
+
+<button
+  className={`modal-button ${languageClass}`}
+  disabled={isOkDisabled}
+  onClick={finishHazard}
+>
+  OK
+</button>
+```
+
+Suggested CSS
+
+```css id="fjygys"
+.hazard-player-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hazard-player-status + .modal-button {
+  margin-top: 20px;
+}
+```
+
+Player Display Lock Requirement
+
+* Store the hazard player when the hazard starts.
+* The hazard modal should keep showing the same player until the page returns to the board.
+* Do not let the player image or health bar switch to the next player before navigation completes.
+* This follows the same invariant from recent Decision page bug fixes.
+
+Suggested State Direction
+
+```js id="sf3gp6"
+const [hazardPlayerId] = useState(currentPlayer.id);
+const hazardPlayer = players.find((player) => player.id === hazardPlayerId);
+```
+
+Health Display Lock Requirement
+
+* If the hazard removes health, keep the post-damage health value visible after it has updated.
+* Clicking OK should not visually reset the health bar before navigation.
+* This should follow the same fix as the Decision health-loss visual reset bug.
+
+OK Button Requirement
+
+* The hazard modal should have one OK button.
+* OK text:
+
+English:
+
+```txt id="os5fkw"
+OK
+```
+
+Japanese:
+
+```txt id="hjmi2k"
+OK
+```
+
+* For skip-turn hazards:
+
+  * OK can be enabled immediately.
+* For health-loss hazards:
+
+  * OK should be disabled until the 1-second delay and health loss have completed.
+
+Turn Flow Requirement
+
+* Hazards should end the player’s board turn.
+* When the hazard is resolved and OK is clicked:
+
+  * return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+* If the hazard reduced the player to 0 health:
+
+  * the player remains at 0 health globally.
+  * when their next turn begins, use the respawn flow from EPIC-015 Feature-006.
+  * do not force immediate respawn from the hazard modal unless another existing rule already does this.
+
+No `ul` / `li` Requirement
+
+* Do not use `ul` or `li`.
+* Use `div` elements with flex or grid layouts.
+
+Out Of Scope
+
+* Do not connect hazards to board square landing automatically yet.
+* Do not implement hazard avoidance.
+* Do not implement environment-specific hazard animations.
+* Do not implement hazard rewards.
+* Do not add Good Decisions or Mini potion interactions with hazards.
+* Do not change Decision skip-turn mechanics except to reuse them.
+* Do not change respawn rules.
+* Do not redesign battle backgrounds.
+* Do not add unrelated board encounter systems.
+
+Assumptions
+
+* `battleBackgrounds` already contains suitable environment backgrounds.
+* The current player is the player affected by the debug-triggered hazard.
+* The skip-next-turn mechanism from Decision outcomes is already available or will be reusable.
+* The health bar component can be reused from Decision, battle, or board UI.
+* Hazards are debug-triggered only in this feature.
+
+Stop Point
+
+* Stop once:
+
+  * the debug menu has a Hazards section.
+  * the environment dropdown works.
+  * Trigger Hazard selects a weighted hazard for the selected environment.
+  * the hazard modal/page displays with the correct background.
+  * title, icons, hazard name, and effect text display correctly.
+  * health-loss hazards remove health after a 1-second delay.
+  * skip-turn hazards apply the existing skip-next-turn mechanism.
+  * OK returns to board and advances the turn.
+* Do not connect hazards to board square generation yet.
+
+Testing Checkpoints
+
+* Open the debug menu.
+* Confirm there is a Hazards section.
+* Confirm the environment dropdown includes Field, Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains.
+* Select Field and trigger hazards repeatedly.
+* Confirm hazards with Field chance `0` are never selected.
+* Select River and trigger hazards repeatedly.
+* Confirm river-weighted hazards such as Strong Current can appear.
+* Select Mountains and trigger hazards repeatedly.
+* Confirm mountain-weighted hazards such as Avalanche can appear.
+* Confirm selected hazards are weighted by the selected environment.
+* Confirm the hazard screen uses the selected environment’s battle background.
+* Confirm the modal appears over the background.
+* Confirm the title says `Hazard` / `ハザード`.
+* Confirm the title uses `larger-text`.
+* Confirm `faTriangleExclamation` appears on both sides of the title.
+* Confirm the icons are yellow.
+* Confirm there is `20px` padding between icons and title text.
+* Confirm the title has `margin-bottom: 60px`.
+* Confirm the hazard name appears below the title.
+* Confirm the hazard name uses `24px` font size.
+* Confirm the hazard name has `margin-bottom: 30px`.
+* Confirm the effect text appears below the hazard name.
+* Confirm the effect text has `margin-bottom: 30px`.
+* Trigger a `Lose your next turn` hazard.
+* Confirm OK is enabled.
+* Click OK.
+* Confirm the game returns to the board and advances turn.
+* Confirm the affected player misses their next turn using the existing skip-turn mechanism.
+* Trigger a `Lose 10 health` hazard.
+* Confirm the player image appears.
+* Confirm the health bar appears.
+* Confirm OK starts disabled.
+* Confirm the game waits 1 second.
+* Confirm 10 health is removed.
+* Confirm OK becomes enabled.
+* Confirm there is `20px` margin between the health bar and OK button.
+* Click OK.
+* Confirm the game returns to the board and advances turn.
+* Reduce a player to 0 health using a hazard.
+* Confirm they do not respawn immediately inside the hazard modal.
+* Confirm they use the respawn flow when their next turn starts.
+* Confirm player image and health bar do not switch to the next player before navigation completes.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added the exact 20-row bilingual hazard table as structured data with the nine required environment weights and reusable weighted selection that excludes zero-weight rows.
+* Added the dedicated localized Hazards debug controls with all nine required environment options and a debug-only trigger.
+* A triggered encounter is stored locally in `App` with the required `environment`, `hazard`, and `playerId` fields. The locked `playerId` keeps the player image and health display stable until navigation completes.
+* Added the Hazard page using the selected battle background, existing wooden Modal, Font Awesome warning icons, required bilingual copy/font classes, requested spacing, and no `ul` or `li` markup.
+* Health hazards reuse `setPlayerHealth`, delay damage for one second, clamp at zero, retain post-damage display health, and enable OK only after resolution.
+* Skip hazards reuse `markPlayerToSkipNextTurn`; all hazards reuse `advanceTurn` so OK returns to gameplay through the existing next-turn modal invariant.
+* Added stream and river to the shared battle-background source map without adding them to the Battle or Decision environment menus.
+* Board-square hazard triggers, avoidance, rewards, animations, potion interactions, and broader encounter abstractions remain out of scope.
+* Per the current three-file vibe workflow, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed.
+
+---
+
+Feature-002: Treat multi-square board features as one logical landing and movement square
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-002: Procedural board generation
+* EPIC-003 Feature-001: Gameplay UI cleanup
+* EPIC-004 Feature-005: Board movement and dice movement
+* EPIC-016 Feature-001: Add hazard debug trigger and hazard result modal
+
+Goal
+
+* Implement correct landing, highlighting, and movement behaviour for multi-square board features.
+* Some board features visually occupy a 2x2 area, but should behave like one logical square.
+* Players may visually stand on any cell inside the feature footprint.
+* When moving away from the feature, the player should be able to leave from any edge of the footprint without spending extra movement inside the feature.
+* When a multi-square feature is in landing range, the whole feature footprint should be highlighted.
+
+Affected Features
+
+* Apply this behaviour to:
+
+```txt id="d9gjnf"
+Field Village
+Forest Village
+Elite Tower Gravel
+Elite Tower Woods
+Boss Battle
+```
+
+* These features should be treated as multi-square logical features.
+* For 2x2 features, use all 4 cells in the footprint.
+* If Boss Battle currently uses a 3x3 footprint, apply the same logical-square behaviour to all cells in that footprint.
+* If Boss Battle has been changed to 2x2, apply the same 4-cell behaviour as the other listed features.
+
+Landing Behaviour
+
+* When a player lands on one of these multi-square features, they should be placed visually on one of the cells inside that feature.
+* For 2x2 features, the player can be placed on any of the 4 cells.
+* Placement should be random where possible.
+* If multiple players are on the same feature, try to place them on different cells within the footprint.
+* This reduces player images layering directly on top of each other.
+
+Placement Priority
+
+```txt id="cz4b59"
+1. Find all cells inside the feature footprint.
+2. Find cells not currently occupied by another player on the same feature.
+3. If at least one unoccupied cell exists, randomly choose one of those cells.
+4. If all cells are occupied, randomly choose any cell inside the feature footprint.
+```
+
+Suggested Landing Logic
+
+```js id="vlxw3t"
+function chooseVisualCellForFeature(feature, playersOnFeature) {
+  const footprintCells = feature.cells;
+
+  const occupiedCellKeys = new Set(
+    playersOnFeature.map((player) => `${player.visualRow}-${player.visualCol}`)
+  );
+
+  const availableCells = footprintCells.filter(
+    (cell) => !occupiedCellKeys.has(`${cell.row}-${cell.col}`)
+  );
+
+  const candidateCells =
+    availableCells.length > 0 ? availableCells : footprintCells;
+
+  return randomChoice(candidateCells);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that players should spread across the feature cells where possible.
+
+Logical Position Requirement
+
+* These multi-square features should be treated as one logical board square.
+* The player’s logical position should represent the feature as a whole.
+* The player’s visual position can be one cell inside the feature footprint.
+* Movement, highlighting, and encounters should use the logical feature identity, not only the visual cell.
+
+Suggested State Direction
+
+```js id="3djhdl"
+player.position = {
+  type: "feature",
+  featureId: "field-village-001",
+  visualCell: {
+    row: 12,
+    col: 8
+  }
+};
+```
+
+* Exact shape can vary.
+* The key distinction is:
+
+  * logical position = the feature.
+  * visual position = the cell inside the feature used to display the piece.
+
+Highlighting Requirement
+
+* When a multi-square feature is within movement range, the whole feature footprint should be highlighted.
+* This should happen even if only one cell of the feature is technically in range.
+* The player should understand they are landing on the whole feature, not on one individual tile.
+* The highlight should cover every cell in the feature footprint.
+
+Example
+
+```txt id="sseeus"
+A 2x2 Field Village has four cells.
+
+Only the top-left village cell is reachable with the current dice roll.
+
+Result:
+All four Field Village cells should be highlighted.
+```
+
+Highlighting Behaviour
+
+* If any cell in a multi-square feature footprint is a valid landing destination:
+
+  * mark the logical feature as reachable.
+  * highlight every cell in the feature footprint.
+* Clicking any highlighted cell in that feature should land the player on the feature as a whole.
+* After clicking the feature, choose the player’s visual cell using the landing placement rules.
+* Do not require the player to click the exact cell that was originally calculated as reachable.
+
+Suggested Highlight Logic
+
+```js id="mgq3wa"
+function expandFeatureHighlights(validDestinationCells, boardFeatures) {
+  const highlightedCells = new Set(
+    validDestinationCells.map((cell) => `${cell.row}-${cell.col}`)
+  );
+
+  for (const feature of boardFeatures) {
+    if (!feature.isMultiSquareLogicalFeature) {
+      continue;
+    }
+
+    const featureIsReachable = feature.cells.some((cell) =>
+      highlightedCells.has(`${cell.row}-${cell.col}`)
+    );
+
+    if (featureIsReachable) {
+      feature.cells.forEach((cell) => {
+        highlightedCells.add(`${cell.row}-${cell.col}`);
+      });
+    }
+  }
+
+  return highlightedCells;
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that partial reachability expands into a full-feature highlight.
+
+Click Handling Requirement
+
+* Clicking any highlighted cell inside a reachable multi-square feature should land the player on that feature.
+* The game should not treat different cells of the same feature as different destinations.
+* The clicked cell can be ignored for final visual placement if another unoccupied cell is better.
+* The final displayed position should still follow the placement priority rules.
+
+Movement Away From Feature Requirement
+
+* When a player starts movement from a multi-square feature, they may leave from any outer edge of the feature footprint.
+* Moving out of the feature should cost `1` movement, not extra internal steps.
+* The player should not need to move across cells inside the feature footprint.
+* The entire feature acts as one square.
+
+Example
+
+* If the player is on a 2x2 village and rolls `1`, valid destinations should include:
+
+  * the two squares directly above the feature.
+  * the two squares directly below the feature.
+  * the two squares directly left of the feature.
+  * the two squares directly right of the feature.
+
+All of those destinations cost:
+
+```txt id="l1ibxa"
+1 movement
+```
+
+* The player should not be limited by the specific visual cell they are standing on inside the feature.
+
+Valid Exit Squares For 2x2 Feature
+
+For a 2x2 feature:
+
+```txt id="qt6cpb"
+[A][B]
+[C][D]
+```
+
+The roll-1 exit destinations are:
+
+```txt id="qpe50n"
+Squares above A and B
+Squares below C and D
+Squares left of A and C
+Squares right of B and D
+```
+
+* Each valid adjacent external square costs `1`.
+* Internal movement between A, B, C, and D should not count.
+
+Pathfinding Requirement
+
+* When calculating valid movement destinations from a multi-square feature:
+
+  * start the movement frontier from every cell in the feature footprint.
+  * treat all footprint cells as movement distance `0`.
+  * external adjacent cells cost `1`.
+* This makes leaving the feature in any direction cost one movement.
+
+Suggested Pathfinding Direction
+
+```js id="gzir7w"
+function getMovementStartCells(playerPosition) {
+  if (playerPosition.type === "feature") {
+    return getFeatureById(playerPosition.featureId).cells.map((cell) => ({
+      ...cell,
+      distanceUsed: 0
+    }));
+  }
+
+  return [
+    {
+      row: playerPosition.row,
+      col: playerPosition.col,
+      distanceUsed: 0
+    }
+  ];
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that all cells inside the feature footprint act as zero-cost starting cells.
+
+Movement Into Feature Requirement
+
+* When moving into one of these multi-square features, entering any cell in the feature footprint should count as landing on the feature.
+* The player should stop on the feature as a whole.
+* The player should then be assigned a visual cell inside the feature using the placement rules above.
+* Do not require the player to move to a specific corner cell of the feature.
+
+Feature Encounter Requirement
+
+* If the feature triggers an encounter or page, it should trigger once when the player lands on the logical feature.
+* Do not trigger multiple times because the feature has multiple cells.
+* Do not treat each cell in the footprint as a separate feature encounter.
+
+Overlap Requirement
+
+* Multiple players can occupy the same logical feature.
+* They should be displayed on different cells inside the footprint if possible.
+* If there are more players than available cells, overlap is allowed only after all cells are already occupied.
+* Existing piece offset rules can still apply if multiple players share the same visual cell.
+
+Corner Feature Note
+
+* Elite Tower Gravel, Elite Tower Woods, and Boss Battle may be fixed to map corners.
+* Even if their exits are naturally limited by board edges, the same logical movement rules still apply.
+* Players should be able to leave from any valid external square around the feature footprint that is inside the board.
+* Out-of-bounds squares should simply be ignored.
+
+Expected Behaviour
+
+* Landing on Field Village places the player on one of the 4 village cells.
+* Landing on Forest Village places the player on one of the 4 village cells.
+* Landing on Elite Tower Gravel places the player on one of the cells in that feature footprint.
+* Landing on Elite Tower Woods places the player on one of the cells in that feature footprint.
+* Landing on Boss Battle places the player on one of the cells in its feature footprint.
+* Multiple players on the same feature are visually spread out where possible.
+* The feature is treated as one logical square.
+* If any cell of a multi-square feature is within landing range, the whole feature is highlighted.
+* Clicking any highlighted cell inside the feature lands the player on the feature.
+* Moving away from the feature does not require internal movement.
+* With a roll of `1`, the player can move to any valid external square adjacent to the feature footprint.
+* Feature encounters only trigger once when landing on the logical feature.
+
+Out Of Scope
+
+* No changes to feature generation.
+* No changes to feature artwork.
+* No changes to battle, village, elite, or boss encounter outcomes.
+* No changes to dice roll values.
+* No changes to one-square environment movement.
+* No changes to player image size.
+* No unrelated board redesign.
+
+Testing Checkpoints
+
+* Land a player on Field Village.
+* Confirm the player is visually placed on one of the 4 village cells.
+* Land multiple players on Field Village.
+* Confirm they use different cells where possible.
+* Land a player on Forest Village.
+* Confirm the same placement behaviour works.
+* Land a player on Elite Tower Gravel.
+* Confirm placement happens inside the feature footprint.
+* Land a player on Elite Tower Woods.
+* Confirm placement happens inside the feature footprint.
+* Land a player on Boss Battle.
+* Confirm placement happens inside the boss footprint.
+* Move near a 2x2 village so only one cell is within movement range.
+* Confirm the whole 2x2 village is highlighted.
+* Click a different highlighted cell in that village.
+* Confirm the player still lands on the logical village feature.
+* Confirm the player is visually placed using the feature placement rules.
+* From a 2x2 village, roll `1`.
+* Confirm the player can move to the two squares above the feature.
+* Confirm the player can move to the two squares below the feature.
+* Confirm the player can move to the two squares left of the feature.
+* Confirm the player can move to the two squares right of the feature.
+* Confirm all valid exits cost only `1` movement.
+* Confirm internal movement inside the feature does not consume movement.
+* Confirm corner features ignore out-of-bounds exits.
+* Confirm landing on any footprint cell triggers the feature once.
+* Confirm there are no duplicate encounters from one multi-square feature.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing movement-node graph so every generated village `featureId`, both fixed elite tower footprints, and the fixed boss footprint resolve to one logical node.
+* Reused `BoardGrid` node-based highlighting. Because every footprint cell now resolves to the same node, reaching any cell highlights and enables all cells in that feature without new styling.
+* Added a focused pure placement helper that selects an unoccupied footprint cell when possible, falls back to any footprint cell when all are occupied, and uses `Math.random` through an injectable `randomFn`.
+* Multi-square player positions are stored in the existing `player.position` field with required `type`, `featureId`, `x`, and `y` fields. `type: "feature"` and `featureId` store logical identity; `x` and `y` store the chosen visual cell. Normal one-square positions remain plain `{ x, y }`.
+* `player.position` remains owned and updated by `GameSetupContext`; Gameplay writes the logical landing position, movement reads the logical identity, and BoardGrid continues rendering the visual `x/y` cell.
+* Collapsing each footprint into one graph node makes all external adjacent cells cost one movement and removes internal footprint steps from pathfinding.
+* Clicking any highlighted footprint cell resolves one logical feature landing and performs one existing position update/turn advance. The current board has no feature encounter dispatcher, so no encounter outcome or route was added; the stored logical `featureId` is available to the existing landing flow when such dispatch exists.
+* Board generation, feature geometry/artwork, dice values, player image size, normal one-square movement, and encounter outcomes were not changed.
+* Per the current three-file vibe workflow, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed.

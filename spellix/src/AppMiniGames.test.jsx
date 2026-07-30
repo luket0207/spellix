@@ -218,6 +218,44 @@ test('debug Mini Games section completes a Decision through the next-turn modal'
   expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
 });
 
+test('debug Hazards selects by environment, applies delayed health, and advances turn', () => {
+  jest.useFakeTimers();
+  jest.spyOn(Math, 'random').mockReturnValue(0);
+  renderApp('/gameplay');
+
+  fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+
+  expect(screen.getByRole('heading', { name: 'Hazards' })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Hazard Environment'), {
+    target: { value: 'mountains' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Trigger Hazard' }));
+
+  const hazardDialog = screen.getByRole('dialog', { name: 'Hazard' });
+  const okButton = within(hazardDialog).getByRole('button', { name: 'OK' });
+
+  expect(screen.getByTestId('hazard-page')).toHaveStyle({
+    backgroundImage: 'url(mountains.png)',
+  });
+  expect(within(hazardDialog).getByText('Landslide')).toBeInTheDocument();
+  expect(within(hazardDialog).getByText('Lose 10 health')).toBeInTheDocument();
+  expect(within(hazardDialog).getByText('100 / 100')).toBeInTheDocument();
+  expect(okButton).toBeDisabled();
+
+  act(() => {
+    jest.advanceTimersByTime(1000);
+  });
+
+  expect(within(hazardDialog).getByText('90 / 100')).toBeInTheDocument();
+  expect(okButton).toBeEnabled();
+  fireEvent.click(okButton);
+
+  expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
+});
+
 test('Cave retreat without roll again advances through the next-turn modal', () => {
   jest.useFakeTimers();
   jest.spyOn(Math, 'random').mockReturnValue(0.5);

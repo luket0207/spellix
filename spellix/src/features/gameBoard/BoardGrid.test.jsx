@@ -71,6 +71,12 @@ function createBoardWithFeatureImages() {
         areaType: 'normal',
         environmentType: null,
         environmentVariation: null,
+        featureId:
+          x >= 8 && x <= 9 && y >= 20 && y <= 21
+            ? 'feature-1'
+            : x >= 20 && x <= 21 && y >= 8 && y <= 9
+              ? 'feature-2'
+              : null,
         id: `square-${x}-${y}`,
         isFixedArea: false,
         section: y >= x ? 'easy' : 'hard',
@@ -328,6 +334,72 @@ describe('BoardGrid feature images', () => {
       left: '600px',
       top: '240px',
       width: '60px',
+    });
+  });
+
+  test('highlights every cell in a reachable generated feature footprint', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={['board-feature-feature-1']}
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    [
+      [8, 20],
+      [9, 20],
+      [8, 21],
+      [9, 21],
+    ].forEach(([x, y]) => {
+      expect(screen.getByRole('button', { name: `Square ${x}, ${y}` })).toHaveAttribute(
+        'data-highlighted',
+        'true'
+      );
+    });
+    expect(screen.getByRole('button', { name: 'Square 10, 20' })).toHaveAttribute(
+      'data-highlighted',
+      'false'
+    );
+  });
+
+  test('highlights every cell in fixed elite and boss footprints', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={[
+          'elite-battle-top-left',
+          'elite-battle-bottom-right',
+          'boss-battle',
+        ]}
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [29, 0],
+      [30, 0],
+      [29, 1],
+      [30, 1],
+      [29, 29],
+      [30, 29],
+      [29, 30],
+      [30, 30],
+    ].forEach(([x, y]) => {
+      expect(screen.getByRole('button', { name: `Square ${x}, ${y}` })).toHaveAttribute(
+        'data-highlighted',
+        'true'
+      );
     });
   });
 

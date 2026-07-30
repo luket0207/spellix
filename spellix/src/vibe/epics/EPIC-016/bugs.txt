@@ -1,0 +1,190 @@
+---
+
+Bug-001: Health-loss hazards do not apply damage or enable OK button
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-001: Add hazard debug trigger and hazard result modal
+
+Bug Summary
+
+* When a hazard has a health-loss effect, the hazard modal opens correctly.
+* However, the health is not removed after the required 1-second delay.
+* The OK button also never becomes enabled.
+* This blocks the player from finishing the hazard sequence.
+
+Current Problem
+
+* A health-loss hazard should:
+
+  * show the player image.
+  * show the player health bar.
+  * disable OK initially.
+  * wait 1 second.
+  * subtract the hazard health amount.
+  * update the health bar.
+  * enable OK.
+* Currently the flow appears to stop before damage resolution completes.
+
+Required Behaviour
+
+* When a health-loss hazard starts:
+
+  * initialise the hazard as unresolved.
+  * disable the OK button.
+  * start a single 1-second timer.
+* After 1 second:
+
+  * remove the correct health amount from the affected player.
+  * update the modal health bar.
+  * mark the hazard as resolved.
+  * enable the OK button.
+
+Health Loss Amounts
+
+* Hazards can remove:
+
+```txt id="xmlzu9"
+5 health
+10 health
+```
+
+* The amount should come from the selected hazard’s effect data.
+
+Suggested State Direction
+
+```js id="t16tf6"
+const [displayHealth, setDisplayHealth] = useState(hazardPlayer.currentHealth);
+const [hazardResolved, setHazardResolved] = useState(false);
+const [isOkDisabled, setIsOkDisabled] = useState(true);
+```
+
+Suggested Resolution Direction
+
+```js id="fgelvs"
+useEffect(() => {
+  if (!hazard || hazard.effect.type !== "loseHealth") {
+    return;
+  }
+
+  setHazardResolved(false);
+  setIsOkDisabled(true);
+
+  const timerId = window.setTimeout(() => {
+    const amount = hazard.effect.amount;
+    const newHealth = Math.max(0, displayHealth - amount);
+
+    applyHealthLoss(hazardPlayerId, amount);
+    setDisplayHealth(newHealth);
+
+    setHazardResolved(true);
+    setIsOkDisabled(false);
+  }, 1000);
+
+  return () => {
+    window.clearTimeout(timerId);
+  };
+}, [hazard.id, hazardPlayerId]);
+```
+
+* Exact implementation can vary.
+* Be careful not to include unstable values in the dependency array if they cause the timer to restart continuously.
+* The timer should run once per health-loss hazard encounter.
+
+Likely Causes To Check
+
+* The health-loss timer may not be starting.
+* The timer may be repeatedly resetting before it completes.
+* The hazard effect type may not match the condition being checked.
+* The damage amount may not be read correctly from the hazard data.
+* The OK button may be tied to the wrong resolved state.
+* The state update may be happening on a stale player reference.
+* The modal may be unmounting or reinitialising before the timer finishes.
+
+OK Button Requirement
+
+* For health-loss hazards, OK should start disabled.
+* OK should become enabled only after:
+
+  * the 1-second delay finishes.
+  * the player’s health has been reduced.
+  * the displayed health bar has updated.
+* OK should not remain disabled forever.
+
+Suggested Button Direction
+
+```jsx id="h5bxkq"
+<button
+  className={`modal-button ${languageClass}`}
+  disabled={isOkDisabled}
+  onClick={finishHazard}
+>
+  OK
+</button>
+```
+
+Player And Health Display Lock Requirement
+
+* The affected hazard player should be stored when the hazard starts.
+* The modal should keep rendering that same player during the delay and after damage is applied.
+* The displayed health should remain the reduced health value after the damage is applied.
+* Clicking OK should not visually reset the health before navigation.
+
+Turn Flow Requirement
+
+* After the OK button is enabled and clicked:
+
+  * return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+* Do not advance the turn before the hazard health-loss sequence has resolved.
+
+Out Of Scope
+
+* No changes to hazard chance weighting.
+* No changes to hazard data.
+* No changes to skip-next-turn hazards.
+* No changes to hazard modal layout.
+* No changes to respawn rules.
+* No unrelated debug menu changes.
+
+Testing Required
+
+* Trigger a hazard with `Lose 5 health`.
+* Confirm the player image appears.
+* Confirm the health bar appears.
+* Confirm OK starts disabled.
+* Confirm the game waits 1 second.
+* Confirm 5 health is removed.
+* Confirm the health bar updates.
+* Confirm OK becomes enabled.
+* Click OK.
+* Confirm the game returns to the board.
+* Confirm the turn advances to the next player.
+* Trigger a hazard with `Lose 10 health`.
+* Confirm 10 health is removed after 1 second.
+* Confirm OK becomes enabled.
+* Trigger a skip-next-turn hazard.
+* Confirm OK is not blocked by the health-loss timer logic.
+* Trigger a health-loss hazard that reduces the player to 0 health.
+* Confirm OK still enables after the damage is applied.
+* Confirm the player respawns only when their next turn starts.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a regression that mounts the health-loss hazard flow inside React Strict Mode, matching the app root.
+* The regression reproduced the bug before the fix: Strict Mode cleaned up the first timer, the shared started flag blocked the replacement timer, health remained unchanged, and OK stayed disabled.
+
+Final Fix
+
+* Separated immediate skip-turn resolution from delayed health-loss resolution in `HazardPage`.
+* Kept a one-time guard only for the immediate skip effect.
+* Changed the health effect to use a cleanup-safe timer driven by stable encounter values and resolved state. Strict Mode can now recreate its cleaned-up development timer, while resolved state prevents a second damage application.
+* Kept the existing locked player ID, starting health, displayed health, `setPlayerHealth`, turn advance, navigation, and respawn behavior.
+* Hazard data, weighting, skip behavior, modal layout, and respawn rules were not changed.

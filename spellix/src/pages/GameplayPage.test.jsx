@@ -7,6 +7,7 @@ import GameplayPage from './GameplayPage';
 
 const mockGetAnywhereModeHighlightedNodeIds = jest.fn();
 const mockGetHighlightedNodeIds = jest.fn();
+const mockChooseVisualPositionForFeature = jest.fn();
 
 jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareClick }) => (
   <div aria-label="game board">
@@ -22,6 +23,11 @@ jest.mock('../features/gameBoard/movement', () => ({
   getHighlightedNodeIds: (...args) => mockGetHighlightedNodeIds(...args),
   getMovementNodeIdFromCoordinates: (x, y) =>
     x >= 0 && x <= 1 && y >= 29 && y <= 30 ? 'start-area' : `square-${x}-${y}`,
+}));
+
+jest.mock('../features/gameBoard/multiSquareFeatures', () => ({
+  chooseVisualPositionForFeature: (...args) =>
+    mockChooseVisualPositionForFeature(...args),
 }));
 
 jest.mock('../features/gameBoard/board', () => ({
@@ -74,6 +80,19 @@ function createCommittedGameplaySetup() {
   };
 }
 
+function GameplayPositionProbe() {
+  const { gameSetup } = useGameSetup();
+  const position = gameSetup.players[0]?.position;
+
+  return (
+    <p>
+      {`Player one board position: ${position?.type ?? 'square'},${
+        position?.featureId ?? 'none'
+      },${position?.x ?? 'none'},${position?.y ?? 'none'}`}
+    </p>
+  );
+}
+
 function createForcedGameplaySetup(placedTokenCount) {
   const players = createPlayers(2);
   const currentPlayer = players[0];
@@ -98,6 +117,13 @@ beforeEach(() => {
   mockGetAnywhereModeHighlightedNodeIds.mockReturnValue(['square-1-28']);
   mockGetHighlightedNodeIds.mockReset();
   mockGetHighlightedNodeIds.mockReturnValue(['square-1-28']);
+  mockChooseVisualPositionForFeature.mockReset();
+  mockChooseVisualPositionForFeature.mockImplementation(
+    ({ destinationSquare }) => ({
+      x: destinationSquare.x,
+      y: destinationSquare.y,
+    })
+  );
 });
 
 afterEach(() => {
@@ -2452,6 +2478,37 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     );
     expect(screen.getByRole('meter', { name: /health bar/i })).toHaveAttribute('aria-valuenow', '15');
     expect(screen.getByText('15 / 100')).toBeInTheDocument();
+  });
+
+  test('stores logical feature identity separately from its chosen visual cell', () => {
+    mockChooseVisualPositionForFeature.mockReturnValue({
+      featureId: 'board-feature-feature-1',
+      type: 'feature',
+      x: 10,
+      y: 11,
+    });
+
+    render(
+      <GameSetupProvider initialGameSetup={createCommittedGameplaySetup()}>
+        <GameplayPositionProbe />
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    finishDiceSequence();
+    fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+    expect(mockChooseVisualPositionForFeature).toHaveBeenCalledWith({
+      board: expect.any(Object),
+      destinationSquare: { x: 1, y: 28 },
+      players: expect.any(Array),
+    });
+    expect(
+      screen.getByText(
+        'Player one board position: feature,board-feature-feature-1,10,11'
+      )
+    ).toBeInTheDocument();
   });
 
   test('disables save and closes immediately on cancel when no spell changes were made', async () => {

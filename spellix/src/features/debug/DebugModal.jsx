@@ -1,9 +1,11 @@
 import Modal from '../../components/Modal';
 import Token from '../../components/tokens/Token';
+import { HAZARD_ENVIRONMENTS } from '../../data/hazards';
 import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
 import {
   getDecisionTranslations,
   getGameplayLanguage,
+  getHazardTranslations,
 } from '../../i18n/translations';
 import DebugPotionGrantControls from './DebugPotionGrantControls';
 import { DEBUG_TOKEN_TYPES, getDebugTokenTypeLabel } from './tokenBagAdmin';
@@ -31,15 +33,18 @@ function DebugModal({
   onSelectedEnvironmentChange,
   onSelectedDecisionEnvironmentChange,
   onSelectedEnemyIdChange,
+  onSelectedHazardEnvironmentChange = () => {},
   onSelectedPotionIdChange,
   onSelectedPotionPlayerIdChange,
   onSelectedTokenTypeChange,
   onStartCaveMiniGame,
+  onStartHazard = () => {},
   pendingPotionGrant = null,
   players = [],
   selectedEnemyId = '',
   selectedDecisionEnvironment = 'fields',
   selectedEnvironment = 'fields',
+  selectedHazardEnvironment = 'field',
   pendingTokenType = '',
   selectedPotionId = '',
   selectedPotionPlayerId = '',
@@ -52,6 +57,7 @@ function DebugModal({
   const isTokenSelectionDisabled = !currentPlayer || !isCurrentPlayerReady || Boolean(pendingTokenType);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const decisionTranslations = getDecisionTranslations(currentLanguage);
+  const hazardTranslations = getHazardTranslations(currentLanguage);
   const decisionLanguageClassName = `language-${currentLanguage}`;
 
   return (
@@ -128,6 +134,40 @@ function DebugModal({
             onClick={onStartSelectedEnemyBattle}
           >
             Start Selected Enemy Battle
+          </button>
+        </div>
+
+        <div className="debug-hazard-controls">
+          <h2 className={decisionLanguageClassName}>
+            {hazardTranslations.hazards}
+          </h2>
+          <label
+            className={decisionLanguageClassName}
+            htmlFor="debug-hazard-environment"
+          >
+            {hazardTranslations.environment}
+          </label>
+          <select
+            id="debug-hazard-environment"
+            value={selectedHazardEnvironment}
+            disabled={!currentPlayer}
+            onChange={(event) =>
+              onSelectedHazardEnvironmentChange(event.target.value)
+            }
+          >
+            {HAZARD_ENVIRONMENTS.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button
+            className={decisionLanguageClassName}
+            type="button"
+            disabled={!currentPlayer}
+            onClick={onStartHazard}
+          >
+            {hazardTranslations.triggerHazard}
           </button>
         </div>
 

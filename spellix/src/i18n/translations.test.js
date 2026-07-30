@@ -7,6 +7,7 @@ import {
   getEnemyDisplayName,
   getGameplayLanguage,
   getGameplayTranslations,
+  getHazardTranslations,
   getLootChestTranslations,
   getMiniGameFailureTranslations,
   getNextTurnMessage,
@@ -19,6 +20,33 @@ import {
 } from './translations';
 
 describe('gameplay translations', () => {
+  test('returns exact Hazard copy in both languages with English fallback', () => {
+    const english = getHazardTranslations('en');
+    const japanese = getHazardTranslations('jp');
+
+    expect(english).toEqual({
+      environment: 'Hazard Environment',
+      hazard: 'Hazard',
+      hazards: 'Hazards',
+      loseHealth: expect.any(Function),
+      loseNextTurn: 'Lose your next turn',
+      triggerHazard: 'Trigger Hazard',
+    });
+    expect(english.loseHealth(5)).toBe('Lose 5 health');
+    expect(english.loseHealth(10)).toBe('Lose 10 health');
+    expect(japanese).toEqual({
+      environment: 'ハザード環境',
+      hazard: 'ハザード',
+      hazards: 'ハザード',
+      loseHealth: expect.any(Function),
+      loseNextTurn: '次のターンを失う',
+      triggerHazard: 'ハザードを発生させる',
+    });
+    expect(japanese.loseHealth(5)).toBe('HPを5失う');
+    expect(japanese.loseHealth(10)).toBe('HPを10失う');
+    expect(getHazardTranslations('invalid')).toBe(english);
+  });
+
   test('returns exact Decision controls in both languages with English fallback', () => {
     const english = getDecisionTranslations('en');
     const japanese = getDecisionTranslations('jp');

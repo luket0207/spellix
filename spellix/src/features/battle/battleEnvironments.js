@@ -4,6 +4,8 @@ import gravel from '../../images/battleBackgrounds/gravel.png';
 import hills from '../../images/battleBackgrounds/hills.png';
 import mountains from '../../images/battleBackgrounds/mountains.png';
 import mud from '../../images/battleBackgrounds/mud.png';
+import river from '../../images/battleBackgrounds/river.png';
+import stream from '../../images/battleBackgrounds/stream.png';
 import woods from '../../images/battleBackgrounds/woods.png';
 
 export const BATTLE_ENVIRONMENTS = [
@@ -23,6 +25,8 @@ const BATTLE_BACKGROUND_SOURCES = {
   hills,
   mountains,
   mud,
+  river,
+  stream,
   woods,
 };
 

@@ -2,18 +2,21 @@ import {
   getAnywhereModeHighlightedNodeIds,
   getHighlightedNodeIds,
   getMovementNodeIdFromCoordinates,
+  getMovementNodeIdFromSquare,
 } from './movement';
 
 function createBoardSquare({
   x,
   y,
   environmentType = 'field',
+  featureId = null,
 }) {
   return {
     id: `square-${x}-${y}`,
     x,
     y,
     environmentType,
+    featureId,
   };
 }
 
@@ -169,5 +172,86 @@ describe('river movement blocking', () => {
 
     expect(getHighlightedNodeIds(board, { x: 2, y: 3 }, 2)).toContain('square-4-3');
     expect(getHighlightedNodeIds(board, { x: 2, y: 3 }, 3)).not.toContain('square-5-3');
+  });
+});
+
+describe('multi-square logical feature movement', () => {
+  const villageSquares = [
+    createBoardSquare({ x: 3, y: 3, environmentType: null, featureId: 'village-1' }),
+    createBoardSquare({ x: 4, y: 3, environmentType: null, featureId: 'village-1' }),
+    createBoardSquare({ x: 3, y: 4, environmentType: null, featureId: 'village-1' }),
+    createBoardSquare({ x: 4, y: 4, environmentType: null, featureId: 'village-1' }),
+  ];
+
+  test('groups every generated feature cell under one movement node', () => {
+    expect(villageSquares.map(getMovementNodeIdFromSquare)).toEqual([
+      'board-feature-village-1',
+      'board-feature-village-1',
+      'board-feature-village-1',
+      'board-feature-village-1',
+    ]);
+  });
+
+  test('highlights the logical feature when any footprint cell is reachable', () => {
+    const board = createBoard(8, 8, villageSquares);
+
+    expect(getHighlightedNodeIds(board, { x: 2, y: 3 }, 1)).toContain(
+      'board-feature-village-1'
+    );
+  });
+
+  test('leaves a 2x2 feature from every outer edge for one movement', () => {
+    const board = createBoard(8, 8, villageSquares);
+
+    expect(
+      getHighlightedNodeIds(
+        board,
+        {
+          featureId: 'board-feature-village-1',
+          type: 'feature',
+          x: 3,
+          y: 3,
+        },
+        1
+      ).sort()
+    ).toEqual(
+      [
+        'square-2-3',
+        'square-2-4',
+        'square-3-2',
+        'square-3-5',
+        'square-4-2',
+        'square-4-5',
+        'square-5-3',
+        'square-5-4',
+      ].sort()
+    );
+  });
+
+  test('keeps fixed elite and boss corner footprints as logical movement nodes', () => {
+    const board = createBoard(31, 31);
+
+    expect(
+      getHighlightedNodeIds(
+        board,
+        {
+          featureId: 'elite-battle-top-left',
+          type: 'feature',
+          x: 0,
+          y: 0,
+        },
+        1
+      ).sort()
+    ).toEqual(
+      ['square-0-2', 'square-1-2', 'square-2-0', 'square-2-1'].sort()
+    );
+    expect(getMovementNodeIdFromCoordinates(29, 29, board)).toBe(
+      'elite-battle-bottom-right'
+    );
+    expect(getMovementNodeIdFromCoordinates(30, 30, board)).toBe(
+      'elite-battle-bottom-right'
+    );
+    expect(getMovementNodeIdFromCoordinates(29, 0, board)).toBe('boss-battle');
+    expect(getMovementNodeIdFromCoordinates(30, 1, board)).toBe('boss-battle');
   });
 });

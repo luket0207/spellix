@@ -58,6 +58,27 @@ const DECISION_TRANSLATIONS = {
   },
 };
 
+const HAZARD_TRANSLATIONS = {
+  en: {
+    environment: 'Hazard Environment',
+    hazard: 'Hazard',
+    hazards: 'Hazards',
+    loseHealth: (amount) => `Lose ${amount} health`,
+    loseNextTurn: 'Lose your next turn',
+    triggerHazard: 'Trigger Hazard',
+  },
+  jp: {
+    environment: '\u30cf\u30b6\u30fc\u30c9\u74b0\u5883',
+    hazard: '\u30cf\u30b6\u30fc\u30c9',
+    hazards: '\u30cf\u30b6\u30fc\u30c9',
+    loseHealth: (amount) => `HP\u3092${amount}\u5931\u3046`,
+    loseNextTurn:
+      '\u6b21\u306e\u30bf\u30fc\u30f3\u3092\u5931\u3046',
+    triggerHazard:
+      '\u30cf\u30b6\u30fc\u30c9\u3092\u767a\u751f\u3055\u305b\u308b',
+  },
+};
+
 const POTION_USAGE_TRANSLATIONS = {
   en: {
     activePotionTitle: 'Active Potion',
@@ -390,6 +411,10 @@ export function getGameplayTranslations(language) {
 
 export function getDecisionTranslations(language) {
   return DECISION_TRANSLATIONS[getGameplayLanguage(language)];
+}
+
+export function getHazardTranslations(language) {
+  return HAZARD_TRANSLATIONS[getGameplayLanguage(language)];
 }
 
 export function getPotionUsageTranslations(language) {

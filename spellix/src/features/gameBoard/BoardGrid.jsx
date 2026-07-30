@@ -8,7 +8,7 @@ import River from './components/environments/river/river';
 import Stream from './components/environments/stream/stream';
 import Woods from './components/environments/woods/woods';
 import { getPieceImageSource } from '../gameSetup/pieceImages';
-import { getMovementNodeIdFromCoordinates } from './movement';
+import { getMovementNodeIdFromSquare } from './movement';
 import bossCastleImage from '../../images/features/boss-castle.png';
 import eliteTowerGravelImage from '../../images/features/elite-tower-gravel.png';
 import eliteTowerWoodsImage from '../../images/features/elite-tower-woods.png';
@@ -129,7 +129,7 @@ function BoardGrid({
       >
         {board.squares.map((square) => {
           const squarePlayers = playerLookup.get(getSquareKey(square.x, square.y)) ?? [];
-          const nodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
+          const nodeId = getMovementNodeIdFromSquare(square);
           const isHighlighted = highlightedNodeIdSet.has(nodeId);
 
           return (

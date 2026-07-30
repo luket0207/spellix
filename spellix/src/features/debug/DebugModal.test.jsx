@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../../data/potions';
 import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import DebugModal from './DebugModal';
@@ -34,6 +34,56 @@ const potionPlayers = [
 ];
 
 describe('DebugModal', () => {
+  test('offers localized Hazard controls with every required environment', () => {
+    const handleEnvironmentChange = jest.fn();
+    const handleStartHazard = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onSelectedHazardEnvironmentChange={handleEnvironmentChange}
+        onStartHazard={handleStartHazard}
+        selectedHazardEnvironment="field"
+      />
+    );
+
+    const environmentSelect = screen.getByLabelText('ハザード環境');
+    const triggerButton = screen.getByRole('button', {
+      name: 'ハザードを発生させる',
+    });
+
+    expect(screen.getByRole('heading', { name: 'ハザード' })).toHaveClass(
+      'language-jp'
+    );
+    expect(environmentSelect).toHaveValue('field');
+    expect(within(environmentSelect).getAllByRole('option')).toHaveLength(9);
+    [
+      ['Field', 'field'],
+      ['Hills', 'hills'],
+      ['Gravel', 'gravel'],
+      ['Mud', 'mud'],
+      ['Stream', 'stream'],
+      ['River', 'river'],
+      ['Woods', 'woods'],
+      ['Forest', 'forest'],
+      ['Mountains', 'mountains'],
+    ].forEach(([label, value]) => {
+      expect(
+        within(environmentSelect).getByRole('option', { name: label })
+      ).toHaveValue(value);
+    });
+    expect(triggerButton).toHaveClass('language-jp');
+
+    fireEvent.change(environmentSelect, { target: { value: 'mountains' } });
+    fireEvent.click(triggerButton);
+
+    expect(handleEnvironmentChange).toHaveBeenCalledWith('mountains');
+    expect(handleStartHazard).toHaveBeenCalledTimes(1);
+  });
+
   test('offers localized Decision controls and reports the selected environment', () => {
     const handleEnvironmentChange = jest.fn();
     const handleStartDecision = jest.fn();

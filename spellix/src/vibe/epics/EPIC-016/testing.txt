@@ -1,0 +1,151 @@
+---
+
+Feature-001: Add hazard debug trigger and hazard result modal
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Settings, open Debug, and inspect the Hazards section.
+   Expected: The localized heading, environment label, and Trigger Hazard button appear.
+2. Inspect the environment dropdown.
+   Expected: Field, Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains appear exactly once.
+3. Trigger hazards repeatedly for Field, River, and Mountains.
+   Expected: Only positive-weight hazards for the selected environment appear, with selection frequency following the table weights.
+4. Trigger a hazard for each environment.
+   Expected: The corresponding battle background appears behind the wooden hazard modal, including the stream and river assets.
+5. Inspect an English and Japanese hazard modal.
+   Expected: The localized Hazard title, two yellow warning icons, localized hazard name/effect, correct font, requested centring and spacing, and no `ul` or `li` appear.
+6. Trigger a health-loss hazard.
+   Expected: The locked player image and health bar appear, OK is disabled for one second, health loses exactly 5 or 10 without going below zero, then OK enables.
+7. Click OK after health loss.
+   Expected: The board returns with the next player active and the next-turn modal shown first.
+8. Trigger a skip-next-turn hazard.
+   Expected: OK is enabled immediately and the affected player's one-time skip flag is set through the existing mechanism.
+9. Advance play until the affected player returns.
+   Expected: The existing miss-turn modal appears, clears the flag, and advances to the following player.
+10. Reduce a player to zero with a hazard and cycle back to their turn.
+    Expected: The player remains at zero after the hazard and uses the existing start-of-turn respawn flow.
+11. Watch the displayed player while the underlying turn state changes.
+    Expected: The original hazard player and post-damage health remain visible until navigation completes.
+12. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `src/data/hazards.test.js` verifies all nine environment definitions, all 20 exact bilingual table rows, effect amounts, zero-weight exclusion, cumulative weighted boundaries, and totals that do not equal 100.
+* `src/features/debug/DebugModal.test.jsx`, `src/i18n/translations.test.js`, and `src/features/battle/battleEnvironments.test.js` verify the localized Debug controls, exact copy, all dropdown options, and stream/river background sources.
+* `src/pages/HazardPage.test.jsx` verifies English/Japanese rendering, warning icons, required CSS, no list markup, delayed lethal damage, health display locking, immediate skip marking, player locking, turn advance, and next-turn modal state.
+* `src/AppMiniGames.test.jsx` verifies the complete Debug-to-Hazard-to-gameplay integration with deterministic weighted selection and delayed damage.
+* The combined EPIC-016 focused run passed 17 tests across 6 suites, and the final unfiltered run passed all 67 tests in those suites.
+* Existing skip-turn, lethal-health, and start-of-turn respawn regressions passed 12 focused tests across `GameplayPage.test.jsx` and `GameSetupContext.test.jsx`.
+* Direct ESLint passed for every Feature-001 production and test file.
+* `npm run build` passed.
+* The project does not define an `npm run lint` script.
+
+Automated Tests Still Needed
+
+* None for Feature-001.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-002: Treat multi-square board features as one logical landing and movement square
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Roll so only one cell of Field Village is reachable.
+   Expected: All four Field Village cells highlight and clicking any highlighted cell lands on the same logical village.
+2. Repeat with Forest Village.
+   Expected: All four cells highlight and behave as one logical destination.
+3. Land one player on a village, then land another player on the same village.
+   Expected: Both players share the same logical feature but use different visual cells while an unoccupied cell remains.
+4. Fill all four visual cells and land another player on the same village.
+   Expected: The player still lands on the feature and overlap occurs only after all cells are occupied.
+5. Land on Elite Tower Gravel, Elite Tower Woods, and Boss Battle.
+   Expected: Each player is visually placed inside the selected fixed footprint and all cells share one logical feature identity.
+6. Highlight each fixed feature from one reachable edge cell.
+   Expected: Every cell in that elite or boss footprint highlights.
+7. Start on a 2x2 village and move exactly one square.
+   Expected: The two cells above, below, left, and right of the footprint are valid where in bounds; no internal feature step is charged.
+8. Start on each corner elite/boss footprint and move one square.
+   Expected: Every in-bounds external neighbor is valid and out-of-bounds neighbors are ignored.
+9. Move into a multi-square feature through different footprint cells.
+   Expected: Every entry stops on the same logical feature and chooses a visual cell using the occupancy priority rather than treating the clicked cell as a separate destination.
+10. Move away from a multi-square feature to a normal square.
+    Expected: The player returns to a normal `{ x, y }` position and normal one-square movement remains unchanged.
+11. Trigger any currently connected landing behavior from a multi-square feature.
+    Expected: One click produces one position update and one turn advance; no duplicate landing action occurs for the footprint cells.
+12. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `movement.test.js` verifies generated feature node grouping, partial reachability, all eight one-step exits from a 2x2 footprint, both fixed elite node identities, boss identity, and in-bounds corner exits.
+* `multiSquareFeatures.test.js` verifies complete footprint lookup, random unoccupied-cell selection, all-occupied fallback, normal-square preservation, and visual placement inside Field/Forest-style generated, both elite, and boss footprints.
+* `BoardGrid.test.jsx` verifies every generated village cell and all fixed elite/boss cells highlight together from one logical node.
+* `GameplayPage.test.jsx` verifies Gameplay stores `type`, logical `featureId`, and independently selected visual `x/y` coordinates through the existing player-position update.
+* The focused Feature-002 run passed 14 tests across 4 suites.
+* The complete board generation, movement, placement, and BoardGrid suites passed all 45 tests.
+* The complete Gameplay suite passed 52 tests including Feature-002. Six unrelated baseline assertions remain failed for previously changed spell warning copy, dice result copy, and player image styles.
+* Direct ESLint passed for all Feature-002 production files and pure movement/placement tests.
+* `BoardGrid.test.jsx` retains 15 older `testing-library/no-node-access` violations, and `GameplayPage.test.jsx` retains 13 older violations; none are in the Feature-002 additions.
+* `npm run build` passed.
+
+Automated Tests Still Needed
+
+* None for Feature-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-001: Health-loss hazards do not apply damage or enable OK button
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Trigger a health-loss hazard that removes 5 health in a development build using React Strict Mode.
+   Expected: The player image and health bar appear, and OK starts disabled.
+2. Wait one second.
+   Expected: Exactly 5 health is removed once, the health bar updates, and OK enables.
+3. Wait another second without clicking OK.
+   Expected: No second damage application occurs.
+4. Click OK.
+   Expected: Gameplay returns with the next player active and the next-turn modal shown first.
+5. Repeat with a hazard that removes 10 health.
+   Expected: Exactly 10 health is removed after one second and OK enables.
+6. Repeat with health low enough to reach zero.
+   Expected: Health clamps at zero, OK enables, and respawn waits until the affected player's next turn.
+7. Trigger a skip-next-turn hazard.
+   Expected: OK remains immediately available and the existing one-time skip flow is unchanged.
+
+Automated Tests Completed
+
+* A new `HazardPage.test.jsx` Strict Mode regression failed before the fix with health remaining at 100 and OK disabled after one second.
+* The same regression passes after the fix, verifies 5 health is removed, verifies OK enables, and verifies waiting another second does not apply damage twice.
+* Seventeen focused behavioral tests passed across `HazardPage.test.jsx`, `AppMiniGames.test.jsx`, `GameplayPage.test.jsx`, and `GameSetupContext.test.jsx`, covering 5/10/lethal health, skip behavior, locked display, navigation, next-turn modal state, and respawn ordering.
+* Direct ESLint passed for `HazardPage.jsx` and `HazardPage.test.jsx`.
+* `npm run build` passed.
+
+Remaining Test Gap
+
+* The complete hazard-page suite currently has one unrelated Feature-001 styling failure because `.hazard-title-row` is `margin-bottom: 20px` while its existing test expects `60px`. That concurrent CSS change was not altered as part of this timer-only bug fix.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.

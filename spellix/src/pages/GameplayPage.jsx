@@ -14,6 +14,7 @@ import {
   getHighlightedNodeIds,
   getMovementNodeIdFromCoordinates,
 } from '../features/gameBoard/movement';
+import { chooseVisualPositionForFeature } from '../features/gameBoard/multiSquareFeatures';
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
@@ -569,10 +570,15 @@ function GameplayPage() {
       return;
     }
 
-    const destinationNodeId = getMovementNodeIdFromCoordinates(square.x, square.y);
+    const destinationNodeId = getMovementNodeIdFromCoordinates(
+      square.x,
+      square.y,
+      gameSetup.board
+    );
     const currentNodeId = getMovementNodeIdFromCoordinates(
       currentPlayer.position.x,
-      currentPlayer.position.y
+      currentPlayer.position.y,
+      gameSetup.board
     );
 
     if (!highlightedNodeIds.includes(destinationNodeId)) {
@@ -583,9 +589,15 @@ function GameplayPage() {
       currentPlayer.hasLeftStartArea ||
       (currentNodeId === 'start-area' && destinationNodeId !== 'start-area');
 
+    const destinationPosition = chooseVisualPositionForFeature({
+      board: gameSetup.board,
+      destinationSquare: square,
+      players: gameSetup.players,
+    });
+
     setPlayerPosition(
       currentPlayer.id,
-      { x: square.x, y: square.y },
+      destinationPosition,
       {
         anywhereMode: false,
         hasLeftStartArea,

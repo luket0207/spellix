@@ -1,0 +1,67 @@
+.hazard-page {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.hazard-modal {
+  text-align: center;
+}
+
+.hazard-modal-content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.hazard-title-row {
+  align-items: center;
+  color: #F5FA00;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.hazard-title-icon {
+  color: #F5FA00;
+}
+
+.hazard-title-text {
+  padding: 0 20px;
+}
+
+.hazard-name {
+  color: #F5FA00;
+  font-size: 24px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.hazard-effect {
+  color: #F5FA00;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.hazard-player-status {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+  width: 100%;
+}
+
+.hazard-player-image {
+  display: block;
+  height: 150px;
+  object-fit: contain;
+  width: auto;
+}
+
+.hazard-modal .modal-actions {
+  margin-top: 20px;
+}
