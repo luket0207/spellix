@@ -73,7 +73,7 @@ function VillageProbe() {
 function GameplayRoute() {
   const navigate = useNavigate();
 
-  return <GameplayPage onNavigate={navigate} />;
+  return <GameplayPage isChooseEventModeEnabled onNavigate={navigate} />;
 }
 
 function createGameplaySetup() {

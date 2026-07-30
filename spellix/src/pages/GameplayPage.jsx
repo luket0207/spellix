@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSkullCrossbones } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import { POTION_DEFINITIONS } from '../data/potions';
+import { selectEventForEnvironment } from '../data/environmentEvents';
 import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
@@ -42,6 +43,9 @@ import DevineChanceResultModal from '../features/potions/DevineChanceResultModal
 import OtherPlayerChooser from '../features/potions/OtherPlayerChooser';
 import TokensmithModal from '../features/potions/TokensmithModal';
 import TroublemakerResultModal from '../features/potions/TroublemakerResultModal';
+import RollAgainEventModal from '../features/rollAgain/RollAgainEventModal';
+import ChooseEventModal from '../features/boardEvents/ChooseEventModal';
+import LootChestFoundModal from '../features/boardEvents/LootChestFoundModal';
 import { createCopyPasteDuplicate } from '../features/potions/copyPaste';
 import { isHealingPotion } from '../features/potions/potionUsage';
 import {
@@ -77,7 +81,16 @@ import {
 } from '../i18n/translations';
 import './GameplayPage.css';
 
-function GameplayPage({ onNavigate = () => {} }) {
+function GameplayPage({
+  activeLootChestEvent = null,
+  activeRollAgainEvent = null,
+  isChooseEventModeEnabled = false,
+  onOpenLootChest = () => {},
+  onConsumeRollAgainEvent = () => {},
+  onContinueRollAgainEvent = () => {},
+  onNavigate = () => {},
+  onTriggerBoardEvent = () => {},
+}) {
   const {
     advanceTurn,
     beginTurnRespawn,
@@ -137,7 +150,23 @@ function GameplayPage({ onNavigate = () => {} }) {
     useState(null);
   const [pendingTokensmithUse, setPendingTokensmithUse] = useState(null);
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
+  const [pendingChooseEvent, setPendingChooseEvent] = useState(null);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
+  const rollAgainPlayer = gameSetup.players.find(
+    ({ id }) => id === activeRollAgainEvent?.playerId
+  );
+  const isRollAgainEventActive = Boolean(
+    rollAgainPlayer && rollAgainPlayer.id === currentPlayer?.id
+  );
+  const isRollAgainEventModalOpen = Boolean(
+    isRollAgainEventActive && activeRollAgainEvent?.isModalOpen
+  );
+  const chooseEventPlayer = gameSetup.players.find(
+    ({ id }) => id === pendingChooseEvent?.playerId
+  );
+  const isChooseEventModalOpen = Boolean(
+    pendingChooseEvent && chooseEventPlayer
+  );
   const gameplayTranslations = getGameplayTranslations(currentLanguage);
   const failureTranslations = getMiniGameFailureTranslations(currentLanguage);
   const caveMiniGameTranslations = getCaveMiniGameTranslations(currentLanguage);
@@ -480,6 +509,7 @@ function GameplayPage({ onNavigate = () => {} }) {
       showDiceModal ||
       showSpellsModal ||
       isTurnStartBlocked ||
+      isRollAgainEventModalOpen ||
       stormMasterResult ||
       currentDiceRoll !== null
     ) {
@@ -491,7 +521,7 @@ function GameplayPage({ onNavigate = () => {} }) {
   };
 
   const handleOpenSpellsModal = () => {
-    if (!currentPlayer) {
+    if (!currentPlayer || isRollAgainEventActive) {
       return;
     }
 
@@ -632,6 +662,7 @@ function GameplayPage({ onNavigate = () => {} }) {
     );
     setCurrentDiceRoll(null);
     setHighlightedNodeIds([]);
+    onConsumeRollAgainEvent();
 
     const encounterType = getEliteBossEncounterType(
       gameSetup.board,
@@ -665,7 +696,48 @@ function GameplayPage({ onNavigate = () => {} }) {
       return;
     }
 
-    advanceTurn();
+    if (square.featureId || square.areaType !== 'normal') {
+      advanceTurn();
+      return;
+    }
+
+    if (isChooseEventModeEnabled) {
+      setPendingChooseEvent({
+        environment: square.environmentType,
+        playerId: currentPlayer.id,
+      });
+      return;
+    }
+
+    const eventType = selectEventForEnvironment(square.environmentType);
+
+    if (!eventType) {
+      advanceTurn();
+      return;
+    }
+
+    onTriggerBoardEvent({
+      environment: square.environmentType,
+      eventType,
+      playerId: currentPlayer.id,
+      source: 'boardLanding',
+    });
+  };
+
+  const handleChooseEvent = (eventType) => {
+    if (!pendingChooseEvent) {
+      return;
+    }
+
+    const selectedEvent = pendingChooseEvent;
+
+    setPendingChooseEvent(null);
+    onTriggerBoardEvent({
+      environment: selectedEvent.environment,
+      eventType,
+      playerId: selectedEvent.playerId,
+      source: 'chooseEventMode',
+    });
   };
 
   const handleContinueTroublemakerResult = () => {
@@ -911,6 +983,9 @@ function GameplayPage({ onNavigate = () => {} }) {
             showDiceModal ||
             showSpellsModal ||
             isTurnStartBlocked ||
+            Boolean(activeLootChestEvent) ||
+            isChooseEventModalOpen ||
+            isRollAgainEventModalOpen ||
             devineChanceResult ||
             stormMasterResult ||
             troublemakerResult ||
@@ -924,7 +999,15 @@ function GameplayPage({ onNavigate = () => {} }) {
         <div className="spells-button-wrapper">
           <Button
             className={languageClassName}
-            disabled={!currentPlayer || showDiceModal || showSpellsModal || isTurnStartBlocked}
+            disabled={
+              !currentPlayer ||
+              showDiceModal ||
+              showSpellsModal ||
+              isTurnStartBlocked ||
+              Boolean(activeLootChestEvent) ||
+              isChooseEventModalOpen ||
+              isRollAgainEventActive
+            }
             type="button"
             onClick={handleOpenSpellsModal}
           >
@@ -995,6 +1078,9 @@ function GameplayPage({ onNavigate = () => {} }) {
           context="board"
           disabled={Boolean(
             isTurnStartBlocked ||
+              Boolean(activeLootChestEvent) ||
+              isChooseEventModalOpen ||
+              isRollAgainEventActive ||
               currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
               blocksBoardPotionUse(currentPlayer?.activePotion)
           )}
@@ -1011,13 +1097,36 @@ function GameplayPage({ onNavigate = () => {} }) {
           title={gameplayTranslations.potions}
           useText={potionUsageTranslations.use}
         />
-        <ActivePotionSection
+      <ActivePotionSection
           activePotion={currentPlayer?.activePotion}
           language={currentLanguage}
           languageClassName={languageClassName}
           title={potionUsageTranslations.activePotionTitle}
         />
       </section>
+
+      <ChooseEventModal
+        environment={pendingChooseEvent?.environment}
+        isOpen={isChooseEventModalOpen}
+        language={chooseEventPlayer?.language}
+        onChoose={handleChooseEvent}
+      />
+
+      <LootChestFoundModal
+        isOpen={Boolean(activeLootChestEvent)}
+        language={getGameplayLanguage(
+          gameSetup.players.find(
+            ({ id }) => id === activeLootChestEvent?.playerId
+          )?.language
+        )}
+        onOpen={onOpenLootChest}
+      />
+
+      <RollAgainEventModal
+        isOpen={isRollAgainEventModalOpen}
+        language={getGameplayLanguage(rollAgainPlayer?.language)}
+        onContinue={onContinueRollAgainEvent}
+      />
 
       <PotionUseConfirmationModal
         isOpen={Boolean(pendingPotionUse)}

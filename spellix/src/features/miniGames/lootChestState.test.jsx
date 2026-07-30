@@ -101,6 +101,19 @@ function LootChestStateProbe() {
       <button type="button" onClick={() => startMiniGame('river', 'player-1')}>
         Start River
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          startMiniGame('lootChest', 'player-1', {
+            environment: 'field',
+            result: 'win',
+            returnBehaviour: 'nextPlayerTurn',
+            source: 'boardLanding',
+          })
+        }
+      >
+        Start Board Loot Chest
+      </button>
       <button type="button" onClick={() => completeMiniGame('win')}>
         Win River
       </button>
@@ -203,6 +216,42 @@ test('adds an available loot potion and preserves River same-player return', () 
 
   expect(screen.getByText('Current: player-1')).toBeInTheDocument();
   expect(screen.getByText('Next turn: clear')).toBeInTheDocument();
+});
+
+test('advances after a board Loot Chest sequence resolves directly', () => {
+  renderProbe();
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Start Board Loot Chest' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Claim Nothing' }));
+
+  expect(screen.getByText('Destination: /gameplay')).toBeInTheDocument();
+  expect(screen.getByText('Loot status: resolved')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Return' }));
+
+  expect(screen.getByText('Current: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Next turn: pending')).toBeInTheDocument();
+});
+
+test('advances after a board Loot Chest token assignment is complete', () => {
+  renderProbe();
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Start Board Loot Chest' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Claim Loot Token' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Add Active Token To Bag' })
+  );
+
+  expect(screen.getByText('Loot status: resolved')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Return' }));
+
+  expect(screen.getByText('Current: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Next turn: pending')).toBeInTheDocument();
 });
 
 test('marks a Loot Chest token added to the bag as unseen', () => {

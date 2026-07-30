@@ -130,6 +130,96 @@ describe('DebugModal', () => {
     expect(handleStartHazard).toHaveBeenCalledTimes(1);
   });
 
+  test('offers the five localized Nothing Event debug controls', () => {
+    const handleEnvironmentChange = jest.fn();
+    const handleStartNothingEvent = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onSelectedNothingEnvironmentChange={handleEnvironmentChange}
+        onStartNothingEvent={handleStartNothingEvent}
+        selectedNothingEnvironment="field"
+      />
+    );
+
+    const environmentSelect = screen.getByLabelText('Environment');
+    const triggerButton = screen.getByRole('button', {
+      name: '\u4f55\u3082\u306a\u3044\u30a4\u30d9\u30f3\u30c8\u3092\u767a\u751f\u3055\u305b\u308b',
+    });
+
+    expect(
+      screen.getByRole('heading', { name: 'Nothing Event' })
+    ).toHaveClass('language-jp');
+    expect(environmentSelect).toHaveValue('field');
+    expect(within(environmentSelect).getAllByRole('option')).toHaveLength(5);
+    [
+      ['Field', 'field'],
+      ['Hills', 'hills'],
+      ['Gravel', 'gravel'],
+      ['Mud', 'mud'],
+      ['Stream', 'stream'],
+    ].forEach(([label, value]) => {
+      expect(
+        within(environmentSelect).getByRole('option', { name: label })
+      ).toHaveValue(value);
+    });
+    expect(triggerButton).toHaveClass('language-jp');
+
+    fireEvent.change(environmentSelect, { target: { value: 'stream' } });
+    fireEvent.click(triggerButton);
+
+    expect(handleEnvironmentChange).toHaveBeenCalledWith('stream');
+    expect(handleStartNothingEvent).toHaveBeenCalledTimes(1);
+  });
+
+  test('offers a Roll Again event trigger for a ready current player', () => {
+    const handleStartRollAgainEvent = jest.fn();
+
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onStartRollAgainEvent={handleStartRollAgainEvent}
+      />
+    );
+
+    const triggerButton = screen.getByRole('button', {
+      name: 'Trigger Roll Again Event',
+    });
+
+    expect(
+      screen.getByRole('heading', { name: 'Roll Again Event' })
+    ).toHaveClass('language-jp');
+    expect(triggerButton).toHaveClass('language-jp');
+
+    fireEvent.click(triggerButton);
+
+    expect(handleStartRollAgainEvent).toHaveBeenCalledTimes(1);
+  });
+
+  test('disables the Roll Again event trigger without a ready player', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({
+          hasCommittedInitialSpells: false,
+        })}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Trigger Roll Again Event' })
+    ).toBeDisabled();
+  });
+
   test('offers localized Decision controls and reports the selected environment', () => {
     const handleEnvironmentChange = jest.fn();
     const handleStartDecision = jest.fn();
@@ -345,6 +435,67 @@ describe('DebugModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /enable anywhere mode/i }));
 
     expect(handleEnableAnywhereMode).not.toHaveBeenCalled();
+  });
+
+  test('toggles choose event mode independently beneath Anywhere Mode', () => {
+    const handleToggleChooseEventMode = jest.fn();
+
+    const { rerender } = render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        isChooseEventModeEnabled={false}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onEnableAnywhereMode={jest.fn()}
+        onToggleChooseEventMode={handleToggleChooseEventMode}
+      />
+    );
+
+    expect(screen.getByText(/anywhere mode: disabled/i)).toBeInTheDocument();
+    const chooseEventButton = screen.getByRole('button', {
+      name: 'Enable choose event mode',
+    });
+
+    expect(chooseEventButton).toHaveClass('language-en');
+    fireEvent.click(chooseEventButton);
+
+    expect(handleToggleChooseEventMode).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        isChooseEventModeEnabled
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onEnableAnywhereMode={jest.fn()}
+        onToggleChooseEventMode={handleToggleChooseEventMode}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Disable choose event mode' })
+    ).toHaveClass('language-en');
+  });
+
+  test('shows the exact Japanese disable choose event mode action', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer({ language: 'jp' })}
+        isChooseEventModeEnabled
+        isOpen
+        message=""
+        onClose={jest.fn()}
+        onToggleChooseEventMode={jest.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: '\u30a4\u30d9\u30f3\u30c8\u9078\u629e\u30e2\u30fc\u30c9\u3092\u7121\u52b9\u306b\u3059\u308b',
+      })
+    ).toHaveClass('language-jp');
   });
 
   test('starts the selected debug battle level for the current player', () => {

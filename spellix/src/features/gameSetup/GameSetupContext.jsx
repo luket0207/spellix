@@ -845,7 +845,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     });
   };
 
-  const startMiniGame = (type, playerId) => {
+  const startMiniGame = (type, playerId, options = {}) => {
     setGameSetup((currentSetup) => {
       const playerExists = currentSetup.players.some((player) => player.id === playerId);
 
@@ -853,13 +853,27 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
+      const result = ['win', 'loss'].includes(options.result)
+        ? options.result
+        : null;
+      const returnBehaviour = [
+        'nextPlayerTurn',
+        'samePlayerRollAgain',
+      ].includes(options.returnBehaviour)
+        ? options.returnBehaviour
+        : null;
+
       return {
         ...currentSetup,
         miniGameResult: {
           type,
-          result: null,
+          result,
           playerId,
-          returnBehaviour: null,
+          returnBehaviour,
+          ...(options.environment
+            ? { environment: options.environment }
+            : {}),
+          ...(options.source ? { source: options.source } : {}),
         },
         miniGameReturnNotice: null,
       };

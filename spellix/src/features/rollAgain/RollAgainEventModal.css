@@ -1,0 +1,18 @@
+.roll-again-event-modal .modal-body {
+  display: flex;
+}
+
+.roll-again-event-modal-content {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.roll-again-event-message {
+  color: #F5FA00;
+  margin: 0;
+  text-align: center;
+}

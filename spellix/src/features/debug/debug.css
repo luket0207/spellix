@@ -34,9 +34,16 @@
 }
 
 .debug-hazard-controls h2,
+.debug-nothing-event-controls h2,
 .debug-mini-game-controls h2 {
   margin: 0;
   font-size: 1rem;
+}
+
+.debug-nothing-event-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .debug-token-replacement-flow {

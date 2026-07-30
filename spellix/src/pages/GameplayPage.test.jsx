@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import { useState } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../data/potions';
 import { createPlayers } from '../features/gameSetup/gameSetup';
@@ -14,6 +15,20 @@ jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareC
     <p>{`Current board player: ${currentPlayerId}`}</p>
     <button type="button" onClick={() => onSquareClick({ x: 1, y: 28 })}>
       Move to square 1, 28
+    </button>
+    <button
+      type="button"
+      onClick={() =>
+        onSquareClick({
+          areaType: 'normal',
+          environmentType: 'field',
+          featureId: null,
+          x: 1,
+          y: 28,
+        })
+      }
+    >
+      Move to Field event square
     </button>
   </div>
 ));
@@ -145,6 +160,200 @@ function renderGameplayPage() {
     </GameSetupProvider>
   );
 }
+
+test('selects and delegates an event for a normal environment landing', () => {
+  const onTriggerBoardEvent = jest.fn();
+  jest.spyOn(Math, 'random').mockReturnValue(0);
+
+  render(
+    <GameSetupProvider initialGameSetup={createCommittedGameplaySetup()}>
+      <GameplayPage onTriggerBoardEvent={onTriggerBoardEvent} />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  expect(onTriggerBoardEvent).toHaveBeenCalledTimes(1);
+  expect(onTriggerBoardEvent).toHaveBeenCalledWith({
+    environment: 'field',
+    eventType: 'nothing',
+    playerId: 'player-1',
+    source: 'boardLanding',
+  });
+});
+
+test('pauses a normal landing for manual event selection when choose mode is enabled', () => {
+  const onTriggerBoardEvent = jest.fn();
+
+  render(
+    <GameSetupProvider initialGameSetup={createCommittedGameplaySetup()}>
+      <GameplayPage
+        isChooseEventModeEnabled
+        onTriggerBoardEvent={onTriggerBoardEvent}
+      />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  const dialog = screen.getByRole('dialog', { name: 'Choose Event' });
+
+  expect(onTriggerBoardEvent).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /^spells$/i })).toBeDisabled();
+
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Level 1 Battle' })
+  );
+
+  expect(
+    screen.queryByRole('dialog', { name: 'Choose Event' })
+  ).not.toBeInTheDocument();
+  expect(onTriggerBoardEvent).toHaveBeenCalledTimes(1);
+  expect(onTriggerBoardEvent).toHaveBeenCalledWith({
+    environment: 'field',
+    eventType: 'level1Battle',
+    playerId: 'player-1',
+    source: 'chooseEventMode',
+  });
+});
+
+function ChooseEventRollAgainHarness() {
+  const [rollAgainEvent, setRollAgainEvent] = useState(null);
+
+  return (
+    <GameplayPage
+      activeRollAgainEvent={rollAgainEvent}
+      isChooseEventModeEnabled
+      onConsumeRollAgainEvent={() => setRollAgainEvent(null)}
+      onContinueRollAgainEvent={() =>
+        setRollAgainEvent((event) => ({ ...event, isModalOpen: false }))
+      }
+      onTriggerBoardEvent={({ eventType, playerId }) => {
+        if (eventType === 'rollAgain') {
+          setRollAgainEvent({ isModalOpen: true, playerId });
+        }
+      }}
+    />
+  );
+}
+
+test('shows choose event mode again after a manually selected Roll Again', () => {
+  render(
+    <GameSetupProvider initialGameSetup={createCommittedGameplaySetup()}>
+      <ChooseEventRollAgainHarness />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Roll Again' }));
+
+  const rollAgainDialog = screen.getByRole('dialog', {
+    name: 'Roll Again Event',
+  });
+
+  fireEvent.click(
+    within(rollAgainDialog).getByRole('button', { name: 'Continue' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  expect(
+    screen.getByRole('dialog', { name: 'Choose Event' })
+  ).toBeInTheDocument();
+});
+
+function RollAgainGameplayHarness() {
+  const [rollAgainEvent, setRollAgainEvent] = useState({
+    isModalOpen: true,
+    playerId: 'player-1',
+  });
+
+  return (
+    <>
+      <GameplayPage
+        activeRollAgainEvent={rollAgainEvent}
+        onConsumeRollAgainEvent={() => setRollAgainEvent(null)}
+        onContinueRollAgainEvent={() =>
+          setRollAgainEvent((event) => ({ ...event, isModalOpen: false }))
+        }
+      />
+      <p>{`Roll Again state: ${
+        rollAgainEvent
+          ? rollAgainEvent.isModalOpen
+            ? 'modal'
+            : 'pending'
+          : 'clear'
+      }`}</p>
+    </>
+  );
+}
+
+test('keeps turn and potion usage intact until a Roll Again landing resolves', () => {
+  const initialGameSetup = createCommittedGameplaySetup();
+  initialGameSetup.players[0].potions = [
+    POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+  ];
+  initialGameSetup.players[0].turnPotionUsage = {
+    ...initialGameSetup.players[0].turnPotionUsage,
+    boardPotionUsedThisTurn: true,
+  };
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <RollAgainGameplayHarness />
+      <GameplayPositionProbe />
+      <PlayerPotionStateProbe />
+    </GameSetupProvider>
+  );
+
+  const dialog = screen.getByRole('dialog', { name: 'Roll Again Event' });
+
+  expect(screen.getByRole('region', { name: 'Gameplay panel' })).toBeInTheDocument();
+  expect(screen.getByText('Current board player: player-1')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+
+  expect(screen.getByText('Roll Again state: pending')).toBeInTheDocument();
+  expect(screen.getByText('Current board player: player-1')).toBeInTheDocument();
+  expect(
+    screen.getByText('Player one board position: square,none,0,29')
+  ).toBeInTheDocument();
+  expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: /turn change/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /^spells$/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+
+  expect(screen.getByText('Current board player: player-1')).toBeInTheDocument();
+  expect(screen.getByText('Roll Again state: pending')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: /move to square 1, 28/i }));
+
+  expect(screen.getByText('Roll Again state: clear')).toBeInTheDocument();
+  expect(screen.getByText('Current board player: player-2')).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: /turn change/i })).toBeInTheDocument();
+});
 
 function RespawnStateProbe() {
   const { currentPlayer, pendingTurnRespawn } = useGameSetup();

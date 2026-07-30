@@ -55,6 +55,104 @@ Manual Execution
 
 ---
 
+Feature-008: Trigger board events based on landed environment
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Land repeatedly on each normal environment and confirm only events with non-zero values in that environment's exact probability row can occur.
+2. Trigger each battle level and confirm a random enemy of that level appears over the landed environment background.
+3. Trigger Nothing, Hazard, and Decision events and confirm their text, weighting, or background uses the landed environment.
+4. Trigger River from Stream/River and Cave from Hills/Mountains, then complete each existing sequence and confirm its established turn behavior remains unchanged.
+5. Trigger Roll Again, continue, and confirm the same player rerolls without another Board potion opportunity or next-turn modal.
+6. Trigger Loot Chest in English and Japanese and confirm the exact localized prompt, shared modal, yellow centred `larger-text`, correct font, and no list markup.
+7. Open the Loot Chest and complete direct, potion-assignment, and token-assignment outcomes.
+   Expected: Gameplay returns with the next player active and the next-turn modal shown first.
+8. Land on Field Village, Forest Village, both Elite Towers, and Boss Battle.
+   Expected: Their feature-specific flows run and no random environment event is selected.
+9. Watch the browser console throughout the flows.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `environmentEvents.test.js` verifies all nine exact 100-point rows, event ordering, zero-weight exclusion, weighted boundaries, unsupported environments, and Field battle-background normalization.
+* `LootChestFoundModal.test.jsx` verifies exact English/Japanese copy, localized action, language classes, shared modal, no list markup, English fallback, and centred yellow text styles.
+* `AppBoardEvents.test.jsx` verifies routing and landed-environment propagation for Nothing, all shared mini-game contracts, Battle, Decision, Hazard, Roll Again, and Loot Chest.
+* `lootChestState.test.jsx` verifies direct and token-assignment board Loot Chest results return to the next player with the next-turn modal.
+* `GameplayPage.test.jsx` verifies a real normal Field landing selects and delegates the expected `boardLanding` payload.
+* `GameplayEliteBoss.test.jsx` passes all 8 village, Elite Tower, and Boss Battle exclusion regressions.
+* The four dedicated Feature-008 suites pass all 26 tests.
+* The new Gameplay landing test passes within the full Gameplay run; 54 tests pass and 6 unrelated documented baseline assertions remain failed.
+* Scoped ESLint passes for all Feature-008 production files and dedicated tests.
+* `GameplayPage.test.jsx` retains 13 pre-existing `testing-library/no-node-access` lint errors outside the Feature-008 addition.
+* `npm run build` passes.
+* `git diff --check` passes.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-009: Add choose event mode to debug menu
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Settings and Debug during Gameplay.
+   Expected: `Enable choose event mode` appears directly beneath Enable Anywhere Mode and uses the current player's language font.
+2. Toggle Choose Event Mode on and off in English and Japanese.
+   Expected: The exact localized Enable/Disable text changes while Anywhere Mode remains unchanged.
+3. Enable the mode and land on Field.
+   Expected: No random event starts; a `Choose Event` modal lists only Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, and Roll Again.
+4. Repeat on River, Woods, and Mountains.
+   Expected: Each modal shows only the events with non-zero Feature-008 weight for that environment.
+5. Choose Level 1 Battle from Field and Hazard from River.
+   Expected: The existing event flow starts with the landed environment.
+6. Choose every other available event type.
+   Expected: Each uses its existing Feature-008 flow and the Choose Event modal closes.
+7. Choose Roll Again, continue, reroll, and land on another normal square.
+   Expected: The same player remains active and Choose Event appears again for the new environment.
+8. Complete an event and return to Gameplay.
+   Expected: Choose Event Mode remains enabled until the debug action disables it.
+9. Disable Choose Event Mode and land on a normal square.
+   Expected: The existing weighted random Feature-008 selection resumes.
+10. Enable Choose Event Mode and land on both villages, both Elite Towers, and Boss Battle.
+    Expected: Each feature-specific flow runs without showing Choose Event.
+11. Inspect the Choose Event dialog and browser console.
+    Expected: The shared modal uses `larger-text`, the event buttons use a two-column `div` grid, no `ul` or `li` exists, and no runtime errors appear.
+
+Automated Tests Completed
+
+* `ChooseEventModal.test.jsx` verifies Field, River, Woods, and Mountains non-zero filtering; every exact English/Japanese label; title, font, callback, no-list markup, fallback language, and required grid declarations.
+* `DebugModal.test.jsx` verifies exact English/Japanese Enable and Disable actions, callback behavior, language classes, and independence from Anywhere Mode.
+* `AppBoardEvents.test.jsx` verifies the mode enables, persists through a Roll Again event, and remains enabled until explicitly disabled.
+* `GameplayPage.test.jsx` verifies manual mode pauses a normal landing, blocks board actions, avoids immediate event delegation, closes on selection, passes the exact `chooseEventMode` payload, and reappears after Roll Again.
+* The existing random-mode Gameplay test still verifies the unchanged `boardLanding` weighted path while the mode is disabled.
+* `GameplayEliteBoss.test.jsx` runs all 8 village, Elite Tower, and Boss Battle regressions with Choose Event Mode enabled.
+* The focused modal, debug, App, and feature-square run passes all 47 tests.
+* The full Gameplay run confirms both Feature-009 tests pass; 56 tests pass and 6 unrelated documented baseline assertions remain failed.
+* Scoped ESLint passes for all Feature-009 production files and dedicated tests.
+* `GameplayPage.test.jsx` retains 13 pre-existing `testing-library/no-node-access` findings outside the Feature-009 additions.
+* `npm run build` passes.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-009.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 Feature-005: Replace enemy "J" placeholders with joined spell columns
 
 Test Status
@@ -488,3 +586,117 @@ Remaining Test Gap
 Manual Execution
 
 * Not run in a browser during this automated pass.
+
+---
+
+Feature-006: Add Nothing events for environment landings
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Settings, then Debug, during an active Gameplay turn.
+   Expected: A Nothing Event section appears with an Environment selector and trigger button.
+2. Inspect the Nothing Event Environment selector.
+   Expected: It contains only Field, Hills, Gravel, Mud, and Stream.
+3. Select Field and trigger the event in English.
+   Expected: The Field background and wooden modal appear with yellow, centred `larger-text` reading `You rest in an open field`.
+4. Repeat Field with a Japanese current player.
+   Expected: The text reads `広々とした野原で休みます`, the trigger reads `何もないイベントを発生させる`, Continue reads `続ける`, and Japanese font classes are active.
+5. Repeat in English and Japanese for Hills, Gravel, Mud, and Stream.
+   Expected: Each event uses its matching existing environment background and exact localized source text.
+6. Inspect the event dialog markup.
+   Expected: The shared wooden modal is used and no `ul` or `li` elements appear.
+7. Change global turn state while the event remains open.
+   Expected: The original event player's language and selected event remain locked.
+8. Click Continue from a normal event.
+   Expected: Gameplay returns, the next player becomes active, and the next-turn modal appears before board controls are available.
+9. Navigate directly to `/nothing-event` without a valid encounter.
+   Expected: The route safely redirects to Gameplay without showing an event dialog.
+10. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Added
+
+* `nothingEvents.test.js` covers the exact five records, backgrounds, labels, bilingual text, localized actions, valid lookup, and unsupported-environment rejection.
+* `NothingEventPage.test.jsx` covers every required environment in both languages, matching backgrounds, language/font classes, `larger-text`, no list markup, locked player language, Continue turn flow, invalid-route safety, and required centring styles.
+* `DebugModal.test.jsx` covers the five-option selector, Japanese trigger text, language class, selection callback, and trigger callback.
+* `AppMiniGames.test.jsx` covers the real debug Stream event route, matching background/text, no list markup, Continue, next-player state, and pending next-turn modal.
+* `git diff --check` passed.
+
+Automated Checks Blocked
+
+* The focused test command could not run in the sandbox because Node failed with `EPERM` while resolving `C:\Users\PC`.
+* Two requests to run the scoped local tests outside the sandbox were rejected by the environment approval policy.
+* A third scoped test request was rejected after explicit user approval because the current environment policy categorically forbids sandbox escalation.
+* Scoped ESLint and `npm run build` were not attempted through alternate execution paths because policy explicitly forbids bypassing the rejected sandbox escalation.
+
+Automated Regression Checks Still Needed
+
+* Run the four focused Feature-006 suites.
+* Run scoped ESLint for Feature-006 production and test files.
+* Run `npm run build`.
+* These checks remain unexecuted because of the documented environment restriction and are not blocking the user-approved completion.
+
+Manual Execution
+
+* The user manually tested Feature-006, reported that it works and is complete, and approved marking it done.
+
+---
+
+Feature-007: Add Roll Again event
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Settings, then Debug, during an active Gameplay turn and trigger Roll Again Event.
+   Expected: The debug tools close and a Roll Again Event modal appears over the existing board.
+2. Trigger the event for an English player.
+   Expected: The modal says `You still have energy, roll again to continue onward` using centred yellow `larger-text` and the English font.
+3. Trigger the event for a Japanese player.
+   Expected: The modal says `まだ体力が残っています。もう一度サイコロを振って、先へ進んでください。`, Continue says `続ける`, and Japanese font classes are active.
+4. Inspect the event dialog markup.
+   Expected: The shared wooden modal and button are used, and no `ul` or `li` elements appear.
+5. Note the current player and position, then click Continue.
+   Expected: The modal closes without moving the player, changing the current player, showing the next-turn modal, or triggering another event.
+6. Inspect the available board actions after Continue.
+   Expected: Roll Dice is enabled; Spells and Board potion Use actions are disabled until the reroll landing resolves.
+7. Use a Board potion before triggering Roll Again, then click Continue.
+   Expected: `boardPotionUsedThisTurn` remains set and another Board potion cannot be used.
+8. Trigger Roll Again while a movement-duration potion effect is active.
+   Expected: The active potion and its pending roll effect remain available for the reroll unless the existing potion rule consumes it during rolling or movement.
+9. Roll the dice after Continue.
+   Expected: The same player rolls and moves again without a new turn or next-turn modal.
+10. Complete a valid landing.
+    Expected: The Roll Again pending state clears and the existing landing resolution runs normally for that square.
+11. Trigger Roll Again again for the same active player.
+    Expected: A fresh modal appears and the same Continue-to-reroll flow can repeat.
+12. Watch the browser console throughout the flow.
+    Expected: No runtime warnings or errors appear.
+
+Automated Tests Added
+
+* `RollAgainEventModal.test.jsx` covers exact bilingual copy, localized Continue, language classes, callback behavior, no list markup, English fallback, and required centring/yellow styles.
+* `DebugModal.test.jsx` covers the ready-player Roll Again trigger, Japanese language class, callback, and disabled pre-setup state.
+* `GameplayPage.test.jsx` covers modal blocking, Continue without turn/position changes, preserved Board potion usage, disabled Spells/potions, enabled reroll, same-player movement, pending-state consumption, and existing landing resolution.
+* `AppMiniGames.test.jsx` covers the complete debug trigger, modal over the real board, no next-turn modal, same-turn reroll availability, disabled non-roll actions, and repeat trigger entry.
+
+Automated Checks Completed
+
+* `RollAgainEventModal.test.jsx` passes all 3 tests.
+* `DebugModal.test.jsx` passes all 20 tests, including the ready-player and disabled Roll Again trigger checks.
+* Both Feature-007 Roll Again tests pass in `GameplayPage.test.jsx`; that full suite passes 56 tests and retains six unrelated baseline failures.
+* `AppMiniGames.test.jsx` passes all 24 tests, including the complete debug-triggered same-turn reroll flow.
+* Scoped ESLint passes for the Feature-007 production and dedicated test files.
+* `npm run build` passed.
+* `git diff --check` passed for all Feature-007 production and test files.
+* A source audit confirmed the feature adds no `ul` or `li` markup and calls no turn-transition helper from the trigger or Continue action.
+
+Manual Execution
+
+* Not run in a browser during this verification pass.

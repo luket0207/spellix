@@ -5,7 +5,9 @@ import { Route, Routes, useNavigate } from 'react-router-dom';
 import Button from './components/common/Button/Button';
 import Modal from './components/Modal';
 import { HAZARDS, selectHazardForEnvironment } from './data/hazards';
+import { getNothingEventForEnvironment } from './data/nothingEvents';
 import { POTION_DEFINITIONS } from './data/potions';
+import { getBattleEnvironmentForBoardEnvironment } from './data/environmentEvents';
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
@@ -31,6 +33,7 @@ import RiverMiniGame from './pages/MiniGames/RiverMiniGame';
 import BossNotReadyPage from './pages/BossNotReadyPage';
 import WinnerPage from './pages/WinnerPage';
 import VillagePage from './pages/VillagePage';
+import NothingEventPage from './pages/NothingEventPage';
 
 function App() {
   const navigate = useNavigate();
@@ -49,6 +52,7 @@ function App() {
   } = useGameSetup();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
+  const [isChooseEventModeEnabled, setIsChooseEventModeEnabled] = useState(false);
   const [selectedDebugTokenType, setSelectedDebugTokenType] = useState('red');
   const [pendingDebugTokenType, setPendingDebugTokenType] = useState('');
   const [selectedReplacementTokenId, setSelectedReplacementTokenId] = useState('');
@@ -61,7 +65,12 @@ function App() {
   const [selectedBattleEnvironment, setSelectedBattleEnvironment] = useState('fields');
   const [selectedDecisionEnvironment, setSelectedDecisionEnvironment] = useState('fields');
   const [selectedHazardEnvironment, setSelectedHazardEnvironment] = useState('field');
+  const [selectedNothingEnvironment, setSelectedNothingEnvironment] = useState('field');
   const [activeHazard, setActiveHazard] = useState(null);
+  const [activeDecisionEnvironment, setActiveDecisionEnvironment] = useState('fields');
+  const [activeLootChestEvent, setActiveLootChestEvent] = useState(null);
+  const [activeNothingEvent, setActiveNothingEvent] = useState(null);
+  const [activeRollAgainEvent, setActiveRollAgainEvent] = useState(null);
   const [debugMessage, setDebugMessage] = useState('');
 
   const resetDebugState = () => {
@@ -76,6 +85,10 @@ function App() {
     setIsSettingsOpen(false);
     setIsDebugOpen(false);
     setActiveHazard(null);
+    setActiveDecisionEnvironment('fields');
+    setActiveLootChestEvent(null);
+    setActiveNothingEvent(null);
+    setActiveRollAgainEvent(null);
     resetDebugState();
     navigate('/');
   };
@@ -323,6 +336,7 @@ function App() {
       return;
     }
 
+    setActiveDecisionEnvironment(selectedDecisionEnvironment);
     setIsDebugOpen(false);
     setIsSettingsOpen(false);
     resetDebugState();
@@ -356,6 +370,141 @@ function App() {
     navigate('/hazard');
   };
 
+  const handleStartNothingEvent = () => {
+    if (!currentPlayer) {
+      setDebugMessage(
+        'Debug Nothing events are only available during gameplay turns.'
+      );
+      return;
+    }
+
+    const event = getNothingEventForEnvironment(selectedNothingEnvironment);
+
+    if (!event) {
+      setDebugMessage(
+        'No Nothing event is available for the selected environment.'
+      );
+      return;
+    }
+
+    setActiveNothingEvent({
+      event,
+      playerId: currentPlayer.id,
+    });
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/nothing-event');
+  };
+
+  const handleStartRollAgainEvent = () => {
+    if (!currentPlayer?.hasCommittedInitialSpells) {
+      setDebugMessage(
+        'Debug Roll Again events are only available during active gameplay turns.'
+      );
+      return;
+    }
+
+    setActiveRollAgainEvent({
+      isModalOpen: true,
+      playerId: currentPlayer.id,
+    });
+    setIsDebugOpen(false);
+    setIsSettingsOpen(false);
+    resetDebugState();
+    navigate('/gameplay');
+  };
+
+  const handleContinueRollAgainEvent = () => {
+    setActiveRollAgainEvent((event) =>
+      event ? { ...event, isModalOpen: false } : null
+    );
+  };
+
+  const handleTriggerBoardEvent = ({
+    environment,
+    eventType,
+    playerId,
+  }) => {
+    const battleEnvironment =
+      getBattleEnvironmentForBoardEnvironment(environment);
+
+    if (eventType === 'nothing') {
+      const event = getNothingEventForEnvironment(environment);
+
+      if (event) {
+        setActiveNothingEvent({ event, playerId });
+        navigate('/nothing-event');
+      }
+      return;
+    }
+
+    if (/^level[1-3]Battle$/.test(eventType)) {
+      const level = Number(eventType.slice(5, 6));
+      const enemy = selectRandomEnemyForLevel(level);
+
+      if (enemy) {
+        startBattle(playerId, level, enemy.id, battleEnvironment);
+        navigate('/battle');
+      }
+      return;
+    }
+
+    if (eventType === 'riverMiniGame' || eventType === 'caveMiniGame') {
+      const type = eventType === 'riverMiniGame' ? 'river' : 'cave';
+
+      startMiniGame(type, playerId, {
+        environment,
+        source: 'boardLanding',
+      });
+      navigate(`/mini-game/${type}`);
+      return;
+    }
+
+    if (eventType === 'decision') {
+      setActiveDecisionEnvironment(battleEnvironment);
+      navigate('/decision');
+      return;
+    }
+
+    if (eventType === 'hazard') {
+      const hazard = selectHazardForEnvironment(environment, HAZARDS);
+
+      if (hazard) {
+        setActiveHazard({ environment, hazard, playerId });
+        navigate('/hazard');
+      }
+      return;
+    }
+
+    if (eventType === 'lootChest') {
+      setActiveLootChestEvent({ environment, playerId });
+      return;
+    }
+
+    if (eventType === 'rollAgain') {
+      setActiveRollAgainEvent({
+        isModalOpen: true,
+        playerId,
+      });
+    }
+  };
+
+  const handleOpenLootChest = () => {
+    if (!activeLootChestEvent) {
+      return;
+    }
+
+    startMiniGame('lootChest', activeLootChestEvent.playerId, {
+      environment: activeLootChestEvent.environment,
+      result: 'win',
+      returnBehaviour: 'nextPlayerTurn',
+      source: 'boardLanding',
+    });
+    setActiveLootChestEvent(null);
+    navigate('/mini-game/loot-chest');
+  };
+
   return (
     <>
       <button
@@ -373,14 +522,25 @@ function App() {
         <Route path="/setup" element={<GameSetupPage />} />
         <Route
           path="/gameplay"
-          element={<GameplayPage onNavigate={navigate} />}
+          element={
+            <GameplayPage
+              activeLootChestEvent={activeLootChestEvent}
+              activeRollAgainEvent={activeRollAgainEvent}
+              isChooseEventModeEnabled={isChooseEventModeEnabled}
+              onOpenLootChest={handleOpenLootChest}
+              onConsumeRollAgainEvent={() => setActiveRollAgainEvent(null)}
+              onContinueRollAgainEvent={handleContinueRollAgainEvent}
+              onNavigate={navigate}
+              onTriggerBoardEvent={handleTriggerBoardEvent}
+            />
+          }
         />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/boss-not-ready" element={<BossNotReadyPage />} />
         <Route path="/village" element={<VillagePage />} />
         <Route
           path="/decision"
-          element={<DecisionPage environment={selectedDecisionEnvironment} />}
+          element={<DecisionPage environment={activeDecisionEnvironment} />}
         />
         <Route
           path="/hazard"
@@ -388,6 +548,15 @@ function App() {
             <HazardPage
               encounter={activeHazard}
               onComplete={() => setActiveHazard(null)}
+            />
+          }
+        />
+        <Route
+          path="/nothing-event"
+          element={
+            <NothingEventPage
+              encounter={activeNothingEvent}
+              onComplete={() => setActiveNothingEvent(null)}
             />
           }
         />
@@ -428,8 +597,12 @@ function App() {
         currentPlayer={currentPlayer}
         eliteBossEnemyAssignments={gameSetup.eliteBossEnemyAssignments}
         isOpen={isDebugOpen}
+        isChooseEventModeEnabled={isChooseEventModeEnabled}
         message={debugMessage}
         onEnableAnywhereMode={handleEnableAnywhereMode}
+        onToggleChooseEventMode={() =>
+          setIsChooseEventModeEnabled((isEnabled) => !isEnabled)
+        }
         onClose={handleCloseDebug}
         onDiscardPendingPotion={handleDiscardPendingPotion}
         onDiscardPendingToken={handleDiscardPendingToken}
@@ -443,6 +616,8 @@ function App() {
         onStartCaveMiniGame={handleStartCaveMiniGame}
         onStartDecision={handleStartDecision}
         onStartHazard={handleStartHazard}
+        onStartNothingEvent={handleStartNothingEvent}
+        onStartRollAgainEvent={handleStartRollAgainEvent}
         onStartBattle={handleStartBattle}
         onStartRiverMiniGame={handleStartRiverMiniGame}
         onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
@@ -452,6 +627,7 @@ function App() {
         onSelectedEnvironmentChange={setSelectedBattleEnvironment}
         onSelectedEnemyIdChange={setSelectedDebugEnemyId}
         onSelectedHazardEnvironmentChange={setSelectedHazardEnvironment}
+        onSelectedNothingEnvironmentChange={setSelectedNothingEnvironment}
         onSelectedDecisionEnvironmentChange={setSelectedDecisionEnvironment}
         onSelectedPotionIdChange={setSelectedDebugPotionId}
         onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
@@ -463,6 +639,7 @@ function App() {
         selectedDecisionEnvironment={selectedDecisionEnvironment}
         selectedEnvironment={selectedBattleEnvironment}
         selectedHazardEnvironment={selectedHazardEnvironment}
+        selectedNothingEnvironment={selectedNothingEnvironment}
         selectedPotionId={selectedDebugPotionId}
         selectedPotionPlayerId={selectedDebugPotionPlayerId}
         selectedReplacementPotionIndex={selectedReplacementPotionIndex}

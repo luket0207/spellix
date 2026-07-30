@@ -1,6 +1,10 @@
 import Modal from '../../components/Modal';
 import Token from '../../components/tokens/Token';
 import { HAZARD_ENVIRONMENTS } from '../../data/hazards';
+import {
+  NOTHING_EVENT_ENVIRONMENTS,
+  NOTHING_EVENT_TRIGGER_TEXT,
+} from '../../data/nothingEvents';
 import { BATTLE_ENVIRONMENTS } from '../battle/battleEnvironments';
 import { getEnemyById } from '../battle/enemies';
 import {
@@ -17,9 +21,11 @@ function DebugModal({
   currentPlayer,
   eliteBossEnemyAssignments = {},
   enemyOptions = [],
+  isChooseEventModeEnabled = false,
   isOpen,
   message,
   onEnableAnywhereMode,
+  onToggleChooseEventMode = () => {},
   onClose,
   onDiscardPendingPotion,
   onDiscardPendingToken,
@@ -28,6 +34,8 @@ function DebugModal({
   onPendingPotionReplacementChange,
   onStartBattle,
   onStartDecision,
+  onStartNothingEvent = () => {},
+  onStartRollAgainEvent = () => {},
   onStartRiverMiniGame,
   onStartSelectedEnemyBattle,
   onPendingTokenReplacementChange,
@@ -37,6 +45,7 @@ function DebugModal({
   onSelectedDecisionEnvironmentChange,
   onSelectedEnemyIdChange,
   onSelectedHazardEnvironmentChange = () => {},
+  onSelectedNothingEnvironmentChange = () => {},
   onSelectedPotionIdChange,
   onSelectedPotionPlayerIdChange,
   onSelectedTokenTypeChange,
@@ -48,6 +57,7 @@ function DebugModal({
   selectedDecisionEnvironment = 'fields',
   selectedEnvironment = 'fields',
   selectedHazardEnvironment = 'field',
+  selectedNothingEnvironment = 'field',
   pendingTokenType = '',
   selectedPotionId = '',
   selectedPotionPlayerId = '',
@@ -62,6 +72,14 @@ function DebugModal({
   const decisionTranslations = getDecisionTranslations(currentLanguage);
   const hazardTranslations = getHazardTranslations(currentLanguage);
   const decisionLanguageClassName = `language-${currentLanguage}`;
+  const chooseEventModeText =
+    currentLanguage === 'jp'
+      ? isChooseEventModeEnabled
+        ? '\u30a4\u30d9\u30f3\u30c8\u9078\u629e\u30e2\u30fc\u30c9\u3092\u7121\u52b9\u306b\u3059\u308b'
+        : '\u30a4\u30d9\u30f3\u30c8\u9078\u629e\u30e2\u30fc\u30c9\u3092\u6709\u52b9\u306b\u3059\u308b'
+      : isChooseEventModeEnabled
+        ? 'Disable choose event mode'
+        : 'Enable choose event mode';
   const eliteBossEnemies = eliteBossEnemyAssignments
     ? [
         ['Elite Tower Gravel', eliteBossEnemyAssignments.eliteTowerGravel],
@@ -110,6 +128,14 @@ function DebugModal({
             onClick={onEnableAnywhereMode}
           >
             Enable Anywhere Mode
+          </button>
+          <button
+            className={decisionLanguageClassName}
+            type="button"
+            disabled={!currentPlayer}
+            onClick={onToggleChooseEventMode}
+          >
+            {chooseEventModeText}
           </button>
         </div>
 
@@ -191,6 +217,50 @@ function DebugModal({
             onClick={onStartHazard}
           >
             {hazardTranslations.triggerHazard}
+          </button>
+        </div>
+
+        <div className="debug-nothing-event-controls">
+          <h2 className={decisionLanguageClassName}>Nothing Event</h2>
+          <label
+            className={decisionLanguageClassName}
+            htmlFor="debug-nothing-event-environment"
+          >
+            Environment
+          </label>
+          <select
+            id="debug-nothing-event-environment"
+            value={selectedNothingEnvironment}
+            disabled={!currentPlayer}
+            onChange={(event) =>
+              onSelectedNothingEnvironmentChange(event.target.value)
+            }
+          >
+            {NOTHING_EVENT_ENVIRONMENTS.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button
+            className={decisionLanguageClassName}
+            type="button"
+            disabled={!currentPlayer}
+            onClick={onStartNothingEvent}
+          >
+            {NOTHING_EVENT_TRIGGER_TEXT[currentLanguage]}
+          </button>
+        </div>
+
+        <div className="debug-roll-again-event-controls">
+          <h2 className={decisionLanguageClassName}>Roll Again Event</h2>
+          <button
+            className={decisionLanguageClassName}
+            type="button"
+            disabled={!isCurrentPlayerReady}
+            onClick={onStartRollAgainEvent}
+          >
+            Trigger Roll Again Event
           </button>
         </div>
 

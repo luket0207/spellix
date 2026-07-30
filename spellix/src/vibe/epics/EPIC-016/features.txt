@@ -2523,3 +2523,1116 @@ Implementation Notes
 * Normal six-column enemies, empty Miss slots, token effects, random enemy selection, images, health, rewards, and level assignment logic remain unchanged.
 * Existing Boss Battle maximum-health overrides continue to apply to both joined-column enemies.
 * The obsolete `J` display-label, `joinedWith`, and joined-placeholder creation paths were removed; no new list markup, routes, styling, abstractions, or player merge behavior were added.
+
+---
+
+Feature-006: Add Nothing events for environment landings
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-001: Add hazard debug trigger and hazard result modal
+* Feature-008: Trigger events by landed environment
+* EPIC-004 Feature-005: Board movement and dice movement
+
+Goal
+
+* Add a simple Nothing event.
+* Sometimes when a player lands on an environment square, nothing significant happens.
+* For now, this event should be triggerable from the debug menu.
+* The event should display a modal over the matching environment background.
+* Clicking Continue should return to the board and advance to the next player.
+
+Debug Menu Requirement
+
+* Add a debug menu control for manually triggering a Nothing event.
+* This should include:
+
+  * an environment dropdown.
+  * a trigger button.
+
+Suggested section title:
+
+```txt id="pwa1fi"
+Nothing Event
+```
+
+Suggested button text:
+
+English:
+
+```txt id="ifjr0g"
+Trigger Nothing Event
+```
+
+Japanese:
+
+```txt id="p88mk1"
+何もないイベントを発生させる
+```
+
+Environment Dropdown Requirement
+
+* The dropdown only needs to include environments that currently have Nothing event text:
+
+```txt id="d6x7dk"
+Field
+Hills
+Gravel
+Mud
+Stream
+```
+
+* Other environments do not need a Nothing event for this feature.
+
+Nothing Event Text Source Of Truth
+
+```txt id="fkx7x4"
+Field
+English: You rest in an open field
+Japanese: 広々とした野原で休みます
+
+Hills
+English: You stop on a hilltop
+Japanese: 丘の頂上で足を止めます
+
+Gravel
+English: You sit on a boulder to rest
+Japanese: 大きな岩に腰掛けて休みます
+
+Mud
+English: You take a moment to wash your boots
+Japanese: 少し立ち止まってブーツの泥を洗い落とします
+
+Stream
+English: You sit by the stream for a while
+Japanese: 小川のそばに座って、しばらく休みます
+```
+
+Suggested Data Shape
+
+```js id="r5lgmk"
+const nothingEvents = {
+  field: {
+    text: {
+      en: "You rest in an open field",
+      jp: "広々とした野原で休みます"
+    }
+  },
+  hills: {
+    text: {
+      en: "You stop on a hilltop",
+      jp: "丘の頂上で足を止めます"
+    }
+  },
+  gravel: {
+    text: {
+      en: "You sit on a boulder to rest",
+      jp: "大きな岩に腰掛けて休みます"
+    }
+  },
+  mud: {
+    text: {
+      en: "You take a moment to wash your boots",
+      jp: "少し立ち止まってブーツの泥を洗い落とします"
+    }
+  },
+  stream: {
+    text: {
+      en: "You sit by the stream for a while",
+      jp: "小川のそばに座って、しばらく休みます"
+    }
+  }
+};
+```
+
+Background Requirement
+
+* Use the environment the player landed on as the background.
+* Use the same background source/pattern as battle and hazard screens.
+* Example:
+
+  * Field Nothing event uses Field background.
+  * Hills Nothing event uses Hills background.
+  * Stream Nothing event uses Stream background.
+
+Modal Requirement
+
+* Show the usual modal component over the background.
+* The modal should use:
+
+  * wooden modal background.
+  * yellow text.
+  * correct English/Japanese fonts.
+  * no `ul` or `li`.
+
+Text Requirement
+
+* The Nothing event text should be:
+
+  * `larger-text`.
+  * centred horizontally.
+  * centred vertically within the modal.
+
+Suggested structure:
+
+```jsx id="k12od2"
+<div className="modal-background nothing-event-modal">
+  <p className={`larger-text nothing-event-text ${languageClass}`}>
+    {nothingEvent.text[language]}
+  </p>
+
+  <button
+    className={`modal-button ${languageClass}`}
+    onClick={finishNothingEvent}
+  >
+    {continueText}
+  </button>
+</div>
+```
+
+Continue Button Requirement
+
+Button text:
+
+English:
+
+```txt id="7amxmo"
+Continue
+```
+
+Japanese:
+
+```txt id="k9e28w"
+続ける
+```
+
+* Clicking Continue should:
+
+  * return to the board.
+  * advance to the next player’s turn.
+  * show the next-turn modal first.
+
+Out Of Scope
+
+* No gameplay effects.
+* No health recovery.
+* No rewards.
+* No hazards.
+* No roll again behaviour.
+* No random event selection yet except what Feature-008 will add.
+* No Nothing events for environments not listed in this feature.
+
+Testing Checkpoints
+
+* Open the debug menu.
+* Confirm there is a Nothing Event section.
+* Confirm the dropdown includes Field, Hills, Gravel, Mud, and Stream.
+* Trigger a Field Nothing event.
+* Confirm the Field background appears.
+* Confirm the text says `You rest in an open field`.
+* Trigger the Japanese version.
+* Confirm the text says `広々とした野原で休みます`.
+* Trigger each listed environment.
+* Confirm each displays the correct bilingual text.
+* Confirm the text uses `larger-text`.
+* Confirm the text is centred horizontally and vertically in the modal.
+* Click Continue.
+* Confirm the game returns to the board.
+* Confirm the turn advances to the next player.
+* Confirm the next-turn modal appears first.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added the five required Field, Hills, Gravel, Mud, and Stream Nothing-event records with exact English/Japanese text and existing battle-background identifiers.
+* Added localized English/Japanese trigger and Continue text without adding Nothing events for any other environment.
+* Added a debug-only Nothing Event section with the required five-option environment selector and trigger action.
+* Added App-owned encounter state that locks the current player and selected event for the result route, following the existing hazard debug pattern.
+* Added a lo-fi Nothing-event page that reuses the battle/hazard background source, shared wooden Modal, shared Button, language classes, and `larger-text`.
+* Continue returns to Gameplay, advances exactly once, and relies on the existing next-turn modal flow.
+* Added focused data, debug control, page matrix, invalid encounter, locked language, styling, list-markup, and App integration tests.
+* No board landing selection, random event selection, effects, healing, rewards, hazards, Roll Again behavior, or unrelated routes were added.
+* The user manually tested Feature-006, reported that it works and is complete, and approved marking it done.
+* Automated test, lint, and build execution remains blocked because Node cannot resolve the workspace parent inside the sandbox and outside-sandbox execution was rejected by environment policy.
+
+---
+
+Feature-007: Add Roll Again event
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-008: Trigger events by landed environment
+* EPIC-010 Feature-012: Add Cave reward generation
+* EPIC-012 Feature-002: Add one-potion-per-turn limits and Active Potion section
+
+Goal
+
+* Add a Roll Again event.
+* When this event happens, the player gets to roll again during the same turn.
+* This is not a new turn.
+* The player should not get another chance to use board potions just because Roll Again happened.
+* The next square they land on should resolve normally.
+
+Roll Again Modal Requirement
+
+* When Roll Again is triggered, display a modal over the board.
+* The modal should say:
+
+English:
+
+```txt id="rmhvis"
+You still have energy, roll again to continue onward
+```
+
+Japanese:
+
+```txt id="n4f3a5"
+まだ体力が残っています。もう一度サイコロを振って、先へ進んでください。
+```
+
+* The text should be:
+
+  * `larger-text`.
+  * centred.
+  * yellow.
+  * correct English/Japanese font.
+
+Continue Button Requirement
+
+* The modal should have a Continue button.
+
+English:
+
+```txt id="hgc210"
+Continue
+```
+
+Japanese:
+
+```txt id="8gdmoj"
+続ける
+```
+
+* Clicking Continue should only close the modal.
+* It should not advance the turn.
+* It should not move the player.
+* It should not trigger another event by itself.
+* It should return the player to the board in a state where they must roll again.
+
+Roll Again Turn State Requirement
+
+* Roll Again continues the same player’s current turn.
+* It is not a new turn.
+* The current player remains active.
+* The player may roll and move again.
+* The player may not use another board potion if they already used one earlier in this same turn.
+* Existing one-board-potion-per-turn tracking should remain unchanged.
+* Any active potion state should remain consistent with the same turn unless the potion specifically expires after movement.
+
+Available Action Requirement
+
+* After the Roll Again modal is closed:
+
+  * the only normal action should be rolling again.
+  * do not reopen pre-roll potion choice flow as if a new turn started.
+  * do not show the next-turn modal.
+  * do not reset board potion use counters.
+  * do not reset other per-turn state that should persist within a turn.
+
+Landing Resolution Requirement
+
+* When the player rolls again and moves again, the new square should behave like a normal landing.
+* This means the second landing can trigger:
+
+  * Nothing
+  * Battle
+  * River Mini Game
+  * Cave Mini Game
+  * Decision
+  * Hazard
+  * Loot Chest
+  * another Roll Again
+  * any other event supported by Feature-008
+
+Suggested State Direction
+
+```js id="8gy4jo"
+turnState = {
+  currentPlayerId,
+  boardPotionUsedThisTurn,
+  rollAgainPending: false,
+  canRollAgainFromEvent: true
+};
+```
+
+Suggested Flow
+
+```txt id="79x6ja"
+1. Player lands on a square.
+2. Roll Again event is selected.
+3. Roll Again modal appears.
+4. Player clicks Continue.
+5. Modal closes.
+6. Same player remains active.
+7. Player rolls again.
+8. Player moves again.
+9. New landing event resolves normally.
+```
+
+Out Of Scope
+
+* No extra reward.
+* No health recovery.
+* No resetting board potion usage.
+* No additional next-turn modal.
+* No new Roll Again potion behaviour.
+* No changes to Cave Roll Again reward handling unless shared helpers are reused safely.
+
+Testing Checkpoints
+
+* Trigger Roll Again from debug or Feature-008 event resolution.
+* Confirm the modal appears over the board.
+* Confirm English text says `You still have energy, roll again to continue onward`.
+* Confirm Japanese text says `まだ体力が残っています。もう一度サイコロを振って、先へ進んでください。`.
+* Confirm the text is centred and uses `larger-text`.
+* Click Continue.
+* Confirm the modal closes.
+* Confirm the turn does not advance.
+* Confirm the next-turn modal does not appear.
+* Confirm the same player can roll again.
+* Use a board potion before Roll Again.
+* Trigger Roll Again.
+* Confirm the player cannot use another board potion after Continue.
+* Roll and land on another square.
+* Confirm the new square resolves normally.
+* Confirm Roll Again can chain again if the next event is also Roll Again.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a feature-local Roll Again modal over the existing Gameplay board using the shared wooden Modal and Button components.
+* Added the exact English and Japanese event text, localized Continue action, language font classes, centred yellow `larger-text`, and no `ul` or `li` markup.
+* Added a debug-only Roll Again trigger that stores the triggering player in App-owned encounter state and returns to Gameplay.
+* Continue only closes the event modal. It does not advance the turn, move the player, trigger a landing event, show the next-turn modal, or mutate game context.
+* The Roll Again state remains pending until the same player completes a valid landing. During that period, rolling remains available after Continue while Spells and Board potion actions remain disabled.
+* Existing `boardPotionUsedThisTurn`, active potion, forced roll, and other per-turn state are preserved because no turn transition or reset helper runs when Roll Again starts or continues.
+* A valid reroll landing consumes only the Roll Again encounter state before following the existing normal village, Elite/Boss, or ordinary landing resolution.
+* Re-triggering Roll Again replaces the pending encounter with a fresh modal for the same active player, providing the chaining entry point needed when Feature-008 adds landed-event selection.
+* Added focused modal, debug control, Gameplay state/landing, and App integration regression coverage.
+* `RollAgainEventModal.test.jsx` passes all 3 tests and `DebugModal.test.jsx` passes all 20 tests, including both Roll Again debug trigger states.
+* `AppMiniGames.test.jsx` passes all 24 tests, including the complete debug-triggered same-turn reroll flow.
+* Both Roll Again Gameplay integration tests pass within the full Gameplay run; the suite retains six unrelated baseline failures.
+* Scoped ESLint, `npm run build`, and `git diff --check` pass.
+
+---
+
+Feature-008: Trigger board events based on landed environment
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-001: Add hazard debug trigger and hazard result modal
+* Feature-006: Add Nothing events for environment landings
+* Feature-007: Add Roll Again event
+* EPIC-011 Feature-001: Loot Chest page
+* EPIC-015 Feature-001: Add Decision page
+* EPIC-010 Feature-011: Refine Cave Mini Game movement and ogre chase
+
+Goal
+
+* Connect board landings to event selection.
+* When a player lands on an environment square, randomly choose an event based on that environment’s event probability table.
+* Pass the landed environment to events that need it, especially for backgrounds.
+* Add a Loot Chest found modal for the Loot Chest event.
+
+Event Selection Requirement
+
+* When a player lands on a normal environment square:
+
+  * identify the environment.
+  * use the matching row from the event probability table.
+  * randomly select one event using weighted chances out of 100.
+  * trigger the selected event.
+
+* Events with `0` chance should not be selected.
+
+* The values in each row are percentages and should total 100.
+
+* If implementation treats them as weights, the outcome is the same as long as the row values are used exactly.
+
+Event Probability Table
+
+```txt id="twdnhp"
+Field
+Nothing 55
+Level 1 Battle 15
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 5
+Loot Chest 5
+Roll Again 5
+
+Hills
+Nothing 35
+Level 1 Battle 20
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 15
+Decision 15
+Hazard 5
+Loot Chest 5
+Roll Again 5
+
+Gravel
+Nothing 25
+Level 1 Battle 30
+Level 2 Battle 5
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 15
+Loot Chest 5
+Roll Again 5
+
+Mud
+Nothing 25
+Level 1 Battle 30
+Level 2 Battle 5
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 15
+Loot Chest 5
+Roll Again 5
+
+Stream
+Nothing 20
+Level 1 Battle 0
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 60
+Cave Mini Game 0
+Decision 0
+Hazard 10
+Loot Chest 5
+Roll Again 5
+
+River
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 90
+Cave Mini Game 0
+Decision 0
+Hazard 5
+Loot Chest 5
+Roll Again 0
+
+Woods
+Nothing 0
+Level 1 Battle 40
+Level 2 Battle 40
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 5
+Hazard 10
+Loot Chest 5
+Roll Again 0
+
+Forest
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 40
+Level 3 Battle 40
+River Mini Game 0
+Cave Mini Game 0
+Decision 5
+Hazard 10
+Loot Chest 5
+Roll Again 0
+
+Mountains
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 25
+Level 3 Battle 30
+River Mini Game 0
+Cave Mini Game 25
+Decision 5
+Hazard 10
+Loot Chest 5
+Roll Again 0
+```
+
+Suggested Data Shape
+
+```js id="e5xpbp"
+const environmentEventTable = {
+  field: {
+    nothing: 55,
+    level1Battle: 15,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 15,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 5
+  }
+};
+```
+
+Weighted Selection Direction
+
+```js id="txrhvn"
+function selectEventForEnvironment(environment) {
+  const eventWeights = environmentEventTable[environment];
+
+  const availableEvents = Object.entries(eventWeights)
+    .filter(([, weight]) => weight > 0)
+    .map(([eventType, weight]) => ({ eventType, weight }));
+
+  const totalWeight = availableEvents.reduce(
+    (total, event) => total + event.weight,
+    0
+  );
+
+  const roll = Math.random() * totalWeight;
+
+  let runningTotal = 0;
+
+  for (const event of availableEvents) {
+    runningTotal += event.weight;
+
+    if (roll < runningTotal) {
+      return event.eventType;
+    }
+  }
+
+  return availableEvents[availableEvents.length - 1].eventType;
+}
+```
+
+Environment Passing Requirement
+
+* The landed environment should be passed to the selected event whenever it is needed.
+* Examples:
+
+  * Battle should use the landed environment to choose the correct battle background.
+  * Hazard should use the landed environment to choose both hazard weighting and background.
+  * Nothing should use the landed environment to choose text and background.
+  * River Mini Game should know the player landed on Stream or River if that matters for background.
+  * Cave Mini Game should know the player landed on Hills or Mountains if that matters for background.
+  * Loot Chest can use the board/gameplay background unless a specific environment background is preferred later.
+
+Suggested event payload:
+
+```js id="oydzzt"
+triggerBoardEvent({
+  eventType,
+  environment,
+  playerId: currentPlayer.id,
+  source: "boardLanding"
+});
+```
+
+Battle Event Requirement
+
+* Level 1 Battle:
+
+  * choose a random level 1 enemy.
+  * use the landed environment battle background.
+* Level 2 Battle:
+
+  * choose a random level 2 enemy.
+  * use the landed environment battle background.
+* Level 3 Battle:
+
+  * choose a random level 3 enemy.
+  * use the landed environment battle background.
+* Existing battle win/loss reward sequences should remain unchanged.
+
+Hazard Event Requirement
+
+* Trigger the hazard system from Feature-001.
+* Use the landed environment as the hazard environment.
+* Hazard selection should use the hazard chance table for that environment.
+* Hazard background should use the landed environment background.
+
+Nothing Event Requirement
+
+* Trigger the Nothing event from Feature-006.
+* Only trigger Nothing in environments where the event table gives Nothing a non-zero chance.
+* Use the landed environment text and background.
+
+Roll Again Event Requirement
+
+* Trigger the Roll Again event from Feature-007.
+* Do not advance the turn.
+* Same player rolls again.
+* Do not reset board potion use.
+
+Loot Chest Event Requirement
+
+* When the Loot Chest event is triggered, first show a modal over the board.
+
+Modal text:
+
+English:
+
+```txt id="sw7r9y"
+You found a Loot Chest!
+```
+
+Japanese:
+
+```txt id="jbxv25"
+戦利品の宝箱を見つけました！
+```
+
+Button text:
+
+English:
+
+```txt id="ukawvu"
+Open Chest
+```
+
+Japanese:
+
+```txt id="0437ym"
+宝箱を開ける
+```
+
+* Clicking Open Chest should start the existing Loot Chest sequence.
+* When the Loot Chest sequence has fully completed:
+
+  * return to the board.
+  * advance to the next player.
+  * show the next-turn modal first.
+
+Loot Chest Modal Requirement
+
+* The text should be:
+
+  * `larger-text`.
+  * centred.
+  * yellow.
+  * correct English/Japanese font.
+* The button should be below the text.
+* Use the usual modal component.
+* Do not use `ul` or `li`.
+
+Decision Event Requirement
+
+* Trigger the existing Decision page flow.
+* When the Decision sequence has completed, return to the board and advance to the next player as already specified in EPIC-015.
+
+River Mini Game Requirement
+
+* Trigger the existing River Mini Game flow.
+* On completion, use the already implemented River success/failure turn flow.
+
+Cave Mini Game Requirement
+
+* Trigger the existing Cave Mini Game flow.
+* On completion, use the already implemented Cave success/failure turn flow.
+
+Feature Square Exclusion Requirement
+
+* This feature applies to normal environment square landings.
+* Feature landings such as villages, Elite Towers, and Boss Battle should continue to use their feature-specific logic.
+* Do not run this random environment event table after a player lands on a village, Elite Tower, or Boss Battle.
+
+Turn Flow Requirement
+
+* Most events end the player’s turn after they resolve:
+
+  * Nothing
+  * Battle
+  * River Mini Game
+  * Cave Mini Game
+  * Decision
+  * Hazard
+  * Loot Chest
+* Roll Again is the exception:
+
+  * it keeps the same player’s turn active.
+  * it lets the same player roll again.
+
+Out Of Scope
+
+* No changes to feature-square logic.
+* No changes to Elite Tower or Boss Battle logic.
+* No changes to village logic.
+* No new event types beyond the listed table.
+* No balancing changes to the percentages.
+* No new animations.
+* No automatic event selection for debug-only modes when choose event mode is active; Feature-009 handles that.
+
+Testing Checkpoints
+
+* Land on Field repeatedly.
+* Confirm event selection follows Field probabilities.
+* Confirm Field can trigger Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, and Roll Again.
+* Confirm Field cannot trigger River Mini Game, Cave Mini Game, Level 2 Battle, or Level 3 Battle.
+* Land on River repeatedly.
+* Confirm River mostly triggers River Mini Game.
+* Confirm River cannot trigger Nothing or Roll Again.
+* Land on Woods repeatedly.
+* Confirm Woods can trigger Level 1 Battle and Level 2 Battle.
+* Confirm Woods cannot trigger Nothing or Roll Again.
+* Land on Mountains repeatedly.
+* Confirm Mountains can trigger Level 2 Battle, Level 3 Battle, Cave Mini Game, Decision, Hazard, and Loot Chest.
+* Confirm each selected event receives the landed environment.
+* Trigger Level 1 Battle from Field.
+* Confirm the Field battle background is used.
+* Trigger Hazard from Mud.
+* Confirm Mud hazard weighting/background are used.
+* Trigger Nothing from Stream.
+* Confirm the Stream Nothing text/background are used.
+* Trigger Loot Chest.
+* Confirm the `You found a Loot Chest!` modal appears.
+* Confirm the button says `Open Chest` / `宝箱を開ける`.
+* Complete the Loot Chest.
+* Confirm the game returns to board and advances turn.
+* Trigger Roll Again.
+* Confirm turn does not advance.
+* Confirm the same player rolls again.
+* Land on a village.
+* Confirm the random event table is not used.
+* Land on an Elite Tower.
+* Confirm the random event table is not used.
+* Land on Boss Battle.
+* Confirm the random event table is not used.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added the exact nine-row environment event table and weighted selector, preserving every required percentage and excluding zero-weight outcomes.
+* Normal environment landings now pass the selected event type, landed environment, player, and `boardLanding` source into one App-owned event dispatcher.
+* Existing village, Elite Tower, and Boss Battle landing paths still resolve before random environment events and remain excluded from the table.
+* Battle events select an enemy at the required level and use the landed environment background, including the existing `field` to `fields` background mapping.
+* Nothing, Hazard, Decision, River, and Cave events reuse their existing flows and receive the landed environment where their current contracts support it.
+* Roll Again reuses the existing same-turn state without advancing the turn or resetting board potion usage.
+* Added the localized Loot Chest found modal over Gameplay using the shared Modal and Button, required language classes, centred yellow `larger-text`, and no list markup.
+* Opening a board Loot Chest starts the existing sequence with a locked `nextPlayerTurn` return behavior so direct and assigned rewards return to Gameplay with the next-turn modal.
+* Added focused table, boundary, routing, environment propagation, modal, landing, Loot Chest return, and feature-square regression tests.
+* Dedicated Feature-008 tests pass 26/26, feature-square regressions pass 8/8, the new Gameplay landing test passes, scoped production/test ESLint passes, `npm run build` passes, and `git diff --check` passes.
+* The full Gameplay suite retains six unrelated baseline failures for existing spell-warning copy, dice-result copy, and image-style assertions; the Feature-008 landing test passes within that run.
+
+---
+
+Feature-009: Add choose event mode to debug menu
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-008: Trigger board events based on landed environment
+* EPIC-004 Feature-005: Board movement and dice movement
+
+Goal
+
+* Add a debug mode that lets the developer manually choose which event triggers after landing on a square.
+* This makes it easier to test specific event flows without relying on probability.
+* When enabled, landing on a normal environment square should show an event selection modal instead of randomly choosing from the event probability table.
+
+Debug Menu Requirement
+
+* Add a new button under the existing Enable Anywhere Mode button.
+
+Button text when disabled:
+
+English:
+
+```txt id="ns5cg3"
+Enable choose event mode
+```
+
+Japanese:
+
+```txt id="m0hbb5"
+イベント選択モードを有効にする
+```
+
+Button text when enabled:
+
+English:
+
+```txt id="1tcoc1"
+Disable choose event mode
+```
+
+Japanese:
+
+```txt id="4l5dgy"
+イベント選択モードを無効にする
+```
+
+* This mode should be independent from Anywhere Mode.
+* Anywhere Mode controls movement freedom.
+* Choose Event Mode controls event selection after landing.
+
+Choose Event Mode Behaviour
+
+* When Choose Event Mode is enabled:
+
+  * player lands on a normal environment square.
+  * do not randomly choose an event.
+  * show a modal listing all events available for that environment.
+  * each event name should be a button.
+  * clicking an event button manually triggers that event for that environment.
+
+Available Event Requirement
+
+* The modal should only show events with a non-zero chance for the landed environment.
+* Example:
+
+  * Field should show Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, Roll Again.
+  * River should show River Mini Game, Hazard, Loot Chest.
+  * Woods should show Level 1 Battle, Level 2 Battle, Decision, Hazard, Loot Chest.
+* Do not show events with `0` chance.
+
+Event Button Names
+
+Use these labels:
+
+```txt id="cbx5hu"
+Nothing
+Level 1 Battle
+Level 2 Battle
+Level 3 Battle
+River Mini Game
+Cave Mini Game
+Decision
+Hazard
+Loot Chest
+Roll Again
+```
+
+Japanese labels:
+
+```txt id="pa6523"
+何も起こらない
+レベル1バトル
+レベル2バトル
+レベル3バトル
+川のミニゲーム
+洞窟のミニゲーム
+決断
+ハザード
+戦利品の宝箱
+もう一度サイコロ
+```
+
+Modal Requirement
+
+* The modal should appear over the board.
+* Use the usual modal component.
+* The title should say:
+
+English:
+
+```txt id="ub6gsp"
+Choose Event
+```
+
+Japanese:
+
+```txt id="d0htq9"
+イベントを選択
+```
+
+* The title should use `larger-text`.
+* Event buttons should be displayed clearly.
+* Do not use `ul` or `li`.
+* Use `div` with flex or grid.
+
+Suggested Modal Structure
+
+```jsx id="po4evo"
+<div className="modal-background choose-event-modal">
+  <p className={`larger-text choose-event-title ${languageClass}`}>
+    {chooseEventTitle}
+  </p>
+
+  <div className="choose-event-button-grid">
+    {availableEvents.map((eventType) => (
+      <button
+        key={eventType}
+        className={`modal-button choose-event-button ${languageClass}`}
+        onClick={() => triggerChosenEvent(eventType)}
+      >
+        {getEventLabel(eventType, language)}
+      </button>
+    ))}
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="jsxaye"
+.choose-event-button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+```
+
+Manual Trigger Requirement
+
+* When an event button is clicked:
+
+  * close the Choose Event modal.
+  * trigger the selected event.
+  * pass the landed environment to the selected event.
+  * follow the same event flow as Feature-008.
+
+Example:
+
+```js id="nvmkdc"
+triggerBoardEvent({
+  eventType: selectedEventType,
+  environment: landedEnvironment,
+  playerId: currentPlayer.id,
+  source: "chooseEventMode"
+});
+```
+
+Feature Square Exclusion Requirement
+
+* Choose Event Mode applies to normal environment squares only.
+
+* It should not override:
+
+  * Field Village
+  * Forest Village
+  * Elite Tower Gravel
+  * Elite Tower Woods
+  * Boss Battle
+
+* Those feature squares should continue using their feature-specific logic.
+
+Roll Again Interaction
+
+* If the player chooses Roll Again:
+
+  * the Roll Again event should behave exactly as Feature-007.
+  * the same player rolls again.
+* If Choose Event Mode is still enabled and the player lands again:
+
+  * show the Choose Event modal again for the new landed environment.
+
+Mode Persistence Requirement
+
+* Choose Event Mode should remain enabled until manually disabled.
+* It should not automatically turn off after one chosen event.
+* It can reset when the app/game is restarted if that is how other debug modes behave.
+
+Expected Behaviour
+
+* Enable Choose Event Mode from the debug menu.
+* Land on a normal environment square.
+* The game does not randomly select an event.
+* A Choose Event modal appears.
+* The modal lists only events with non-zero chance for that environment.
+* Clicking an event triggers that event using the landed environment.
+* The selected event resolves exactly as it would if randomly selected.
+* Disable Choose Event Mode.
+* Land on a normal environment square.
+* The game returns to normal weighted random event selection.
+
+Out Of Scope
+
+* No changes to event probabilities.
+* No new events.
+* No changes to Anywhere Mode movement logic.
+* No changes to feature-square encounters.
+* No probability display required.
+* No persistent storage requirement for debug mode.
+* No keyboard shortcut requirement.
+
+Testing Checkpoints
+
+* Open the debug menu.
+* Confirm `Enable choose event mode` appears under Enable Anywhere Mode.
+* Enable Choose Event Mode.
+* Land on Field.
+* Confirm a Choose Event modal appears.
+* Confirm Field only shows Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, and Roll Again.
+* Click Level 1 Battle.
+* Confirm a Level 1 Battle starts with the Field environment background.
+* Enable Choose Event Mode and land on River.
+* Confirm River only shows River Mini Game, Hazard, and Loot Chest.
+* Click Hazard.
+* Confirm a River hazard triggers.
+* Enable Choose Event Mode and land on Mountains.
+* Confirm Mountains shows Level 2 Battle, Level 3 Battle, Cave Mini Game, Decision, Hazard, and Loot Chest.
+* Click Roll Again on an environment that supports it.
+* Confirm Roll Again behaves correctly.
+* Confirm Choose Event Mode stays enabled after one event.
+* Disable Choose Event Mode.
+* Land on a normal environment square.
+* Confirm random weighted event selection resumes.
+* Land on a village with Choose Event Mode enabled.
+* Confirm the village flow still happens instead of Choose Event modal.
+* Land on an Elite Tower with Choose Event Mode enabled.
+* Confirm the Elite Tower battle still happens instead of Choose Event modal.
+* Land on Boss Battle with Choose Event Mode enabled.
+* Confirm Boss Battle logic still happens instead of Choose Event modal.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added one App-owned `isChooseEventModeEnabled` boolean that is independent from player-scoped Anywhere Mode and persists through event routes until its debug action disables it.
+* Added the exact localized Enable/Disable choose event mode action directly beneath the existing Enable Anywhere Mode button.
+* Normal environment landings now store only the landed `environment` and `playerId` in Gameplay while Choose Event Mode is enabled, without running weighted random selection.
+* Added a feature-local Choose Event modal that reuses the Feature-008 non-zero event list, shared Modal and Button components, exact English/Japanese title and event labels, language classes, `larger-text`, a two-column button grid, and no list markup.
+* Selecting an event closes the modal and delegates the existing Feature-008 payload with `source: 'chooseEventMode'`, preserving all existing Battle, mini-game, Decision, Hazard, Loot Chest, Nothing, and Roll Again flows.
+* The existing random Feature-008 path remains unchanged when Choose Event Mode is disabled.
+* Village, Elite Tower, and Boss Battle resolution still runs before Choose Event Mode and remains excluded.
+* A manually selected Roll Again preserves the mode and shows Choose Event again after the same player rerolls and lands.
+* The focused modal, debug, App persistence, and feature-square run passes 47/47 tests; both new Gameplay behavior tests pass within the full Gameplay run.
+* Scoped production and dedicated-test ESLint passes, `npm run build` passes, and `git diff --check` passes.
+* The full Gameplay suite retains its six unrelated baseline failures and its test file retains 13 pre-existing direct-DOM lint findings; neither set includes the Feature-009 additions.

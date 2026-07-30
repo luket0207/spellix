@@ -256,6 +256,100 @@ test('debug Hazards selects by environment, applies delayed health, and advances
   expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
 });
 
+test('debug Nothing Event uses the selected environment and advances through the next-turn modal', () => {
+  renderApp('/gameplay');
+
+  fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+
+  expect(
+    screen.getByRole('heading', { name: 'Nothing Event' })
+  ).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Environment'), {
+    target: { value: 'stream' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Trigger Nothing Event' })
+  );
+
+  const nothingDialog = screen.getByRole('dialog', {
+    name: 'Nothing Event',
+  });
+
+  expect(screen.getByTestId('nothing-event-page')).toHaveStyle({
+    backgroundImage: 'url(stream.png)',
+  });
+  expect(
+    within(nothingDialog).getByText('You sit by the stream for a while')
+  ).toHaveClass('larger-text', 'language-en');
+  expect(within(nothingDialog).queryByRole('list')).not.toBeInTheDocument();
+  expect(within(nothingDialog).queryByRole('listitem')).not.toBeInTheDocument();
+
+  fireEvent.click(
+    within(nothingDialog).getByRole('button', { name: 'Continue' })
+  );
+
+  expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
+});
+
+test('debug Roll Again keeps the same turn and permits only the required reroll', () => {
+  const gameSetup = createGameplayReadySetup();
+  gameSetup.players[0].potions = [
+    POTION_DEFINITIONS.find(({ id }) => id === 'small-heal'),
+  ];
+
+  renderApp('/gameplay', gameSetup);
+
+  fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Trigger Roll Again Event' })
+  );
+
+  const rollAgainDialog = screen.getByRole('dialog', {
+    name: 'Roll Again Event',
+  });
+
+  expect(screen.getByLabelText('Game board')).toBeInTheDocument();
+  expect(
+    within(rollAgainDialog).getByText(
+      'You still have energy, roll again to continue onward'
+    )
+  ).toHaveClass('larger-text', 'language-en');
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+
+  fireEvent.click(
+    within(rollAgainDialog).getByRole('button', { name: 'Continue' })
+  );
+
+  expect(
+    screen.queryByRole('dialog', { name: 'Roll Again Event' })
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('dialog', { name: /turn change/i })
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /^spells$/i })).toBeDisabled();
+  expect(
+    within(screen.getByRole('region', { name: 'Potions' })).getByRole(
+      'button',
+      { name: 'Use' }
+    )
+  ).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Trigger Roll Again Event' })
+  );
+
+  expect(
+    screen.getByRole('dialog', { name: 'Roll Again Event' })
+  ).toBeInTheDocument();
+});
+
 test('Cave retreat without roll again advances through the next-turn modal', () => {
   jest.useFakeTimers();
   jest.spyOn(Math, 'random').mockReturnValue(0.5);

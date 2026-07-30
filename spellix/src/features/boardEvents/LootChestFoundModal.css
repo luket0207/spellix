@@ -1,0 +1,18 @@
+.loot-chest-found-modal .modal-body {
+  display: flex;
+}
+
+.loot-chest-found-modal-content {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.loot-chest-found-message {
+  color: #F5FA00;
+  margin: 0;
+  text-align: center;
+}
