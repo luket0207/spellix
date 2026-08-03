@@ -23,6 +23,18 @@ describe('battle enemy data', () => {
     expect(selectRandomEnemyForLevel(9, () => 0)).toBeNull();
   });
 
+  test.each([
+    [1, 20],
+    [2, 30],
+    [3, 50],
+    [4, 100],
+  ])('gives every level %i enemy %i starting health', (level, health) => {
+    getEnemiesForLevel(level).forEach((enemy) => {
+      expect(enemy.maxHealth).toBe(health);
+      expect(enemy.currentHealth).toBe(health);
+    });
+  });
+
   test('stores joined enemy spell columns as effective merged columns without placeholders', () => {
     const crownedLichlord = getEnemyById('crowned-lichlord');
     const hellcrownReaper = getEnemyById('hellcrown-reaper');

@@ -7,13 +7,13 @@ import {
 } from './environmentEvents';
 
 const EXPECTED_EVENT_TABLE = {
-  field: [55, 15, 0, 0, 0, 0, 15, 5, 5, 5],
-  hills: [35, 20, 0, 0, 0, 15, 15, 5, 5, 5],
+  field: [30, 35, 0, 0, 0, 0, 15, 5, 5, 10],
+  hills: [25, 35, 0, 0, 0, 15, 10, 5, 5, 5],
   gravel: [25, 30, 5, 0, 0, 0, 15, 15, 5, 5],
   mud: [25, 30, 5, 0, 0, 0, 15, 15, 5, 5],
-  stream: [20, 0, 0, 0, 60, 0, 0, 10, 5, 5],
+  stream: [15, 10, 0, 0, 60, 0, 0, 10, 5, 0],
   river: [0, 0, 0, 0, 90, 0, 0, 5, 5, 0],
-  woods: [0, 40, 40, 0, 0, 0, 5, 10, 5, 0],
+  woods: [0, 45, 40, 0, 0, 0, 5, 5, 5, 0],
   forest: [0, 0, 40, 40, 0, 0, 5, 10, 5, 0],
   mountains: [0, 0, 25, 30, 0, 25, 5, 10, 5, 0],
 };
@@ -39,6 +39,7 @@ test('stores every event row with the exact required percentages', () => {
 
 test.each([
   ['field', ['nothing', 'level1Battle', 'decision', 'hazard', 'lootChest', 'rollAgain']],
+  ['stream', ['nothing', 'level1Battle', 'riverMiniGame', 'hazard', 'lootChest']],
   ['river', ['riverMiniGame', 'hazard', 'lootChest']],
   ['woods', ['level1Battle', 'level2Battle', 'decision', 'hazard', 'lootChest']],
   ['mountains', ['level2Battle', 'level3Battle', 'caveMiniGame', 'decision', 'hazard', 'lootChest']],
@@ -50,12 +51,13 @@ test.each([
 
 test('selects events at exact weighted boundaries', () => {
   expect(selectEventForEnvironment('field', () => 0)).toBe('nothing');
-  expect(selectEventForEnvironment('field', () => 0.54999)).toBe('nothing');
-  expect(selectEventForEnvironment('field', () => 0.55)).toBe('level1Battle');
-  expect(selectEventForEnvironment('field', () => 0.7)).toBe('decision');
-  expect(selectEventForEnvironment('field', () => 0.85)).toBe('hazard');
-  expect(selectEventForEnvironment('field', () => 0.9)).toBe('lootChest');
-  expect(selectEventForEnvironment('field', () => 0.95)).toBe('rollAgain');
+  expect(selectEventForEnvironment('field', () => 0.29999)).toBe('nothing');
+  expect(selectEventForEnvironment('field', () => 0.3)).toBe('level1Battle');
+  expect(selectEventForEnvironment('field', () => 0.64999)).toBe('level1Battle');
+  expect(selectEventForEnvironment('field', () => 0.65)).toBe('decision');
+  expect(selectEventForEnvironment('field', () => 0.8)).toBe('hazard');
+  expect(selectEventForEnvironment('field', () => 0.85)).toBe('lootChest');
+  expect(selectEventForEnvironment('field', () => 0.9)).toBe('rollAgain');
 });
 
 test('handles unsupported environments and battle field naming', () => {

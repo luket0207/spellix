@@ -14,8 +14,8 @@ describe('DeathResult', () => {
       />
     );
 
-    expect(screen.getAllByText('A Green token was removed from column 2.')).toHaveLength(2);
-    expect(screen.getByText('A Light Blue token was removed from column 5.')).toBeInTheDocument();
+    expect(screen.getAllByText('A Weaken token was removed from column 2.')).toHaveLength(2);
+    expect(screen.getByText('A Freeze token was removed from column 5.')).toBeInTheDocument();
     const removedTokens = screen.getByLabelText('Removed tokens');
 
     expect(removedTokens.tagName).toBe('DIV');

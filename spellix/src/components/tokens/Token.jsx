@@ -1,5 +1,9 @@
 import { useId } from 'react';
-import { getTokenDescription, getTokenName } from '../../data/tokens';
+import {
+  getTokenDescription,
+  getTokenName,
+  TOKEN_DEFINITIONS,
+} from '../../data/tokens';
 import './token.css';
 
 function Token({
@@ -20,14 +24,20 @@ function Token({
   const description = getTokenDescription(tokenType, normalizedLanguage);
   const tooltipDescription = showTooltip ? description : '';
   const name = getTokenName(tokenType, normalizedLanguage);
+  const tooltipText = showTooltip ? [name, description].filter(Boolean).join('\n') : '';
   const hasCount = typeof count === 'number' && count > 1;
+  const tokenDefinition = TOKEN_DEFINITIONS[tokenType];
+  const displayColour = tokenDefinition?.baseColour ?? tokenType;
+  const hasYellowOutline = tokenDefinition?.outlineColour === 'yellow';
 
   return (
     <span className="token-display-wrapper">
       <span
         aria-describedby={tooltipDescription ? descriptionId : undefined}
         aria-label={ariaLabel}
-        className={`token-display token-display--glow token-display--${tokenType}${
+        className={`token-display token-display--glow token-display--${displayColour}${
+          hasYellowOutline ? ' token-display--yellow-outline' : ''
+        }${
           committed ? ' token-display--committed' : ''
         }${
           faded ? ' token-display--faded' : ''
@@ -35,7 +45,7 @@ function Token({
         role="img"
         style={faded ? { opacity: 0.5 } : undefined}
         tabIndex={tooltipDescription && focusable ? 0 : undefined}
-        title={tooltipDescription || undefined}
+        title={tooltipText || undefined}
       >
         {hasCount ? <span className="token-display-count">{count}</span> : null}
       </span>

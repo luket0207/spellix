@@ -8,6 +8,10 @@ const RED_DAMAGE_PER_TOKEN = 10;
 const BLUE_GUARD_PER_TOKEN = 5;
 const ORANGE_COUNTER_DAMAGE_PER_TOKEN = 5;
 const GREEN_REDUCTION_PER_TOKEN = 5;
+const OUTLINED_RED_DAMAGE_PER_TOKEN = 20;
+const OUTLINED_BLUE_GUARD_PER_TOKEN = 10;
+const OUTLINED_ORANGE_COUNTER_DAMAGE_PER_TOKEN = 10;
+const OUTLINED_GREEN_REDUCTION_PER_TOKEN = 10;
 const PURPLE_BUFF_PER_TOKEN = 5;
 const YELLOW_CHARGE_BUFF = 10;
 
@@ -71,36 +75,81 @@ export function calculateBattleTurn({
     opponentGreen: countTokens(opponentTokens, 'green'),
     opponentOrange: countTokens(opponentTokens, 'orange'),
   };
+  const actorOutlinedBlue = countTokens(actorTokens, 'blue-yellow-outline');
+  const actorOutlinedRed = countTokens(actorTokens, 'red-yellow-outline');
+  const opponentOutlinedGreen = countTokens(
+    opponentTokens,
+    'green-yellow-outline'
+  );
+  const opponentOutlinedOrange = countTokens(
+    opponentTokens,
+    'orange-yellow-outline'
+  );
   const yellowBuff = yellowCharged ? YELLOW_CHARGE_BUFF : 0;
-  const redBuff = tokenCounts.actorRed > 0 ? purpleBuff + yellowBuff : 0;
-  const blueBuff = tokenCounts.actorBlue > 0 ? purpleBuff + yellowBuff : 0;
+  const redBuff =
+    tokenCounts.actorRed + actorOutlinedRed > 0 ? purpleBuff + yellowBuff : 0;
+  const blueBuff =
+    tokenCounts.actorBlue + actorOutlinedBlue > 0 ? purpleBuff + yellowBuff : 0;
   const purpleBuffGranted = tokenCounts.actorPurple * PURPLE_BUFF_PER_TOKEN;
   const chargeApplied = chargeAvailable && tokenCounts.actorYellow > 0;
-  const rawRedDamage = tokenCounts.actorRed * RED_DAMAGE_PER_TOKEN + redBuff;
-  const availableGreenReduction = tokenCounts.opponentGreen * GREEN_REDUCTION_PER_TOKEN;
+  const rawRedDamage =
+    tokenCounts.actorRed * RED_DAMAGE_PER_TOKEN +
+    actorOutlinedRed * OUTLINED_RED_DAMAGE_PER_TOKEN +
+    redBuff;
+  const availableGreenReduction =
+    tokenCounts.opponentGreen * GREEN_REDUCTION_PER_TOKEN +
+    opponentOutlinedGreen * OUTLINED_GREEN_REDUCTION_PER_TOKEN;
   const greenReduction = Math.min(rawRedDamage, availableGreenReduction);
   const damageAfterGreen = rawRedDamage - greenReduction;
   const guardReduction = Math.min(damageAfterGreen, opponent.guard ?? 0);
   const outgoingDamage = damageAfterGreen - guardReduction;
-  const guardGranted = tokenCounts.actorBlue * BLUE_GUARD_PER_TOKEN + blueBuff;
-  const counterDamage = tokenCounts.opponentOrange * ORANGE_COUNTER_DAMAGE_PER_TOKEN;
+  const guardGranted =
+    tokenCounts.actorBlue * BLUE_GUARD_PER_TOKEN +
+    actorOutlinedBlue * OUTLINED_BLUE_GUARD_PER_TOKEN +
+    blueBuff;
+  const availableCounterDamage =
+    tokenCounts.opponentOrange * ORANGE_COUNTER_DAMAGE_PER_TOKEN +
+    opponentOutlinedOrange * OUTLINED_ORANGE_COUNTER_DAMAGE_PER_TOKEN;
   const freezeApplied = freezeAvailable && tokenCounts.actorLightBlue > 0;
   const effects = [];
 
+  if (guardGranted > 0) {
+    effects.push({ amount: guardGranted, source: 'currentActor', target: 'currentActor', type: 'blueGuard' });
+  }
+
   if (rawRedDamage > 0) {
-    effects.push({ amount: outgoingDamage, source: 'currentActor', target: 'opponent', type: 'redDamage' });
+    effects.push({
+      amount: outgoingDamage,
+      ...(guardReduction > 0 ? { guardReduction } : {}),
+      source: 'currentActor',
+      target: 'opponent',
+      type: 'redDamage',
+    });
   }
 
   if (greenReduction > 0) {
     effects.push({ amount: greenReduction, source: 'opponent', target: 'opponent', type: 'greenReduction' });
   }
 
-  if (guardGranted > 0) {
-    effects.push({ amount: guardGranted, source: 'currentActor', target: 'currentActor', type: 'blueGuard' });
-  }
+  const attemptedToAffectOpponent =
+    freezeApplied ||
+    effects.some(
+      ({ source, target }) =>
+        source === 'currentActor' && target === 'opponent'
+    );
+  const counterDamage = attemptedToAffectOpponent ? availableCounterDamage : 0;
+  const guardAfterGrant = (currentActor.guard ?? 0) + guardGranted;
+  const counterGuardReduction = Math.min(counterDamage, guardAfterGrant);
+  const counterHealthDamage = counterDamage - counterGuardReduction;
 
   if (counterDamage > 0) {
-    effects.push({ amount: counterDamage, source: 'opponent', target: 'currentActor', type: 'orangeCounter' });
+    effects.push({
+      amount: counterHealthDamage,
+      guardReduction: counterGuardReduction,
+      source: 'opponent',
+      target: 'currentActor',
+      type: 'orangeCounter',
+    });
   }
 
   return {
@@ -116,18 +165,21 @@ export function calculateBattleTurn({
     effects,
     freezeApplied,
     isMiss:
-      tokenCounts.actorRed === 0 &&
-      tokenCounts.actorBlue === 0 &&
+      tokenCounts.actorRed + actorOutlinedRed === 0 &&
+      tokenCounts.actorBlue + actorOutlinedBlue === 0 &&
       !freezeApplied &&
       purpleBuffGranted === 0 &&
       !chargeApplied,
     nextCurrentActor: {
-      currentHealth: Math.max(0, currentActor.currentHealth - counterDamage),
-      guard: (currentActor.guard ?? 0) + guardGranted,
+      currentHealth: Math.max(
+        0,
+        currentActor.currentHealth - counterHealthDamage
+      ),
+      guard: guardAfterGrant - counterGuardReduction,
     },
     nextOpponent: {
       currentHealth: Math.max(0, opponent.currentHealth - outgoingDamage),
-      guard: 0,
+      guard: Math.max(0, (opponent.guard ?? 0) - guardReduction),
     },
     purpleBuffGranted,
     tokenCounts,

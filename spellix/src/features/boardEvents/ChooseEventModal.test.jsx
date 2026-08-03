@@ -14,6 +14,16 @@ test.each([
       'Roll Again',
     ],
   ],
+  [
+    'stream',
+    [
+      'Nothing',
+      'Level 1 Battle',
+      'River Mini Game',
+      'Hazard',
+      'Loot Chest',
+    ],
+  ],
   ['river', ['River Mini Game', 'Hazard', 'Loot Chest']],
   [
     'woods',

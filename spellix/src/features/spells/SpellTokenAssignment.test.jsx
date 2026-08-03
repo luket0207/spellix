@@ -226,12 +226,12 @@ describe('SpellTokenAssignment', () => {
     expect(within(tokenBag).getByText('ダメージ')).toBeInTheDocument();
     expect(within(tokenBag).getByRole('img', { name: /red token/i })).toHaveAttribute(
       'title',
-      'ダメージ+10'
+      'ダメージ\nダメージ＋10'
     );
     expect(within(firstSpellSlot).queryByText('ガード')).not.toBeInTheDocument();
     expect(within(firstSpellSlot).getByRole('img', { name: /blue token/i })).toHaveAttribute(
       'title',
-      'ガード+5'
+      'ガード\nガード＋5'
     );
   });
 
@@ -268,7 +268,10 @@ describe('SpellTokenAssignment', () => {
     expect(moveableTokenButton).toHaveAccessibleDescription(/Plus 10 Damage/);
     expect(committedTokenButton).toBeDisabled();
     expect(moveableToken).toHaveClass('token-display--glow', 'token-display--red');
-    expect(moveableToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description.en);
+    expect(moveableToken).toHaveAttribute(
+      'title',
+      `${TOKEN_DEFINITIONS.red.name.en}\n${TOKEN_DEFINITIONS.red.description.en}`
+    );
     expect(moveableToken).not.toHaveAttribute('tabindex');
     expect(committedToken).toHaveClass(
       'token-display--committed',
@@ -523,7 +526,10 @@ describe('SpellTokenAssignment', () => {
     ).toHaveClass('reward-token-status');
     expect(within(assignment).getByRole('heading', { name: 'ゴミ箱' })).toBeInTheDocument();
     expect(within(screen.getByLabelText(/discard token drop zone/i)).getByText('ダメージ')).toBeInTheDocument();
-    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'ダメージ+10');
+    expect(screen.getByLabelText('red token')).toHaveAttribute(
+      'title',
+      'ダメージ\nダメージ＋10'
+    );
     expect(within(screen.getByLabelText(/spell slot 1/i)).queryByText('ガード')).not.toBeInTheDocument();
   });
 

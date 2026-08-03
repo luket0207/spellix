@@ -2,13 +2,6 @@ import Token from '../../components/tokens/Token';
 import { getTokenName } from '../../data/tokens';
 import './DeathResult.css';
 
-function formatTokenType(tokenType) {
-  return tokenType
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 function DeathResult({ language = 'en', removedTokens = [] }) {
   const currentLanguage = language === 'jp' ? 'jp' : 'en';
   const isJapanese = currentLanguage === 'jp';
@@ -36,7 +29,7 @@ function DeathResult({ language = 'en', removedTokens = [] }) {
           key={`${token.id}-${index}`}
         >
           <Token
-            ariaLabel={`${formatTokenType(token.type)} removed token`}
+            ariaLabel={`${getTokenName(token.type, currentLanguage)} removed token`}
             focusable={false}
             language={currentLanguage}
             showName={false}
@@ -46,7 +39,7 @@ function DeathResult({ language = 'en', removedTokens = [] }) {
           <div className={`death-result-token-text ${languageClassName}`}>
             {isJapanese
               ? `${getTokenName(token.type, currentLanguage)}トークンが列${columnNumber}から取り除かれました。`
-              : `A ${formatTokenType(token.type)} token was removed from column ${columnNumber}.`}
+              : `A ${getTokenName(token.type, currentLanguage)} token was removed from column ${columnNumber}.`}
           </div>
         </div>
       ))}

@@ -84,6 +84,7 @@ test('elite victory marks only the encounter player and keeps normal rewards', (
   renderProbe();
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Elite' }));
+  expect(screen.getByText('Enemy health: 100/100')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Win' }));
 
   expect(screen.getByText('Phase: reward')).toBeInTheDocument();
@@ -99,7 +100,8 @@ test('boss battle uses a local 150 health override and skips rewards on win', ()
   fireEvent.click(screen.getByRole('button', { name: 'Start Boss' }));
 
   expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
-  expect(baseBoss.maxHealth).toBe(120);
+  expect(baseBoss.maxHealth).toBe(100);
+  expect(baseBoss.currentHealth).toBe(100);
 
   fireEvent.click(screen.getByRole('button', { name: 'Win' }));
 

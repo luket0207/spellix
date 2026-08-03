@@ -1,5 +1,5 @@
 import { cloneTokenBag } from '../gameSetup/gameSetup';
-import { TOKEN_DEFINITIONS, TOKEN_TYPES } from '../../data/tokens';
+import { getTokenName, TOKEN_TYPES } from '../../data/tokens';
 
 export const DEBUG_TOKEN_TYPES = TOKEN_TYPES;
 
@@ -12,8 +12,8 @@ function getPlayerTokens(player) {
   ];
 }
 
-export function getDebugTokenTypeLabel(tokenType) {
-  return TOKEN_DEFINITIONS[tokenType]?.label ?? tokenType;
+export function getDebugTokenTypeLabel(tokenType, language) {
+  return getTokenName(tokenType, language) || tokenType;
 }
 
 export function createDebugToken(player, tokenType) {

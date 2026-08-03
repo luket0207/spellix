@@ -1,0 +1,418 @@
+Feature-001: Rebalance board landing event probabilities
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start Gameplay and land repeatedly on normal Field squares.
+   Expected: Only Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, and Roll Again occur; Level 1 Battle uses 35 points and Roll Again uses 10 points in the selection table.
+2. Land repeatedly on Hills.
+   Expected: Decision uses 10 points, all non-zero Hills events remain available, and zero-weight events never occur.
+3. Land repeatedly on Stream.
+   Expected: Level 1 Battle can occur, River Mini Game remains available, and Roll Again never occurs.
+4. Land repeatedly on Woods.
+   Expected: Level 1 Battle uses 45 points and Hazard uses 5 points.
+5. Enable Choose Event Mode and land on Stream.
+   Expected: The modal shows Nothing, Level 1 Battle, River Mini Game, Hazard, and Loot Chest, but not Roll Again.
+6. Use Choose Event Mode on the other environments.
+   Expected: Only events with non-zero values in the updated table are shown and the existing event flows remain unchanged.
+7. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `environmentEvents.test.js` verifies all nine exact rows total 100, the updated Field weighted boundaries, zero-weight exclusion, Stream's Level 1 Battle inclusion, and Stream's Roll Again exclusion.
+* `ChooseEventModal.test.jsx` verifies the updated Stream non-zero event buttons alongside the existing environment coverage.
+* Both focused suites pass all 19 tests.
+* Scoped ESLint passes for the environment event data, selector tests, Choose Event modal, and modal tests.
+* `npm run build` passes.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-001.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-002: Rebalance enemy health values
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a Level 1 Battle.
+   Expected: The selected enemy starts at `20 / 20` health.
+2. Start a Level 2 Battle.
+   Expected: The selected enemy starts at `30 / 30` health.
+3. Start a Level 3 Battle.
+   Expected: The selected enemy starts at `50 / 50` health.
+4. Start a normal level 4 or Elite Tower battle.
+   Expected: The selected enemy starts at `100 / 100` health.
+5. Start the Boss Battle.
+   Expected: The boss battle instance starts at `150 / 150`, while the selected enemy remains `100 / 100` in the base enemy data.
+6. Start battles against Crowned Lichlord and Hellcrown Reaper and roll each side of their joined columns.
+   Expected: Their joined columns resolve once for either joined number and no `J` placeholder appears.
+7. Compare enemy names, Japanese names, images, levels, spell columns, and rewards with their previous behavior.
+   Expected: Only enemy health values have changed.
+8. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `enemies.test.js` verifies all five enemies in each level band use exact `20`, `30`, `50`, or `100` matching current/max health and preserves joined-column data.
+* `GameSetupContext.test.jsx` verifies a real normal Level 2 battle starts at `30 / 30` and all joined-column battle-state regressions still pass.
+* `EliteBossGameSetupContext.test.jsx` verifies an Elite starts at `100 / 100`, a Boss starts at `150 / 150`, and the base Boss enemy remains `100 / 100`.
+* `AppSettingsButton.test.jsx` verifies real debug Level 3 and selected level 4 battles display `50 / 50` and `100 / 100` respectively.
+* The four suites pass all 47 tests.
+* Scoped ESLint passes for the changed enemy data and focused test files.
+* `npm run build` passes.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-002.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+Feature-003: Add rare yellow-outline double-strength tokens
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Obtain each Red/Yellow Outline, Blue/Yellow Outline, Orange/Yellow Outline, and Green/Yellow Outline token through a Rare or Any token reward.
+   Expected: Each appears with its common counterpart's fill, a `2px` yellow outline, and the correct localized name and tooltip; Common-only rewards never select one.
+2. Assign each outlined token from the token bag to a spell column.
+   Expected: Each assignment uses one token slot and follows the existing token assignment flow.
+3. Roll a column containing Red/Yellow Outline and Blue/Yellow Outline.
+   Expected: Red deals `20` raw damage, Blue grants `10` guard, and the existing red and blue animations play.
+4. Roll against an opponent column containing Orange/Yellow Outline and Green/Yellow Outline.
+   Expected: Orange produces `10` counter damage, Green produces up to `10` weakness reduction, and the existing orange and green animations play.
+5. Use Copy and Paste on an outlined token and open Buy and Sell repeatedly.
+   Expected: Copy and Paste preserves the outlined token type, and Buy and Sell can offer all four outlined types.
+6. Switch between English and Japanese while viewing an outlined token.
+   Expected: The existing English and Japanese font classes apply and descriptions remain correct.
+7. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `tokens.test.js` verifies all four exact definitions, Rare classification, localized text, base colours, and yellow-outline metadata.
+* `Token.test.jsx` verifies shared common fill classes, the yellow-outline class and exact border rule, tooltips, and English/Japanese font classes.
+* `battleTurn.test.js` verifies exact doubled values and reuse of the existing red, blue, orange, and green animation effect types.
+* `spellSetup.test.js` verifies an outlined token is assigned as one token of column capacity.
+* `copyPaste.test.js` and `buyAndSell.test.js` verify duplication and availability in the complete Buy and Sell pool.
+* `rewardItems.test.js`, `DecisionPage.test.jsx`, and `caveMiniGame.test.js` verify Rare inclusion, Common exclusion, Any-token selection, and cave Rare selection.
+* The nine focused suites pass all 157 tests.
+* Scoped ESLint passes for all Feature-003 source and test files.
+* `npm run build` passes.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-003.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Roll a column containing only Blue while the opponent's matching column contains Orange.
+   Expected: Blue grants Guard, no counter damage or orange animation occurs, and the turn advances normally.
+2. Repeat with only Purple, only an available Yellow charge, and an empty or no-effect column.
+   Expected: Self-only effects and misses do not trigger a counter.
+3. Roll a Red column against a matching Orange column.
+   Expected: Red targets the opponent and the counter triggers after the actor's effects, even if opponent weakness or Guard blocks the Red health damage.
+4. Roll an available Light Blue Freeze against a matching Orange column.
+   Expected: Freeze targets the opponent and triggers the counter; an exhausted Freeze does not.
+5. Roll one Red and one Blue against two matching Orange tokens.
+   Expected: Red deals `10` damage, Blue grants `5` Guard, the counter totals `10`, Guard absorbs `5`, and only `5` actor health is lost.
+6. Repeat with Orange/Yellow Outline and existing actor Guard.
+   Expected: The outlined counter totals `10`, existing plus same-roll Guard absorbs it first, and only the remainder reaches health.
+7. Roll both numbers of merged actor and joined opponent columns.
+   Expected: Each number resolves the retained effective column once and finds the correct counter tokens.
+8. Watch the effect order and browser console.
+   Expected: Blue Guard resolves before Red/Freeze when present, Orange animates last only when triggered, and no runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `battleTurn.test.js` verifies guard-only, Purple-only, Yellow-only, miss, Red, blocked Red, Freeze, existing Guard, same-roll Guard, outlined Orange, stacking, and both actor/opponent effective-column cases.
+* `GameSetupContext.test.jsx` passes its full suite, confirming the updated guard and queued-effect state remains compatible with battle context resolution.
+* Three focused `BattlePage.test.jsx` tests verify no orange animation for guard-only turns, Red/Blue/Orange animation order with partial Guard absorption, and lethal attack-triggered counters.
+* The resolver and GameSetup suites pass all 76 tests; the focused BattlePage run passes all 3 selected tests.
+* Scoped ESLint passes for `battleTurn.js` and `battleTurn.test.js`.
+* `npm run build` passes.
+* `git diff --check` passes, and no `ul` or `li` markup was introduced.
+
+Automated Tests Still Needed
+
+* None for Feature-004.
+* The complete `BattlePage.test.jsx` suite still has five unrelated pre-existing failures: two stale CSS expectations and three old `120` enemy-health expectations.
+* Whole-file ESLint for `BattlePage.test.jsx` still reports 97 pre-existing `testing-library/no-node-access` violations outside the Feature-004 changes.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+Bug-001: Guard shield should appear before counter damage removes it
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Set a player column to contain one Red and one Blue token, and set the opponent's matching column to contain two Orange tokens.
+   Expected: Red deals `10` damage, Blue grants `5` Guard, and the player shield appears before the Orange counter animation.
+2. Watch the Orange counter animation.
+   Expected: The shield remains visible with `5` Guard while the counter hit is shown.
+3. Let the Orange counter finish.
+   Expected: Guard absorbs `5`, the shield disappears when Guard reaches `0`, and only the remaining `5` damage reaches player health.
+4. Repeat with one Red, three Blue, and two matching Orange tokens.
+   Expected: The shield appears with `15` Guard, the counter reduces Guard to `5`, player health is unchanged, and the shield remains visible with `5`.
+5. Roll a Blue-only column against matching Orange tokens.
+   Expected: Guard remains visible, no Orange counter or counter damage occurs, and the turn advances normally.
+6. Repeat the attack/counter sequence during an enemy turn.
+   Expected: The enemy shield follows the same gain, counter-hit, reduction, and removal behavior.
+7. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `battleTurn.test.js` passes all 49 tests, including exact queued health and Guard absorption amounts for common and outlined Orange counters.
+* Three focused `BattlePage.test.jsx` tests verify guard-only turns, full same-roll Guard absorption with delayed shield removal, and partial absorption with the remaining shield visible.
+* `GameSetupContext.test.jsx` passes all 27 tests, covering the shared battle-state regression surface.
+* Scoped ESLint passes for `battleTurn.js`, `battleTurn.test.js`, and `GameSetupContext.jsx`.
+* `npm run build` passes.
+
+Automated Tests Still Needed
+
+* None for Bug-001.
+* The complete `BattlePage.test.jsx` suite and its whole-file lint retain the unrelated pre-existing failures documented under Feature-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-002: Guard animations should always run first when casting spells
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Create a spell column containing Blue and Red tokens, then roll that column.
+   Expected: The Blue Guard animation runs first, the caster's shield is visible, and the Red Damage animation follows.
+2. Add matching Orange tokens to the opponent and roll the mixed Blue/Red column again.
+   Expected: Blue runs first, Red runs second, Orange runs last, and the shield remains visible until Orange resolves.
+3. Let the Orange counter fully consume the new Guard.
+   Expected: Guard absorbs its portion of counter damage and the shield disappears only after Guard reaches `0`.
+4. Repeat with enough Blue tokens for Guard to exceed the Orange counter.
+   Expected: The shield remains visible with the reduced Guard amount after Orange resolves.
+5. Repeat with Blue/Yellow Outline and Red/Yellow Outline against Green/Yellow Outline and Orange/Yellow Outline.
+   Expected: Shiny Guard uses the existing Blue animation first, followed by Red, Green, and Orange in their existing relative order.
+6. Repeat with multiple Blue tokens mixed with other supported effects.
+   Expected: The combined Guard animation remains first and all non-Guard effects continue in their existing order.
+7. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* `battleTurn.test.js` passes all 49 tests, including common Guard, multiple Guard, outlined Guard, Red/Green mixes, and same-roll Orange counter ordering.
+* Three focused `BattlePage.test.jsx` tests verify Blue-first/Red-next/Orange-last ordering, visible Guard before counter damage, partial Guard retention, and unchanged guard-only behavior.
+* `GameSetupContext.test.jsx` passes all 27 shared battle-state tests.
+* Scoped ESLint passes for `battleTurn.js` and `battleTurn.test.js`.
+* `npm run build` passes.
+
+Automated Tests Still Needed
+
+* None for Bug-002.
+* The complete `BattlePage.test.jsx` suite and its whole-file lint retain the unrelated pre-existing failures documented under Feature-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-005: Improve weakness animation with faBan icon
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger weakness against an enemy with a common Green token.
+   Expected: The existing green radiating flash and a green Font Awesome ban icon appear together over the enemy image.
+2. Watch the ban icon for the full effect.
+   Expected: It grows from the centre to the actor image width, shakes left and right several times, fades out, and lasts the same one-second duration as the green flash.
+3. Trigger an enemy attack against player Green weakness.
+   Expected: The same flash and ban icon appear over the player image rather than the enemy image.
+4. Trigger weakness with Green/Yellow Outline.
+   Expected: The outlined token's existing `greenReduction` effect shows the same flash and ban icon without changing its `10` weakness value.
+5. Trigger a mixed-effect column that includes weakness.
+   Expected: The ban icon appears only during the existing Green animation step and does not overlap unrelated battle effects.
+6. Observe both actor images, battle sides, and dice before, during, and after the icon animation.
+   Expected: No image movement, layout shift, dice-position change, or blocked interaction occurs.
+7. Watch the browser console during these checks.
+   Expected: No runtime warnings or errors appear.
+
+Automated Tests Completed
+
+* Two focused `BattlePage.test.jsx` tests verify the existing green flash and `faBan` render together for enemy and player targets inside the correct actor image wrapper.
+* The focused tests verify the `ban` Font Awesome icon, reused `green` colour, absolute full-width overlay, centre growth, alternating shake, fade, one-second duration, and synchronized removal.
+* `battleTurn.test.js` passes all 49 tests, including the Green/Yellow Outline path that reuses `greenReduction` with its doubled value.
+* Scoped ESLint passes for `BattlePage.jsx`.
+* `npm run build` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-005.
+* The complete `BattlePage.test.jsx` suite and its whole-file lint retain the unrelated pre-existing failures documented under Feature-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-006: Correct token names and separate them from descriptions
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open a token bag or spell assignment view in English and inspect all common and rare token types.
+   Expected: Visible labels are Damage, Guard, Counter, Weaken, Freeze, Health, Sacrifice, Merge, Buff, Charge, Capacity, Shiny Damage, Shiny Guard, Shiny Counter, and Shiny Weaken; effect descriptions are not used as names.
+2. Repeat in Japanese.
+   Expected: Every token uses the Japanese name from the Feature-006 source of truth, including all four Shiny names.
+3. Hover or keyboard-focus common and Shiny tokens in token bag, assignment, committed/battle columns, rewards, Copy and Paste, Buy and Sell, Tokensmith, village, decision, loot, and debug views.
+   Expected: The browser-native tooltip shows the localized name first and localized description second; the accessible description contains the description body.
+4. Use debug token giving and full-bag replacement in English and Japanese.
+   Expected: Selector options, pending-token text, replacement rows, and result messages use localized token names without duplicate row labels.
+5. Replace a full-bag reward token and view removed-token results.
+   Expected: Replacement and removal messages use names such as Guard, Weaken, and Freeze rather than Blue, Green, or Light Blue.
+6. Resolve battle columns containing each common effect and the four outlined effects.
+   Expected: Existing effects remain unchanged and outlined effects retain their doubled values.
+7. Watch token visuals, reward selection, and the browser console during these checks.
+   Expected: Rarity, reward odds, fills, yellow outlines, animations, and assignment behavior are unchanged, with no runtime errors.
+
+Automated Tests Completed
+
+* Reproduced the old behavior before implementation: focused tests failed on outdated outlined names, Japanese descriptions, description-only tooltip titles, and colour-based debug labels.
+* Fifteen focused source/component/flow suites pass all 189 tests across token data, Token, assignment, committed columns, rewards, Copy and Paste, Buy and Sell, Tokensmith, village, decision, loot, cave rewards, and debug.
+* `DeathResult.test.jsx` passes all 4 tests, including English token-name removal messages and unchanged Japanese behavior.
+* `battleTurn.test.js` passes all 49 tests, confirming common and outlined token effects, doubled values, Guard/counter sequencing, and weakness behavior remain unchanged.
+* Scoped ESLint passes for every Feature-006 production file. The project has no `npm run lint` script, so direct `npx eslint` was used.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* `App.test.jsx` could not execute because `source-map-support` throws while parsing mappings before Jest runs any assertions; both the normal and isolated no-cache runs reproduced the runner failure. Feature-specific debug and page-flow suites pass.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-003: Guard shield should remain visible until removed by damage or turn end
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the defending character `10` Guard and trigger an incoming `20` Red damage attack.
+   Expected: The `10` Guard shield remains visible throughout the Red animation, then disappears when the hit lands and the remaining `10` damage reaches health.
+2. Give the defender `30` Guard and repeat the `20` damage attack.
+   Expected: The shield remains at `30` during the animation, changes to `10` at impact, stays visible until the turn ends, and then clears.
+3. Give the defender Guard and resolve a turn that causes no incoming damage.
+   Expected: The shield remains visible while the turn's effects run and clears only when the battle actor changes.
+4. Trigger Orange counter damage against newly gained Guard.
+   Expected: Blue Guard appears first, remains visible during the Orange animation, and is reduced or removed only when Orange lands.
+5. Repeat the normal and counter cases with player and enemy targets.
+   Expected: Both sides use the same Guard impact and end-of-turn lifecycle.
+6. Watch health, Guard amounts, shields, animation order, and the browser console.
+   Expected: Existing values and order remain unchanged, and no runtime errors appear.
+
+Automated Tests Completed
+
+* Reproduced the old behavior before implementation: all five focused resolver/UI regressions failed because defender Guard was cleared before impact or before turn end.
+* `battleTurn.test.js` and `GameSetupContext.test.jsx` pass all 77 tests, covering impact payloads, full/partial absorption, no-damage preservation, both battle sides, counters, and actor transitions.
+* Six focused `BattlePage.test.jsx` tests pass, covering full Red absorption, partial Red absorption, no-damage expiry, guard-only behavior, Guard-first counter ordering, and partial counter absorption.
+* Scoped ESLint passes for `battleTurn.js` and `GameSetupContext.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Bug-003. The complete `BattlePage.test.jsx` suite retains the unrelated pre-existing failures documented under Feature-004.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-007: Smooth token glow animation
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. View normal tokens in the token bag and reward selection.
+   Expected: Each token has one soft aura that pulses continuously without a midpoint jump or an end-to-start snap.
+2. Open spell assignment and drag tokens between the bag and spell slots.
+   Expected: The same shared glow remains smooth and drag-and-drop, clicking, focus, and tooltips continue to work.
+3. View committed spells and player/enemy battle spell columns.
+   Expected: Tokens use the same smooth glow without shifting the surrounding layout or changing counts and faded states.
+4. View each shiny yellow-outline token in the bag, assignment, committed, reward, and battle displays.
+   Expected: The yellow border remains `2px`, the token stays the same size as a normal token, and the aura pulses without a jagged resize.
+5. Watch several complete glow loops and inspect the browser console.
+   Expected: The start and end are visually identical, no competing animation appears on the token itself, and no runtime errors occur.
+
+Automated Tests Completed
+
+* `Token.test.jsx` passes all 13 tests, including explicit matching glow endpoints, one `1.6s ease-in-out` aura animation, and a stable `2px` outlined token with no width or height override.
+* `SpellTokenAssignment.test.jsx`, `CommittedSpellSlots.test.jsx`, and `RewardPage.test.jsx` pass, confirming shared token rendering, assignment interactions, committed displays, reward displays, and existing glow classes remain intact.
+* Two focused `BattlePage.test.jsx` spell-column display tests pass for player/enemy faded tokens and remaining token counts.
+* Scoped ESLint passes for `Token.test.jsx`.
+* `npm run build` passes.
+
+Automated Tests Still Needed
+
+* None for Feature-007. A combined consumer run passed 114 tests but the complete `GameplayPage.test.jsx` suite retained 8 unrelated stale expectations covering prior tooltip copy, setup copy, random rewards, dice timing, and player-piece styles.
+
+Manual Execution
+
+* Not run in a browser during this automated pass; visual pulse smoothness should still be confirmed in a real browser.

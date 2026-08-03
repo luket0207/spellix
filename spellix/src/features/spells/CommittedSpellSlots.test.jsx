@@ -95,7 +95,10 @@ describe('CommittedSpellSlots', () => {
   test('localizes committed token tooltips without showing token names', () => {
     render(<CommittedSpellSlots language="jp" spellSlots={createSpellSlots()} />);
 
-    expect(screen.getByLabelText('red token in slot 1')).toHaveAttribute('title', 'ダメージ+10');
+    expect(screen.getByLabelText('red token in slot 1')).toHaveAttribute(
+      'title',
+      'ダメージ\nダメージ＋10'
+    );
     expect(screen.queryByText('ダメージ')).not.toBeInTheDocument();
     expect(screen.queryByText('ガード')).not.toBeInTheDocument();
   });

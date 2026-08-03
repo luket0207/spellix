@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faBan,
   faBolt,
   faGavel,
   faShield,
@@ -40,7 +41,7 @@ import './BattlePage.css';
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
 const BATTLE_DICE_FADE_MS = 350;
 
-function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, side }) {
+function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, showWeakness, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
   const [freezeAnimation, setFreezeAnimation] = useState(frozen ? 'enter' : null);
 
@@ -66,6 +67,13 @@ function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLab
   return (
     <div className={`battle-actor-image battle-actor-image--${side}`}>
       {children}
+      {showWeakness ? (
+        <FontAwesomeIcon
+          aria-label="Weakness ban animation"
+          className="battle-weakness-ban"
+          icon={faBan}
+        />
+      ) : null}
       {guard > 0 ? (
         <span className="battle-guard-indicator">
           <FontAwesomeIcon
@@ -487,6 +495,10 @@ function BattlePage() {
             guard={activeBattle.playerGuard}
             guardAmountLabel="Player guard amount"
             guardLabel="Player guard shield"
+            showWeakness={
+              activeBattleEffect?.type === 'greenReduction' &&
+              isEffectTargetPlayer
+            }
             side="player"
           >
             {pieceImageSource ? (
@@ -563,6 +575,10 @@ function BattlePage() {
             guard={activeBattle.enemyGuard}
             guardAmountLabel="Enemy guard amount"
             guardLabel="Enemy guard shield"
+            showWeakness={
+              activeBattleEffect?.type === 'greenReduction' &&
+              !isEffectTargetPlayer
+            }
             side="enemy"
           >
             {enemyImageSource ? (

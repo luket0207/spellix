@@ -2334,6 +2334,7 @@ describe('BattlePage flows', () => {
   test('plays Green reduction after Red damage without overlapping effects', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
     const greenBattleSetup = createBattleSetup();
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
     greenBattleSetup.activeBattle = {
       ...greenBattleSetup.activeBattle,
       enemyCurrentHealth: 40,
@@ -2367,10 +2368,22 @@ describe('BattlePage flows', () => {
     expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle enemy health: 25/i)).toBeInTheDocument();
     const enemyGreenAnimation = screen.getByLabelText(/green reduction animation/i);
+    const enemyWeaknessIcon = screen.getByLabelText(/weakness ban animation/i);
     expect(enemyGreenAnimation).toHaveClass('battle-radiating-effect--enemy');
     expect(enemyGreenAnimation.parentElement).toHaveAttribute(
       'aria-label',
       'Battle enemy panel'
+    );
+    expect(enemyWeaknessIcon).toHaveAttribute('data-icon', 'ban');
+    expect(enemyWeaknessIcon).toHaveClass('battle-weakness-ban');
+    expect(enemyWeaknessIcon.parentElement).toHaveClass(
+      'battle-actor-image--enemy'
+    );
+    expect(stylesheet).toMatch(
+      /\.battle-weakness-ban\s*{[^}]*animation:\s*battle-weakness-ban 1s linear forwards;[^}]*color:\s*green;[^}]*position:\s*absolute;[^}]*width:\s*100%;/s
+    );
+    expect(stylesheet).toMatch(
+      /@keyframes battle-weakness-ban\s*{[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\);[\s\S]*?translateX\(-5px\)[\s\S]*?translateX\(5px\)[\s\S]*?opacity:\s*0;/
     );
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
@@ -2379,6 +2392,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByLabelText(/green reduction animation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/weakness ban animation/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
 
     act(() => {
@@ -2386,6 +2400,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/weakness ban animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
 
     act(() => {
@@ -2433,100 +2448,270 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText(/battle player health: 90/i)).toBeInTheDocument();
     const playerGreenAnimation = screen.getByLabelText(/green reduction animation/i);
+    const playerWeaknessIcon = screen.getByLabelText(/weakness ban animation/i);
     expect(playerGreenAnimation).toHaveClass('battle-radiating-effect--player');
     expect(playerGreenAnimation.parentElement).toHaveAttribute(
       'aria-label',
       'Battle player panel'
     );
+    expect(playerWeaknessIcon).toHaveAttribute('data-icon', 'ban');
+    expect(playerWeaknessIcon).toHaveClass('battle-weakness-ban');
+    expect(playerWeaknessIcon.parentElement).toHaveClass(
+      'battle-actor-image--player'
+    );
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
   });
 
-  test('plays Orange counter last and travels from the opponent in both directions', () => {
-    jest.spyOn(Math, 'random').mockReturnValueOnce(0.2).mockReturnValueOnce(0);
-    const orangeBattleSetup = createBattleSetup();
-    orangeBattleSetup.activeBattle = {
-      ...orangeBattleSetup.activeBattle,
+  test('does not play an Orange counter animation for a guard-only turn', () => {
+    const guardOnlySetup = createBattleSetup();
+    guardOnlySetup.activeBattle = {
+      ...guardOnlySetup.activeBattle,
       enemyCurrentHealth: 40,
       enemyId: 'vilewhisker-rat',
       level: 1,
     };
-    orangeBattleSetup.players[0].spellSlots[0] = {
-      ...orangeBattleSetup.players[0].spellSlots[0],
-      tokens: [{ committed: true, id: 'player-1-orange-1', type: 'orange' }],
-    };
-    renderBattleFlow(['/battle'], orangeBattleSetup);
+    renderBattleFlow(['/battle'], guardOnlySetup);
 
     act(() => {
       jest.advanceTimersByTime(2000);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Force 2' }));
 
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(4000);
     });
+
+    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(2000);
     });
 
     expect(screen.getByText(/battle player health: 10/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
+  });
+
+  test('keeps defending Guard visible until normal damage lands', () => {
+    const guardedSetup = createBattleSetup();
+    guardedSetup.activeBattle = {
+      ...guardedSetup.activeBattle,
+      enemyCurrentHealth: 40,
+      enemyGuard: 10,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    renderBattleFlow(['/battle'], guardedSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 10/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy guard shield/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle enemy health: 40/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy guard shield/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle enemy health: 30/i)).toBeInTheDocument();
+  });
+
+  test('keeps partially consumed Guard until the attack turn ends', () => {
+    const guardedSetup = createBattleSetup();
+    guardedSetup.activeBattle = {
+      ...guardedSetup.activeBattle,
+      enemyCurrentHealth: 40,
+      enemyGuard: 30,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    renderBattleFlow(['/battle'], guardedSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 30/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText(/enemy guard: 10/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy guard shield/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle enemy health: 40/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy guard shield/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
+  });
+
+  test('keeps unspent defending Guard until a no-damage turn ends', () => {
+    const guardedSetup = createBattleSetup();
+    guardedSetup.activeBattle = {
+      ...guardedSetup.activeBattle,
+      enemyCurrentHealth: 40,
+      enemyGuard: 30,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    renderBattleFlow(['/battle'], guardedSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Force 2' }));
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 30/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy guard shield/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/enemy guard: 0/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy guard shield/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
+  });
+
+  test('plays Guard first and Orange counter last when same-roll guard absorbs damage', () => {
+    const counterSetup = createBattleSetup();
+    counterSetup.activeBattle = {
+      ...counterSetup.activeBattle,
+      enemyCurrentHealth: 40,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    counterSetup.players[0].spellSlots[4] = {
+      ...counterSetup.players[0].spellSlots[4],
+      tokens: [
+        { committed: true, id: 'player-1-red-5', type: 'red' },
+        { committed: true, id: 'player-1-blue-5', type: 'blue' },
+      ],
+    };
+    renderBattleFlow(['/battle'], counterSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 5' }));
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle player health: 10/i)).toBeInTheDocument();
+    expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player guard shield/i)).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(1000);
     });
 
     expect(screen.queryByLabelText(/blue guard animation/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/battle player health: 10/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player guard shield/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
     expect(screen.getByLabelText(/orange counter animation/i)).toHaveClass(
       'battle-orange-effect--enemy-to-player'
     );
-
-    act(() => {
-      jest.advanceTimersByTime(999);
-    });
-
-    expect(screen.getByLabelText(/orange counter animation/i)).toBeInTheDocument();
     expect(screen.getByText(/battle player health: 10/i)).toBeInTheDocument();
-    expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
+    expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player guard shield/i)).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(1);
+      jest.advanceTimersByTime(1000);
     });
 
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle player health: 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/player guard: 0/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/player guard shield/i)).not.toBeInTheDocument();
+  });
+
+  test('keeps the guard shield when same-roll guard exceeds Orange counter damage', () => {
+    const counterSetup = createBattleSetup();
+    counterSetup.activeBattle = {
+      ...counterSetup.activeBattle,
+      enemyCurrentHealth: 40,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    counterSetup.players[0].spellSlots[4] = {
+      ...counterSetup.players[0].spellSlots[4],
+      tokens: [
+        { committed: true, id: 'player-1-red-5', type: 'red' },
+        { committed: true, id: 'player-1-blue-5-a', type: 'blue' },
+        { committed: true, id: 'player-1-blue-5-b', type: 'blue' },
+        { committed: true, id: 'player-1-blue-5-c', type: 'blue' },
+      ],
+    };
+    renderBattleFlow(['/battle'], counterSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 5' }));
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
 
     act(() => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByText(/battle actor: enemy/i)).toBeInTheDocument();
-
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(1000);
     });
 
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
-
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
-
-    expect(screen.getByText(/battle enemy health: 40/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/orange counter animation/i)).toHaveClass(
-      'battle-orange-effect--player-to-enemy'
-    );
+    expect(screen.getByLabelText(/orange counter animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/player guard: 15/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player guard shield/i)).toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByText(/battle enemy health: 35/i)).toBeInTheDocument();
+    expect(screen.getByText(/player guard: 5/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player guard shield/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle player health: 10/i)).toBeInTheDocument();
   });
 
   test('automatically resolves a player win without starting another battle transition', () => {
@@ -2598,6 +2783,10 @@ describe('BattlePage flows', () => {
       level: 1,
     };
     losingBattleSetup.players[0].currentHealth = 5;
+    losingBattleSetup.players[0].spellSlots[1] = {
+      ...losingBattleSetup.players[0].spellSlots[1],
+      tokens: [{ committed: true, id: 'player-1-red-2', type: 'red' }],
+    };
     renderBattleFlow(['/battle'], losingBattleSetup);
 
     act(() => {
@@ -2618,14 +2807,14 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle phase: active/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
-    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.queryByLabelText(/blue guard animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle player health: 5/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/orange counter animation/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();

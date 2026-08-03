@@ -143,9 +143,11 @@ describe('App gameplay settings button accessibility', () => {
     await userEvent.click(screen.getByRole('button', { name: /^level 3$/i }));
 
     expect(screen.getByRole('heading', { name: /battle/i })).toBeInTheDocument();
-    expect(screen.getByText(/battle level: 3/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/battle player panel/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/battle enemy panel/i)).toBeInTheDocument();
+    const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
+
+    expect(enemyPanel).toBeInTheDocument();
+    expect(within(enemyPanel).getByText('50 / 50')).toBeInTheDocument();
     expect(screen.getByLabelText(/battle player piece/i)).toHaveAttribute(
       'src',
       expect.stringContaining('m-red.png')
@@ -181,9 +183,9 @@ describe('App gameplay settings button accessibility', () => {
     expect(screen.getByRole('img', { name: /hellcrown reaper/i })).toHaveClass(
       'battle-enemy-piece'
     );
-    expect(screen.getByText('120 / 120')).toBeInTheDocument();
     const enemyPanel = screen.getByLabelText(/battle enemy panel/i);
 
+    expect(within(enemyPanel).getByText('100 / 100')).toBeInTheDocument();
     expect(within(enemyPanel).getByText('2+3')).toBeInTheDocument();
     expect(within(enemyPanel).getByText('5+6')).toBeInTheDocument();
     expect(within(enemyPanel).queryByText('J')).not.toBeInTheDocument();

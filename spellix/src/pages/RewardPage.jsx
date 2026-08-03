@@ -432,7 +432,8 @@ function RewardPage() {
               <>
                 {selectedTokenBagReplacement ? (
                   <p>{`Selected token to replace: ${getDebugTokenTypeLabel(
-                    selectedTokenBagReplacement.type
+                    selectedTokenBagReplacement.type,
+                    currentLanguage
                   )} token ${selectedTokenBagReplacementIndex + 1}`}</p>
                 ) : (
                   <p>Choose a token to remove.</p>

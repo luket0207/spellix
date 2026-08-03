@@ -206,7 +206,10 @@ describe('RewardPage choice flow', () => {
     expect(within(rewardOptions).queryByRole('list')).not.toBeInTheDocument();
     expect(within(rewardOptions).getAllByLabelText(/reward option/i)).toHaveLength(2);
     expect(tokenRewardIcon).toHaveClass('token-display--glow', 'token-display--red');
-    expect(tokenRewardIcon).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description.en);
+    expect(tokenRewardIcon).toHaveAttribute(
+      'title',
+      `${TOKEN_DEFINITIONS.red.name.en}\n${TOKEN_DEFINITIONS.red.description.en}`
+    );
     expect(tokenRewardIcon).toHaveAccessibleDescription(
       TOKEN_DEFINITIONS.red.description.en
     );
@@ -260,7 +263,7 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByText('ダメージ')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /red reward token/i })).toHaveAttribute(
       'title',
-      'ダメージ+10'
+      'ダメージ\nダメージ＋10'
     );
     expect(screen.getByRole('group', { name: '出目選択 potion' })).toHaveAccessibleDescription(
       '次に振るサイコロの出目を選ぶ。'
@@ -708,7 +711,7 @@ describe('RewardPage choice flow', () => {
       })[2]
     );
 
-    expect(screen.getByText('Selected token to replace: Blue token 3')).toBeInTheDocument();
+    expect(screen.getByText('Selected token to replace: Guard token 3')).toBeInTheDocument();
     expect(
       within(screen.getByLabelText(/token bag drop zone/i)).getByRole('button', {
         name: /new reward red token/i,
@@ -757,7 +760,7 @@ describe('RewardPage choice flow', () => {
     );
 
     expect(screen.queryByRole('button', { name: /choose token to replace/i })).not.toBeInTheDocument();
-    expect(screen.getByText('Selected token to replace: Blue token 3')).toBeInTheDocument();
+    expect(screen.getByText('Selected token to replace: Guard token 3')).toBeInTheDocument();
     expect(screen.getByText('Reward destination: none')).toBeInTheDocument();
     expect(screen.getByText(originalBagText)).toBeInTheDocument();
 

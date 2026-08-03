@@ -2,10 +2,17 @@ import {
   addTokenToBag,
   canAddTokenToBag,
   createDebugToken,
+  getDebugTokenTypeLabel,
   replaceTokenInBag,
 } from './tokenBagAdmin';
 
 describe('tokenBagAdmin', () => {
+  test('uses localized token names for debug labels', () => {
+    expect(getDebugTokenTypeLabel('red', 'en')).toBe('Damage');
+    expect(getDebugTokenTypeLabel('red', 'jp')).toBe('\u30c0\u30e1\u30fc\u30b8');
+    expect(getDebugTokenTypeLabel('red-yellow-outline', 'en')).toBe('Shiny Damage');
+  });
+
   test('creates a unique debug token id based on the player token history', () => {
     const player = {
       id: 'player-1',

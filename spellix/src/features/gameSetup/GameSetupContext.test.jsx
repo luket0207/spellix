@@ -264,7 +264,7 @@ function createFreezeSetup({ activeBattle = null } = {}) {
 }
 
 function BattleStateProbe() {
-  const { activeBattle, startBattle } = useGameSetup();
+  const { activeBattle, battleEnemy, startBattle } = useGameSetup();
 
   return (
     <div>
@@ -285,6 +285,7 @@ function BattleStateProbe() {
       <p>{`Enemy freeze uses: ${activeBattle?.enemyFreezeUses?.join(',') ?? 'none'}`}</p>
       <p>{`Player Purple buffs: ${activeBattle?.playerPurpleBuffs?.join(',') ?? 'none'}`}</p>
       <p>{`Enemy Purple buffs: ${activeBattle?.enemyPurpleBuffs?.join(',') ?? 'none'}`}</p>
+      <p>{`Starting enemy health: ${battleEnemy?.currentHealth ?? 'none'}/${battleEnemy?.maxHealth ?? 'none'}`}</p>
     </div>
   );
 }
@@ -590,6 +591,7 @@ test('starts every battle with fresh Light Blue uses and no frozen actors', () =
   expect(screen.getByText(/enemy freeze uses: 0,0,1,0,0,0/i)).toBeInTheDocument();
   expect(screen.getByText(/player purple buffs: 0,0,0,0,0,0/i)).toBeInTheDocument();
   expect(screen.getByText(/enemy purple buffs: 0,0,0,0,0,0/i)).toBeInTheDocument();
+  expect(screen.getByText(/starting enemy health: 30\/30/i)).toBeInTheDocument();
 });
 
 test('starts a battle with fresh per-column Yellow uses and no charged actors', () => {

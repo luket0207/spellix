@@ -153,7 +153,10 @@ function App() {
     }
 
     const nextToken = createDebugToken(currentPlayer, selectedDebugTokenType);
-    const tokenTypeLabel = getDebugTokenTypeLabel(selectedDebugTokenType);
+    const tokenTypeLabel = getDebugTokenTypeLabel(
+      selectedDebugTokenType,
+      currentPlayer.language
+    );
 
     if (canAddTokenToBag(currentPlayer.tokenBag)) {
       updateCurrentPlayerTokenBag(
@@ -173,7 +176,10 @@ function App() {
   };
 
   const handleDiscardPendingToken = () => {
-    const tokenTypeLabel = getDebugTokenTypeLabel(pendingDebugTokenType);
+    const tokenTypeLabel = getDebugTokenTypeLabel(
+      pendingDebugTokenType,
+      currentPlayer?.language
+    );
 
     setPendingDebugTokenType('');
     setSelectedReplacementTokenId('');
@@ -194,7 +200,10 @@ function App() {
 
     updateCurrentPlayerTokenBag(
       nextTokenBag,
-      `Replaced one bag token with a ${getDebugTokenTypeLabel(pendingDebugTokenType)} token for the ${currentPlayer.colour} player.`
+      `Replaced one bag token with a ${getDebugTokenTypeLabel(
+        pendingDebugTokenType,
+        currentPlayer.language
+      )} token for the ${currentPlayer.colour} player.`
     );
     setPendingDebugTokenType('');
     setSelectedReplacementTokenId('');

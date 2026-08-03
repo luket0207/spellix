@@ -1,0 +1,421 @@
+---
+
+Bug-001: Guard shield should appear before counter damage removes it
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+
+Bug Summary
+
+* When a player gains guard on the same turn that counter damage will remove it, the guard shield is not being shown clearly.
+* The shield should still appear when guard is applied.
+* Counter damage should then hit afterwards and remove or reduce the guard.
+* The player needs to visually see that guard was gained before it was used to absorb counter damage.
+
+Required Behaviour
+
+* If the rolling player gains guard during their attack turn:
+
+  * show the guard shield as normal.
+  * apply the guard value to the player.
+  * keep the shield visible until the counter damage hits.
+* If counter damage then removes the guard:
+
+  * play or apply the counter damage sequence.
+  * reduce the guard.
+  * remove the shield only when guard reaches `0`.
+
+Example
+
+```txt id="i5n66f"
+Player rolls 1.
+Player has 1 Red token and 1 Blue token in column 1.
+Opponent has 2 Orange tokens in column 1.
+
+Expected sequence:
+1. Player deals 10 damage to opponent.
+2. Player gains 5 guard.
+3. Guard shield appears.
+4. Opponent counter damage triggers for 10.
+5. Player's 5 guard absorbs 5 counter damage.
+6. Guard shield is removed.
+7. Player loses 5 health.
+```
+
+Visual Timing Requirement
+
+* Do not skip the guard shield just because counter damage is queued.
+* Do not calculate the final guard value first and then decide not to render the shield.
+* The visual sequence should reflect the actual order of events:
+
+  * guard gained.
+  * shield appears.
+  * counter hits.
+  * shield is reduced or removed.
+
+Suggested Resolution Direction
+
+```txt id="9yzn95"
+1. Resolve actor's rolled column effects.
+2. If guard is gained, update guard and render shield.
+3. Wait for the guard visual step if battle animation sequencing requires it.
+4. Resolve opponent counter damage if counter conditions are met.
+5. Apply counter damage against current guard first.
+6. Remove or update shield after counter damage is applied.
+```
+
+Suggested Implementation Direction
+
+```js id="y7euuz"
+applyGuard(actor, guardAmount);
+queueBattleAnimation("guardApplied", { playerId: actor.id });
+
+if (counterShouldTrigger) {
+  queueBattleAnimation("counterDamage", {
+    sourcePlayerId: opponent.id,
+    targetPlayerId: actor.id,
+    damage: counterDamage
+  });
+
+  applyDamageToGuardThenHealth(actor, counterDamage);
+}
+```
+
+* Exact implementation can vary.
+* The important requirement is that the guard visual state is rendered before counter damage removes it.
+
+Guard Shield Removal Requirement
+
+* If counter damage removes all guard, remove the shield during or after the counter damage hit.
+* If counter damage only partially reduces guard, keep the shield visible with the remaining guard value.
+* If no counter damage triggers, guard remains as normal.
+
+Out Of Scope
+
+* No changes to whether counter damage triggers.
+* No changes to counter damage values.
+* No changes to guard values.
+* No changes to the new shiny token values.
+* No changes to battle reward logic.
+* No unrelated animation redesign.
+
+Testing Required
+
+* Set a player column to contain Red and Blue.
+* Set the opponent matching column to contain Orange.
+* Roll that number.
+* Confirm the player attacks the opponent.
+* Confirm the player gains guard.
+* Confirm the guard shield appears.
+* Confirm counter damage then hits.
+* Confirm the guard shield is removed only when the counter damage removes the guard.
+* Repeat with enough guard to partially absorb counter damage.
+* Confirm the shield remains visible if guard remains above `0`.
+* Repeat with guard-only and opponent counter.
+* Confirm no counter damage triggers, and the guard shield remains.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added a focused Battle page regression requiring `5` Guard and the player shield to remain visible during the Blue and Orange animation steps.
+* The regression reproduced the bug before the fix: the Blue animation rendered while `playerGuard` was already `0`, so no shield appeared.
+* Added a second regression covering partial absorption, where `15` Guard must remain visible until Orange resolves and then retain a visible shield with `5` Guard.
+
+Final Fix
+
+* Added the absorbed Guard amount to the existing queued Orange counter effect without changing counter eligibility or damage values.
+* Battle setup now exposes the current actor's Guard before counter absorption while the Red and Blue effects resolve.
+* Applying the Orange effect now removes its queued Guard amount from the targeted actor and applies only the remaining counter damage to health.
+* Full absorption removes the shield after the Orange hit, while partial absorption keeps the shield with the remaining Guard value.
+* Guard-only turns, token values, counter trigger rules, battle rewards, and unrelated animation behavior were not changed.
+
+---
+
+Bug-002: Guard animations should always run first when casting spells
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+* Bug-001: Guard shield should appear before counter damage removes it
+
+Bug Summary
+
+* When a player casts spells, guard animations should always be first in the battle animation queue.
+* This makes sure the guard shield appears before any later effects, especially counter damage.
+* If a spell column contains Guard plus other effects, Guard should visually resolve first.
+
+Required Behaviour
+
+* Whenever a player casts spells and their triggered column contains Guard:
+
+  * apply the Guard animation first.
+  * show the shield before other spell animations.
+  * then continue with the rest of the animation queue.
+* This should apply to:
+
+  * Blue tokens.
+  * Blue/Yellow Outline tokens.
+  * multiple Guard tokens.
+  * Guard mixed with Damage, Freeze, Weaken, Buff, Charge, or any other spell effect.
+
+Animation Queue Requirement
+
+* Guard animations should be inserted at the start of the casting animation queue.
+* Other animations should follow after Guard.
+* Counter damage should never run before the caster’s own Guard animation has appeared.
+
+Suggested Queue Order
+
+```txt id="nup7ol"
+1. Guard animations
+2. Damage / attack animations
+3. Freeze animations
+4. Weaken animations
+5. Buff / charge / other spell animations
+6. Counter damage animations
+```
+
+* Exact ordering after Guard can follow the existing battle system.
+* The strict requirement is that Guard is always first.
+
+Example
+
+```txt id="z6xk29"
+Player rolls 1.
+Column 1 contains 1 Red token and 1 Blue token.
+Opponent column 1 contains Orange counter tokens.
+
+Expected animation order:
+1. Blue Guard animation plays.
+2. Shield appears on the player.
+3. Red Damage animation plays.
+4. Counter damage animation plays.
+5. Shield absorbs counter damage.
+6. Shield is reduced or removed depending on remaining guard.
+```
+
+Implementation Direction
+
+* Do not simply process tokens in the visual order they appear in the column if that can put Guard later.
+* Build the animation queue by effect priority.
+* Guard effects should be separated from the other effects and queued first.
+
+Suggested Logic Direction
+
+```js id="w6u8ch"
+const guardAnimations = spellAnimations.filter(
+  (animation) => animation.type === "guard"
+);
+
+const otherAnimations = spellAnimations.filter(
+  (animation) => animation.type !== "guard"
+);
+
+const orderedAnimations = [
+  ...guardAnimations,
+  ...otherAnimations
+];
+```
+
+* Exact implementation can vary.
+* If the animation queue already has priorities, Guard should have the highest priority.
+
+State Requirement
+
+* The player’s guard value should be applied in time for the shield to appear before counter damage.
+* If visual and state updates are separate:
+
+  * update guard state before or during the Guard animation.
+  * do not wait until after damage/counter resolution to display the shield.
+* Counter damage should read the guard value after Guard has been applied.
+
+Out Of Scope
+
+* No changes to Guard values.
+* No changes to Blue token descriptions.
+* No changes to Blue/Yellow Outline token values.
+* No changes to whether counter damage triggers.
+* No changes to counter damage values.
+* No unrelated battle animation redesign.
+
+Testing Required
+
+* Create a spell column with Blue and Red tokens.
+* Roll that column.
+* Confirm Guard animation plays before Damage animation.
+* Confirm the shield appears before the attack animation finishes.
+* Add opponent counter tokens in the matching column.
+* Roll the column again.
+* Confirm Guard animation plays first.
+* Confirm the shield appears before counter damage.
+* Confirm counter damage removes or reduces the shield after it appears.
+* Test Blue/Yellow Outline.
+* Confirm Shiny Guard animation also plays first.
+* Test a column with multiple mixed effects.
+* Confirm all Guard animations are queued before non-Guard animations.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Updated the existing common, outlined, multiple-Guard, and same-roll counter resolver regressions to require `blueGuard` at the start of the effect queue.
+* The three focused resolver cases reproduced the bug before the fix: Blue Guard was queued after Red Damage and Green Reduction, or after Red Damage in the counter case.
+* Updated the focused Battle page regression to require the Blue animation and visible shield before Red, with Orange still last.
+
+Final Fix
+
+* Moved the existing Blue Guard queue entry ahead of Red Damage and Green Reduction in `calculateBattleTurn`.
+* Preserved the existing order of all non-Guard effects and kept Orange counter damage last.
+* Reused the existing Guard animation, shield state, effect queue, and one-second battle animation timing.
+* Guard values, outlined Guard values, counter eligibility, counter damage, token descriptions, and unrelated animations were not changed.
+
+
+---
+
+Bug-003: Guard shield should remain visible until removed by damage or turn end
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+* Bug-001: Guard shield should appear before counter damage removes it
+* Bug-002: Guard animations should always run first when casting spells
+
+Bug Summary
+
+* Guard shields are being removed too early.
+* If an attack animation has not finished yet, the guard shield should remain visible on the character.
+* Guard should only disappear when:
+
+  * damage actually removes the guard.
+  * or the battle turn ends.
+
+Required Behaviour
+
+* When a character has guard, the shield should remain visible while animations are still running.
+* Do not remove the guard shield at the start of an incoming attack animation.
+* Do not remove the guard shield when damage is queued.
+* Remove or reduce the shield only when the damage actually lands and guard is consumed.
+* If guard remains after the damage, the shield should stay visible.
+* If no damage removes the guard, it should remain until the end of the turn.
+
+Correct Guard Lifecycle
+
+```txt id="yu81ba"
+1. Character gains guard.
+2. Guard shield appears.
+3. Attack animation begins.
+4. Guard shield remains visible during the attack animation.
+5. Damage lands.
+6. Guard absorbs damage.
+7. If guard reaches 0, shield disappears.
+8. If guard remains above 0, shield stays visible.
+9. Any remaining guard clears at the end of the turn.
+```
+
+Incorrect Behaviour To Avoid
+
+```txt id="bpv3sq"
+1. Character gains guard.
+2. Guard shield appears.
+3. Attack animation begins.
+4. Guard shield disappears before the attack lands.
+5. Damage lands later.
+```
+
+* This makes it look like guard vanished before it was used.
+* This should be fixed.
+
+Implementation Direction
+
+* Separate visual shield removal from animation start.
+* The shield should be tied to current guard value and turn state, not to whether an attack animation has started.
+* Incoming damage should have a clear “impact” or “damage applied” moment.
+* Only update the guard value and shield display at that impact point.
+
+Suggested Damage Timing Direction
+
+```js id="0l7ps9"
+queueAnimation({
+  type: "attack",
+  targetId,
+  onImpact: () => {
+    applyDamageToGuardThenHealth(targetId, damageAmount);
+  }
+});
+```
+
+* The shield should remain visible before `onImpact`.
+* If `applyDamageToGuardThenHealth` reduces guard to `0`, then remove the shield.
+* If guard remains, keep the shield visible.
+
+Counter Damage Requirement
+
+* This also applies to counter damage.
+* If counter damage is going to remove newly applied guard:
+
+  * the guard shield should appear first.
+  * the counter animation should begin.
+  * the shield should remain visible while the counter animation is travelling/playing.
+  * the shield should be removed only when the counter damage lands.
+
+End Of Turn Requirement
+
+* Guard should not last forever.
+* Any guard remaining after all turn animations and effects have completed should clear at the end of the turn.
+* The shield should disappear at that point if guard is reset to `0`.
+
+Out Of Scope
+
+* No changes to guard values.
+* No changes to damage values.
+* No changes to whether counter damage triggers.
+* No changes to animation artwork.
+* No changes to token data.
+* No unrelated battle sequencing changes beyond keeping guard visible correctly.
+
+Testing Required
+
+* Give a character guard.
+* Trigger an incoming attack.
+* Confirm the guard shield remains visible while the attack animation plays.
+* Confirm the shield is removed only when damage lands and fully removes the guard.
+* Trigger incoming damage that only partially removes guard.
+* Confirm the shield remains visible after damage lands.
+* Trigger counter damage against newly gained guard.
+* Confirm the shield appears first.
+* Confirm the shield stays visible during the counter animation.
+* Confirm the shield is removed only when counter damage lands.
+* Trigger a turn where guard is gained but no damage removes it.
+* Confirm the shield remains until the end of the turn.
+* Confirm the shield disappears when remaining guard is cleared at turn end.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added resolver regressions requiring normal Red damage to carry its absorbed Guard amount to the damage effect and no-damage turns to preserve defender Guard until turn cleanup.
+* Added focused Battle page regressions for full Guard absorption, partial Guard absorption, and a no-damage turn.
+* The regressions reproduced the bug before the fix: defender Guard was already `0` while the Red or Blue animation was still visible.
+
+Final Fix
+
+* Added the normal Red attack's Guard reduction to the existing queued damage effect so Guard changes when the animation reaches its impact point.
+* Preserved the defender's current Guard while the queued effects are animating for both player and enemy targets.
+* Reused `applyBattleEffect` to reduce Guard and health together at normal Red or Orange counter impact.
+* Updated the existing battle actor transition to clear only the defending side's remaining Guard after all effects finish, while preserving newly gained actor Guard for the opponent's next turn.
+* Full absorption removes the shield at impact, partial absorption keeps the remaining shield until turn end, and no-damage turns keep the shield until turn end.
+* Guard values, damage values, counter eligibility, animation artwork, token data, and unrelated sequencing were not changed.

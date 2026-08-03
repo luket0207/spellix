@@ -554,13 +554,15 @@ test('uses the existing replacement or discard flow when potion slots are full',
 });
 
 test.each([
-  ['commonToken', 'red', 'Gain a common token'],
-  ['rareToken', 'white', 'Gain a rare token'],
-  ['token', 'red', 'Gain a token'],
+  ['commonToken', 'red', 'Gain a common token', 0],
+  ['rareToken', 'white', 'Gain a rare token', 0],
+  ['token', 'red', 'Gain a token', 0],
+  ['rareToken', 'green-yellow-outline', 'Gain a rare token', 0.9999],
+  ['token', 'green-yellow-outline', 'Gain a token', 0.9999],
 ])(
   'shows the %s reward before opening assignment on Continue',
-  (resultId, tokenType, resultLabel) => {
-  renderDecisionOutcome(resultId);
+  (resultId, tokenType, resultLabel, rewardRoll) => {
+  renderDecisionOutcome(resultId, { rewardRoll });
 
   expect(screen.getByText(resultLabel)).toBeInTheDocument();
   expect(

@@ -54,7 +54,7 @@ describe('rewardItems', () => {
         category: REWARD_CATEGORIES.COMMON_TOKEN,
         id: 'reward-choice-1',
         item: {
-          description: { en: 'Plus 10 Damage', jp: 'ダメージ+10' },
+          description: { en: 'Plus 10 Damage', jp: 'ダメージ＋10' },
           label: 'Red',
           name: { en: 'Damage', jp: 'ダメージ' },
           rarity: 'Common',
@@ -134,6 +134,22 @@ describe('rewardItems', () => {
       expect(selectedIds).toEqual(expectedIds);
     }
   );
+
+  test('includes outlined tokens in rare pools and excludes them from common pools', () => {
+    const outlinedTypes = [
+      'red-yellow-outline',
+      'blue-yellow-outline',
+      'orange-yellow-outline',
+      'green-yellow-outline',
+    ];
+
+    expect(getExpectedTokenTypes('Rare')).toEqual(
+      expect.arrayContaining(outlinedTypes)
+    );
+    expect(getExpectedTokenTypes('Common')).not.toEqual(
+      expect.arrayContaining(outlinedTypes)
+    );
+  });
 
   test('includes the new potions only in their matching Board reward pools', () => {
     const commonBoardIds = selectEveryItem(

@@ -660,7 +660,8 @@ function DecisionPage({ environment = 'fields', randomFn = Math.random }) {
                 <p>
                   {selectedTokenBagReplacement
                     ? `${getDebugTokenTypeLabel(
-                        selectedTokenBagReplacement.type
+                        selectedTokenBagReplacement.type,
+                        currentLanguage
                       )} token ${selectedTokenBagReplacementIndex + 1}`
                     : rewardGrantTranslations.chooseToken}
                 </p>

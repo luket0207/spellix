@@ -316,7 +316,7 @@ function DebugModal({
           >
             {DEBUG_TOKEN_TYPES.map((tokenType) => (
               <option key={tokenType} value={tokenType}>
-                {getDebugTokenTypeLabel(tokenType)}
+                {getDebugTokenTypeLabel(tokenType, currentPlayer?.language)}
               </option>
             ))}
           </select>
@@ -330,7 +330,10 @@ function DebugModal({
 
         {pendingTokenType ? (
           <div className="debug-token-replacement-flow">
-            <p>{`New token: ${getDebugTokenTypeLabel(pendingTokenType)}`}</p>
+            <p>{`New token: ${getDebugTokenTypeLabel(
+              pendingTokenType,
+              currentPlayer.language
+            )}`}</p>
             <div className="debug-token-choice-list" role="radiogroup" aria-label="Bag tokens to discard">
               {currentPlayer.tokenBag.map((token) => (
                 <label key={token.id} className="debug-token-choice">
@@ -342,12 +345,14 @@ function DebugModal({
                     onChange={(event) => onPendingTokenReplacementChange(event.target.value)}
                   />
                   <Token
-                    ariaLabel={`${getDebugTokenTypeLabel(token.type)} token`}
+                    ariaLabel={`${getDebugTokenTypeLabel(
+                      token.type,
+                      currentPlayer.language
+                    )} token`}
                     language={currentPlayer.language}
                     showName
                     tokenType={token.type}
                   />
-                  <span>{getDebugTokenTypeLabel(token.type)}</span>
                 </label>
               ))}
             </div>

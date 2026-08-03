@@ -332,17 +332,20 @@ describe('DebugModal', () => {
       />
     );
 
-    expect(screen.getByText(/new token: purple/i)).toBeInTheDocument();
+    expect(screen.getByText(/new token: buff/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /discard new token/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /replace selected token/i })).toBeEnabled();
-    const redToken = screen.getByRole('img', { name: /red token/i });
-    const blueToken = screen.getByRole('img', { name: /blue token/i });
+    const redToken = screen.getByRole('img', { name: /damage token/i });
+    const blueToken = screen.getByRole('img', { name: /guard token/i });
 
     expect(redToken).toHaveClass('token-display--glow', 'token-display--red');
-    expect(redToken).toHaveAttribute('title', TOKEN_DEFINITIONS.red.description.en);
+    expect(redToken).toHaveAttribute(
+      'title',
+      `${TOKEN_DEFINITIONS.red.name.en}\n${TOKEN_DEFINITIONS.red.description.en}`
+    );
     expect(redToken).toHaveAccessibleDescription(TOKEN_DEFINITIONS.red.description.en);
-    expect(screen.getByText('Damage')).toBeInTheDocument();
-    expect(screen.getByText('Guard')).toBeInTheDocument();
+    expect(screen.getAllByText('Damage')).toHaveLength(2);
+    expect(screen.getAllByText('Guard')).toHaveLength(2);
     expect(blueToken).toHaveClass('token-display--glow', 'token-display--blue');
 
     fireEvent.click(screen.getByDisplayValue('player-1-blue-1'));
@@ -364,11 +367,11 @@ describe('DebugModal', () => {
       />
     );
 
-    expect(screen.getByText('ダメージ')).toBeInTheDocument();
-    expect(screen.getByText('ガード')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /red token/i })).toHaveAttribute(
+    expect(screen.getAllByText('ダメージ')).toHaveLength(2);
+    expect(screen.getAllByText('ガード')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: /ダメージ token/i })).toHaveAttribute(
       'title',
-      'ダメージ+10'
+      'ダメージ\nダメージ＋10'
     );
   });
 

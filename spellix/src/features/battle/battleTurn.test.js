@@ -55,14 +55,14 @@ test('stacks all four token effects in the required calculation and animation or
     },
     diceResult: 1,
     effects: [
-      { amount: 10, source: 'currentActor', target: 'opponent', type: 'redDamage' },
-      { amount: 10, source: 'opponent', target: 'opponent', type: 'greenReduction' },
       { amount: 10, source: 'currentActor', target: 'currentActor', type: 'blueGuard' },
-      { amount: 10, source: 'opponent', target: 'currentActor', type: 'orangeCounter' },
+      { amount: 10, guardReduction: 10, source: 'currentActor', target: 'opponent', type: 'redDamage' },
+      { amount: 10, source: 'opponent', target: 'opponent', type: 'greenReduction' },
+      { amount: 0, guardReduction: 10, source: 'opponent', target: 'currentActor', type: 'orangeCounter' },
     ],
     freezeApplied: false,
     isMiss: false,
-    nextCurrentActor: { currentHealth: 90, guard: 10 },
+    nextCurrentActor: { currentHealth: 100, guard: 0 },
     nextOpponent: { currentHealth: 110, guard: 0 },
     purpleBuffGranted: 0,
     tokenCounts: {
@@ -75,6 +75,44 @@ test('stacks all four token effects in the required calculation and animation or
       opponentOrange: 2,
     },
   });
+});
+
+test('applies doubled outlined token values through the common animation effects', () => {
+  const currentActor = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([
+        createToken('red-yellow-outline', 1),
+        createToken('blue-yellow-outline', 1),
+      ])
+    ),
+  });
+  const opponent = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([
+        createToken('green-yellow-outline', 1),
+        createToken('orange-yellow-outline', 1),
+      ])
+    ),
+  });
+
+  const result = calculateBattleTurn({ currentActor, diceResult: 1, opponent });
+
+  expect(result.damage).toEqual({
+    counter: 10,
+    greenReduction: 10,
+    guardReduction: 0,
+    outgoing: 10,
+    rawRed: 20,
+  });
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 100, guard: 0 });
+  expect(result.nextOpponent).toEqual({ currentHealth: 90, guard: 0 });
+  expect(result.effects).toEqual([
+    { amount: 10, source: 'currentActor', target: 'currentActor', type: 'blueGuard' },
+    { amount: 10, source: 'currentActor', target: 'opponent', type: 'redDamage' },
+    { amount: 10, source: 'opponent', target: 'opponent', type: 'greenReduction' },
+    { amount: 0, guardReduction: 10, source: 'opponent', target: 'currentActor', type: 'orangeCounter' },
+  ]);
+  expect(result.isMiss).toBe(false);
 });
 
 test('uses the same rolled slot for both actors and ignores non-active token colours', () => {
@@ -120,7 +158,7 @@ test('uses the same rolled slot for both actors and ignores non-active token col
     outgoing: 5,
     rawRed: 10,
   });
-  expect(result.nextCurrentActor).toEqual({ currentHealth: 95, guard: 5 });
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 100, guard: 0 });
   expect(result.nextOpponent).toEqual({ currentHealth: 95, guard: 0 });
 });
 
@@ -172,7 +210,174 @@ test.each([
   });
 });
 
-test('treats empty actor slots as misses and expires opponent guard', () => {
+test('does not trigger an Orange counter when the actor only grants guard', () => {
+  const currentActor = createActor({
+    spellSlots: createSpellSlots(createSlot([createToken('blue', 1)])),
+  });
+  const opponent = createActor({
+    spellSlots: createSpellSlots(createSlot([createToken('orange', 1)])),
+  });
+
+  const result = calculateBattleTurn({ currentActor, diceResult: 1, opponent });
+
+  expect(result.damage.counter).toBe(0);
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 100, guard: 5 });
+  expect(result.effects).toEqual([
+    { amount: 5, source: 'currentActor', target: 'currentActor', type: 'blueGuard' },
+  ]);
+});
+
+test('triggers an Orange counter when an available Freeze targets the opponent', () => {
+  const currentActor = createActor({
+    spellSlots: createSpellSlots(createSlot([createToken('light-blue', 1)])),
+  });
+  const opponent = createActor({
+    spellSlots: createSpellSlots(createSlot([createToken('orange', 1)])),
+  });
+
+  const result = calculateBattleTurn({
+    currentActor,
+    diceResult: 1,
+    freezeAvailable: true,
+    opponent,
+  });
+
+  expect(result.freezeApplied).toBe(true);
+  expect(result.damage.counter).toBe(5);
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 95, guard: 0 });
+  expect(result.effects).toEqual([
+    { amount: 5, guardReduction: 0, source: 'opponent', target: 'currentActor', type: 'orangeCounter' },
+  ]);
+});
+
+test.each([
+  ['purple', { purpleBuffGranted: 5 }],
+  ['yellow', { chargeApplied: true }],
+])(
+  'does not trigger an Orange counter for a self-only %s effect',
+  (tokenType, expectedEffect) => {
+    const currentActor = createActor({
+      spellSlots: createSpellSlots(createSlot([createToken(tokenType, 1)])),
+    });
+    const opponent = createActor({
+      spellSlots: createSpellSlots(createSlot([createToken('orange', 1)])),
+    });
+
+    const result = calculateBattleTurn({
+      chargeAvailable: tokenType === 'yellow',
+      currentActor,
+      diceResult: 1,
+      opponent,
+    });
+
+    expect(result).toMatchObject({
+      damage: { counter: 0 },
+      effects: [],
+      ...expectedEffect,
+    });
+  }
+);
+
+test('applies same-roll guard before counter damage reaches health', () => {
+  const currentActor = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([createToken('red', 1), createToken('blue', 1)])
+    ),
+  });
+  const opponent = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([createToken('orange', 1), createToken('orange', 2)])
+    ),
+  });
+
+  const result = calculateBattleTurn({ currentActor, diceResult: 1, opponent });
+
+  expect(result.damage.counter).toBe(10);
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 95, guard: 0 });
+  expect(result.effects).toEqual([
+    { amount: 5, source: 'currentActor', target: 'currentActor', type: 'blueGuard' },
+    { amount: 10, source: 'currentActor', target: 'opponent', type: 'redDamage' },
+    { amount: 5, guardReduction: 5, source: 'opponent', target: 'currentActor', type: 'orangeCounter' },
+  ]);
+});
+
+test('uses existing guard before applying an outlined Orange counter to health', () => {
+  const currentActor = createActor({
+    guard: 4,
+    spellSlots: createSpellSlots(createSlot([createToken('red', 1)])),
+  });
+  const opponent = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([createToken('orange-yellow-outline', 1)])
+    ),
+  });
+
+  const result = calculateBattleTurn({ currentActor, diceResult: 1, opponent });
+
+  expect(result.damage.counter).toBe(10);
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 94, guard: 0 });
+  expect(result.effects).toContainEqual({
+    amount: 6,
+    guardReduction: 4,
+    source: 'opponent',
+    target: 'currentActor',
+    type: 'orangeCounter',
+  });
+});
+
+test.each([2, 3])(
+  'triggers counters when merged actor column %i targets the opponent',
+  (diceResult) => {
+    const currentActor = createActor({
+      spellSlots: createSpellSlots(
+        createSlot([createToken('red', 1)]),
+        1
+      ),
+    });
+    currentActor.mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+    const opponent = createActor({
+      spellSlots: createSpellSlots(
+        createSlot([createToken('orange', 1)]),
+        diceResult - 1
+      ),
+    });
+
+    const result = calculateBattleTurn({ currentActor, diceResult, opponent });
+
+    expect(result.damage.counter).toBe(5);
+    expect(result.nextCurrentActor.currentHealth).toBe(95);
+  }
+);
+
+test.each([2, 3])(
+  'finds counters in joined opponent column %i',
+  (diceResult) => {
+    const currentActor = createActor({
+      spellSlots: createSpellSlots(
+        createSlot([createToken('red', 1)]),
+        diceResult - 1
+      ),
+    });
+    const opponent = createActor({
+      spellSlots: createSpellSlots(
+        createSlot([createToken('orange', 1)]),
+        1
+      ),
+    });
+    opponent.mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+
+    const result = calculateBattleTurn({ currentActor, diceResult, opponent });
+
+    expect(result.damage.counter).toBe(5);
+    expect(result.nextCurrentActor.currentHealth).toBe(95);
+  }
+);
+
+test('keeps opponent guard in the resolved state until turn-end cleanup', () => {
   const emptyResult = calculateBattleTurn({
     currentActor: createActor(),
     diceResult: 1,
@@ -183,8 +388,28 @@ test('treats empty actor slots as misses and expires opponent guard', () => {
     effects: [],
     isMiss: true,
     nextCurrentActor: { currentHealth: 100, guard: 0 },
-    nextOpponent: { currentHealth: 100, guard: 0 },
+    nextOpponent: { currentHealth: 100, guard: 30 },
   });
+});
+
+test('queues normal attack guard absorption for the damage impact', () => {
+  const currentActor = createActor({
+    spellSlots: createSpellSlots(createSlot([createToken('red', 1)])),
+  });
+  const opponent = createActor({ guard: 7 });
+
+  const result = calculateBattleTurn({ currentActor, diceResult: 1, opponent });
+
+  expect(result.effects).toEqual([
+    {
+      amount: 3,
+      guardReduction: 7,
+      source: 'currentActor',
+      target: 'opponent',
+      type: 'redDamage',
+    },
+  ]);
+  expect(result.nextOpponent).toEqual({ currentHealth: 97, guard: 0 });
 });
 
 test.each([
@@ -408,7 +633,7 @@ test('applies an active Purple buff only to Red attack and Blue guard', () => {
     outgoing: 10,
     rawRed: 15,
   });
-  expect(result.nextCurrentActor).toEqual({ currentHealth: 95, guard: 10 });
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 100, guard: 5 });
   expect(result.freezeApplied).toBe(true);
   expect(result.purpleBuffGranted).toBe(5);
 });
@@ -513,7 +738,7 @@ test('combines active Yellow and Purple buffs only for Red attack and Blue guard
     outgoing: 20,
     rawRed: 25,
   });
-  expect(result.nextCurrentActor).toEqual({ currentHealth: 95, guard: 20 });
+  expect(result.nextCurrentActor).toEqual({ currentHealth: 100, guard: 15 });
   expect(result.freezeApplied).toBe(true);
   expect(result.purpleBuffGranted).toBe(5);
 });
@@ -546,5 +771,5 @@ test('clamps health and reductions while keeping Orange counter damage separate 
     rawRed: 10,
   });
   expect(result.nextCurrentActor.currentHealth).toBe(0);
-  expect(result.nextOpponent).toEqual({ currentHealth: 4, guard: 0 });
+  expect(result.nextOpponent).toEqual({ currentHealth: 4, guard: 50 });
 });

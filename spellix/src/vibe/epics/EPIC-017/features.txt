@@ -1,0 +1,1401 @@
+---
+
+Feature-001: Rebalance board landing event probabilities
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-008: Trigger board events based on landed environment
+* EPIC-016 Feature-009: Add choose event mode to debug menu
+
+Goal
+
+* Update the board landing event probability table for balancing.
+* This replaces the EPIC-016 Feature-008 event probability table.
+* Event selection behaviour stays the same.
+* Only the probability values change.
+
+Updated Event Probability Table
+
+```txt id="nsp38j"
+Field
+Nothing 30
+Level 1 Battle 35
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 5
+Loot Chest 5
+Roll Again 10
+
+Hills
+Nothing 25
+Level 1 Battle 35
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 15
+Decision 10
+Hazard 5
+Loot Chest 5
+Roll Again 5
+
+Gravel
+Nothing 25
+Level 1 Battle 30
+Level 2 Battle 5
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 15
+Loot Chest 5
+Roll Again 5
+
+Mud
+Nothing 25
+Level 1 Battle 30
+Level 2 Battle 5
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 15
+Hazard 15
+Loot Chest 5
+Roll Again 5
+
+Stream
+Nothing 15
+Level 1 Battle 10
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 60
+Cave Mini Game 0
+Decision 0
+Hazard 10
+Loot Chest 5
+Roll Again 0
+
+River
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 0
+Level 3 Battle 0
+River Mini Game 90
+Cave Mini Game 0
+Decision 0
+Hazard 5
+Loot Chest 5
+Roll Again 0
+
+Woods
+Nothing 0
+Level 1 Battle 45
+Level 2 Battle 40
+Level 3 Battle 0
+River Mini Game 0
+Cave Mini Game 0
+Decision 5
+Hazard 5
+Loot Chest 5
+Roll Again 0
+
+Forest
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 40
+Level 3 Battle 40
+River Mini Game 0
+Cave Mini Game 0
+Decision 5
+Hazard 10
+Loot Chest 5
+Roll Again 0
+
+Mountains
+Nothing 0
+Level 1 Battle 0
+Level 2 Battle 25
+Level 3 Battle 30
+River Mini Game 0
+Cave Mini Game 25
+Decision 5
+Hazard 10
+Loot Chest 5
+Roll Again 0
+```
+
+Required Behaviour
+
+* Use this table as the new source of truth for random board landing event selection.
+* Each environment row still totals 100.
+* Events with `0` chance should not be selected.
+* Choose Event Mode should also use this updated table when deciding which event buttons are available.
+* Any event with a non-zero value should appear in Choose Event Mode.
+* Any event with a zero value should not appear in Choose Event Mode.
+
+Suggested Data Direction
+
+```js id="vibdez"
+const environmentEventTable = {
+  field: {
+    nothing: 30,
+    level1Battle: 35,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 15,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 10
+  }
+};
+```
+
+Out Of Scope
+
+* No changes to event resolution.
+* No changes to event names.
+* No changes to hazard probability table.
+* No changes to battle rewards.
+* No changes to Choose Event Mode layout.
+* No changes to feature-square behaviour.
+
+Testing Checkpoints
+
+* Land on Field repeatedly and confirm Level 1 Battle is more common than before.
+* Confirm Field Roll Again chance is now 10.
+* Confirm Hills Decision chance is now 10.
+* Confirm Stream can now trigger Level 1 Battle.
+* Confirm Stream no longer triggers Roll Again.
+* Confirm Woods Hazard chance is now 5.
+* Confirm all rows still total 100.
+* Confirm zero-chance events are never selected.
+* Confirm Choose Event Mode shows only non-zero events from the updated table.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Updated the existing shared environment event table with the exact Field, Hills, Stream, and Woods values from this feature; unchanged environment rows remain unchanged.
+* Reused the existing weighted selector and non-zero event filtering, so random board landings and Choose Event Mode both consume the new values without event-resolution or layout changes.
+* Updated focused tests for all nine exact 100-point rows, Field selection boundaries, zero-weight exclusion, and Stream's new Level 1 Battle availability without Roll Again.
+* The focused data and Choose Event Mode suites pass all 19 tests, scoped ESLint passes, `npm run build` passes, and `git diff --check` passes.
+* No new components, routes, styling, dependencies, or abstractions were added.
+
+---
+
+Feature-002: Rebalance enemy health values
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* EPIC-016 Feature-005: Replace enemy “J” placeholders with joined spell columns
+
+Goal
+
+* Update enemy health values for balancing.
+* Only enemy health values are changing.
+* Enemy names, Japanese names, image file names, levels, and spell slots should remain the same.
+* Existing joined-column data from EPIC-016 Feature-005 should remain intact.
+
+Updated Enemy Health Values
+
+```txt id="q648d0"
+Vilewhisker Rat / 毒ヒゲネズミ / VR.png / Level 1 / Health 20
+Emberhorn Imp / 火角インプ / EI.png / Level 1 / Health 20
+Boneveil Acolyte / 骨衣の使徒 / BA.png / Level 1 / Health 20
+Nightplume Raven / 夜羽ガラス / NR.png / Level 1 / Health 20
+Flaskwick Goblin / 薬瓶ゴブリン / FG.png / Level 1 / Health 20
+
+Hexmaw Hag / 呪牙の魔女 / HH.png / Level 2 / Health 30
+Runefang Wolf / 魔紋狼 / RW.png / Level 2 / Health 30
+Frostwisp Spirit / 氷霊ウィスプ / FS.png / Level 2 / Health 30
+Harvestrot Scarecrow / 腐れ案山子 / HS.png / Level 2 / Health 30
+Wartback Brute / イボ背の巨漢 / WB.png / Level 2 / Health 30
+
+Gravechant Necromancer / 墓歌の屍術師 / GN.png / Level 3 / Health 50
+Dreadsteel Knight / 恐鋼の騎士 / DK.png / Level 3 / Health 50
+Skullclub Warlord / 髑髏棍の戦王 / SW.png / Level 3 / Health 50
+Venomglyph Serpent / 毒紋の大蛇 / VS.png / Level 3 / Health 50
+Cinderveil Demon / 炎灰の悪魔 / CD.png / Level 3 / Health 50
+
+Crowned Lichlord / 冠のリッチ王 / CL.png / Level 4 / Health 100
+Amethyst Ogre / 紫晶のオーガ / AO.png / Level 4 / Health 100
+Mossroot Elder / 苔根の古老 / ME.png / Level 4 / Health 100
+Duskwyrm Warlock / 黄昏竜の魔導士 / DW.png / Level 4 / Health 100
+Hellcrown Reaper / 地獄冠の死神 / HR.png / Level 4 / Health 100
+```
+
+Required Behaviour
+
+* Update both `health` and any equivalent `maxHealth` / `currentHealth` initial values.
+* When a battle starts, the enemy should begin at the new max health.
+* Do not accidentally leave old health values in copied battle instances.
+* Do not change enemy spell slots.
+* Do not remove joined-column handling for Crowned Lichlord or Hellcrown Reaper.
+
+Boss Battle Exception
+
+* EPIC-016 Feature-003 still applies.
+* If a level 4 enemy is selected as the Boss Battle enemy, the boss battle instance should still override health to:
+
+```txt id="6lfnn6"
+150 / 150
+```
+
+* This boss override should not mutate the base enemy data.
+* Base level 4 enemies should now have `100` health outside the boss battle override.
+
+Out Of Scope
+
+* No spell table changes.
+* No token effect changes.
+* No enemy level changes.
+* No enemy image changes.
+* No battle reward changes.
+* No changes to boss health override.
+
+Testing Checkpoints
+
+* Trigger a Level 1 Battle.
+* Confirm the enemy starts with 20 HP.
+* Trigger a Level 2 Battle.
+* Confirm the enemy starts with 30 HP.
+* Trigger a Level 3 Battle.
+* Confirm the enemy starts with 50 HP.
+* Trigger an Elite Tower battle.
+* Confirm the level 4 enemy starts with 100 HP.
+* Trigger Boss Battle.
+* Confirm the boss still starts with 150 / 150 HP.
+* Confirm Crowned Lichlord joined columns still work.
+* Confirm Hellcrown Reaper joined columns still work.
+* Confirm no spell tables changed accidentally.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Updated the 20 existing enemy definitions to use level-based base health: Level 1 `20`, Level 2 `30`, Level 3 `50`, and Level 4 `100`.
+* Reused the existing enemy factory, which derives `currentHealth` from `maxHealth`, and the existing `startBattle` copy path so normal battles start at the new full health values.
+* Preserved the existing Boss Battle option override at `150 / 150`; focused coverage confirms it does not mutate the selected level 4 enemy's `100 / 100` base data.
+* Enemy names, Japanese names, images, levels, spell slots, rewards, and all Crowned Lichlord and Hellcrown Reaper joined-column data remain unchanged.
+* Enemy, GameSetup, Elite/Boss, and real debug-battle suites pass all 47 tests; scoped ESLint, `npm run build`, and `git diff --check` pass.
+* No new components, routes, styling, dependencies, or abstractions were added.
+
+---
+
+Feature-003: Add rare yellow-outline double-strength tokens
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-011 Feature-004: Add non-battle token effects
+* EPIC-014 Feature-007: Make potion tooltips like token tooltips
+
+Goal
+
+* Add 4 new rare tokens.
+* These are yellow-outline versions of existing common tokens.
+* They use the same base colours and animations as their common counterparts.
+* They have doubled values when used in spell columns.
+* No new token functionality is required.
+
+New Tokens
+
+```txt id="k81g51"
+Red/Yellow Outline
+Description: Plus 20 Damage
+Japanese Description: ダメージ＋20
+Rarity: Rare
+
+Blue/Yellow Outline
+Description: Plus 10 Guard
+Japanese Description: ガード＋10
+Rarity: Rare
+
+Orange/Yellow Outline
+Description: Plus 10 Counter Damage
+Japanese Description: 反撃ダメージ＋10
+Rarity: Rare
+
+Green/Yellow Outline
+Description: Plus 10 Weakness
+Japanese Description: 弱体化＋10
+Rarity: Rare
+```
+
+Existing Token Source Of Truth
+
+* Keep the existing tokens unchanged:
+
+```txt id="oxqmkw"
+Red / Plus 10 Damage / ダメージ＋10 / Common
+Blue / Plus 5 Guard / ガード＋5 / Common
+Orange / Plus 5 Counter Damage / 反撃ダメージ＋5 / Common
+Green / Plus 5 Weakness / 弱体化＋5 / Common
+Light Blue / Freeze / 凍結 / Common
+Light Green / Plus 5 HP / HP＋5 / Common
+Black / This token will be the first token to be removed if you lose a battle / バトルに敗北した場合、このトークンが最初に取り除かれる / Common
+White / Merge Token / 合成トークン / Rare
+Purple / Plus 5 Buff / バフ＋5 / Rare
+Yellow / Charge / チャージ / Rare
+Grey / Plus 1 Token slot to all adjacent columns / 隣接するすべての列のトークンスロットを1つ増やす / Rare
+```
+
+Visual Requirement
+
+* The new tokens should use the normal token component.
+* Each yellow-outline token should use the same fill/base colour as its common counterpart.
+* Add a `2px` yellow border around the token.
+* This border indicates it is like a shiny or upgraded version of the common token.
+
+Suggested CSS Direction
+
+```css id="w9rw41"
+.token-yellow-outline {
+  border: 2px solid #F5FA00;
+  box-sizing: border-box;
+}
+```
+
+* Exact yellow should match the game’s existing yellow UI colour if possible.
+
+Suggested Data Shape
+
+```js id="mfvkml"
+{
+  id: "red-yellow-outline",
+  name: {
+    en: "Red/Yellow Outline",
+    jp: "赤/黄色アウトライン"
+  },
+  description: {
+    en: "Plus 20 Damage",
+    jp: "ダメージ＋20"
+  },
+  rarity: "Rare",
+  baseColour: "Red",
+  outlineColour: "Yellow",
+  battleEffect: {
+    type: "damage",
+    amount: 20
+  }
+}
+```
+
+Battle Behaviour
+
+* The new tokens should behave like their common counterparts, but with doubled values.
+
+Effect mapping:
+
+```txt id="i6wj92"
+Red/Yellow Outline = Red token behaviour, but 20 damage
+Blue/Yellow Outline = Blue token behaviour, but 10 guard
+Orange/Yellow Outline = Orange token behaviour, but 10 counter damage
+Green/Yellow Outline = Green token behaviour, but 10 weakness
+```
+
+Animation Requirement
+
+* Use the same battle animations as the common counterpart.
+* Red/Yellow Outline uses Red damage animation.
+* Blue/Yellow Outline uses Blue guard animation.
+* Orange/Yellow Outline uses Orange counter animation.
+* Green/Yellow Outline uses Green weakness animation.
+* No new animations are needed.
+
+Assignment Requirement
+
+* These tokens should be assignable to spell columns exactly like other tokens.
+* They should count as one token for capacity purposes.
+* Their effect value is doubled, but they do not take two token slots.
+* They should be valid in token bag, token rewards, token assignment, Copy and Paste, Buy and Sell, and any random token reward pool that includes rare tokens.
+
+Random Reward Requirement
+
+* Since these tokens are rare, they should be included wherever rare tokens can be randomly awarded.
+* If a reward gives a random token from all tokens, these should be available.
+* If a reward gives a common token only, these should not be available.
+* If a reward gives a rare token only, these should be available.
+
+Out Of Scope
+
+* No new token mechanics.
+* No new token assignment UI.
+* No new battle animations.
+* No changes to common token values.
+* No changes to token capacity.
+* No changes to rarity weighting unless required to include the new rare tokens.
+
+Testing Checkpoints
+
+* Confirm all 4 yellow-outline tokens exist in token data.
+* Confirm they are marked Rare.
+* Confirm they use the same base colour as their common counterpart.
+* Confirm each has a 2px yellow border.
+* Add Red/Yellow Outline to a spell column.
+* Confirm it deals 20 damage.
+* Add Blue/Yellow Outline to a spell column.
+* Confirm it grants 10 guard.
+* Add Orange/Yellow Outline to a spell column.
+* Confirm it grants 10 counter damage.
+* Add Green/Yellow Outline to a spell column.
+* Confirm it applies 10 weakness.
+* Confirm each uses the common counterpart’s animation.
+* Confirm each consumes only one token slot.
+* Confirm rare token reward pools can include them.
+* Confirm common-only reward pools do not include them.
+* Confirm Copy and Paste can duplicate them.
+* Confirm token tooltips show the correct descriptions.
+* Confirm English text uses the correct font.
+* Confirm Japanese text uses the correct font.
+* Confirm no `ul` or `li` elements are introduced.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added four centralized Rare token definitions with the required English and Japanese text, common base-colour metadata, and yellow-outline metadata.
+* Reused the existing token component and battle effect types, adding only the required `2px` `#F5FA00` outline and doubled damage, guard, counter, and weakness values.
+* Existing generic token handling makes each outlined token consume one spell slot and supports token bags, Copy and Paste, Buy and Sell, battle rewards, Decision rewards, and cave rewards without new UI or mechanics.
+* Nine focused suites pass all 157 tests; scoped ESLint, `npm run build`, and `git diff --check` pass.
+* No new components, routes, dependencies, animations, capacity rules, rarity weighting, list markup, or unrelated refactors were added.
+
+---
+
+Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-003: Add rare yellow-outline double-strength tokens
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-011 Bug-010: Battle buffs applied to merged columns must trigger from either merged column number
+* EPIC-014 Feature-009: Rearrange battle page with dice between characters
+
+Goal
+
+* Change counter attack behaviour in battle.
+* Orange and Orange/Yellow Outline tokens should not always trigger just because the roller matched the opponent’s counter column.
+* Counter attack damage should only trigger if the rolling player attempts to affect the opponent that turn.
+* Newly applied guard from the same roll should be able to absorb counter damage.
+
+Current Problem
+
+* At the moment, if a player rolls a number and the opponent has counter tokens in that matching column, counter damage is applied regardless of what the player actually did.
+* This means a player can take counter damage even if they only guarded or used a self-focused effect.
+* That should no longer happen.
+
+Required Counter Trigger Rule
+
+* A counter attack can only trigger if:
+
+  * the rolling player rolls the relevant number.
+  * the opponent has Orange or Orange/Yellow Outline counter tokens in the matching effective column.
+  * the rolling player attempted to affect the opponent during that same battle turn.
+
+Opponent-Affecting Actions
+
+* The following should count as trying to affect the opponent:
+
+  * dealing damage with Red or Red/Yellow Outline tokens.
+  * freezing with Light Blue tokens.
+  * applying weakness with Green or Green/Yellow Outline tokens, if weakness targets the opponent.
+  * any other current or future token effect that directly targets or harms the opponent.
+
+Non-Opponent-Affecting Actions
+
+* The following should not trigger counter damage by themselves:
+
+  * applying only Guard.
+  * charging only.
+  * buffing self only.
+  * healing self only.
+  * missing.
+  * any other self-only effect.
+
+Examples
+
+Example 1: Guard only should not trigger counter
+
+```txt id="k9ym13"
+Player rolls 2.
+Player has 2 Blue tokens in column 2.
+Opponent has 1 Orange token in column 2.
+
+Result:
+Player gains guard.
+No counter damage is applied because the player did not attack or affect the opponent.
+```
+
+Example 2: Attack or freeze should trigger counter
+
+```txt id="9auiqv"
+Player rolls 4.
+Player has Red and/or Light Blue tokens in column 4.
+Opponent has Orange token in column 4.
+
+Result:
+Player attempted to affect the opponent.
+Counter damage is applied.
+```
+
+Example 3: Guard from same turn absorbs counter
+
+```txt id="u2pg2r"
+Player rolls 1.
+Player has 1 Red token and 1 Blue token in column 1.
+Opponent has 2 Orange tokens in column 1.
+
+Resolution:
+Player deals 10 damage to opponent.
+Player gains 5 guard.
+Opponent counter deals 10 counter damage.
+Player's 5 newly gained guard absorbs 5 counter damage.
+Player takes 5 health damage.
+Player's guard is reduced to 0.
+```
+
+Required Resolution Order
+
+* Within a battle turn, resolve the rolling player’s column effects first.
+* Apply the rolling player’s guard before resolving opponent counter damage.
+* Then, if the rolling player attempted to affect the opponent, resolve opponent counter damage.
+* Counter damage should be absorbed by the rolling player’s current guard, including guard gained earlier in the same turn.
+
+Suggested Resolution Order
+
+```txt id="pzphug"
+1. Rolling player rolls dice.
+2. Determine rolling player's effective column.
+3. Resolve rolling player's effects.
+4. Track whether any resolved effect attempted to affect the opponent.
+5. Apply any guard gained by the rolling player.
+6. If opponent was affected or targeted, check opponent's matching counter column.
+7. Apply counter damage.
+8. Rolling player's guard absorbs counter damage first.
+9. Remaining counter damage reduces rolling player's health.
+```
+
+Suggested State Direction
+
+```js id="gnrs7y"
+const turnResolution = {
+  attemptedToAffectOpponent: false,
+  damageToOpponent: 0,
+  freezeAppliedToOpponent: false,
+  weaknessAppliedToOpponent: 0,
+  guardGainedByActor: 0
+};
+```
+
+Suggested Logic Direction
+
+```js id="h4gwis"
+const attemptedToAffectOpponent =
+  damageToOpponent > 0 ||
+  freezeAppliedToOpponent ||
+  weaknessAppliedToOpponent > 0;
+
+if (attemptedToAffectOpponent) {
+  applyCounterDamageFromOpponentColumn({
+    opponent,
+    actor,
+    rolledNumber
+  });
+}
+```
+
+Counter Token Values
+
+* Orange token:
+
+```txt id="ykwrtm"
+5 counter damage
+```
+
+* Orange/Yellow Outline token:
+
+```txt id="sgdwi8"
+10 counter damage
+```
+
+* Multiple counter tokens stack.
+
+Merged / Joined Column Requirement
+
+* Counter attack checks should use effective column logic.
+* If the opponent has a merged or joined column, rolling either number in that effective group should check the correct counter column.
+* Do not accidentally check only the visual slot number.
+
+Out Of Scope
+
+* No changes to counter token visual design.
+* No changes to counter token animation, except it may trigger less often.
+* No changes to Red, Blue, Green, or Light Blue base effects.
+* No changes to enemy spell data.
+* No changes to battle rewards.
+* No changes to non-counter battle order except what is required for guard to absorb same-turn counter damage.
+
+Testing Checkpoints
+
+* Set actor column 2 to only Blue tokens.
+* Set opponent column 2 to Orange tokens.
+* Roll 2.
+* Confirm actor gains guard.
+* Confirm no counter damage is applied.
+* Set actor column 4 to Red token.
+* Set opponent column 4 to Orange token.
+* Roll 4.
+* Confirm actor damages opponent.
+* Confirm counter damage is applied.
+* Set actor column 4 to Light Blue token.
+* Set opponent column 4 to Orange token.
+* Roll 4.
+* Confirm freeze attempts to affect opponent.
+* Confirm counter damage is applied.
+* Set actor column 1 to Red and Blue.
+* Set opponent column 1 to 2 Orange tokens.
+* Roll 1.
+* Confirm actor deals 10 damage.
+* Confirm actor gains 5 guard.
+* Confirm opponent counter damage totals 10.
+* Confirm 5 guard absorbs 5 counter damage.
+* Confirm actor takes only 5 health damage.
+* Test Orange/Yellow Outline.
+* Confirm it deals 10 counter damage.
+* Test merged player columns.
+* Confirm counter checks use effective column numbers.
+* Test joined enemy columns.
+* Confirm counter checks use effective column numbers.
+* Confirm counter animations still play when counter actually triggers.
+* Confirm no counter animation plays when counter does not trigger.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Counter eligibility now requires a resolved actor-to-opponent effect or an available Light Blue Freeze; guard-only, Purple-only, Yellow-only, and miss turns do not trigger counters.
+* Red attacks count as targeting the opponent even when weakness or Guard prevents health damage, matching the feature's affected-or-targeted rule.
+* Existing Guard and Blue Guard gained on the same roll now absorb counter damage before the remaining amount is queued as health damage.
+* Reused the existing effective-column lookup and orange effect type, preserving merged/joined columns and the current counter animation without UI or enemy-data changes.
+* The resolver and GameSetup suites pass all 76 tests, and the three focused BattlePage counter animation/loss tests pass; scoped resolver ESLint, `npm run build`, and `git diff --check` pass.
+* The full BattlePage suite retains five unrelated pre-existing stale CSS and old enemy-health expectation failures, and that legacy test file retains 97 pre-existing `testing-library/no-node-access` lint violations outside the changed Feature-004 lines.
+
+---
+
+Feature-005: Improve weakness animation with faBan icon
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-003: Add rare yellow-outline double-strength tokens
+* EPIC-006 Feature-002: Add dice-driven battle turns
+* EPIC-014 Feature-009: Rearrange battle page with dice between characters
+
+Goal
+
+* Make the weakness animation more obvious.
+* Keep the existing green flash animation.
+* Add a Font Awesome `faBan` icon animation at the same time.
+* The icon should use the same green colour as the existing weakness flash.
+
+Trigger Requirement
+
+* Trigger this icon animation whenever the current green weakness flash animation is triggered.
+* This should apply to:
+
+  * Green token weakness.
+  * Green/Yellow Outline token weakness.
+  * any other current or future weakness effect that reuses the green flash.
+
+Icon Requirement
+
+* Use Font Awesome icon:
+
+```txt id="gvfxqb"
+faBan
+```
+
+* The icon should:
+
+  * appear above the affected player’s image.
+  * use the same green colour as the weakness flash.
+  * grow from the centre.
+  * grow to the same width as the player image.
+  * shake a few times.
+  * fade out.
+  * last the same amount of time as the other battle animations.
+
+Suggested Structure
+
+```jsx id="i6bxdu"
+{showWeaknessAnimation && (
+  <FontAwesomeIcon
+    icon={faBan}
+    className="weakness-ban-animation"
+  />
+)}
+```
+
+Suggested CSS Direction
+
+```css id="a767yu"
+.weakness-animation-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.weakness-ban-animation {
+  width: 100%;
+  height: auto;
+  color: var(--weakness-green);
+  animation: weaknessBanAnimation 1.5s ease-out forwards;
+}
+```
+
+Suggested Keyframes
+
+```css id="ebreq2"
+@keyframes weaknessBanAnimation {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  42% {
+    transform: scale(1) translateX(-5px) rotate(-4deg);
+  }
+
+  54% {
+    transform: scale(1) translateX(5px) rotate(4deg);
+  }
+
+  66% {
+    transform: scale(1) translateX(-4px) rotate(-3deg);
+  }
+
+  78% {
+    transform: scale(1) translateX(4px) rotate(3deg);
+  }
+
+  90% {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1) translateX(0) rotate(0);
+  }
+}
+```
+
+* Exact timing can vary.
+* The animation duration should match the existing battle animation timing.
+* If existing battle animations use `1.5s`, use `1.5s`.
+
+Position Requirement
+
+* The icon should be centred over the affected player image.
+* It should not move the player image or layout.
+* It should not affect dice positioning.
+* It should not affect battle-side layout.
+* Use absolute positioning inside the same image wrapper used by the current green flash if practical.
+
+Colour Requirement
+
+* Use the same green as the current weakness flash.
+* Do not introduce a different random green.
+* If the current animation has a CSS variable or class colour, reuse it.
+
+Out Of Scope
+
+* No changes to weakness mechanics.
+* No changes to weakness amount.
+* No changes to Green token data except interaction with Feature-003.
+* No changes to battle timing except adding the icon within the existing animation duration.
+* No changes to other token animations.
+* No new sounds.
+* No unrelated battle UI redesign.
+
+Testing Checkpoints
+
+* Trigger weakness with a Green token.
+* Confirm the existing green flash still appears.
+* Confirm `faBan` appears at the same time.
+* Confirm the icon is green.
+* Confirm it uses the same green as the flash.
+* Confirm the icon grows from the centre.
+* Confirm it grows to the same width as the player image.
+* Confirm it shakes a few times.
+* Confirm it fades out.
+* Confirm it lasts the same duration as the other animations.
+* Trigger weakness with a Green/Yellow Outline token.
+* Confirm the same animation plays.
+* Confirm no layout shifts occur.
+* Confirm the player image remains positioned correctly.
+* Confirm the dice element behaviour is unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing `greenReduction` effect and affected-side calculation so common Green, Green/Yellow Outline, and any future effect using the same animation type trigger one shared weakness overlay.
+* Added the existing Font Awesome `faBan` icon inside the affected actor image wrapper while preserving the current green radiating flash.
+* The icon reuses the flash's `green` colour, grows to the actor wrapper width, shakes around its centre, and fades during the existing one-second battle effect window.
+* Absolute positioning and pointer-event suppression keep the actor image, battle sides, and dice layout unchanged.
+* The two focused BattlePage weakness tests, all 49 battle resolver tests, scoped BattlePage ESLint, `npm run build`, and `git diff --check` pass.
+* No weakness values, token data, battle sequencing, sounds, or unrelated animations were changed.
+
+---
+
+Feature-006: Correct token names and separate them from descriptions
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-003: Add rare yellow-outline double-strength tokens
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-014 Feature-007: Make potion tooltips like token tooltips
+
+Goal
+
+* Fix token labelling.
+* Token names appear to have been replaced with token descriptions.
+* Each token should have:
+
+  * colour / visual type.
+  * English name.
+  * Japanese name.
+  * English description.
+  * Japanese description.
+  * rarity.
+* The token name should be displayed as the token’s label.
+* The token description should be shown in the tooltip or description area.
+
+Problem Summary
+
+* Some tokens are currently labelled with their effect text, such as:
+
+```txt id="l4qlb2"
+Plus 10 Damage
+Plus 5 Guard
+Plus 5 Counter Damage
+```
+
+* These should not be the token names.
+* The token names should instead be:
+
+```txt id="sdqp4t"
+Damage
+Guard
+Counter
+```
+
+Required Token Source Of Truth
+
+```txt id="erxgxe"
+Colour: Red
+Name: Damage
+Japanese Name: ダメージ
+Description: Plus 10 Damage
+Japanese Description: ダメージ＋10
+Rarity: Common
+
+Colour: Blue
+Name: Guard
+Japanese Name: ガード
+Description: Plus 5 Guard
+Japanese Description: ガード＋5
+Rarity: Common
+
+Colour: Orange
+Name: Counter
+Japanese Name: カウンター
+Description: Plus 5 Counter Damage
+Japanese Description: 反撃ダメージ＋5
+Rarity: Common
+
+Colour: Green
+Name: Weaken
+Japanese Name: 弱体化
+Description: Plus 5 Weakness
+Japanese Description: 弱体化＋5
+Rarity: Common
+
+Colour: Light Blue
+Name: Freeze
+Japanese Name: 凍結
+Description: Freeze
+Japanese Description: 凍結
+Rarity: Common
+
+Colour: Light Green
+Name: Health
+Japanese Name: 体力
+Description: Plus 5 HP
+Japanese Description: HP＋5
+Rarity: Common
+
+Colour: Black
+Name: Sacrifice
+Japanese Name: 身代わり
+Description: This token will be the first token to be removed if you lose a battle
+Japanese Description: バトルに敗北した場合、このトークンが最初に取り除かれる
+Rarity: Common
+
+Colour: White
+Name: Merge
+Japanese Name: 合成
+Description: Merge Token
+Japanese Description: 合成トークン
+Rarity: Rare
+
+Colour: Purple
+Name: Buff
+Japanese Name: 強化
+Description: Plus 5 Buff
+Japanese Description: バフ＋5
+Rarity: Rare
+
+Colour: Yellow
+Name: Charge
+Japanese Name: チャージ
+Description: Charge
+Japanese Description: チャージ
+Rarity: Rare
+
+Colour: Grey
+Name: Capacity
+Japanese Name: 容量
+Description: Plus 1 Token slot to all adjacent columns
+Japanese Description: 隣接するすべての列のトークンスロットを1つ増やす
+Rarity: Rare
+
+Colour: Red/Yellow Outline
+Name: Shiny Damage
+Japanese Name: 輝くダメージ
+Description: Plus 20 Damage
+Japanese Description: ダメージ＋20
+Rarity: Rare
+
+Colour: Blue/Yellow Outline
+Name: Shiny Guard
+Japanese Name: 輝くガード
+Description: Plus 10 Guard
+Japanese Description: ガード＋10
+Rarity: Rare
+
+Colour: Orange/Yellow Outline
+Name: Shiny Counter
+Japanese Name: 輝くカウンター
+Description: Plus 10 Counter Damage
+Japanese Description: 反撃ダメージ＋10
+Rarity: Rare
+
+Colour: Green/Yellow Outline
+Name: Shiny Weaken
+Japanese Name: 輝く弱体化
+Description: Plus 10 Weakness
+Japanese Description: 弱体化＋10
+Rarity: Rare
+```
+
+Suggested Data Shape
+
+```js id="i1eed0"
+{
+  id: "red",
+  colour: "Red",
+  name: {
+    en: "Damage",
+    jp: "ダメージ"
+  },
+  description: {
+    en: "Plus 10 Damage",
+    jp: "ダメージ＋10"
+  },
+  rarity: "Common",
+  battleEffect: {
+    type: "damage",
+    amount: 10
+  }
+}
+```
+
+Shiny Token Data Requirement
+
+* The yellow-outline tokens should use their proper token names.
+* Do not use their descriptions as names.
+* Correct names:
+
+```txt id="xmq6ld"
+Shiny Damage
+Shiny Guard
+Shiny Counter
+Shiny Weaken
+```
+
+* Correct Japanese names:
+
+```txt id="sfsggg"
+輝くダメージ
+輝くガード
+輝くカウンター
+輝く弱体化
+```
+
+Display Requirement
+
+* Wherever a token name is shown, use `token.name`.
+* Wherever a token effect/description is shown, use `token.description`.
+* This applies to:
+
+  * token bag.
+  * spell assignment modal.
+  * committed spell slot display.
+  * battle spell columns.
+  * reward token display.
+  * token tooltips.
+  * Copy and Paste.
+  * Buy and Sell.
+  * Tokensmith.
+  * village token rewards.
+  * decision token rewards.
+  * loot chest token rewards.
+  * debug displays.
+
+Tooltip Requirement
+
+* Token tooltip title should show the token name.
+* Token tooltip body should show the token description.
+* Do not duplicate the description as the title.
+
+Example:
+
+```txt id="upz5u6"
+Tooltip title: Shiny Damage
+Tooltip body: Plus 20 Damage
+```
+
+Japanese example:
+
+```txt id="v14zij"
+Tooltip title: 輝くダメージ
+Tooltip body: ダメージ＋20
+```
+
+Battle Behaviour Requirement
+
+* This feature should only correct labels.
+* Token functionality should remain unchanged.
+* Shiny tokens should still use the doubled effects from Feature-003.
+* Counter behaviour changes from Feature-004 should remain unchanged.
+* Weakness animation changes from Feature-005 should remain unchanged.
+
+Out Of Scope
+
+* No changes to token effects.
+* No changes to token rarity.
+* No changes to token reward odds.
+* No changes to token visuals except ensuring the correct name is displayed.
+* No changes to yellow-outline styling.
+* No changes to battle animations.
+* No unrelated token assignment changes.
+
+Testing Checkpoints
+
+* Open token bag.
+* Confirm Red token is labelled `Damage`, not `Plus 10 Damage`.
+* Confirm Blue token is labelled `Guard`, not `Plus 5 Guard`.
+* Confirm Orange token is labelled `Counter`, not `Plus 5 Counter Damage`.
+* Confirm Green token is labelled `Weaken`, not `Plus 5 Weakness`.
+* Confirm Light Blue token is labelled `Freeze`.
+* Confirm Light Green token is labelled `Health`.
+* Confirm Black token is labelled `Sacrifice`.
+* Confirm White token is labelled `Merge`.
+* Confirm Purple token is labelled `Buff`.
+* Confirm Yellow token is labelled `Charge`.
+* Confirm Grey token is labelled `Capacity`.
+* Confirm Red/Yellow Outline token is labelled `Shiny Damage`.
+* Confirm Blue/Yellow Outline token is labelled `Shiny Guard`.
+* Confirm Orange/Yellow Outline token is labelled `Shiny Counter`.
+* Confirm Green/Yellow Outline token is labelled `Shiny Weaken`.
+* Confirm Japanese names display correctly.
+* Confirm tooltips show token name as title and description as body.
+* Confirm token effects still work correctly in battle.
+* Confirm shiny token effects still use doubled values.
+* Confirm reward/token assignment flows show names correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the centralized `TOKEN_DEFINITIONS`, `getTokenName`, `getTokenDescription`, and shared `Token` component; no new component, helper layer, route, dependency, styling, or data model was added.
+* Corrected the exact English and Japanese names and descriptions for all 15 tokens while preserving visual colour labels and rarity values.
+* Renamed the four outlined token names to Shiny Damage, Shiny Guard, Shiny Counter, and Shiny Weaken, with their required Japanese names.
+* Native token tooltips now present the localized name first and description second, while the accessible description remains the description body.
+* Debug selectors, debug messages, reward/decision replacement text, and death-result text now use localized token names instead of visual colour labels.
+* Existing shared Token usage carries the corrected names and descriptions through token bags, spell assignment, committed/battle columns, rewards, Copy and Paste, Buy and Sell, Tokensmith, village, decision, loot, and debug displays.
+* No token effects, values, rarity, reward odds, visuals, yellow-outline styling, assignment behavior, or battle animations were changed.
+
+---
+
+Feature-007: Smooth token glow animation
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-003: Add rare yellow-outline double-strength tokens
+* Feature-006: Correct token names and separate them from descriptions
+* EPIC-003 Feature-002: Add spell token assignment system
+
+Goal
+
+* Improve the glow animation on tokens.
+* The current glow looks jagged and appears to happen in two separate stages.
+* The glow should feel smooth, continuous, and polished.
+
+Problem Summary
+
+* Token glow animation currently looks like it jumps between states.
+* It may be caused by:
+
+  * too few keyframe steps.
+  * abrupt `box-shadow` changes.
+  * competing transitions and animations.
+  * class changes restarting the animation.
+  * glow being applied to both parent and child elements.
+  * border changes affecting layout.
+* The final visual should be one smooth pulse rather than a two-stage flicker.
+
+Required Behaviour
+
+* Token glow should smoothly pulse in and out.
+* The animation should not jump halfway through.
+* The token should not visually resize in a jagged way.
+* The glow should not affect layout.
+* The animation should work for:
+
+  * normal tokens.
+  * shiny yellow-outline tokens.
+  * reward tokens.
+  * token bag tokens.
+  * spell assignment tokens.
+  * committed spell display tokens.
+  * battle spell column tokens.
+
+Implementation Direction
+
+* Refactor the glow into a single reusable class.
+* Prefer animating `box-shadow`, `filter: drop-shadow`, `opacity`, or a pseudo-element.
+* Avoid rapidly changing layout properties such as:
+
+  * `width`
+  * `height`
+  * `border-width`
+  * `margin`
+  * `padding`
+* If scaling is used, use a very small smooth scale range and keep it on `transform`.
+
+Suggested CSS Direction
+
+```css id="2k88gq"
+.token-glow {
+  animation: tokenGlowPulse 1.6s ease-in-out infinite;
+  will-change: filter, box-shadow, transform;
+}
+
+@keyframes tokenGlowPulse {
+  0% {
+    filter: drop-shadow(0 0 2px currentColor);
+    transform: scale(1);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 10px currentColor);
+    transform: scale(1.04);
+  }
+
+  100% {
+    filter: drop-shadow(0 0 2px currentColor);
+    transform: scale(1);
+  }
+}
+```
+
+Alternative Pseudo-Element Direction
+
+* If `box-shadow` or `filter` still looks jagged, use a pseudo-element behind the token.
+* This often gives a smoother glow because the token itself does not need to resize or repaint as heavily.
+
+```css id="zilhfo"
+.token-wrapper {
+  position: relative;
+}
+
+.token-wrapper.is-glowing::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  filter: blur(8px);
+  animation: tokenGlowAura 1.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes tokenGlowAura {
+  0% {
+    opacity: 0.15;
+    transform: scale(0.95);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0.15;
+    transform: scale(0.95);
+  }
+}
+```
+
+Smoothness Requirement
+
+* The glow animation should use:
+
+  * one continuous animation.
+  * `ease-in-out`.
+  * matching start and end states.
+  * no abrupt change at `50%`.
+* The first and last keyframes must match so the loop does not snap.
+
+Important Keyframe Rule
+
+```txt id="5wc2qc"
+0% and 100% should be visually identical.
+```
+
+* This prevents the glow from jumping when the animation loops.
+
+Avoid Two-Stage Animation
+
+* Check that the token is not receiving two glow animations at the same time.
+* Avoid combining:
+
+  * one animation on the token.
+  * another animation on the token image.
+  * another transition on hover/active state.
+* If multiple glow classes exist, consolidate them.
+
+Shiny Token Requirement
+
+* Shiny yellow-outline tokens should keep their `2px` yellow border.
+* The glow should not make the yellow border jump or resize.
+* Use `box-sizing: border-box` on shiny tokens if needed.
+
+```css id="iiv2u0"
+.token-yellow-outline {
+  border: 2px solid #F5FA00;
+  box-sizing: border-box;
+}
+```
+
+* The glow should sit outside the token visually and not alter the token’s dimensions.
+
+Performance Requirement
+
+* Avoid expensive layout recalculation during the glow.
+* Prefer `transform`, `opacity`, and `filter`.
+* Add `will-change` only to the glowing token or aura element, not every token permanently if performance becomes worse.
+* Do not trigger React state updates every animation frame.
+* The glow should be pure CSS once started.
+
+Expected Behaviour
+
+* Token glow pulses smoothly.
+* The glow no longer appears to happen in two stages.
+* The token does not jump or flicker.
+* The animation loops cleanly.
+* Normal tokens still look the same apart from the smoother glow.
+* Shiny tokens keep their yellow outline and glow smoothly.
+* Token tooltips and click/drag behaviour are unaffected.
+
+Out Of Scope
+
+* No changes to token effects.
+* No changes to token rarity.
+* No changes to token names or descriptions.
+* No changes to token assignment rules.
+* No changes to battle animations.
+* No changes to reward odds.
+* No unrelated token redesign.
+
+Testing Checkpoints
+
+* View a glowing token in the token bag.
+* Confirm the glow is smooth.
+* Confirm the glow does not jump halfway through.
+* Confirm the loop does not snap between the end and start.
+* View a glowing token in spell assignment.
+* Confirm drag-and-drop still works.
+* View a glowing token in committed spell display.
+* Confirm the layout does not shift.
+* View a shiny yellow-outline token with glow.
+* Confirm the yellow border remains stable.
+* Confirm the shiny token does not visually resize in a jagged way.
+* Confirm tooltips still appear correctly.
+* Confirm no competing glow animations are applied at the same time.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing shared `Token` component and `token-display--glow` pseudo-element; no new component, animation class, state update, route, dependency, or abstraction was added.
+* Reworked the shared aura into one `1.6s ease-in-out` animation using only `opacity` and `transform`, with a static blur and explicitly identical `0%` and `100%` states so the loop does not snap.
+* Limited `will-change` to the animated aura rather than applying it permanently to every token element.
+* Kept shiny tokens at the base token dimensions while preserving a stable `2px` yellow border with `border-box` sizing.
+* Because all token bag, reward, assignment, committed, and battle displays reuse `Token`, the smoother glow applies to every required context without changing tooltip, click, drag-and-drop, effect, rarity, reward, or battle behavior.

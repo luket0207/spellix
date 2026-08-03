@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import Token from './Token';
 
@@ -43,12 +45,96 @@ describe('Token', () => {
 
       expect(token).toHaveClass('token-display--glow');
       expect(token).toHaveClass(`token-display--${tokenType}`);
-      expect(token).toHaveAttribute('title', TOKEN_DEFINITIONS[tokenType].description.en);
+      expect(token).toHaveAttribute(
+        'title',
+        `${TOKEN_DEFINITIONS[tokenType].name.en}\n${TOKEN_DEFINITIONS[tokenType].description.en}`
+      );
       expect(token).toHaveAccessibleDescription(TOKEN_DEFINITIONS[tokenType].description.en);
       expect(token).toHaveAttribute('tabindex', '0');
     });
 
     expect(screen.getAllByRole('img')).toHaveLength(tokenTypes.length);
+  });
+
+  test.each([
+    ['red-yellow-outline', 'red', 'Plus 20 Damage'],
+    ['blue-yellow-outline', 'blue', 'Plus 10 Guard'],
+    ['orange-yellow-outline', 'orange', 'Plus 10 Counter Damage'],
+    ['green-yellow-outline', 'green', 'Plus 10 Weakness'],
+  ])(
+    'renders %s with the common %s fill and yellow outline',
+    (tokenType, baseColour, description) => {
+      render(<Token ariaLabel={`${tokenType} token`} tokenType={tokenType} />);
+
+      const token = screen.getByLabelText(`${tokenType} token`);
+
+      expect(token).toHaveClass(
+        `token-display--${baseColour}`,
+        'token-display--yellow-outline'
+      );
+      expect(token).toHaveAttribute(
+        'title',
+        `${TOKEN_DEFINITIONS[tokenType].name.en}\n${description}`
+      );
+      expect(token).toHaveAccessibleDescription(description);
+    }
+  );
+
+  test('defines one smooth glow animation with matching loop endpoints', () => {
+    const stylesheet = readFileSync(join(__dirname, 'token.css'), 'utf8');
+
+    expect(stylesheet).toMatch(
+      /\.token-display--glow::before\s*{[^}]*animation:\s*token-display-glow 1\.6s ease-in-out infinite;[^}]*will-change:\s*opacity, transform;/s
+    );
+    expect(stylesheet).toMatch(
+      /@keyframes token-display-glow\s*{\s*0%,\s*100%\s*{[^}]*opacity:\s*0\.15;[^}]*transform:\s*scale\(0\.95\);/s
+    );
+  });
+
+  test('keeps the yellow outline stable without resizing the token', () => {
+    const stylesheet = readFileSync(join(__dirname, 'token.css'), 'utf8');
+    const outlinedTokenRule = stylesheet.match(
+      /\.token-display--yellow-outline\s*{([^}]*)}/s
+    )?.[1];
+
+    expect(outlinedTokenRule).toBeDefined();
+    expect(outlinedTokenRule).toMatch(/border:\s*2px solid #f5fa00;/);
+    expect(outlinedTokenRule).toMatch(/box-sizing:\s*border-box;/);
+    expect(outlinedTokenRule).not.toMatch(/(?:height|width):/);
+
+    expect(stylesheet).toMatch(
+      /\.token-display--yellow-outline\s*{[^}]*border:\s*2px solid #f5fa00;/s
+    );
+  });
+
+  test('shows outlined token names with the selected language font class', () => {
+    const { rerender } = render(
+      <Token
+        ariaLabel="outlined token"
+        language="en"
+        showName
+        tokenType="red-yellow-outline"
+      />
+    );
+
+    expect(screen.getByText('Shiny Damage')).toHaveClass('language-en');
+
+    rerender(
+      <Token
+        ariaLabel="outlined token"
+        language="jp"
+        showName
+        tokenType="red-yellow-outline"
+      />
+    );
+
+    expect(screen.getByText('\u8f1d\u304f\u30c0\u30e1\u30fc\u30b8')).toHaveClass(
+      'language-jp'
+    );
+    expect(screen.getByLabelText('outlined token')).toHaveAttribute(
+      'title',
+      '\u8f1d\u304f\u30c0\u30e1\u30fc\u30b8\n\u30c0\u30e1\u30fc\u30b8\uff0b20'
+    );
   });
 
   test('supports an optional faded state at half opacity', () => {
@@ -84,15 +170,26 @@ describe('Token', () => {
       <Token ariaLabel="red token" language="jp" showName tokenType="red" />
     );
 
-    expect(screen.getByText('ダメージ')).toHaveClass('token-display-name', 'language-jp');
-    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'ダメージ+10');
-    expect(screen.getByLabelText('red token')).toHaveAccessibleDescription('ダメージ+10');
+    expect(screen.getByText('\u30c0\u30e1\u30fc\u30b8')).toHaveClass(
+      'token-display-name',
+      'language-jp'
+    );
+    expect(screen.getByLabelText('red token')).toHaveAttribute(
+      'title',
+      '\u30c0\u30e1\u30fc\u30b8\n\u30c0\u30e1\u30fc\u30b8\uff0b10'
+    );
+    expect(screen.getByLabelText('red token')).toHaveAccessibleDescription(
+      '\u30c0\u30e1\u30fc\u30b8\uff0b10'
+    );
 
     rerender(<Token ariaLabel="red token" language="invalid" tokenType="red" />);
 
-    expect(screen.queryByText('ダメージ')).not.toBeInTheDocument();
+    expect(screen.queryByText('\u30c0\u30e1\u30fc\u30b8')).not.toBeInTheDocument();
     expect(screen.queryByText('Damage')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('red token')).toHaveAttribute('title', 'Plus 10 Damage');
+    expect(screen.getByLabelText('red token')).toHaveAttribute(
+      'title',
+      'Damage\nPlus 10 Damage'
+    );
   });
 
   test('can suppress its tooltip without removing an allowed resting name', () => {

@@ -118,6 +118,15 @@ test('generates exact token objects with 10 percent rare and 90 percent common o
   expect(commonToken).toHaveProperty('name.jp');
 });
 
+test('can award an outlined token from the rare cave token pool', () => {
+  const rolls = [0.0999, 0.9999];
+
+  expect(generateCaveTokenReward(() => rolls.shift())).toMatchObject({
+    rarity: 'Rare',
+    type: 'green-yellow-outline',
+  });
+});
+
 test('generates exact potion objects with 20 percent rare and 80 percent common odds', () => {
   const rareRolls = [0.1999, 0];
   const commonRolls = [0.2, 0];

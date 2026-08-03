@@ -25,6 +25,26 @@ describe('spellSetup helpers', () => {
     expect(result.spellSlots[0].tokens[0].id).toBe(tokenToMove.id);
   });
 
+  test('assigns an outlined token as one token of spell capacity', () => {
+    const [player] = createPlayers(1);
+    const outlinedToken = {
+      committed: false,
+      id: 'player-1-red-yellow-outline-1',
+      type: 'red-yellow-outline',
+    };
+
+    const result = moveSpellTokenInDraft({
+      destinationId: player.spellSlots[0].id,
+      spellSlots: player.spellSlots,
+      tokenBag: [outlinedToken],
+      tokenId: outlinedToken.id,
+    });
+
+    expect(result.didMove).toBe(true);
+    expect(result.tokenBag).toEqual([]);
+    expect(result.spellSlots[0].tokens).toEqual([outlinedToken]);
+  });
+
   test('preserves starting-token protection when spell placement is committed', () => {
     const [player] = createPlayers(1);
     const startingToken = player.tokenBag[0];

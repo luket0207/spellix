@@ -31,4 +31,23 @@ describe('Copy and Paste token duplication', () => {
     expect(duplicate).not.toBe(sourceToken);
     expect(sourceToken.id).toBe('player-1-red-2');
   });
+
+  test('duplicates an outlined token without changing its type', () => {
+    const sourceToken = {
+      committed: true,
+      id: 'player-1-red-yellow-outline-1',
+      type: 'red-yellow-outline',
+    };
+    const player = {
+      id: 'player-1',
+      spellSlots: [],
+      tokenBag: [sourceToken],
+    };
+
+    expect(createCopyPasteDuplicate(player, sourceToken)).toEqual({
+      committed: false,
+      id: 'player-1-red-yellow-outline-2',
+      type: 'red-yellow-outline',
+    });
+  });
 });

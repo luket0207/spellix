@@ -2680,14 +2680,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         purpleBuff: purpleBuffs[effectiveActorColumnIndex] ?? 0,
         yellowCharged: Boolean(activeBattle[chargedKey]),
       });
-      const nextPlayerState = isPlayerActor ? result.nextCurrentActor : result.nextOpponent;
-      const nextEnemyState = isPlayerActor ? result.nextOpponent : result.nextCurrentActor;
+      const counterGuardReduction =
+        result.effects.find(({ type }) => type === 'orangeCounter')
+          ?.guardReduction ?? 0;
+      const currentActorGuardBeforeCounter =
+        result.nextCurrentActor.guard + counterGuardReduction;
 
       return {
         ...currentSetup,
         activeBattle: {
           ...activeBattle,
-          enemyGuard: nextEnemyState.guard,
+          enemyGuard: isPlayerActor
+            ? activeBattle.enemyGuard ?? 0
+            : currentActorGuardBeforeCounter,
           ...(result.freezeApplied
             ? {
                 [freezeUsesKey]: freezeUses.map((uses, index) =>
@@ -2706,7 +2711,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           isResolvingTurn: true,
           outcome: null,
           pendingEffects: result.effects,
-          playerGuard: nextPlayerState.guard,
+          playerGuard: isPlayerActor
+            ? currentActorGuardBeforeCounter
+            : activeBattle.playerGuard ?? 0,
           [nextChargedKey]: result.chargeApplied,
           [nextPurpleBuffsKey]: createAdjacentPurpleBuffs(
             diceResult,
@@ -2735,10 +2742,18 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const isPlayerTarget =
         effect.target === 'currentActor' ? isPlayerActor : !isPlayerActor;
       const damage = Math.max(0, effect.amount ?? 0);
+      const guardReduction = Math.max(0, effect.guardReduction ?? 0);
 
       if (isPlayerTarget) {
         return {
           ...currentSetup,
+          activeBattle: {
+            ...activeBattle,
+            playerGuard: Math.max(
+              0,
+              (activeBattle.playerGuard ?? 0) - guardReduction
+            ),
+          },
           players: currentSetup.players.map((player) => {
             if (player.id !== activeBattle.playerId) {
               return player;
@@ -2765,6 +2780,10 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         activeBattle: {
           ...activeBattle,
           enemyCurrentHealth: Math.max(0, enemyCurrentHealth - damage),
+          enemyGuard: Math.max(
+            0,
+            (activeBattle.enemyGuard ?? 0) - guardReduction
+          ),
         },
       };
     });
@@ -2872,11 +2891,17 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         activeBattle: {
           ...currentSetup.activeBattle,
           currentBattleActor: nextBattleActor,
+          enemyGuard: isPlayerActor
+            ? 0
+            : currentSetup.activeBattle.enemyGuard,
           freezeAppliedByIceBeamThisTurn: isPlayerActor
             ? false
             : currentSetup.activeBattle.freezeAppliedByIceBeamThisTurn,
           isResolvingTurn: false,
           pendingEffects: [],
+          playerGuard: isPlayerActor
+            ? currentSetup.activeBattle.playerGuard
+            : 0,
           [chargedKey]: currentSetup.activeBattle[nextChargedKey] ?? false,
           [nextChargedKey]: null,
           [nextPurpleBuffsKey]: null,

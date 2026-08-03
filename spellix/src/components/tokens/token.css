@@ -29,13 +29,15 @@
   content: '';
   position: absolute;
   z-index: -1;
-  inset: -4px;
+  inset: -6px;
   border-radius: inherit;
   background: var(--token-display-colour);
-  opacity: 0.18;
+  filter: blur(2px);
+  opacity: 0.15;
   pointer-events: none;
-  transform: scale(0.9);
+  transform: scale(0.8);
   animation: token-display-glow 2.5s ease-in-out infinite;
+  will-change: opacity, transform;
 }
 
 .token-display--committed {
@@ -43,9 +45,15 @@
 }
 
 @keyframes token-display-glow {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+
   50% {
-    opacity: 0.32;
-    transform: scale(1.12);
+    opacity: 0.45;
+    transform: scale(0.9);
   }
 }
 
@@ -129,4 +137,9 @@
 .token-display--grey {
   --token-display-colour: #767676;
   background: var(--token-display-colour);
+}
+
+.token-display--yellow-outline {
+  border: 2px solid #f5fa00;
+  box-sizing: border-box;
 }
