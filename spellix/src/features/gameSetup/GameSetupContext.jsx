@@ -139,6 +139,9 @@ function transitionToPlayerTurn(currentSetup, nextTurnIndex) {
   return {
     ...currentSetup,
     currentTurnIndex: nextTurnIndex,
+    hasRolledMovementDice: didPlayerChange
+      ? false
+      : Boolean(currentSetup.hasRolledMovementDice),
     stormMasterEffect,
     stormMasterPendingPlayerId:
       didPlayerChange &&
@@ -511,6 +514,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     return {
       ...setup,
       debugMode: Boolean(setup.debugMode),
+      hasRolledMovementDice: Boolean(setup.hasRolledMovementDice),
       eliteBossEnemyAssignments: {
         ...(setup.eliteBossEnemyAssignments ??
           selectEliteBossEnemyAssignments()),
@@ -714,6 +718,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
       debugMode: Boolean(debugMode),
+    }));
+  };
+
+  const markMovementDiceRolled = () => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      hasRolledMovementDice: true,
     }));
   };
 
@@ -3244,6 +3255,10 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     setGameSetup(createInitialGameSetup());
   };
 
+  const restoreGame = (savedGameSetup) => {
+    setGameSetupState(savedGameSetup);
+  };
+
   return (
     <GameSetupContext.Provider
       value={{
@@ -3298,6 +3313,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         initializeTurnOrder,
         miniGameResult: gameSetup.miniGameResult ?? null,
         miniGameReturnNotice: gameSetup.miniGameReturnNotice ?? null,
+        markMovementDiceRolled,
         markPlayerTokenBagSeen,
         markPlayerToSkipNextTurn,
         pendingNextTurnModal: gameSetup.pendingNextTurnModal ?? false,
@@ -3318,6 +3334,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         finalizeBattleEffects,
         finishVillageVisit,
         resetGame,
+        restoreGame,
         returnFromMiniGame,
         resolveBattleFreezeCheck,
         resolveBuyAndSellPotion,

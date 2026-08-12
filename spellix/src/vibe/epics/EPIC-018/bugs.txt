@@ -173,3 +173,103 @@ Final Fix
 
 * Reduced only `PERSISTENT_RESULT_DURATION_MS` from `2000` to `1000`.
 * Preserved the 2-second persistent battle roll, 1.5-second temporary board roll/result timings, forced values, 1-second battle turn modal, click dismissal, and all battle effect durations.
+
+---
+
+Bug-003: Hide settings button after movement dice has been rolled
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-012: Only show settings button on gameplay page
+* Feature-011: Add save and load game using base64 text file
+* EPIC-016 Feature-008: Trigger board events based on landed environment
+
+Bug Summary
+
+* The settings button should only be available on the gameplay page before the player has rolled for movement.
+* Once the player rolls the board movement dice, the settings button should disappear.
+* This prevents players from opening settings during movement, landing resolution, or event transitions.
+
+Required Behaviour
+
+* On the gameplay page, show the settings button only when:
+
+  * the current player has not rolled the board movement dice yet.
+  * the game is in the normal pre-roll gameplay state.
+
+* Hide the settings button once:
+
+  * the movement dice has been rolled.
+  * valid movement squares are being shown.
+  * the player is choosing where to move.
+  * movement animation is happening.
+  * the landing event is being resolved.
+  * the game is waiting to route to battle, decision, river, cave, hazard, loot chest, village, tower, boss, or any other event.
+
+Suggested Visibility Rule
+
+```js id="xnaz9n"
+const shouldShowSettingsButton =
+  location.pathname === "/gameplay" &&
+  boardTurnPhase === "preRoll";
+```
+
+* Use the actual route/state names from the project.
+* The important part is that settings is only visible during the safe pre-roll state.
+
+Roll Again Requirement
+
+* If Roll Again happens, it is still the same turn.
+* After the Roll Again modal closes and the player is waiting to roll again, the settings button should remain hidden.
+* Roll Again should not reset settings availability.
+
+Next Turn Requirement
+
+* When the turn advances to the next player and the next-turn modal has completed, the gameplay page returns to pre-roll state.
+* At that point, the settings button can appear again.
+
+Save Game Interaction
+
+* Save Game from Feature-011 is inside settings.
+* Because settings is hidden after rolling, players should only be able to save during the safe pre-roll gameplay state.
+* This avoids saving during mid-turn or mid-event states.
+
+Out Of Scope
+
+* No changes to settings menu content.
+* No changes to End Game behaviour.
+* No changes to movement rules.
+* No changes to Roll Again logic beyond settings visibility.
+* No changes to event resolution.
+
+Testing Required
+
+* Open gameplay page at the start of a turn.
+* Confirm settings button appears.
+* Roll the movement dice.
+* Confirm settings button disappears immediately.
+* Confirm settings remains hidden while valid movement squares are highlighted.
+* Move the player.
+* Confirm settings remains hidden during movement animation.
+* Confirm settings remains hidden while the landing event resolves.
+* Trigger Roll Again.
+* Confirm settings remains hidden before the extra roll.
+* Advance to the next player.
+* Complete the next-turn modal.
+* Confirm settings button appears again before the new player rolls.
+* Confirm Save Game cannot be accessed after rolling.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added focused pre-fix coverage for the movement-roll lifecycle; it failed because settings remained available after rolling and no turn-level rolled state existed.
+
+Final Fix
+
+* Added a movement-dice-rolled flag to game state, set it as soon as a valid movement roll begins, retained it for same-turn flows such as Roll Again, and reset it only when play advances to another player.
+* Limited the gameplay settings button to the safe pre-roll state and kept it hidden while next-turn or respawn transitions are pending, which also prevents Save Game access after rolling.

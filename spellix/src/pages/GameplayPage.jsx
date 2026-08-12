@@ -107,6 +107,7 @@ function GameplayPage({
     gameSetup,
     initializeBoard,
     initializeTurnOrder,
+    markMovementDiceRolled,
     markPlayerTokenBagSeen,
     miniGameReturnNotice,
     pendingNextTurnModal,
@@ -516,6 +517,7 @@ function GameplayPage({
       return;
     }
 
+    markMovementDiceRolled();
     setDiceCountForCurrentRoll(nextBoardDiceCount);
     setShowDiceModal(true);
   };

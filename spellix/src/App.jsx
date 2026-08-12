@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
-import { Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Button from './components/common/Button/Button';
 import Modal from './components/Modal';
 import { HAZARDS, selectHazardForEnvironment } from './data/hazards';
@@ -11,6 +11,10 @@ import { getBattleEnvironmentForBoardEnvironment } from './data/environmentEvent
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
+import {
+  createSaveFileText,
+  downloadSaveFile,
+} from './features/saveGame/saveGame';
 import {
   addTokenToBag,
   canAddTokenToBag,
@@ -38,6 +42,7 @@ import VillagePage from './pages/VillagePage';
 import NothingEventPage from './pages/NothingEventPage';
 
 function App() {
+  const location = useLocation();
   const navigate = useNavigate();
   const {
     currentPlayer,
@@ -46,6 +51,7 @@ function App() {
     pendingNextTurnModal,
     pendingPotionGrant,
     resetGame,
+    restoreGame,
     resolvePendingPotionGrant,
     setPlayerAnywhereMode,
     startBattle,
@@ -80,6 +86,33 @@ function App() {
     setSelectedReplacementPotionIndex('');
     setSelectedReplacementTokenId('');
     setDebugMessage('');
+  };
+
+  const handleSaveGame = () => {
+    const appState = {
+      activeDecisionEnvironment,
+      activeHazard,
+      activeLootChestEvent,
+      activeNothingEvent,
+      activeRollAgainEvent,
+      isChooseEventModeEnabled,
+    };
+
+    downloadSaveFile(createSaveFileText(gameSetup, appState));
+  };
+
+  const handleLoadGame = ({ appState = {}, gameState }) => {
+    restoreGame(gameState);
+    setIsChooseEventModeEnabled(Boolean(appState.isChooseEventModeEnabled));
+    setActiveHazard(appState.activeHazard ?? null);
+    setActiveDecisionEnvironment(appState.activeDecisionEnvironment ?? 'fields');
+    setActiveLootChestEvent(appState.activeLootChestEvent ?? null);
+    setActiveNothingEvent(appState.activeNothingEvent ?? null);
+    setActiveRollAgainEvent(appState.activeRollAgainEvent ?? null);
+    setIsSettingsOpen(false);
+    setIsDebugOpen(false);
+    resetDebugState();
+    navigate('/gameplay');
   };
 
   const handleEndGame = () => {
@@ -518,18 +551,26 @@ function App() {
 
   return (
     <>
-      <button
-        aria-label="Open settings"
-        className="app-settings-button"
-        disabled={pendingNextTurnModal}
-        type="button"
-        onClick={handleOpenSettings}
-      >
-        <FontAwesomeIcon icon={faGear} />
-      </button>
+      {location.pathname === '/gameplay' &&
+      !gameSetup.hasRolledMovementDice &&
+      !pendingNextTurnModal &&
+      !gameSetup.pendingTurnRespawn ? (
+        <button
+          aria-label="Open settings"
+          className="app-settings-button"
+          disabled={pendingNextTurnModal}
+          type="button"
+          onClick={handleOpenSettings}
+        >
+          <FontAwesomeIcon icon={faGear} />
+        </button>
+      ) : null}
 
       <Routes>
-        <Route path="/" element={<StartPage onStart={resetGame} />} />
+        <Route
+          path="/"
+          element={<StartPage onLoadGame={handleLoadGame} onStart={resetGame} />}
+        />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/setup" element={<GameSetupPage />} />
         <Route path="/story" element={<StoryPage />} />
@@ -592,6 +633,11 @@ function App() {
             {gameSetup.debugMode ? (
               <Button type="button" onClick={handleOpenDebug}>
                 Debug
+              </Button>
+            ) : null}
+            {location.pathname === '/gameplay' ? (
+              <Button type="button" onClick={handleSaveGame}>
+                {currentPlayer?.language === 'jp' ? 'ゲームを保存' : 'Save Game'}
               </Button>
             ) : null}
             <Button type="button" onClick={handleEndGame}>

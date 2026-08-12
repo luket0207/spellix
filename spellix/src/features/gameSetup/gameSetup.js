@@ -130,6 +130,7 @@ export function createInitialGameSetup() {
     cauldronChoiceState: null,
     devineChanceResult: null,
     debugMode: false,
+    hasRolledMovementDice: false,
     miniGameResult: null,
     miniGameReturnNotice: null,
     pendingNextTurnModal: false,

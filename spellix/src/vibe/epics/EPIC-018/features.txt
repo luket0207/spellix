@@ -1365,7 +1365,7 @@ Feature-011: Add save and load game using base64 text file
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -1619,3 +1619,145 @@ Testing Checkpoints
 * Confirm the error modal appears.
 * Confirm there are no console errors for valid files.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a version `1` UTF-8 save format that serializes the complete `gameSetup` context snapshot plus the small App-local gameplay event state, then stores the JSON as base64 text.
+* Added a gameplay-settings Save Game action with the current player's English or Japanese label; strict `/gameplay` route gating keeps it absent from settings opened on every other page.
+* Save downloads use the required `spellix-save.txt` filename and contain base64 rather than plain JSON.
+* Added the bilingual Load Game action on the Start page with a hidden `.txt` file picker.
+* Valid files are decoded, parsed, version/structure validated, restored directly into Game Context, and routed to Gameplay with turn, board, players, positions, visual feature cells, health, tokens, spells, merges, potions, progress, enemy assignments, debug/Anywhere state, pending context state, choose-event mode, and active gameplay event descriptors preserved.
+* Invalid base64, JSON, versions, and structurally incomplete saves leave the current game untouched and show the required bilingual error modal.
+* No cloud save, autosave, slot management, encryption, extra compression, non-text format, editing UI, dependency, route, or settings redesign was added.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-012: Only show settings button on gameplay page
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-011: Add save and load game using base64 text file
+* EPIC-016 Bug-005: Revert winner screen state-clearing and only fix Back to Start navigation
+
+Goal
+
+* Prevent the settings menu from being opened on pages where ending the game does not work correctly.
+* The settings button should only appear on the gameplay page.
+* This avoids the issue where ending the game from another page sends the player back to gameplay instead of properly ending the game.
+
+Problem Summary
+
+* If the settings menu is opened from pages other than gameplay, using End Game does not reliably end the game.
+* Instead, it can behave like the previous winner-page bug and route the player back to gameplay.
+* To avoid this, the settings button should not be accessible outside the gameplay page.
+
+Required Behaviour
+
+* Show the settings button only on the gameplay page.
+* Hide the settings button everywhere else.
+
+The settings button should not appear on:
+
+```txt id="tyrh8b"
+Start page
+Game Setup page
+Story page
+Rules page
+Battle page
+Decision page
+River Mini Game page
+Cave Mini Game page
+Loot Chest page
+Village reward/heal pages
+Hazard page
+Winner page
+Any other non-gameplay page
+```
+
+Gameplay Page Requirement
+
+* On the gameplay page, the settings button should work exactly as it does now.
+* The settings menu should still include existing gameplay settings.
+* End Game should still be available from gameplay settings.
+* Save Game from Feature-011 should still only appear when settings is opened from gameplay.
+
+Implementation Direction
+
+* Do not try to fix End Game behaviour on every route yet.
+* Instead, gate the settings button by current route/page.
+* The button should render only when the current page is gameplay.
+
+Suggested Direction
+
+```jsx id="9l30rv"
+const shouldShowSettingsButton = location.pathname === "/gameplay";
+
+return (
+  <>
+    {shouldShowSettingsButton && (
+      <SettingsButton />
+    )}
+  </>
+);
+```
+
+* Use the actual gameplay route if it differs.
+* If the app uses page state instead of route pathname, gate by the gameplay page state instead.
+
+Debug Mode Interaction
+
+* Feature-008 still applies.
+* If Debug Mode is off, debug features inside settings should remain hidden.
+* This feature controls where the settings button appears.
+* It should not change debug feature functionality.
+
+Out Of Scope
+
+* No changes to End Game logic itself.
+* No changes to winner screen navigation.
+* No changes to Back to Start logic.
+* No changes to save/load logic except that Save Game remains accessible through gameplay settings only.
+* No settings redesign.
+* No new confirmation modal.
+
+Testing Checkpoints
+
+* Open gameplay page.
+* Confirm the settings button appears.
+* Open settings from gameplay.
+* Confirm End Game is available.
+* Confirm End Game works from gameplay.
+* Confirm Save Game appears from gameplay settings if Feature-011 is implemented.
+* Go to Battle page.
+* Confirm settings button is hidden.
+* Go to Decision page.
+* Confirm settings button is hidden.
+* Go to River Mini Game page.
+* Confirm settings button is hidden.
+* Go to Cave Mini Game page.
+* Confirm settings button is hidden.
+* Go to Loot Chest page.
+* Confirm settings button is hidden.
+* Go to Rules page.
+* Confirm settings button is hidden.
+* Go to Story page.
+* Confirm settings button is hidden.
+* Go to Winner page.
+* Confirm settings button is hidden.
+* Confirm there is no way to open settings from non-gameplay pages.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused App's existing React Router location and now renders the settings gear only when `location.pathname === '/gameplay'`.
+* The button is absent from Start, Game Setup, Story, Rules, Battle, Boss Not Ready, Decision, River, Cave, Loot Chest, mini-game loss, Village, Hazard, Nothing Event, Reward, Winner, and all other non-gameplay routes.
+* Gameplay settings retain the existing pending-turn disabled state, modal behavior, Debug Mode gating, End Game action, Close action, and Feature-011 Save Game action.
+* End Game logic, winner state/navigation, Back to Start, save/load behavior, settings contents, and styling were not changed.
+* No confirmation modal, route, dependency, redesign, abstraction, or unrelated fix was added.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.

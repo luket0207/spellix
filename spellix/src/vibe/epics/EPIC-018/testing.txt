@@ -390,6 +390,88 @@ Manual Execution
 
 ---
 
+Feature-011: Add save and load game using base64 text file
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game, enter Gameplay, open Settings, and select Save Game.
+   Expected: Save Game uses the current player's English or Japanese label and downloads `spellix-save.txt`.
+2. Open Settings from Start, Game Setup, Rules, Story, Battle, mini-game, reward, and winner routes.
+   Expected: Save Game is absent everywhere except Gameplay settings.
+3. Open the downloaded file in a text editor.
+   Expected: It contains base64 text rather than readable JSON and includes no extra file format.
+4. Record the current player, board layout, player positions/feature cells, health, tokens, committed spell slots, merged columns, potions/effects, skipped/death flags, Elite progress, village progress, assigned enemies, and Debug/Anywhere state, then return to Start.
+   Expected: The recorded state remains available in the save file after leaving Gameplay.
+5. Select `Load Game - ゲームを読み込む` and choose the saved `.txt` file.
+   Expected: The file picker accepts text files, Gameplay opens, and every recorded context value is restored exactly.
+6. Save with choose-event mode or a resumable gameplay event descriptor active, then load the file.
+   Expected: The App-local gameplay mode/event state is restored with the context snapshot.
+7. Try plain JSON, malformed base64, an unsupported save version, and a structurally incomplete save.
+   Expected: The app stays on Start, does not replace current state or crash, and shows both required load-error messages.
+8. Close the invalid-file modal and choose a valid save afterward.
+   Expected: The modal closes normally and the valid game can still be loaded.
+9. Monitor the browser console during valid save/load and continue taking gameplay turns.
+   Expected: No valid-file errors occur and the restored game remains playable.
+
+Automated Tests Completed
+
+* The pre-fix focused run failed because the save-file module did not exist.
+* All 23 tests pass across `saveGame.test.js`, `SaveLoadGame.test.jsx`, `StartPage.test.jsx`, and `AppSettingsButton.test.jsx` for UTF-8 JSON/base64 round-tripping, version/structure rejection, `.txt` reading/download, exact context snapshots, gameplay-only visibility, localized Save and bilingual Load actions, picker invocation, invalid-file recovery, restored choose-event state, Gameplay navigation, and existing Start/Settings regressions.
+* Scoped ESLint passes for the save utility/tests, Game Context, Start page, and App integration.
+* `npm run build`, `git diff --check`, and new-file trailing-whitespace checks pass.
+
+Automated Tests Still Needed
+
+* None for serialization, validation, context restoration, route gating, or navigation. A real browser is still required to confirm the operating-system file picker and physical download behavior end to end.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-012: Only show settings button on gameplay page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Gameplay and locate the settings gear.
+   Expected: The gear is visible and retains its existing disabled behavior while a next-turn modal is pending.
+2. Open Gameplay settings with Debug Mode off and then on.
+   Expected: End Game, Close, and Save Game remain available; Debug remains hidden when off and works normally when on.
+3. Select End Game from Gameplay settings.
+   Expected: The existing End Game action returns to Start and the settings gear disappears without changing winner or Back to Start logic.
+4. Visit Start, Game Setup, Story, Rules, Battle, Boss Not Ready, Decision, River, Cave, Loot Chest, mini-game loss, Village, Hazard, Nothing Event, Reward, and Winner pages.
+   Expected: No settings gear is rendered and Settings cannot be opened from any of these routes.
+5. Enter Battle, mini-game, reward, and winner flows from normal Gameplay transitions.
+   Expected: The gear disappears immediately after leaving `/gameplay` and returns when normal flow navigates back to `/gameplay`.
+6. Monitor the browser console while navigating through these pages and using Gameplay settings.
+   Expected: No new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-fix route matrix reproduced Feature-012 on all 17 non-gameplay routes: every route incorrectly rendered the Open settings button, including Start after End Game.
+* All 31 tests pass across `GameplaySettingsVisibility.test.jsx`, `AppSettingsButton.test.jsx`, and `SaveLoadGame.test.jsx` for the complete non-gameplay route matrix, gameplay visibility, End Game return behavior, existing Settings/Debug interactions, and Feature-011 Save gating.
+* Scoped ESLint passes for `App.jsx`, the Feature-012 route matrix, and the adjusted Feature-011 regression assertion.
+* `npm run build`, `git diff --check`, and new-file trailing-whitespace checks pass.
+
+Automated Tests Still Needed
+
+* None for route gating or existing Gameplay settings behavior. Normal browser navigation through the full real page flows remains a manual interaction check.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 Bug-001: Revert battle dice roll timing change from Feature-005
 
 Test Status
@@ -459,6 +541,46 @@ Automated Tests Completed
 Automated Tests Still Needed
 
 * None for Bug-002 behavior. Existing unrelated whole-file test and lint debt remains documented under Feature-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-003: Hide settings button after movement dice has been rolled
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Gameplay at the start of a turn before rolling movement dice.
+   Expected: The settings gear is visible and Settings, including Save Game, can be opened.
+2. Select Roll Dice.
+   Expected: The settings gear disappears immediately while the dice result is shown, and Save Game cannot be accessed.
+3. Wait for valid movement squares, select a destination, and observe movement and landing resolution.
+   Expected: Settings remains hidden throughout highlighting, movement, landing, and event transitions.
+4. Trigger Roll Again and close its modal.
+   Expected: Settings remains hidden before the extra movement roll because it is still the same turn.
+5. Finish the turn and observe the next-turn modal.
+   Expected: Settings remains hidden while the next-turn modal is open.
+6. Dismiss the next-turn modal for the new player.
+   Expected: Settings becomes visible again in the new player's safe pre-roll state.
+7. Repeat through a player respawn transition and monitor the browser console.
+   Expected: Settings stays hidden until the respawn/turn transition is complete and no new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run reproduced Bug-003 because the settings gear stayed visible after movement rolling began and no context lifecycle retained the lock for a turn.
+* All 44 relevant tests pass across `movementSettingsState.test.jsx`, `GameplaySettingsVisibility.test.jsx`, `AppSettingsButton.test.jsx`, `gameSetup.test.js`, and `SaveLoadGame.test.jsx` for immediate hiding, movement/next-turn persistence, new-player restoration, route gating, Save Game inaccessibility, and context state transitions.
+* Both existing Roll Again scenarios pass and confirm same-turn reroll behavior remains intact. The broader `GameplayPage.test.jsx` file also ran because the project test script ignored the name filter; its eight unrelated existing failures concern respawn copy, forced setup copy, potion flow, dice-animation timing, and image styling.
+* Scoped ESLint, the production build, and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the Bug-003 state lifecycle or settings visibility gate. Existing unrelated `GameplayPage.test.jsx` failures remain outside this bug's scope.
 
 Manual Execution
 

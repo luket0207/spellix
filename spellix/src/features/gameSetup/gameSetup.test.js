@@ -6,6 +6,10 @@ describe('game setup player piece selection foundation', () => {
     expect(createInitialGameSetup().debugMode).toBe(false);
   });
 
+  test('starts before the movement dice has been rolled', () => {
+    expect(createInitialGameSetup().hasRolledMovementDice).toBe(false);
+  });
+
   test('starts without a pending potion grant', () => {
     expect(createInitialGameSetup().pendingPotionGrant).toBeNull();
   });

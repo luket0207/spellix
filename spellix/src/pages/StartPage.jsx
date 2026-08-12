@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BattleBackgroundSlideshow from '../components/BattleBackgroundSlideshow';
+import Button from '../components/common/Button/Button';
+import Modal from '../components/Modal';
 import { ENEMIES } from '../features/battle/enemies';
 import { getEnemyImageSource } from '../features/battle/enemyImages';
+import { readSaveFile } from '../features/saveGame/saveGame';
 import './StartPage.css';
 
 const ENEMY_SIZE = 150;
@@ -45,10 +48,30 @@ function getRandomEnemyPosition(safeZoneElement) {
   return null;
 }
 
-function StartPage({ onStart = () => {} }) {
+function StartPage({ onLoadGame = () => {}, onStart = () => {} }) {
   const navigate = useNavigate();
+  const loadFileInputRef = useRef(null);
   const safeZoneRef = useRef(null);
   const [decorativeEnemy, setDecorativeEnemy] = useState(null);
+  const [isLoadErrorOpen, setIsLoadErrorOpen] = useState(false);
+
+  const handleLoadFile = async (event) => {
+    const file = event.target.files?.[0];
+
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const saveData = await readSaveFile(file);
+
+      onLoadGame(saveData);
+    } catch (_error) {
+      setIsLoadErrorOpen(true);
+    }
+  };
 
   useEffect(() => {
     let appearanceTimeoutId;
@@ -163,7 +186,38 @@ function StartPage({ onStart = () => {} }) {
         >
           Rules - ルール
         </button>
+        <button
+          className="start-page-button"
+          type="button"
+          onClick={() => {
+            setIsLoadErrorOpen(false);
+            loadFileInputRef.current?.click();
+          }}
+        >
+          Load Game - ゲームを読み込む
+        </button>
+        <input
+          accept=".txt,text/plain"
+          aria-label="Load saved game file"
+          hidden
+          ref={loadFileInputRef}
+          type="file"
+          onChange={handleLoadFile}
+        />
       </div>
+
+      <Modal
+        actions={
+          <Button type="button" onClick={() => setIsLoadErrorOpen(false)}>
+            Close
+          </Button>
+        }
+        ariaLabel="Load game error"
+        isOpen={isLoadErrorOpen}
+      >
+        <p>This save file could not be loaded.</p>
+        <p>このセーブファイルを読み込めませんでした。</p>
+      </Modal>
     </main>
   );
 }
