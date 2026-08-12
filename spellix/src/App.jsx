@@ -24,7 +24,9 @@ import GameplayPage from './pages/GameplayPage';
 import GameSetupPage from './pages/GameSetupPage';
 import HazardPage from './pages/HazardPage';
 import RewardPage from './pages/RewardPage';
+import RulesPage from './pages/RulesPage';
 import StartPage from './pages/StartPage';
+import StoryPage from './pages/StoryPage';
 import DecisionPage from './pages/DecisionPage';
 import CaveMiniGame from './pages/MiniGames/CaveMiniGame';
 import LootChestPage from './pages/MiniGames/LootChestPage';
@@ -528,7 +530,9 @@ function App() {
 
       <Routes>
         <Route path="/" element={<StartPage onStart={resetGame} />} />
+        <Route path="/rules" element={<RulesPage />} />
         <Route path="/setup" element={<GameSetupPage />} />
+        <Route path="/story" element={<StoryPage />} />
         <Route
           path="/gameplay"
           element={
@@ -585,9 +589,11 @@ function App() {
       <Modal
         actions={
           <>
-            <Button type="button" onClick={handleOpenDebug}>
-              Debug
-            </Button>
+            {gameSetup.debugMode ? (
+              <Button type="button" onClick={handleOpenDebug}>
+                Debug
+              </Button>
+            ) : null}
             <Button type="button" onClick={handleEndGame}>
               End Game
             </Button>
@@ -602,59 +608,61 @@ function App() {
         <p>Settings</p>
       </Modal>
 
-      <DebugModal
-        currentPlayer={currentPlayer}
-        eliteBossEnemyAssignments={gameSetup.eliteBossEnemyAssignments}
-        isOpen={isDebugOpen}
-        isChooseEventModeEnabled={isChooseEventModeEnabled}
-        message={debugMessage}
-        onEnableAnywhereMode={handleEnableAnywhereMode}
-        onToggleChooseEventMode={() =>
-          setIsChooseEventModeEnabled((isEnabled) => !isEnabled)
-        }
-        onClose={handleCloseDebug}
-        onDiscardPendingPotion={handleDiscardPendingPotion}
-        onDiscardPendingToken={handleDiscardPendingToken}
-        enemyOptions={ENEMIES.map((enemy) => ({
-          id: enemy.id,
-          label: `${enemy.englishName} - Level ${enemy.level}`,
-        }))}
-        onGivePotion={handleGiveDebugPotion}
-        onGiveToken={handleGiveDebugToken}
-        onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
-        onStartCaveMiniGame={handleStartCaveMiniGame}
-        onStartDecision={handleStartDecision}
-        onStartHazard={handleStartHazard}
-        onStartNothingEvent={handleStartNothingEvent}
-        onStartRollAgainEvent={handleStartRollAgainEvent}
-        onStartBattle={handleStartBattle}
-        onStartRiverMiniGame={handleStartRiverMiniGame}
-        onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
-        onPendingTokenReplacementChange={setSelectedReplacementTokenId}
-        onReplacePendingPotion={handleReplacePendingPotion}
-        onReplacePendingToken={handleReplacePendingToken}
-        onSelectedEnvironmentChange={setSelectedBattleEnvironment}
-        onSelectedEnemyIdChange={setSelectedDebugEnemyId}
-        onSelectedHazardEnvironmentChange={setSelectedHazardEnvironment}
-        onSelectedNothingEnvironmentChange={setSelectedNothingEnvironment}
-        onSelectedDecisionEnvironmentChange={setSelectedDecisionEnvironment}
-        onSelectedPotionIdChange={setSelectedDebugPotionId}
-        onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
-        onSelectedTokenTypeChange={setSelectedDebugTokenType}
-        pendingPotionGrant={pendingPotionGrant}
-        pendingTokenType={pendingDebugTokenType}
-        players={gameSetup.players}
-        selectedEnemyId={selectedDebugEnemyId}
-        selectedDecisionEnvironment={selectedDecisionEnvironment}
-        selectedEnvironment={selectedBattleEnvironment}
-        selectedHazardEnvironment={selectedHazardEnvironment}
-        selectedNothingEnvironment={selectedNothingEnvironment}
-        selectedPotionId={selectedDebugPotionId}
-        selectedPotionPlayerId={selectedDebugPotionPlayerId}
-        selectedReplacementPotionIndex={selectedReplacementPotionIndex}
-        selectedReplacementTokenId={selectedReplacementTokenId}
-        selectedTokenType={selectedDebugTokenType}
-      />
+      {gameSetup.debugMode ? (
+        <DebugModal
+          currentPlayer={currentPlayer}
+          eliteBossEnemyAssignments={gameSetup.eliteBossEnemyAssignments}
+          isOpen={isDebugOpen}
+          isChooseEventModeEnabled={isChooseEventModeEnabled}
+          message={debugMessage}
+          onEnableAnywhereMode={handleEnableAnywhereMode}
+          onToggleChooseEventMode={() =>
+            setIsChooseEventModeEnabled((isEnabled) => !isEnabled)
+          }
+          onClose={handleCloseDebug}
+          onDiscardPendingPotion={handleDiscardPendingPotion}
+          onDiscardPendingToken={handleDiscardPendingToken}
+          enemyOptions={ENEMIES.map((enemy) => ({
+            id: enemy.id,
+            label: `${enemy.englishName} - Level ${enemy.level}`,
+          }))}
+          onGivePotion={handleGiveDebugPotion}
+          onGiveToken={handleGiveDebugToken}
+          onPendingPotionReplacementChange={setSelectedReplacementPotionIndex}
+          onStartCaveMiniGame={handleStartCaveMiniGame}
+          onStartDecision={handleStartDecision}
+          onStartHazard={handleStartHazard}
+          onStartNothingEvent={handleStartNothingEvent}
+          onStartRollAgainEvent={handleStartRollAgainEvent}
+          onStartBattle={handleStartBattle}
+          onStartRiverMiniGame={handleStartRiverMiniGame}
+          onStartSelectedEnemyBattle={handleStartSelectedEnemyBattle}
+          onPendingTokenReplacementChange={setSelectedReplacementTokenId}
+          onReplacePendingPotion={handleReplacePendingPotion}
+          onReplacePendingToken={handleReplacePendingToken}
+          onSelectedEnvironmentChange={setSelectedBattleEnvironment}
+          onSelectedEnemyIdChange={setSelectedDebugEnemyId}
+          onSelectedHazardEnvironmentChange={setSelectedHazardEnvironment}
+          onSelectedNothingEnvironmentChange={setSelectedNothingEnvironment}
+          onSelectedDecisionEnvironmentChange={setSelectedDecisionEnvironment}
+          onSelectedPotionIdChange={setSelectedDebugPotionId}
+          onSelectedPotionPlayerIdChange={setSelectedDebugPotionPlayerId}
+          onSelectedTokenTypeChange={setSelectedDebugTokenType}
+          pendingPotionGrant={pendingPotionGrant}
+          pendingTokenType={pendingDebugTokenType}
+          players={gameSetup.players}
+          selectedEnemyId={selectedDebugEnemyId}
+          selectedDecisionEnvironment={selectedDecisionEnvironment}
+          selectedEnvironment={selectedBattleEnvironment}
+          selectedHazardEnvironment={selectedHazardEnvironment}
+          selectedNothingEnvironment={selectedNothingEnvironment}
+          selectedPotionId={selectedDebugPotionId}
+          selectedPotionPlayerId={selectedDebugPotionPlayerId}
+          selectedReplacementPotionIndex={selectedReplacementPotionIndex}
+          selectedReplacementTokenId={selectedReplacementTokenId}
+          selectedTokenType={selectedDebugTokenType}
+        />
+      ) : null}
     </>
   );
 }

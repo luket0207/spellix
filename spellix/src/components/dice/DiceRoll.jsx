@@ -3,7 +3,7 @@ import Button from '../common/Button/Button';
 import './DiceRoll.css';
 
 export const PERSISTENT_ROLL_DURATION_MS = 2000;
-export const PERSISTENT_RESULT_DURATION_MS = 2000;
+export const PERSISTENT_RESULT_DURATION_MS = 1000;
 export const TEMPORARY_ROLL_DURATION_MS = 1500;
 export const TEMPORARY_RESULT_DURATION_MS = 1500;
 

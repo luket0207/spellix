@@ -23,6 +23,7 @@ describe('token definitions', () => {
       'blue-yellow-outline',
       'orange-yellow-outline',
       'green-yellow-outline',
+      'light-green-yellow-outline',
     ]);
     expect(TOKEN_TYPES.filter((type) => TOKEN_DEFINITIONS[type].rarity === 'Common')).toEqual([
       'red',
@@ -42,6 +43,7 @@ describe('token definitions', () => {
       'blue-yellow-outline',
       'orange-yellow-outline',
       'green-yellow-outline',
+      'light-green-yellow-outline',
     ]);
   });
 
@@ -72,8 +74,8 @@ describe('token definitions', () => {
       'orange-yellow-outline': {
         baseColour: 'orange',
         description: {
-          en: 'Plus 10 Counter Damage',
-          jp: '\u53cd\u6483\u30c0\u30e1\u30fc\u30b8\uff0b10',
+          en: 'Plus 10 counter damage if attacked via this number',
+          jp: '\u3053\u306e\u6570\u5b57\u304b\u3089\u653b\u6483\u3055\u308c\u305f\u5834\u5408\u3001\u30ab\u30a6\u30f3\u30bf\u30fc\u30c0\u30e1\u30fc\u30b8\uff0b10',
         },
         label: 'Orange/Yellow Outline',
         name: { en: 'Shiny Counter', jp: '\u8f1d\u304f\u30ab\u30a6\u30f3\u30bf\u30fc' },
@@ -82,9 +84,20 @@ describe('token definitions', () => {
       },
       'green-yellow-outline': {
         baseColour: 'green',
-        description: { en: 'Plus 10 Weakness', jp: '\u5f31\u4f53\u5316\uff0b10' },
+        description: {
+          en: 'Deflect 10 damage if attacked via this number',
+          jp: '\u3053\u306e\u6570\u5b57\u304b\u3089\u653b\u6483\u3055\u308c\u305f\u5834\u5408\u300110\u30c0\u30e1\u30fc\u30b8\u3092\u53d7\u3051\u6d41\u3059',
+        },
         label: 'Green/Yellow Outline',
-        name: { en: 'Shiny Weaken', jp: '\u8f1d\u304f\u5f31\u4f53\u5316' },
+        name: { en: 'Shiny Deflect', jp: '\u8f1d\u304f\u53d7\u3051\u6d41\u3057' },
+        outlineColour: 'yellow',
+        rarity: 'Rare',
+      },
+      'light-green-yellow-outline': {
+        baseColour: 'light-green',
+        description: { en: 'Plus 10 HP', jp: 'HP\uff0b10' },
+        label: 'Light Green/Yellow Outline',
+        name: { en: 'Shiny Health', jp: '\u8f1d\u304f\u4f53\u529b' },
         outlineColour: 'yellow',
         rarity: 'Rare',
       },
@@ -113,17 +126,23 @@ describe('token definitions', () => {
       },
       orange: {
         description: {
-          en: 'Plus 5 Counter Damage',
-          jp: '\u53cd\u6483\u30c0\u30e1\u30fc\u30b8\uff0b5',
+          en: 'Plus 5 counter damage if attacked via this number',
+          jp: '\u3053\u306e\u6570\u5b57\u304b\u3089\u653b\u6483\u3055\u308c\u305f\u5834\u5408\u3001\u30ab\u30a6\u30f3\u30bf\u30fc\u30c0\u30e1\u30fc\u30b8\uff0b5',
         },
         name: { en: 'Counter', jp: '\u30ab\u30a6\u30f3\u30bf\u30fc' },
       },
       green: {
-        description: { en: 'Plus 5 Weakness', jp: '\u5f31\u4f53\u5316\uff0b5' },
-        name: { en: 'Weaken', jp: '\u5f31\u4f53\u5316' },
+        description: {
+          en: 'Deflect 5 damage if attacked via this number',
+          jp: '\u3053\u306e\u6570\u5b57\u304b\u3089\u653b\u6483\u3055\u308c\u305f\u5834\u5408\u30015\u30c0\u30e1\u30fc\u30b8\u3092\u53d7\u3051\u6d41\u3059',
+        },
+        name: { en: 'Deflect', jp: '\u53d7\u3051\u6d41\u3057' },
       },
       'light-blue': {
-        description: { en: 'Freeze', jp: '\u51cd\u7d50' },
+        description: {
+          en: 'Freeze your opponent for their next turn',
+          jp: '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u5bfe\u6226\u76f8\u624b\u3092\u51cd\u7d50\u3055\u305b\u308b',
+        },
         name: { en: 'Freeze', jp: '\u51cd\u7d50' },
       },
       'light-green': {
@@ -138,7 +157,10 @@ describe('token definitions', () => {
         name: { en: 'Sacrifice', jp: '\u8eab\u4ee3\u308f\u308a' },
       },
       white: {
-        description: { en: 'Merge Token', jp: '\u5408\u6210\u30c8\u30fc\u30af\u30f3' },
+        description: {
+          en: 'Put in two adjacent columns to merge them together.',
+          jp: '\u96a3\u63a5\u3059\u308b2\u3064\u306e\u5217\u306b\u914d\u7f6e\u3059\u308b\u3068\u3001\u305d\u306e2\u5217\u3092\u7d71\u5408\u3059\u308b\u3002',
+        },
         name: { en: 'Merge', jp: '\u5408\u6210' },
       },
       purple: {
@@ -146,7 +168,10 @@ describe('token definitions', () => {
         name: { en: 'Buff', jp: '\u5f37\u5316' },
       },
       yellow: {
-        description: { en: 'Charge', jp: '\u30c1\u30e3\u30fc\u30b8' },
+        description: {
+          en: 'Charge all your slots next turn',
+          jp: '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u3059\u3079\u3066\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30c1\u30e3\u30fc\u30b8\u3059\u308b\u3002',
+        },
         name: { en: 'Charge', jp: '\u30c1\u30e3\u30fc\u30b8' },
       },
       grey: {

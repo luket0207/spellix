@@ -16,6 +16,11 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+test('uses a two-second persistent roll and a one-second result phase', () => {
+  expect(PERSISTENT_ROLL_DURATION_MS).toBe(2000);
+  expect(PERSISTENT_RESULT_DURATION_MS).toBe(1000);
+});
+
 test('persistent mode rolls repeatedly and locks its button through both timed phases', () => {
   const onRollComplete = jest.fn();
   const onSequenceComplete = jest.fn();

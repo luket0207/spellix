@@ -305,12 +305,12 @@ function PlayerLanguageProbe() {
 
 function NonBattleSpellEffectsProbe() {
   const { currentPlayer, updatePlayerSpells } = useGameSetup();
-  const commitLightGreen = () => {
+  const commitHealthToken = (tokenType) => {
     const spellSlots = currentPlayer.spellSlots.map((slot, index) => ({
       ...slot,
       tokens:
         index === 0
-          ? [{ committed: true, id: 'light-green-1', type: 'light-green' }]
+          ? [{ committed: true, id: `${tokenType}-1`, type: tokenType }]
           : slot.tokens,
     }));
 
@@ -325,7 +325,15 @@ function NonBattleSpellEffectsProbe() {
 
   return (
     <div>
-      <button type="button" onClick={commitLightGreen}>Commit non-battle effects</button>
+      <button type="button" onClick={() => commitHealthToken('light-green')}>
+        Commit non-battle effects
+      </button>
+      <button
+        type="button"
+        onClick={() => commitHealthToken('light-green-yellow-outline')}
+      >
+        Commit Shiny Health
+      </button>
       <p>{`Player health: ${currentPlayer.currentHealth}/${currentPlayer.maxHealth}`}</p>
       <p>{`Merges used: ${currentPlayer.columnMergesUsed ?? 0}`}</p>
       <p>{`Merged columns: ${currentPlayer.mergedColumns?.[0]?.columns.join('+') ?? 'none'}`}</p>
@@ -348,6 +356,21 @@ test('persists merged columns and applies committed Light Green health', () => {
   expect(screen.getByText('Player health: 85/105')).toBeInTheDocument();
   expect(screen.getByText('Merges used: 1')).toBeInTheDocument();
   expect(screen.getByText('Merged columns: 2+3')).toBeInTheDocument();
+});
+
+test('applies ten current and max health when Shiny Health is committed', () => {
+  const setup = createFreezeSetup();
+  setup.players[0].currentHealth = 80;
+
+  render(
+    <GameSetupProvider initialGameSetup={setup}>
+      <NonBattleSpellEffectsProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /commit shiny health/i }));
+
+  expect(screen.getByText('Player health: 90/110')).toBeInTheDocument();
 });
 
 function FreezeResolutionProbe() {

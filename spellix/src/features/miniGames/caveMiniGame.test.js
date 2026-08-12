@@ -123,7 +123,7 @@ test('can award an outlined token from the rare cave token pool', () => {
 
   expect(generateCaveTokenReward(() => rolls.shift())).toMatchObject({
     rarity: 'Rare',
-    type: 'green-yellow-outline',
+    type: 'light-green-yellow-outline',
   });
 });
 

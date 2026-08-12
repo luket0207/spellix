@@ -1,0 +1,465 @@
+Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the token bag, spell assignment, committed spell display, battle columns, rewards, and debug token selector in English and Japanese.
+   Expected: Green is named Deflect, Green/Yellow Outline is named Shiny Deflect, and their required localized descriptions appear in tooltips; no old Weaken or Weakness wording appears.
+2. Give a player Shiny Health through a rare reward or debug selector and view it in the bag and spell assignment.
+   Expected: It uses the Light Green fill, stable `2px` yellow outline, Shiny Health name, localized `Plus 10 HP` description, and occupies one normal token slot.
+3. Commit one normal Health token to a player below maximum health.
+   Expected: Current HP and maximum HP each increase by `5`.
+4. Commit one Shiny Health token instead.
+   Expected: Current HP and maximum HP each increase by `10`.
+5. Commit normal and Shiny Health together, then remove or uncommit either token through an existing valid flow.
+   Expected: Bonuses stack to `15`; removal recalculates maximum HP and clamps current HP consistently without granting duplicate healing.
+6. Trigger common-only and rare token rewards repeatedly.
+   Expected: Shiny Health can appear in rare pools but never in common-only pools, and existing reward odds/categories remain unchanged.
+7. Resolve attacks through common and Shiny Deflect columns.
+   Expected: Existing damage reduction remains `5` and `10`, with the renamed Deflect animation and no change to battle sequencing.
+8. Watch the browser console throughout these checks.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* `tokens.test.js`, `nonBattleSpellEffects.test.js`, and `rewardItems.test.js` pass all 52 tests for exact bilingual data, token identity/rarity, mixed `5`/`10` health bonuses, removal recalculation, and common/rare pool separation.
+* `GameSetupContext.test.jsx`, `DecisionPage.test.jsx`, `battleTurn.test.js`, `CommittedSpellSlots.test.jsx`, `caveMiniGame.test.js`, and `DeathResult.test.jsx` pass all 136 tests, including context-level Shiny Health commitment, rare reward flows, one-slot rendering, unchanged battle values, and Deflect removal copy.
+* Seven focused `Token.test.jsx` tests pass for all normal/outlined rendering, Light Green fill, yellow outline, localized names, and tooltips.
+* Two focused `BattlePage.test.jsx` tests pass for the renamed Deflect animation on both battle sides.
+* `DebugModal.test.jsx` and `tokenBagAdmin.test.js` pass all 25 tests, including localized Deflect, Shiny Deflect, and Shiny Health debug labels.
+* Scoped ESLint passes for all Feature-001 production files and clean affected test files.
+* `npm run build` and `git diff --check` pass.
+* A source scan confirms no `Weaken` or `Weakness` terms remain in JavaScript, JSX, or CSS.
+
+Automated Tests Still Needed
+
+* None for Feature-001. The complete `Token.test.jsx` suite retains one unrelated stale glow timing expectation after separate user changes to the token glow stylesheet.
+* Whole-file lint for `BattlePage.test.jsx`, `CommittedSpellSlots.test.jsx`, and `DeathResult.test.jsx` retains 147 pre-existing Testing Library node/container-access violations outside the Feature-001 lines.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+Feature-002: Battle reward token choices must be different
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Win Level 2, Level 3, and Level 4 battles repeatedly when two or three token rewards are offered.
+   Expected: Every token option in one reward set has a different token type; duplicate Damage, Guard, or other identical token options never appear together.
+2. Continue generating rewards until Damage and Shiny Damage appear together.
+   Expected: Both may be offered because `red` and `red-yellow-outline` are distinct stable token identities.
+3. Compare common and rare token rewards across repeated battle wins.
+   Expected: Existing category odds and rarity pools are unchanged, including Shiny Health remaining rare-only.
+4. Generate reward sets containing potion choices.
+   Expected: Battle-compatible potion selection and mixed token/potion reward sets behave exactly as before.
+5. Select a reward and complete normal token or potion assignment.
+   Expected: Reward IDs, selection state, assignment, and result displays remain unchanged.
+6. Watch the browser console during normal gameplay.
+   Expected: No warnings or errors occur while the configured pools contain enough unique tokens.
+
+Automated Tests Completed
+
+* `rewardItems.test.js` passes all 28 tests, including three distinct same-category token choices, Damage plus Shiny Damage, exact choice counts, unchanged category/item ordering, centralized rarity pools, potion compatibility, and safe warned fallback for an undersized pool.
+* `battleRewards.test.js` and `rewardStateContext.test.jsx` pass with the full reward suite; together with `rewardItems.test.js`, all 79 reward logic/state tests pass.
+* Five focused `RewardPage.test.jsx` tests pass for token/potion display, Japanese labels/tooltips, selection, assignment, and exact awarded-token results.
+* Scoped ESLint passes for `rewardItems.js` and `rewardItems.test.js`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Feature-002. The complete `RewardPage.test.jsx` suite retains one unrelated stale CSS expectation for a four-column potion assignment grid after separate user styling changes; its other 26 tests pass in the combined run.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+Feature-003: Reduce battle loss token penalties
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Lose normal battles at Levels 1, 2, and 3 with at least one eligible committed token.
+   Expected: Exactly one token is removed for each level.
+2. Lose a normal Level 4 battle with at least two eligible committed tokens.
+   Expected: Exactly two tokens are removed and both appear in the existing loss modal layout.
+3. Lose an Elite Tower battle and a Boss Battle with at least two eligible committed tokens.
+   Expected: Each loss removes exactly two tokens and does not change Elite Tower progress.
+4. Lose a battle with protected starting tokens and Sacrifice / Black tokens present.
+   Expected: Starting tokens remain, Sacrifice tokens are removed first, and any remaining removal is selected from eligible tokens.
+5. Lose a battle with fewer eligible tokens than the configured penalty, then with no eligible tokens.
+   Expected: Only available tokens are removed, and the existing no-token-removal message appears when none can be removed.
+6. Trigger the existing mini-game death penalty and start-of-turn respawn flow.
+   Expected: Their one-token rules and existing recovery behavior are unchanged.
+7. Watch the browser console during these checks.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* `deathPenalty.test.js`, `EliteBossGameSetupContext.test.jsx`, `GameSetupContext.test.jsx`, and `DeathResult.test.jsx` pass all 42 tests for the exact Level 1-4 table, normal/Elite/Boss Level 4 losses, removal priority and protection, respawn behavior, and existing loss-modal output.
+* The focused mini-game failure-punishment test passes, confirming its separate one-token penalty is unchanged and applied only once.
+* Scoped ESLint passes for `deathPenalty.js`, `deathPenalty.test.js`, and `EliteBossGameSetupContext.test.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Feature-003. The complete `miniGameState.test.jsx` suite retains four unrelated existing page/reward expectation failures; its focused death-penalty regression passes.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-004: Add Japanese bottom padding to elite progress display
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start or load a game whose current player uses Japanese and view the Elite Tower progress display.
+   Expected: The display uses the Japanese language class and has `10px` of bottom padding, so its final row is not cramped against the bottom.
+2. View the same display while the current player uses English.
+   Expected: The display uses the English language class and receives no new Feature-004 bottom padding.
+3. Confirm both assigned Elite Tower enemies and their completion indicators still appear.
+   Expected: Enemy names and progress state are unchanged.
+4. Watch the browser console while switching between English and Japanese players.
+   Expected: No runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* Two focused `GameplayEliteBoss.test.jsx` tests pass for the English wrapper class, Japanese wrapper class, and exact Japanese-only `padding-bottom: 10px` rule.
+* Before the concurrent max-height edit, the complete `GameplayEliteBoss.test.jsx` suite passed all nine tests after the Feature-004 implementation.
+* Scoped ESLint passes for `GameplayPage.jsx` and `GameplayEliteBoss.test.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Feature-004 behavior. The complete `GameplayEliteBoss.test.jsx` suite now retains one unrelated stale assertion expecting `max-height: 100px` after a concurrent change set it to `115px`; Feature-004 preserves that separate change.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-005: Speed up battle turn modal and dice roll timing
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a battle and wait without interacting.
+   Expected: The current-turn modal appears immediately and closes after exactly 1 second.
+2. Show the turn modal again and click either its content or the surrounding screen.
+   Expected: The modal closes immediately, and the same click does not roll dice, use a potion, or activate another battle control.
+3. Roll the battle dice normally.
+   Expected: The rolling animation lasts 1 second, then the final value remains visible for the existing 2-second result phase before battle effects begin.
+4. Use Roll Choice and select a forced value, then roll.
+   Expected: The selected value rolls for 1 second and resolves normally without generating a random replacement value.
+5. Roll the board dice outside battle.
+   Expected: Its existing temporary 1.5-second timing is unchanged.
+6. Watch battle effects, rewards, and potion interactions after a roll while monitoring the browser console.
+   Expected: Existing timings and behavior continue unchanged, with no new runtime errors.
+
+Automated Tests Completed
+
+* Eight focused tests pass across `BattlePage.test.jsx`, `DiceRoll.test.jsx`, and `Modal.test.jsx` for the 1-second modal boundary, click dismissal without click-through, 1-second persistent normal/forced rolls, unchanged 2-second result phase, freeze-flow restoration, and optional shared-modal click handling.
+* Scoped ESLint passes for `Modal.jsx`, `Modal.test.jsx`, `DiceRoll.jsx`, and `BattlePage.jsx`.
+* `npm run build` compiles successfully.
+
+Automated Tests Still Needed
+
+* None for Feature-005 behavior. The complete shared test files retain unrelated pre-existing stale assertions: direct DOM lint violations and obsolete result text queries in `DiceRoll.test.jsx`, source-count assertions in `Modal.test.jsx`, and older battle expectations affected by prior enemy-health and reduced-loss-penalty changes.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-006: Prevent white flash when returning to gameplay page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Move from battle back to gameplay repeatedly after both a win/reward flow and a loss/respawn flow.
+   Expected: The screen always retains the existing dark starry base while GameplayPage mounts; no white frame appears.
+2. Complete a Decision and return to gameplay repeatedly.
+   Expected: The dark fallback remains visible through navigation and the board state resumes normally.
+3. Return from Cave, River, Loot Chest, Village, Hazard, and other board-event pages.
+   Expected: No transition exposes a white body/root background, and each existing return flow remains unchanged.
+4. Repeat the transitions with browser performance throttling or a slow device if available.
+   Expected: Delayed route rendering may show the dark `#050617` base, never plain white.
+5. View gameplay and the winner page normally.
+   Expected: Their existing gradient, stars, spell effects, board, and content look unchanged above the fallback.
+6. Monitor the browser console during all transitions.
+   Expected: No new runtime errors or warnings occur.
+
+Automated Tests Completed
+
+* The focused pre-fix test reproduced the missing fallback: the gameplay sky defined `#050617`, but `html`, `body`, and `#root` did not provide a background.
+* All six `MagicalNightSky.test.jsx` tests pass, including the exact shared base-colour/full-height global fallback contract and unchanged animated/reduced-motion behavior.
+* Six focused existing regressions pass across `WinnerPage.test.jsx`, `DecisionPage.test.jsx`, `VillagePage.test.jsx`, and `AppMiniGames.test.jsx` for exact gameplay/winner sky matching and Decision, Village, Cave, Loot Chest, and River return flows.
+* Scoped ESLint passes for `MagicalNightSky.test.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the Feature-006 CSS and return-flow behavior. Automated DOM tests cannot visually detect a single browser paint frame, so the throttled transition check remains a manual visual confirmation.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-007: Disable text selection across the game
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Drag across text on the start page, game setup, gameplay, battle, mini games, rewards, rules, and the debug menu.
+   Expected: No visible text becomes highlighted.
+2. Open representative modals and drag or double-click their labels and body text.
+   Expected: Text remains unselected and existing modal controls continue to respond normally.
+3. Drag tokens between the bag and spell slots on the token assignment screen.
+   Expected: Token assignment still works, and no token name or nearby text becomes highlighted during the drag.
+4. Try native dragging on buttons, images, token displays, and potion displays.
+   Expected: The browser does not create a native drag preview or drag those elements independently.
+5. Navigate to the rules page and try selecting its text.
+   Expected: Selection remains disabled there, matching the current game-wide requirement.
+6. Repeat the interactions with mouse and touch input while monitoring the browser console.
+   Expected: Selection remains disabled, existing interactions work, and no runtime errors or warnings are introduced.
+
+Automated Tests Completed
+
+* The focused pre-fix test failed with the selection and native-drag rules absent; the installed source-map helper obscured the normal assertion output, while a direct ESLint parse check confirmed the test itself was valid.
+* All seven `MagicalNightSky.test.jsx` tests pass, including the exact global standard/vendor-prefixed selection lock and native-drag selector contract.
+* All 21 `SpellTokenAssignment.test.jsx` tests pass, retaining drag overlay, drop-zone, reward assignment, replacement, localization, and committed-token behavior.
+* Scoped ESLint passes for `MagicalNightSky.test.jsx`.
+* `npm run build` and the Feature-007 `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the global CSS contract or existing token-assignment behavior. Browser text highlighting and native drag previews require the manual interaction checks above.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-008: Add Debug Mode toggle on Game Setup
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Game Setup without changing any controls.
+   Expected: A `Debug Mode - デバッグモード` checkbox appears below Start Game and is unchecked.
+2. Start a game with Debug Mode unchecked, then open Settings on gameplay.
+   Expected: Settings has no Debug button and no Debug modal or its Hazard, Nothing Event, choose-event, Anywhere Mode, battle, mini-game, token, or potion tools can be accessed.
+3. Enter a normal battle with Debug Mode off.
+   Expected: Remove Health, Win, Lose, and Force dice controls are absent while normal battle controls still work.
+4. Enter the Cave mini game with Debug Mode off.
+   Expected: The four `Debug: Add...` reward buttons are absent while normal Cave actions still work.
+5. Return to Game Setup, enable Debug Mode, and start a game.
+   Expected: Settings shows Debug, the existing Debug modal and all of its tools appear, Battle debug controls appear, and Cave debug reward controls appear exactly as before.
+6. Use representative Debug tools, including Anywhere Mode, a forced Battle roll, and a Cave reward shortcut.
+   Expected: Each existing tool retains its previous behavior with no new errors or warnings in the browser console.
+7. End/reset the game and return to Game Setup.
+   Expected: Debug Mode returns to its default unchecked state.
+
+Automated Tests Completed
+
+* The pre-fix run reproduced the missing behavior: initial state had no `debugMode`, the setup checkbox was absent, and settings, Battle, and Cave debug controls remained visible for off-mode fixtures.
+* Seven isolated Feature-008 tests pass across `gameSetup.test.js`, `GameSetupPage.test.jsx`, `AppSettingsButton.test.jsx`, `BattlePage.test.jsx`, and `CaveMiniGame.test.jsx` for default-off state, bilingual toggle/context storage, off-mode visibility, and representative on-mode Anywhere, forced-roll, and Cave behavior.
+* The complete nine-test `AppSettingsButton.test.jsx` suite passes with debug-enabled fixtures, retaining Debug modal access, Anywhere Mode, battle launch, selected-enemy launch, and potion grant/replacement flows.
+* The complete 15-test `CaveMiniGame.test.jsx` suite passes, including existing debug reward routing and all normal Cave behavior.
+* Scoped ESLint passes for all six changed production files and the four clean focused test files.
+* `npm run build` and the Feature-008 `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Feature-008 behavior. The complete `GameSetupPage.test.jsx` file retains one unrelated stale `600px` assertion against the existing `670px` panel height, while `BattlePage.test.jsx` retains six unrelated stale behavior/style assertions and pre-existing direct-DOM lint debt.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-009: Add start-page Rules button and bilingual Rules page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the start page and select `Rules - ルール`.
+   Expected: The `/rules` page opens without starting a game or changing current setup state.
+2. View the Rules page at desktop and mobile browser sizes.
+   Expected: The existing animated starry gameplay background fills the screen and a centred modal occupies 80% of the viewport height.
+3. Scroll from the top to the bottom of the English rules.
+   Expected: The modal scrolls vertically and shows Rules of the game, Tokens, Battles, Potions, Environments, and Features with the complete supplied English text.
+4. Select `日本語` at the top.
+   Expected: All rules content switches to Japanese, the English content is hidden, and both return buttons read `スタートに戻る`.
+5. Select `English` again.
+   Expected: All content and both return buttons switch back to English without navigating.
+6. Select the top Back to Start button, reopen Rules, and select the bottom Back to Start button.
+   Expected: Both buttons return to the start page.
+7. Monitor the browser console while navigating, switching languages, scrolling, and returning.
+   Expected: No runtime errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run reproduced both missing requirements: the start page had no Rules action and the Rules page module did not exist.
+* All 11 tests pass across `StartPage.test.jsx` and `RulesPage.test.jsx` for real Rules-page navigation without game reset, animated sky reuse, English default content, all six section headings in both languages, complete-language replacement, localized top/bottom return actions, and the exact centred `80vh` scrollable modal contract.
+* Scoped ESLint passes for `App.jsx`, both page components and tests, and the feature-local rules content file.
+* `npm run build` and the tracked Feature-009 `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the route, content, language, navigation, or CSS contracts. Browser scrolling and responsive presentation remain manual visual checks.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-010: Add pre-game story page explaining win condition
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a new game with English-only players and submit Game Setup.
+   Expected: Story opens over the animated starry background and displays only the English story inside the modal.
+2. Repeat with Japanese-only players.
+   Expected: Story displays only Japanese text and the button reads `続ける`.
+3. Repeat with a mix of English- and Japanese-language players.
+   Expected: Both complete stories appear in English/Japanese order with `30px` between them, and the button reads `Continue - 続ける`.
+4. Compare the story player list with the selected player colours and genders.
+   Expected: English uses Wizard/Witch with natural list grammar; Japanese uses localized descriptors separated by `、`.
+5. Compare the north-west, south-east, and north-east enemy names with the generated board and Elite/Boss assignments.
+   Expected: Each story uses the actual localized enemy assigned to that exact location.
+6. Select Continue and monitor the browser console.
+   Expected: Gameplay loads with the initialized board and turn order, normal gameplay startup behavior remains unchanged, and no runtime errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run failed because the story content module and Story page did not exist.
+* All 9 tests pass across `storyContent.test.js`, `StoryPage.test.jsx`, and `storyFlow.test.jsx` for exact English/Japanese templates, one/two/three-plus player grammar, Japanese list joining, location-aware enemy assignments, language visibility, modal/sky reuse, localized Continue actions, and the complete Setup-to-Story-to-Gameplay state flow.
+* Scoped ESLint passes for all Feature-010 production files and isolated tests.
+* The production build, exact `30px` story-separation/static modal CSS checks, and tracked Feature-010 `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* The monolithic `App.test.jsx` suite remains blocked by its existing `source-map-support` crash before tests execute. The isolated Feature-010 route-flow suite covers the changed navigation and initialized state without that unrelated runner fault.
+* The existing full `GameSetupPage.test.jsx` suite has one unrelated prior CSS assertion expecting a `600px` panel while the current stylesheet uses `670px`; all 17 other tests pass.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-001: Revert battle dice roll timing change from Feature-005
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a battle and let the current-turn modal close automatically.
+   Expected: The modal still closes after 1 second.
+2. Start another turn and click the visible turn modal or surrounding screen.
+   Expected: The modal closes immediately without activating an underlying battle control.
+3. Roll battle dice normally and observe the rolling cube before the result appears.
+   Expected: The roll lasts 2 seconds, matching the timing before Feature-005, and no result appears after only 1 second.
+4. Use Roll Choice to force a value and roll again.
+   Expected: The forced value also rolls for 2 seconds, appears correctly, and is not replaced by a random value.
+5. Observe the result and following battle effects.
+   Expected: The result remains visible for the existing 2-second phase before unchanged battle effects begin.
+6. Roll board dice outside battle and monitor the browser console.
+   Expected: The board dice retain their 1.5-second temporary timing and no new runtime errors occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run reproduced the bug with five roll-boundary failures while both unchanged modal checks passed.
+* Seven focused `DiceRoll.test.jsx` and `BattlePage.test.jsx` tests pass after the fix for the exact 2-second persistent duration, normal/forced/freeze roll flows, unchanged 2-second result phase, 1-second modal timeout, and click dismissal without click-through.
+* Scoped ESLint passes for `DiceRoll.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Bug-001 behavior. Existing unrelated whole-file test and lint debt remains documented under Feature-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-002: Reduce post-dice-result display pause to 1 second
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a battle and roll the dice normally.
+   Expected: The rolling animation still lasts 2 seconds before the final result appears.
+2. Observe the displayed result before battle effects begin.
+   Expected: The result remains visible for 1 second, then the dice hides and the existing effect sequence starts.
+3. Use Roll Choice to force a value and roll again.
+   Expected: The selected value uses the same 2-second roll and 1-second result display without random replacement.
+4. Resolve a frozen-player check.
+   Expected: The freeze result remains visible for 1 second before the existing freeze resolution and dice restoration sequence continues.
+5. Let a turn modal close automatically, then dismiss another by clicking it or the surrounding screen.
+   Expected: Automatic close still occurs after 1 second, click dismissal remains immediate, and no underlying control activates.
+6. Roll board dice outside battle and monitor the browser console.
+   Expected: Temporary board dice retain their 1.5-second roll/result timings and no new runtime errors occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run reproduced Bug-002 with five result-boundary failures while the restored roll duration and both modal behaviors remained correct.
+* Seven focused `DiceRoll.test.jsx` and `BattlePage.test.jsx` tests pass for the exact 2-second persistent roll, 1-second persistent result phase, normal/forced/freeze flows, 1-second modal timeout, and click dismissal without click-through.
+* Scoped ESLint passes for `DiceRoll.jsx`.
+* `npm run build` and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for Bug-002 behavior. Existing unrelated whole-file test and lint debt remains documented under Feature-005.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.

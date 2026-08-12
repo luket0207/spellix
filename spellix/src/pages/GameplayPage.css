@@ -34,7 +34,11 @@
 }
 
 .elite-progress-display {
-  max-height: 100px;
+  max-height: 115px;
+}
+
+.elite-progress-display.language-jp {
+  padding-bottom: 10px;
 }
 
 .elite-progress-list {

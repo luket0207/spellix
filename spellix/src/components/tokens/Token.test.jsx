@@ -59,8 +59,13 @@ describe('Token', () => {
   test.each([
     ['red-yellow-outline', 'red', 'Plus 20 Damage'],
     ['blue-yellow-outline', 'blue', 'Plus 10 Guard'],
-    ['orange-yellow-outline', 'orange', 'Plus 10 Counter Damage'],
-    ['green-yellow-outline', 'green', 'Plus 10 Weakness'],
+    [
+      'orange-yellow-outline',
+      'orange',
+      'Plus 10 counter damage if attacked via this number',
+    ],
+    ['green-yellow-outline', 'green', 'Deflect 10 damage if attacked via this number'],
+    ['light-green-yellow-outline', 'light-green', 'Plus 10 HP'],
   ])(
     'renders %s with the common %s fill and yellow outline',
     (tokenType, baseColour, description) => {

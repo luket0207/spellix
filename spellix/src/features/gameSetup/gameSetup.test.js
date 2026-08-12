@@ -2,6 +2,10 @@ import { createInitialGameSetup, createPlayers } from './gameSetup';
 import { getPlayerPieceImageName } from './pieceImages';
 
 describe('game setup player piece selection foundation', () => {
+  test('starts with debug mode off', () => {
+    expect(createInitialGameSetup().debugMode).toBe(false);
+  });
+
   test('starts without a pending potion grant', () => {
     expect(createInitialGameSetup().pendingPotionGrant).toBeNull();
   });

@@ -129,6 +129,7 @@ export function createInitialGameSetup() {
     buyAndSellTransaction: null,
     cauldronChoiceState: null,
     devineChanceResult: null,
+    debugMode: false,
     miniGameResult: null,
     miniGameReturnNotice: null,
     pendingNextTurnModal: false,

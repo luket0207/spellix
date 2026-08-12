@@ -115,7 +115,7 @@ function VillagePage() {
         panelClassName={`village-modal ${languageClassName}`}
       >
         <div className="village-content">
-          <p className={languageClassName}>
+          <p className={`larger-text ${languageClassName}`}>
             {isHealing ? translations.heal : rewardMessage}
           </p>
           {!isHealing && visit.rewardType === 'potion' && visit.rewardItem ? (

@@ -1,0 +1,30 @@
+.story-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.story-modal {
+  background-image: url('../images/misc/modalBackground.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-sizing: border-box;
+  color: #F5FA00;
+  font-weight: 700;
+  max-width: calc(100vw - 32px);
+  padding: 50px;
+  position: relative;
+  text-align: center;
+  width: 800px;
+  z-index: 1;
+}
+
+.story-text {
+  font-size: 22px;
+}
+
+.story-text + .story-text {
+  margin-top: 30px;
+}

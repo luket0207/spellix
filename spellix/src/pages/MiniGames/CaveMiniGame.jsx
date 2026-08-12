@@ -228,36 +228,38 @@ function CaveMiniGame() {
 
   return (
     <main className="cave-mini-game-page">
-      <div className="cave-debug-rewards">
-        <button
-          disabled={decisionsDisabled || acquiredRewards.token}
-          type="button"
-          onClick={() => handleDebugReward('token')}
-        >
-          Debug: Add Token
-        </button>
-        <button
-          disabled={decisionsDisabled || acquiredRewards.potion}
-          type="button"
-          onClick={() => handleDebugReward('potion')}
-        >
-          Debug: Add Potion
-        </button>
-        <button
-          disabled={decisionsDisabled || acquiredRewards.loot}
-          type="button"
-          onClick={() => handleDebugReward('loot')}
-        >
-          Debug: Add Loot Chest
-        </button>
-        <button
-          disabled={decisionsDisabled || acquiredRewards.rollAgain}
-          type="button"
-          onClick={() => handleDebugReward('rollAgain')}
-        >
-          Debug: Add Roll Again Potion
-        </button>
-      </div>
+      {gameSetup.debugMode ? (
+        <div className="cave-debug-rewards">
+          <button
+            disabled={decisionsDisabled || acquiredRewards.token}
+            type="button"
+            onClick={() => handleDebugReward('token')}
+          >
+            Debug: Add Token
+          </button>
+          <button
+            disabled={decisionsDisabled || acquiredRewards.potion}
+            type="button"
+            onClick={() => handleDebugReward('potion')}
+          >
+            Debug: Add Potion
+          </button>
+          <button
+            disabled={decisionsDisabled || acquiredRewards.loot}
+            type="button"
+            onClick={() => handleDebugReward('loot')}
+          >
+            Debug: Add Loot Chest
+          </button>
+          <button
+            disabled={decisionsDisabled || acquiredRewards.rollAgain}
+            type="button"
+            onClick={() => handleDebugReward('rollAgain')}
+          >
+            Debug: Add Roll Again Potion
+          </button>
+        </div>
+      ) : null}
       <section className="cave-mini-game-layout">
         {playerImageSource ? (
           <div className="cave-progress-track">

@@ -1,8 +1,8 @@
 export const DEATH_TOKEN_PENALTIES = Object.freeze({
   level1BattleLoss: 1,
   level2BattleLoss: 1,
-  level3BattleLoss: 2,
-  level4BattleLoss: 3,
+  level3BattleLoss: 1,
+  level4BattleLoss: 2,
   miniGameDeath: 1,
 });
 

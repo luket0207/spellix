@@ -1,7 +1,10 @@
 import { TOKEN_DEFINITIONS } from '../../data/tokens';
 
 export const MAX_COLUMN_MERGES = 2;
-const LIGHT_GREEN_HEALTH_BONUS = 5;
+const HEALTH_BONUS_BY_TOKEN_TYPE = {
+  'light-green': 5,
+  'light-green-yellow-outline': 10,
+};
 
 function countTokensByType(tokens = [], tokenType) {
   return tokens.filter((token) => token?.type === tokenType).length;
@@ -28,15 +31,17 @@ function cloneSpellSlots(spellSlots = []) {
 
 export function applyLightGreenHealthBonus(player, spellSlots = player?.spellSlots ?? []) {
   const baseMaxHealth = player?.baseMaxHealth ?? player?.maxHealth ?? 100;
-  const lightGreenCount = spellSlots.reduce(
+  const nextHealthBonus = spellSlots.reduce(
     (total, slot) =>
       total +
-      (slot.tokens ?? []).filter(
-        (token) => token.committed && token.type === 'light-green'
-      ).length,
+      (slot.tokens ?? []).reduce(
+        (slotTotal, token) =>
+          slotTotal +
+          (token.committed ? HEALTH_BONUS_BY_TOKEN_TYPE[token.type] ?? 0 : 0),
+        0
+      ),
     0
   );
-  const nextHealthBonus = lightGreenCount * LIGHT_GREEN_HEALTH_BONUS;
   const previousHealthBonus = Math.max(
     0,
     (player?.maxHealth ?? baseMaxHealth) - baseMaxHealth

@@ -284,8 +284,8 @@
   transform: scaleX(-1);
 }
 
-.battle-weakness-ban {
-  animation: battle-weakness-ban 1s linear forwards;
+.battle-deflect-ban {
+  animation: battle-deflect-ban 1s linear forwards;
   color: green;
   height: auto;
   left: 50%;
@@ -297,7 +297,7 @@
   z-index: 2;
 }
 
-@keyframes battle-weakness-ban {
+@keyframes battle-deflect-ban {
   0% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0);

@@ -5,6 +5,7 @@ function Modal({
   ariaLabel,
   children,
   isOpen,
+  onClick,
   panelClassName = '',
   variant = 'default',
 }) {
@@ -13,7 +14,7 @@ function Modal({
   }
 
   return (
-    <div className="modal-overlay" data-testid="modal-overlay">
+    <div className="modal-overlay" data-testid="modal-overlay" onClick={onClick}>
       <div
         aria-label={ariaLabel}
         aria-modal="true"

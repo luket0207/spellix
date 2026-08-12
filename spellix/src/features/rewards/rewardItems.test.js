@@ -71,6 +71,51 @@ describe('rewardItems', () => {
     ]);
   });
 
+  test('generates distinct token types when repeated rolls select one token category', () => {
+    const choices = generateBattleRewardChoices(3, () => 0);
+
+    expect(choices.map(({ item }) => item.type)).toEqual([
+      'red',
+      'blue',
+      'orange',
+    ]);
+  });
+
+  test('allows common and shiny versions of one colour as distinct token choices', () => {
+    const rolls = [0, 0.65, 0, 0.45];
+    const choices = generateBattleRewardChoices(2, () => rolls.shift());
+
+    expect(choices.map(({ item }) => item.type)).toEqual([
+      'red',
+      'red-yellow-outline',
+    ]);
+  });
+
+  test('warns and safely falls back when a token pool has no unique option left', () => {
+    const commonDefinitions = Object.values(TOKEN_DEFINITIONS).filter(
+      ({ rarity }) => rarity === 'Common'
+    );
+    const originalRarities = commonDefinitions.map(({ rarity }) => rarity);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    commonDefinitions.slice(1).forEach((definition) => {
+      definition.rarity = 'Rare';
+    });
+
+    try {
+      const choices = generateBattleRewardChoices(3, () => 0);
+
+      expect(choices).toHaveLength(3);
+      expect(choices.map(({ item }) => item.type)).toEqual(['red', 'red', 'red']);
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      commonDefinitions.forEach((definition, index) => {
+        definition.rarity = originalRarities[index];
+      });
+      warnSpy.mockRestore();
+    }
+  });
+
   test('returns no complete choices for an unsupported battle level', () => {
     expect(generateBattleRewardChoices(5, () => 0)).toEqual([]);
   });
@@ -141,6 +186,7 @@ describe('rewardItems', () => {
       'blue-yellow-outline',
       'orange-yellow-outline',
       'green-yellow-outline',
+      'light-green-yellow-outline',
     ];
 
     expect(getExpectedTokenTypes('Rare')).toEqual(

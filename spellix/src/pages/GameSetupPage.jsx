@@ -39,6 +39,7 @@ function GameSetupPage() {
   const navigate = useNavigate();
   const {
     gameSetup,
+    setDebugMode,
     setPlayerCount,
     setPlayerColour,
     setPlayerGender,
@@ -47,7 +48,7 @@ function GameSetupPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    navigate('/gameplay');
+    navigate('/story');
   };
 
   const getAvailableColours = (currentPlayerId, currentColour) => {
@@ -148,6 +149,14 @@ function GameSetupPage() {
         <Button className="game-setup-submit" type="submit" variant="secondary">
           Start Game - ゲーム開始
         </Button>
+        <label>
+          <input
+            checked={gameSetup.debugMode}
+            type="checkbox"
+            onChange={(event) => setDebugMode(event.target.checked)}
+          />
+          Debug Mode - デバッグモード
+        </label>
       </form>
     </main>
   );

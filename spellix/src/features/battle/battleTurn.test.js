@@ -466,7 +466,7 @@ test('treats effective joined enemy columns as single neighbours for Purple buff
   ]);
 });
 
-test.each(['light-green', 'black', 'white', 'grey'])(
+test.each(['light-green', 'light-green-yellow-outline', 'black', 'white', 'grey'])(
   'treats %s as a no-effect battle miss',
   (tokenType) => {
     const currentActor = createActor({

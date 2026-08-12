@@ -1026,7 +1026,7 @@ function GameplayPage({
         {currentPlayer ? (
           <div
             aria-label="Elite Tower progress"
-            className="committed-spell-slot-display elite-progress-display"
+            className={`committed-spell-slot-display elite-progress-display ${languageClassName}`}
           >
             <p
               className={`committed-spell-slot-display-title ${languageClassName}`}

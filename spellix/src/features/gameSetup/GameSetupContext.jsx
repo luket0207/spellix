@@ -510,6 +510,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
 
     return {
       ...setup,
+      debugMode: Boolean(setup.debugMode),
       eliteBossEnemyAssignments: {
         ...(setup.eliteBossEnemyAssignments ??
           selectEliteBossEnemyAssignments()),
@@ -706,6 +707,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       turnOrder: [],
       currentTurnIndex: 0,
       board: null,
+    }));
+  };
+
+  const setDebugMode = (debugMode) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      debugMode: Boolean(debugMode),
     }));
   };
 
@@ -3323,6 +3331,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         startBuyAndSell,
         startCauldronChoice,
         startStormMasterBlockedTurn,
+        setDebugMode,
         setPlayerColour,
         setPlayerGender,
         setPlayerLanguage,

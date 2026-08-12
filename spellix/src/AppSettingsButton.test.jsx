@@ -10,7 +10,11 @@ jest.mock('./features/gameBoard/BoardGrid', () => ({ currentPlayerId }) => (
   <div aria-label="game board">{`Current board player: ${currentPlayerId}`}</div>
 ));
 
-function createGameplaySetup({ hasCommittedInitialSpells = true, playerCount = 2 } = {}) {
+function createGameplaySetup({
+  debugMode = true,
+  hasCommittedInitialSpells = true,
+  playerCount = 2,
+} = {}) {
   const players = createPlayers(playerCount).map((player, index) => {
     const spellSlots = player.spellSlots.map((slot) => ({
       ...slot,
@@ -46,6 +50,7 @@ function createGameplaySetup({ hasCommittedInitialSpells = true, playerCount = 2
       width: 0,
     },
     currentTurnIndex: 0,
+    debugMode,
     playerCount,
     players,
     turnOrder: players.map((player) => player.id),
@@ -66,6 +71,17 @@ function renderApp(initialRoute = '/gameplay', { initialGameSetup = null } = {})
 }
 
 describe('App gameplay settings button accessibility', () => {
+  test('hides Debug access from settings when Debug Mode is off', async () => {
+    renderApp('/gameplay', {
+      initialGameSetup: createGameplaySetup({ debugMode: false }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+
+    expect(screen.queryByRole('button', { name: /^debug$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /debug/i })).not.toBeInTheDocument();
+  });
+
   test('opens the settings modal while the forced spells modal is already open', async () => {
     renderApp('/gameplay', {
       initialGameSetup: createGameplaySetup({ hasCommittedInitialSpells: false }),

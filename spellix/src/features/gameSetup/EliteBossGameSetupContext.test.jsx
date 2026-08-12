@@ -28,7 +28,14 @@ function EliteBossProbe() {
       <p>{`Player 1 gravel: ${gameSetup.players[0].eliteProgress.eliteTowerGravel}`}</p>
       <p>{`Player 2 gravel: ${gameSetup.players[1].eliteProgress.eliteTowerGravel}`}</p>
       <p>{`Rewards: ${activeBattle?.rewardChoices?.length ?? 0}`}</p>
+      <p>{`Removed tokens: ${activeBattle?.deathPenalty?.removedTokens.length ?? 0}`}</p>
       <p>{`Winner display: ${gameSetup.winnerDisplay?.id ?? 'none'}`}</p>
+      <button
+        type="button"
+        onClick={() => startBattle('player-1', 4, 'hellcrown-reaper')}
+      >
+        Start Normal
+      </button>
       <button
         type="button"
         onClick={() =>
@@ -73,8 +80,15 @@ function EliteBossProbe() {
 }
 
 function renderProbe() {
+  const setup = createInitialGameSetup();
+  setup.players[0].spellSlots[0].tokens = [
+    { committed: true, id: 'black-1', type: 'black' },
+    { committed: true, id: 'black-2', type: 'black' },
+    { committed: true, id: 'red-gained', type: 'red' },
+  ];
+
   render(
-    <GameSetupProvider initialGameSetup={createInitialGameSetup()}>
+    <GameSetupProvider initialGameSetup={setup}>
       <EliteBossProbe />
     </GameSetupProvider>
   );
@@ -119,7 +133,29 @@ test('boss loss remains a normal battle loss and preserves elite progress', () =
   fireEvent.click(screen.getByRole('button', { name: 'Lose' }));
 
   expect(screen.getByText('Phase: lost')).toBeInTheDocument();
+  expect(screen.getByText('Removed tokens: 2')).toBeInTheDocument();
   expect(screen.getByText('Player 1 gravel: true')).toBeInTheDocument();
+});
+
+test('normal level four loss uses the two-token battle penalty', () => {
+  renderProbe();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Start Normal' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Lose' }));
+
+  expect(screen.getByText('Phase: lost')).toBeInTheDocument();
+  expect(screen.getByText('Removed tokens: 2')).toBeInTheDocument();
+});
+
+test('elite loss uses the level four two-token battle penalty', () => {
+  renderProbe();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Start Elite' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Lose' }));
+
+  expect(screen.getByText('Phase: lost')).toBeInTheDocument();
+  expect(screen.getByText('Removed tokens: 2')).toBeInTheDocument();
+  expect(screen.getByText('Player 1 gravel: false')).toBeInTheDocument();
 });
 
 test('stores a locked boss encounter without starting a battle', () => {

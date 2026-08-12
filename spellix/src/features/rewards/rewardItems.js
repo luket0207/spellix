@@ -9,10 +9,17 @@ const REWARD_ITEM_REQUIREMENTS = {
   [REWARD_CATEGORIES.RARE_POTION]: { itemType: 'potion', rarity: 'Rare' },
 };
 
-function getEligibleItems({ itemType, rarity }, availability) {
+function getEligibleItems(
+  { itemType, rarity },
+  availability,
+  excludedTokenTypes = new Set()
+) {
   if (itemType === 'token') {
     return Object.entries(TOKEN_DEFINITIONS)
-      .filter(([, definition]) => definition.rarity === rarity)
+      .filter(
+        ([type, definition]) =>
+          definition.rarity === rarity && !excludedTokenTypes.has(type)
+      )
       .map(([type, definition]) => ({ type, ...definition }));
   }
 
@@ -28,7 +35,8 @@ function getEligibleItems({ itemType, rarity }, availability) {
 export function generateRewardItem(
   category,
   randomFn = Math.random,
-  availability = null
+  availability = null,
+  excludedTokenTypes = new Set()
 ) {
   const requirement = REWARD_ITEM_REQUIREMENTS[category];
 
@@ -36,7 +44,11 @@ export function generateRewardItem(
     return null;
   }
 
-  const eligibleItems = getEligibleItems(requirement, availability);
+  const eligibleItems = getEligibleItems(
+    requirement,
+    availability,
+    excludedTokenTypes
+  );
 
   if (eligibleItems.length === 0) {
     return null;
@@ -56,9 +68,28 @@ export function generateRewardItem(
 
 export function generateBattleRewardChoices(battleLevel, randomFn = Math.random) {
   const categories = generateRewardCategories(battleLevel, randomFn);
+  const selectedTokenTypes = new Set();
 
-  return categories.map((category, index) => ({
-    id: `reward-choice-${index + 1}`,
-    ...generateRewardItem(category, randomFn, 'Battle'),
-  }));
+  return categories.map((category, index) => {
+    let reward = generateRewardItem(
+      category,
+      randomFn,
+      'Battle',
+      selectedTokenTypes
+    );
+
+    if (!reward && REWARD_ITEM_REQUIREMENTS[category]?.itemType === 'token') {
+      console.warn('Battle reward token pool has no unique choices remaining.');
+      reward = generateRewardItem(category, randomFn, 'Battle');
+    }
+
+    if (reward?.itemType === 'token') {
+      selectedTokenTypes.add(reward.item.type);
+    }
+
+    return {
+      id: `reward-choice-${index + 1}`,
+      ...reward,
+    };
+  });
 }

@@ -44,7 +44,7 @@ jest.mock('../../features/miniGames/caveMiniGame', () => ({
   selectCaveOutcome: jest.fn(),
 }));
 
-function renderCave(language = 'en', playerOverrides = {}) {
+function renderCave(language = 'en', playerOverrides = {}, debugMode = true) {
   const player = {
     colour: 'red',
     currentHealth: 100,
@@ -59,7 +59,7 @@ function renderCave(language = 'en', playerOverrides = {}) {
   useGameSetup.mockReturnValue({
     completeMiniGame,
     currentPlayer: player,
-    gameSetup: { players: [player] },
+    gameSetup: { debugMode, players: [player] },
     miniGameResult: { playerId: 'player-1', type: 'cave' },
     removePlayerPotion,
     returnFromMiniGame,
@@ -117,6 +117,27 @@ test('starts with Go Deeper enabled and Retreat visible but disabled at depth ze
   expect(stylesheet).toMatch(
     /\.cave-debug-rewards\s*{[^}]*left:\s*8px;[^}]*position:\s*absolute;[^}]*top:\s*8px;[^}]*z-index:\s*20;/s
   );
+});
+
+test('shows Cave debug rewards only when Debug Mode is on', () => {
+  const view = renderCave('en', {}, false);
+
+  expect(screen.queryByRole('button', { name: 'Debug: Add Token' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Debug: Add Potion' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Debug: Add Loot Chest' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Debug: Add Roll Again Potion' })
+  ).not.toBeInTheDocument();
+
+  view.unmount();
+  renderCave('en', {}, true);
+
+  expect(screen.getByRole('button', { name: 'Debug: Add Token' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Debug: Add Potion' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Debug: Add Loot Chest' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Debug: Add Roll Again Potion' })
+  ).toBeInTheDocument();
 });
 
 test('shows owned Cave Runner below the actions as an automatic active potion', () => {

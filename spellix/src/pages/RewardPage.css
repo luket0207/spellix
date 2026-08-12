@@ -86,7 +86,6 @@
 .potion-assignment-actions {
   display: grid;
   gap: 15px;
-  grid-template-columns: repeat(4, 1fr);
 }
 
 .potion-assignment-actions button {
@@ -103,6 +102,10 @@
 
 .potion-assignment-button .potion-icon {
   margin-right: 20px;
+}
+
+.potion-assignment-button-discard {
+  grid-template-columns: 100%;
 }
 
 .reward-options {

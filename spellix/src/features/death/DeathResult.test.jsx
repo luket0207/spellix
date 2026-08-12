@@ -14,7 +14,7 @@ describe('DeathResult', () => {
       />
     );
 
-    expect(screen.getAllByText('A Weaken token was removed from column 2.')).toHaveLength(2);
+    expect(screen.getAllByText('A Deflect token was removed from column 2.')).toHaveLength(2);
     expect(screen.getByText('A Freeze token was removed from column 5.')).toBeInTheDocument();
     const removedTokens = screen.getByLabelText('Removed tokens');
 

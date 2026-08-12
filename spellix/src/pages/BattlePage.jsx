@@ -41,7 +41,7 @@ import './BattlePage.css';
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
 const BATTLE_DICE_FADE_MS = 350;
 
-function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, showWeakness, side }) {
+function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, showDeflect, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
   const [freezeAnimation, setFreezeAnimation] = useState(frozen ? 'enter' : null);
 
@@ -67,10 +67,10 @@ function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLab
   return (
     <div className={`battle-actor-image battle-actor-image--${side}`}>
       {children}
-      {showWeakness ? (
+      {showDeflect ? (
         <FontAwesomeIcon
-          aria-label="Weakness ban animation"
-          className="battle-weakness-ban"
+          aria-label="Deflect ban animation"
+          className="battle-deflect-ban"
           icon={faBan}
         />
       ) : null}
@@ -177,7 +177,7 @@ function BattlePage() {
     const timeoutId = window.setTimeout(() => {
       setClosedTurnModalActor(modalActor);
       setShowTurnModal(false);
-    }, 2000);
+    }, 1000);
 
     return () => window.clearTimeout(timeoutId);
   }, [activeBattle?.currentBattleActor, isActiveBattle]);
@@ -318,6 +318,11 @@ function BattlePage() {
       ? isPlayerTurn
       : !isPlayerTurn
     : false;
+
+  const handleCloseTurnModal = () => {
+    setClosedTurnModalActor(activeBattle.currentBattleActor);
+    setShowTurnModal(false);
+  };
 
   const handleRemoveHealth = () => {
     const nextHealth = Math.max(0, battlePlayer.currentHealth - 5);
@@ -495,7 +500,7 @@ function BattlePage() {
             guard={activeBattle.playerGuard}
             guardAmountLabel="Player guard amount"
             guardLabel="Player guard shield"
-            showWeakness={
+            showDeflect={
               activeBattleEffect?.type === 'greenReduction' &&
               isEffectTargetPlayer
             }
@@ -575,7 +580,7 @@ function BattlePage() {
             guard={activeBattle.enemyGuard}
             guardAmountLabel="Enemy guard amount"
             guardLabel="Enemy guard shield"
-            showWeakness={
+            showDeflect={
               activeBattleEffect?.type === 'greenReduction' &&
               !isEffectTargetPlayer
             }
@@ -635,45 +640,46 @@ function BattlePage() {
         onSelect={handleSelectRollChoice}
       />
 
-      {/* DEBUG ONLY: Floating battle debug controls. Remove before production. */}
-      <div className="battle-debug-controls">
-        <button
-          type="button"
-          disabled={!isActiveBattle || isPotionAnimationPending}
-          onClick={handleRemoveHealth}
-        >
-          Remove 5 health
-        </button>
-        <button
-          type="button"
-          disabled={!isActiveBattle || isPotionAnimationPending}
-          onClick={handleWin}
-        >
-          Win
-        </button>
-        <button
-          type="button"
-          disabled={!isActiveBattle || isPotionAnimationPending}
-          onClick={handleLose}
-        >
-          Lose
-        </button>
-        {/* DEBUG ONLY: Forced dice roll buttons for battle testing. Remove before production. */}
-        {[1, 2, 3, 4, 5, 6].map((value) => (
+      {gameSetup.debugMode ? (
+        <div className="battle-debug-controls">
           <button
-            disabled={isBattleDiceDisabled}
-            key={value}
             type="button"
-            onClick={() => handleForcedBattleRoll(value)}
+            disabled={!isActiveBattle || isPotionAnimationPending}
+            onClick={handleRemoveHealth}
           >
-            {`Force ${value}`}
+            Remove 5 health
           </button>
-        ))}
-      </div>
+          <button
+            type="button"
+            disabled={!isActiveBattle || isPotionAnimationPending}
+            onClick={handleWin}
+          >
+            Win
+          </button>
+          <button
+            type="button"
+            disabled={!isActiveBattle || isPotionAnimationPending}
+            onClick={handleLose}
+          >
+            Lose
+          </button>
+          {[1, 2, 3, 4, 5, 6].map((value) => (
+            <button
+              disabled={isBattleDiceDisabled}
+              key={value}
+              type="button"
+              onClick={() => handleForcedBattleRoll(value)}
+            >
+              {`Force ${value}`}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <Modal
         ariaLabel="Battle turn"
         isOpen={showTurnModal}
+        onClick={handleCloseTurnModal}
         panelClassName={`battle-turn-modal ${languageClassName}`}
       >
         <div className="battle-turn-modal-content">

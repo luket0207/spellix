@@ -80,6 +80,7 @@ function createBattleSetup() {
       width: 31,
     },
     currentTurnIndex: 0,
+    debugMode: true,
     playerCount: 2,
     players,
     turnOrder: ['player-1', 'player-2'],
@@ -180,6 +181,16 @@ describe('BattlePage flows', () => {
     jest.clearAllTimers();
     jest.restoreAllMocks();
     jest.useRealTimers();
+  });
+
+  test('hides battle debug controls when Debug Mode is off', () => {
+    const setup = createBattleSetup();
+
+    setup.debugMode = false;
+    renderBattleFlow(['/battle'], setup);
+
+    expect(screen.queryByRole('button', { name: 'Remove 5 health' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Force 1' })).not.toBeInTheDocument();
   });
 
   test('keeps debug controls absolutely positioned on the left', () => {
@@ -291,12 +302,12 @@ describe('BattlePage flows', () => {
     );
   });
 
-  test('keeps the result visible for two seconds before fading into battle effects', () => {
+  test('keeps the result visible for one second before fading into battle effects', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
     renderBattleFlow();
 
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(1000);
     });
 
     const dicePanel = document.querySelector('.battle-dice');
@@ -319,7 +330,7 @@ describe('BattlePage flows', () => {
     expect(rollButton).toBeDisabled();
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(999);
     });
 
     expect(dicePanel.querySelector('.dice-roll-result')).toHaveClass(
@@ -344,6 +355,82 @@ describe('BattlePage flows', () => {
     expect(dicePanel).not.toHaveClass('battle-dice--hidden');
   });
 
+  test('auto-closes the battle turn modal after one second', () => {
+    renderBattleFlow();
+
+    expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+
+    act(() => {
+      jest.advanceTimersByTime(999);
+    });
+
+    expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+  });
+
+  test('closes the battle turn modal from a screen click without clicking through', () => {
+    const randomSpy = jest.spyOn(Math, 'random');
+
+    renderBattleFlow();
+    fireEvent.click(screen.getByRole('dialog', { name: /battle turn/i }));
+
+    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
+    expect(screen.getByRole('img', { name: /dice face 1/i })).toBeInTheDocument();
+    expect(randomSpy).not.toHaveBeenCalled();
+  });
+
+  test('rolls forced battle dice for two seconds before the existing result pause', () => {
+    const randomSpy = jest.spyOn(Math, 'random');
+
+    renderBattleFlow();
+    fireEvent.click(screen.getByRole('dialog', { name: /battle turn/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toHaveClass(
+      'dice-roll-cube--face-1'
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1999);
+    });
+
+    expect(screen.getByRole('img', { name: /dice rolling/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.getByRole('img', { name: /dice face 1/i })).toBeInTheDocument();
+    expect(document.querySelector('.dice-roll-result')).toHaveClass(
+      'dice-roll-result--visible'
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(999);
+    });
+
+    expect(document.querySelector('.dice-roll-result')).toHaveClass(
+      'dice-roll-result--visible'
+    );
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(randomSpy).not.toHaveBeenCalled();
+  });
+
   test('restores the dice only after a freeze-check result sequence finishes', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
     const frozenPlayerSetup = createBattleSetup();
@@ -355,7 +442,7 @@ describe('BattlePage flows', () => {
     renderBattleFlow(['/battle'], frozenPlayerSetup);
 
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(1000);
     });
 
     const dicePanel = document.querySelector('.battle-dice');
@@ -372,7 +459,7 @@ describe('BattlePage flows', () => {
     expect(potionUseButton).toBeDisabled();
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(999);
     });
 
     expect(screen.getByText(/player frozen: true/i)).toBeInTheDocument();
@@ -1494,7 +1581,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(999);
     });
 
     expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
@@ -1664,7 +1751,7 @@ describe('BattlePage flows', () => {
     });
 
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(1000);
     });
 
     forceButtons.forEach((button) => expect(button).toBeEnabled());
@@ -1689,9 +1776,12 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('img', { name: /dice face 1/i })).toHaveClass(
       'dice-roll-cube--face-1'
     );
-    expect(screen.getByText(/dice result: 1/i)).toHaveClass('dice-roll-result--visible');
+    expect(document.querySelector('.dice-roll-result')).toHaveClass(
+      'dice-roll-result--visible'
+    );
+    expect(document.querySelector('.dice-roll-result')).toHaveTextContent('1');
     expect(screen.getByText(/battle enemy health: 120/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
     forceButtons.forEach((button) => expect(button).toBeDisabled());
 
     act(() => {
@@ -1699,10 +1789,17 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByText(/battle enemy health: 120/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(1);
+    });
+
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle enemy health: 120/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
     });
 
     expect(screen.getByText(/battle enemy health: 100/i)).toBeInTheDocument();
@@ -2220,7 +2317,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(999);
     });
 
     expect(screen.getByRole('dialog', { name: /battle turn/i })).toBeInTheDocument();
@@ -2368,22 +2465,22 @@ describe('BattlePage flows', () => {
     expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle enemy health: 25/i)).toBeInTheDocument();
     const enemyGreenAnimation = screen.getByLabelText(/green reduction animation/i);
-    const enemyWeaknessIcon = screen.getByLabelText(/weakness ban animation/i);
+    const enemyDeflectIcon = screen.getByLabelText(/deflect ban animation/i);
     expect(enemyGreenAnimation).toHaveClass('battle-radiating-effect--enemy');
     expect(enemyGreenAnimation.parentElement).toHaveAttribute(
       'aria-label',
       'Battle enemy panel'
     );
-    expect(enemyWeaknessIcon).toHaveAttribute('data-icon', 'ban');
-    expect(enemyWeaknessIcon).toHaveClass('battle-weakness-ban');
-    expect(enemyWeaknessIcon.parentElement).toHaveClass(
+    expect(enemyDeflectIcon).toHaveAttribute('data-icon', 'ban');
+    expect(enemyDeflectIcon).toHaveClass('battle-deflect-ban');
+    expect(enemyDeflectIcon.parentElement).toHaveClass(
       'battle-actor-image--enemy'
     );
     expect(stylesheet).toMatch(
-      /\.battle-weakness-ban\s*{[^}]*animation:\s*battle-weakness-ban 1s linear forwards;[^}]*color:\s*green;[^}]*position:\s*absolute;[^}]*width:\s*100%;/s
+      /\.battle-deflect-ban\s*{[^}]*animation:\s*battle-deflect-ban 1s linear forwards;[^}]*color:\s*green;[^}]*position:\s*absolute;[^}]*width:\s*100%;/s
     );
     expect(stylesheet).toMatch(
-      /@keyframes battle-weakness-ban\s*{[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\);[\s\S]*?translateX\(-5px\)[\s\S]*?translateX\(5px\)[\s\S]*?opacity:\s*0;/
+      /@keyframes battle-deflect-ban\s*{[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\);[\s\S]*?translateX\(-5px\)[\s\S]*?translateX\(5px\)[\s\S]*?opacity:\s*0;/
     );
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
@@ -2392,7 +2489,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.getByLabelText(/green reduction animation/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/weakness ban animation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/deflect ban animation/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
 
     act(() => {
@@ -2400,7 +2497,7 @@ describe('BattlePage flows', () => {
     });
 
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/weakness ban animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/deflect ban animation/i)).not.toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
 
     act(() => {
@@ -2448,15 +2545,15 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText(/battle player health: 90/i)).toBeInTheDocument();
     const playerGreenAnimation = screen.getByLabelText(/green reduction animation/i);
-    const playerWeaknessIcon = screen.getByLabelText(/weakness ban animation/i);
+    const playerDeflectIcon = screen.getByLabelText(/deflect ban animation/i);
     expect(playerGreenAnimation).toHaveClass('battle-radiating-effect--player');
     expect(playerGreenAnimation.parentElement).toHaveAttribute(
       'aria-label',
       'Battle player panel'
     );
-    expect(playerWeaknessIcon).toHaveAttribute('data-icon', 'ban');
-    expect(playerWeaknessIcon).toHaveClass('battle-weakness-ban');
-    expect(playerWeaknessIcon.parentElement).toHaveClass(
+    expect(playerDeflectIcon).toHaveAttribute('data-icon', 'ban');
+    expect(playerDeflectIcon).toHaveClass('battle-deflect-ban');
+    expect(playerDeflectIcon.parentElement).toHaveClass(
       'battle-actor-image--player'
     );
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
@@ -2855,7 +2952,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
 
     act(() => {
-      jest.advanceTimersByTime(1999);
+      jest.advanceTimersByTime(999);
     });
 
     expect(randomSpy).not.toHaveBeenCalled();

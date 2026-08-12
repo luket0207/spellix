@@ -1,0 +1,175 @@
+---
+
+Bug-001: Revert battle dice roll timing change from Feature-005
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-005: Speed up battle turn modal and dice roll timing
+* EPIC-014 Feature-006: Battle dice result visible 2s before animations
+
+Bug Summary
+
+* Feature-005 changed the battle dice roll animation to last only `1 second`.
+* This change should be reverted.
+* The battle dice roll should use the same duration it had before Feature-005.
+* Only the dice roll timing should be reverted.
+
+Suspected Cause
+
+* Feature-005 changed the shared persistent `DiceRoll` duration constant from `2000ms` to `1000ms`; BattlePage uses persistent mode while board dice use the separate temporary timing constants.
+
+Required Behaviour
+
+* Restore the previous battle dice roll animation duration.
+* Do not keep the new `1 second` dice roll duration.
+* Use the same battle dice roll timing that existed before EPIC-018 Feature-005 was implemented.
+
+Important Scope
+
+* Keep the other Feature-005 changes:
+
+  * battle next-turn modal should still show for only `1 second`.
+  * battle new-turn modal should still close instantly when anywhere on the screen is clicked.
+* Revert only:
+
+  * battle dice roll animation duration.
+
+Suggested Fix Direction
+
+```js id="c2xjz6"
+const BATTLE_DICE_ROLL_DURATION_MS = PREVIOUS_BATTLE_DICE_ROLL_DURATION_MS;
+```
+
+* If the old value exists in git/history, restore that exact value.
+* If the old value was controlled by a shared constant, use the previous constant again.
+* Do not affect board dice roll timing unless battle and board dice intentionally share the same component and previous behaviour requires it.
+
+Out Of Scope
+
+* No changes to battle turn modal timing.
+* No changes to click-anywhere-to-close behaviour.
+* No changes to dice result display.
+* No changes to post-roll battle animation timing.
+* No changes to board dice timing unless it is technically unavoidable.
+* No unrelated battle pacing changes.
+
+Testing Required
+
+* Start a battle.
+* Roll the battle dice.
+* Confirm the dice roll animation uses the same duration it had before Feature-005.
+* Confirm it no longer uses the shortened `1 second` timing.
+* Confirm the final dice result still appears correctly.
+* Confirm battle animations still start after the correct result flow.
+* Confirm the battle next-turn modal still auto-closes after `1 second`.
+* Confirm clicking anywhere still closes the battle new-turn modal instantly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Updated the focused duration and battle-flow tests first to require the previous 2-second persistent roll while retaining the 1-second modal assertions; the pre-fix run failed at the shortened roll boundaries and passed both modal checks.
+
+Final Fix
+
+* Restored `PERSISTENT_ROLL_DURATION_MS` from `1000` to `2000` and adjusted only battle-roll timing expectations for normal, forced, frozen-player, and enemy paths.
+* Preserved the 1-second battle turn modal, click-anywhere dismissal, 2-second result phase, battle effect timings, and 1.5-second temporary board dice timings.
+
+
+---
+
+Bug-002: Reduce post-dice-result display pause to 1 second
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-005: Speed up battle turn modal and dice roll timing
+* Bug-001: Revert battle dice roll timing change from Feature-005
+* EPIC-014 Feature-006: Battle dice result visible before animations
+
+Bug Summary
+
+* Bug-001 restores the dice roll animation length to its previous duration.
+* The part that should actually be shortened is the pause after the dice result has already appeared.
+* Once the final dice result is shown, it should remain visible for only `1 second` before the battle continues.
+
+Suspected Cause
+
+* Persistent `DiceRoll` mode still used `PERSISTENT_RESULT_DURATION_MS = 2000` after Bug-001 restored the separate 2-second roll duration.
+
+Required Behaviour
+
+* Keep the dice roll animation duration at its previous value.
+* After the dice finishes rolling and the result is displayed:
+
+  * show the final result for `1 second`.
+  * then continue to the next battle animation/effect sequence.
+* Do not use the previous longer post-result pause.
+
+Timing Requirement
+
+```txt id="rx2mbl"
+Dice roll animation: previous duration restored by Bug-001
+Post-result display pause: 1 second
+```
+
+Suggested Constant Direction
+
+```js id="w4s9qc"
+const BATTLE_DICE_RESULT_DISPLAY_MS = 1000;
+```
+
+Suggested Flow
+
+```txt id="jxva11"
+1. Player clicks Roll Dice.
+2. Dice roll animation plays using the previous duration.
+3. Final dice result appears.
+4. Result remains visible for 1 second.
+5. Dice fades out or battle animations begin according to the existing battle sequence.
+```
+
+Important Scope
+
+* This bug changes only the post-result display pause.
+* Do not shorten the dice roll animation itself.
+* Do not change the battle next-turn modal timing.
+* Do not change click-anywhere-to-close behaviour for the battle new-turn modal.
+
+Out Of Scope
+
+* No changes to dice roll animation duration.
+* No changes to dice result calculation.
+* No changes to forced dice results.
+* No changes to token animation duration.
+* No changes to battle reward timing.
+* No unrelated battle pacing changes.
+
+Testing Required
+
+* Start a battle.
+* Roll the battle dice.
+* Confirm the dice roll animation uses the restored previous duration.
+* Confirm the final dice result appears.
+* Confirm the result stays visible for 1 second.
+* Confirm battle animations/effects begin after that 1-second result display.
+* Confirm forced dice results still show correctly.
+* Confirm battle next-turn modal still uses the Feature-005 timing.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Updated focused constant and battle-flow tests first to require a 1-second result phase while retaining 2-second roll boundaries; the pre-fix run failed five result-boundary checks and passed both modal regressions.
+
+Final Fix
+
+* Reduced only `PERSISTENT_RESULT_DURATION_MS` from `2000` to `1000`.
+* Preserved the 2-second persistent battle roll, 1.5-second temporary board roll/result timings, forced values, 1-second battle turn modal, click dismissal, and all battle effect durations.

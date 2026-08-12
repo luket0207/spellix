@@ -77,7 +77,13 @@ describe('CommittedSpellSlots', () => {
 
   test('keeps no-effect battle token colours visible in committed spell slots', () => {
     const spellSlots = createSpellSlots();
-    const noEffectTokenTypes = ['light-green', 'black', 'white', 'grey'];
+    const noEffectTokenTypes = [
+      'light-green',
+      'light-green-yellow-outline',
+      'black',
+      'white',
+      'grey',
+    ];
 
     spellSlots[0].tokens = noEffectTokenTypes.map((type) => ({
       committed: true,

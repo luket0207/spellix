@@ -142,6 +142,7 @@ beforeEach(() => {
 test('shows only the two assigned elite enemies with visual progress', () => {
   renderGameplay();
 
+  expect(screen.getByLabelText('Elite Tower progress')).toHaveClass('language-en');
   expect(screen.getByText('Crowned Lichlord')).toBeInTheDocument();
   expect(screen.getByText('Amethyst Ogre')).toBeInTheDocument();
   expect(screen.queryByText('Mossroot Elder')).not.toBeInTheDocument();
@@ -159,6 +160,22 @@ test('limits the elite progress display to the required maximum height', () => {
   )?.[1];
 
   expect(progressRule).toMatch(/max-height:\s*100px/);
+});
+
+test('adds ten pixels of bottom padding to the Japanese elite progress display', () => {
+  const setup = createGameplaySetup();
+
+  setup.players[0].language = 'jp';
+  renderGameplay(setup);
+
+  expect(screen.getByLabelText('Elite Tower progress')).toHaveClass('language-jp');
+
+  const cssSource = readFileSync('src/pages/GameplayPage.css', 'utf8');
+  const japaneseProgressRule = cssSource.match(
+    /\.elite-progress-display\.language-jp\s*\{([\s\S]*?)\}/
+  )?.[1];
+
+  expect(japaneseProgressRule).toMatch(/padding-bottom:\s*10px/);
 });
 
 test('starts the assigned battle every time an elite tower is landed on', () => {

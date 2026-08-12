@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'fs';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import RulesPage from './RulesPage';
 import StartPage from './StartPage';
 
 function renderStartPage(onStart = () => {}) {
@@ -9,6 +10,7 @@ function renderStartPage(onStart = () => {}) {
       <Routes>
         <Route path="/" element={<StartPage onStart={onStart} />} />
         <Route path="/setup" element={<p>Game setup destination</p>} />
+        <Route path="/rules" element={<RulesPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -41,6 +43,16 @@ describe('StartPage', () => {
 
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Game setup destination')).toBeInTheDocument();
+  });
+
+  test('opens the Rules page without starting or resetting the game', () => {
+    const onStart = jest.fn();
+
+    renderStartPage(onStart);
+    fireEvent.click(screen.getByRole('button', { name: 'Rules - ルール' }));
+
+    expect(onStart).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Rules of the game' })).toBeInTheDocument();
   });
 
   test('crossfades all seven battle backgrounds every fifteen seconds and loops', () => {

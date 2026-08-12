@@ -52,6 +52,20 @@ describe('Modal variants', () => {
     handlers.forEach((handler) => expect(handler).toHaveBeenCalledTimes(1));
   });
 
+  test('forwards panel clicks to an optional modal click handler', () => {
+    const handleClick = jest.fn();
+
+    render(
+      <Modal ariaLabel="Clickable modal" isOpen onClick={handleClick}>
+        <p>Clickable content</p>
+      </Modal>
+    );
+
+    fireEvent.click(screen.getByRole('dialog', { name: 'Clickable modal' }));
+
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
   test('keeps the dice modal on its isolated legacy variant', () => {
     render(
       <Modal

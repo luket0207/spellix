@@ -1,0 +1,1621 @@
+---
+
+Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-017 Feature-003: Add rare yellow-outline double-strength tokens
+* EPIC-017 Feature-006: Correct token names and separate them from descriptions
+* EPIC-011 Feature-004: Add non-battle token effects
+* EPIC-017 Feature-004: Counter attacks should only trigger when the roller attempts to affect the opponent
+
+Goal
+
+* Update the token data source of truth.
+* Rename the old Weakness / Weaken token concept to Deflect.
+* Rename the shiny version to Shiny Deflect.
+* Add a new Shiny Health token.
+* Update token descriptions and Japanese text.
+* Preserve existing token behaviours unless the new wording requires the already-implemented behaviour to be labelled differently.
+
+Important Rename Requirement
+
+* The token previously named `Weaken` / `Weakness` should now be named:
+
+English:
+
+```txt id="e1h8hx"
+Deflect
+```
+
+Japanese:
+
+```txt id="9xlx07"
+受け流し
+```
+
+* The shiny version should now be named:
+
+English:
+
+```txt id="tby9rd"
+Shiny Deflect
+```
+
+Japanese:
+
+```txt id="x1z4ge"
+輝く受け流し
+```
+
+* This rename should happen everywhere:
+
+  * token data
+  * token bag
+  * spell assignment
+  * committed spell slots
+  * battle spell columns
+  * reward modals
+  * tooltips
+  * debug displays
+  * token reward pools
+  * battle logs/text, if any
+  * code comments only if they are user-facing or confusing
+
+Token Data Source Of Truth
+
+```txt id="s3ci5q"
+Colour: Red
+Name: Damage
+Japanese Name: ダメージ
+Description: Plus 10 Damage
+Japanese Description: ダメージ＋10
+Rarity: Common
+
+Colour: Blue
+Name: Guard
+Japanese Name: ガード
+Description: Plus 5 Guard
+Japanese Description: ガード＋5
+Rarity: Common
+
+Colour: Orange
+Name: Counter
+Japanese Name: カウンター
+Description: Plus 5 counter damage if attacked via this number
+Japanese Description: この数字から攻撃された場合、カウンターダメージ＋5
+Rarity: Common
+
+Colour: Green
+Name: Deflect
+Japanese Name: 受け流し
+Description: Deflect 5 damage if attacked via this number
+Japanese Description: この数字から攻撃された場合、5ダメージを受け流す
+Rarity: Common
+
+Colour: Light Blue
+Name: Freeze
+Japanese Name: 凍結
+Description: Freeze your opponent for their next turn
+Japanese Description: 次のターン、対戦相手を凍結させる
+Rarity: Common
+
+Colour: Light Green
+Name: Health
+Japanese Name: 体力
+Description: Plus 5 HP
+Japanese Description: HP＋5
+Rarity: Common
+
+Colour: Black
+Name: Sacrifice
+Japanese Name: 身代わり
+Description: This token will be the first token to be removed if you lose a battle
+Japanese Description: バトルに敗北した場合、このトークンが最初に取り除かれる
+Rarity: Common
+
+Colour: White
+Name: Merge
+Japanese Name: 合成
+Description: Put in two adjacent columns to merge them together.
+Japanese Description: 隣接する2つの列に配置すると、その2列を統合する。
+Rarity: Rare
+
+Colour: Purple
+Name: Buff
+Japanese Name: 強化
+Description: Plus 5 Buff
+Japanese Description: バフ＋5
+Rarity: Rare
+
+Colour: Yellow
+Name: Charge
+Japanese Name: チャージ
+Description: Charge all your slots next turn
+Japanese Description: 次のターン、すべてのスロットをチャージする。
+Rarity: Rare
+
+Colour: Grey
+Name: Capacity
+Japanese Name: 容量
+Description: Plus 1 Token slot to all adjacent columns
+Japanese Description: 隣接するすべての列のトークンスロットを1つ増やす
+Rarity: Rare
+
+Colour: Red/Yellow Outline
+Name: Shiny Damage
+Japanese Name: 輝くダメージ
+Description: Plus 20 Damage
+Japanese Description: ダメージ＋20
+Rarity: Rare
+
+Colour: Blue/Yellow Outline
+Name: Shiny Guard
+Japanese Name: 輝くガード
+Description: Plus 10 Guard
+Japanese Description: ガード＋10
+Rarity: Rare
+
+Colour: Orange/Yellow Outline
+Name: Shiny Counter
+Japanese Name: 輝くカウンター
+Description: Plus 10 counter damage if attacked via this number
+Japanese Description: この数字から攻撃された場合、カウンターダメージ＋10
+Rarity: Rare
+
+Colour: Green/Yellow Outline
+Name: Shiny Deflect
+Japanese Name: 輝く受け流し
+Description: Deflect 10 damage if attacked via this number
+Japanese Description: この数字から攻撃された場合、10ダメージを受け流す
+Rarity: Rare
+
+Colour: Light Green/Yellow Outline
+Name: Shiny Health
+Japanese Name: 輝く体力
+Description: Plus 10 HP
+Japanese Description: HP＋10
+Rarity: Rare
+```
+
+New Token Requirement
+
+* Add the new token:
+
+```txt id="b2vdmu"
+Light Green/Yellow Outline
+Shiny Health
+輝く体力
+Plus 10 HP
+HP＋10
+Rare
+```
+
+* It should work exactly like the existing Health token, but gives `+10 HP` instead of `+5 HP`.
+* It should use the Light Green token colour with a `2px` yellow outline.
+* It should count as one token for slot capacity.
+* It should be included in rare token reward pools.
+
+Health Token Behaviour Requirement
+
+* Health token:
+
+  * increases max HP by `5`.
+  * increases current HP by `5` when committed.
+* Shiny Health token:
+
+  * increases max HP by `10`.
+  * increases current HP by `10` when committed.
+* Removing or uncommitting the token through existing valid systems should reverse or recalculate health consistently with current max HP rules.
+
+Deflect Behaviour Note
+
+* This feature is primarily a data/text update.
+* The old Green token functionality should now be labelled as Deflect.
+* Any existing Green token battle logic should continue to work under the new name.
+* Shiny Deflect should remain the doubled version of Deflect.
+
+Display Requirement
+
+* Token names should use `name`.
+* Token descriptions should use `description`.
+* Tooltips should show:
+
+  * token name as the title.
+  * token description as the body.
+
+Out Of Scope
+
+* No new battle functionality beyond Shiny Health.
+* No changes to token reward odds except adding Shiny Health to rare token pools.
+* No visual redesign beyond the Light Green/Yellow Outline token.
+* No changes to existing yellow-outline token border rules.
+
+Testing Checkpoints
+
+* Confirm Green token is labelled Deflect / 受け流し everywhere.
+* Confirm Green/Yellow Outline token is labelled Shiny Deflect / 輝く受け流し everywhere.
+* Confirm no user-facing `Weaken` or `Weakness` text remains.
+* Confirm Shiny Health appears in token data.
+* Confirm Shiny Health has Light Green fill and yellow outline.
+* Confirm Shiny Health gives +10 max HP and +10 current HP when committed.
+* Confirm Health still gives +5 max HP and +5 current HP.
+* Confirm Shiny Health appears in rare token reward pools.
+* Confirm common-only rewards do not grant Shiny Health.
+* Confirm all token tooltips show correct names and descriptions.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused `TOKEN_DEFINITIONS`, the shared `Token` component, rarity-based reward generation, existing spell assignment/committed displays, debug token helpers, and the current non-battle health recalculation path.
+* Updated the requested bilingual token source of truth, renamed Green and Green/Yellow Outline to Deflect and Shiny Deflect, and removed the old concept wording from JavaScript, JSX, and CSS.
+* Added `light-green-yellow-outline` as the rare Shiny Health token. Existing base-colour and outline metadata gives it the Light Green fill and stable shared `2px` yellow outline in every token display.
+* Extended the existing committed-health calculation so Health contributes `5` and Shiny Health contributes `10`; newly committed bonuses increase current and max HP, while removal recalculates and clamps through the existing max-HP rules.
+* Existing rarity filtering automatically includes Shiny Health in rare reward pools and excludes it from common-only pools; no reward odds were changed.
+* Renamed the existing battle Deflect animation identifiers and accessibility label without changing its values, sequencing, or visual behavior.
+* No new components, routes, dependencies, reward systems, battle mechanics, token capacity rules, or visual redesigns were added.
+
+---
+
+Feature-002: Battle reward token choices must be different
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-017 Feature-006: Correct token names and separate them from descriptions
+* Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+
+Goal
+
+* When a player wins a battle and is offered multiple token choices, those token choices must be different from one another.
+* Duplicate token options should not appear in the same reward choice set.
+
+Required Behaviour
+
+* If a battle reward offers a choice of 2 tokens, the 2 tokens must be different.
+* If a battle reward offers a choice of 3 tokens in any current or future flow, all 3 tokens must be different.
+* Different means different token identity, not just different object instance.
+
+Example
+
+Incorrect:
+
+```txt id="igtv4c"
+Damage
+Damage
+```
+
+Correct:
+
+```txt id="508li9"
+Damage
+Counter
+```
+
+Token Identity Requirement
+
+* Compare tokens by stable token ID.
+* Do not compare by object reference.
+* For example, two separate generated `Damage` token objects are still duplicates if their token ID is the same.
+
+Suggested Logic Direction
+
+```js id="ymaicp"
+function generateDistinctTokenChoices(pool, count) {
+  const choices = [];
+
+  while (choices.length < count) {
+    const candidate = randomChoice(pool);
+
+    const alreadyChosen = choices.some(
+      (token) => token.id === candidate.id
+    );
+
+    if (!alreadyChosen) {
+      choices.push(candidate);
+    }
+  }
+
+  return choices;
+}
+```
+
+Safety Requirement
+
+* If the token pool has fewer unique tokens than the number of choices required, do not infinite loop.
+* In that case:
+
+  * use all available unique tokens.
+  * log a developer warning.
+  * or gracefully fall back to the existing reward behaviour.
+
+Out Of Scope
+
+* No changes to battle reward odds.
+* No changes to token rarity.
+* No changes to token functionality.
+* No changes to reward modal layout.
+
+Testing Checkpoints
+
+* Win battles that offer token choices repeatedly.
+* Confirm duplicate token choices never appear in the same reward choice.
+* Confirm Damage and Shiny Damage can both appear together because they are different token IDs.
+* Confirm rewards still respect common/rare pool rules.
+* Confirm there are no infinite loops.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused `generateRewardCategories`, `generateRewardItem`, centralized token definitions, and the existing battle reward choice shape; no new generator, component, route, dependency, or UI was added.
+* Battle choice generation now tracks already selected stable token types and excludes them from each later token pool while leaving category rolls, rarity filtering, potion choices, choice IDs, and reward odds unchanged.
+* The current token catalog's stable identity is `item.type`; this distinguishes Damage (`red`) from Shiny Damage (`red-yellow-outline`) while treating separately cloned objects of the same type as duplicates.
+* If the requested rarity pool cannot provide another unique token, generation warns once for that exhausted choice and falls back to the existing selector without retry loops, preserving the configured number of choices.
+* No token rarity, token behavior, reward modal layout, potion selection, or later Epic-018 feature was changed.
+
+---
+
+Feature-003: Reduce battle loss token penalties
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-011 Feature-003: Battle modal cleanup
+* EPIC-015 Feature-006: Add respawn flow when a player starts their turn with 0 health
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Goal
+
+* Reduce the punishment for losing battles.
+* Battle loss token removal is currently too severe.
+* Update token loss by enemy/battle level.
+
+New Battle Loss Penalty Table
+
+```txt id="xnelcz"
+Lose a level 1 battle: lose 1 token
+Lose a level 2 battle: lose 1 token
+Lose a level 3 battle: lose 1 token
+Lose a level 4 battle: lose 2 tokens
+```
+
+Required Behaviour
+
+* When a player loses a level 1 battle, remove 1 token.
+* When a player loses a level 2 battle, remove 1 token.
+* When a player loses a level 3 battle, remove 1 token.
+* When a player loses a level 4 battle, remove 2 tokens.
+* This should apply to:
+
+  * normal battles.
+  * Elite Tower battles.
+  * Boss Battle losses, unless Boss Battle has a specific override elsewhere.
+
+Token Removal Priority
+
+* Preserve existing token removal rules:
+
+  * starting tokens cannot be removed.
+  * Sacrifice / Black tokens are removed first.
+  * otherwise remove random eligible tokens.
+  * if fewer eligible tokens exist than the penalty requires, remove only what can be removed.
+
+Modal Requirement
+
+* Use the existing battle loss token removal modal.
+* If multiple tokens are removed, show all removed tokens using the existing layout.
+* If no tokens can be removed, show the existing no-token-removal message.
+
+Out Of Scope
+
+* No changes to respawn token loss.
+* No changes to hazard token loss.
+* No changes to Decision punishment token loss.
+* No changes to enemy health.
+* No changes to battle win rewards.
+
+Testing Checkpoints
+
+* Lose a level 1 battle and confirm 1 token is removed.
+* Lose a level 2 battle and confirm 1 token is removed.
+* Lose a level 3 battle and confirm 1 token is removed.
+* Lose a level 4 battle and confirm 2 tokens are removed.
+* Confirm starting tokens are not removed.
+* Confirm Sacrifice tokens are removed first.
+* Confirm random eligible tokens are removed after Sacrifice tokens.
+* Confirm no-token case still displays correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Updated the centralized battle-loss penalty table to `1`, `1`, `1`, and `2` tokens for battle Levels 1 through 4.
+* Normal, Elite Tower, and Boss Battle losses continue to use the existing battle level lookup, so all three encounter types receive the same Level 4 two-token penalty without an override.
+* Reused the existing removal flow, preserving protected starting tokens, Sacrifice / Black priority, random eligible-token fallback, and safe handling when fewer tokens are available.
+* Kept the separate mini-game death penalty at one token and made no changes to respawn, hazard, Decision, enemy health, rewards, routes, or loss-modal UI.
+
+---
+
+Feature-004: Add Japanese bottom padding to elite progress display
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Goal
+
+* Fix Japanese-only spacing on `elite-progress-display`.
+* In the Japanese version, the element appears to have no bottom padding.
+* Add `10px` bottom padding.
+
+Required Behaviour
+
+* In Japanese UI, `elite-progress-display` should have:
+
+```css id="45vzgl"
+padding-bottom: 10px;
+```
+
+* Do not break the English layout.
+* If practical, use the same bottom padding for both languages unless English already looks correct and should remain unchanged.
+
+Suggested CSS Direction
+
+```css id="2kn6rr"
+.elite-progress-display.jp {
+  padding-bottom: 10px;
+}
+```
+
+Alternative shared fix:
+
+```css id="qi03zh"
+.elite-progress-display {
+  padding-bottom: 10px;
+}
+```
+
+Out Of Scope
+
+* No changes to Elite Tower progress logic.
+* No changes to enemy names.
+* No changes to checkbox styling.
+* No unrelated gameplay UI spacing changes.
+
+Testing Checkpoints
+
+* Switch to Japanese.
+* Confirm `elite-progress-display` has 10px bottom padding.
+* Confirm the text no longer feels cramped at the bottom.
+* Switch to English.
+* Confirm English layout still looks correct.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing gameplay language class and added it to the Elite Tower progress wrapper.
+* Added `padding-bottom: 10px` only for `.elite-progress-display.language-jp`, leaving English padding unchanged.
+* Made no changes to Elite Tower progress logic, enemy names, checkbox styling, routes, or other gameplay spacing.
+* Preserved the concurrent `115px` elite progress max-height change rather than overwriting unrelated work.
+
+---
+
+Feature-005: Speed up battle turn modal and dice roll timing
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-014 Feature-006: Battle dice result visible 2s before animations
+* EPIC-014 Feature-009: Rearrange battle page with dice between characters
+* EPIC-017 Bug-002: Guard animations should always run first when casting spells
+
+Goal
+
+* Make battles play faster.
+* Speed up the battle next-turn modal.
+* Speed up the battle dice roll.
+* Allow the battle new-turn modal to close instantly if the screen is clicked.
+
+Timing Changes
+
+* Battle next-turn modal should only be shown for:
+
+```txt id="w9esba"
+1 second
+```
+
+* Battle dice roll animation should only last:
+
+```txt id="duxvop"
+1 second
+```
+
+* The new-turn modal should also close instantly if anywhere on the screen is clicked.
+
+Battle Next-Turn Modal Requirement
+
+* When the battle changes turn, show the new-turn modal as usual.
+* It should auto-close after 1 second.
+* It should also close immediately if the player clicks anywhere on the screen.
+* Clicking should not need to hit a specific OK button.
+
+Screen Click Requirement
+
+* While the battle new-turn modal is visible:
+
+  * clicking anywhere on the screen should close it instantly.
+  * close only this modal.
+  * do not accidentally trigger underlying battle buttons.
+  * prevent click-through to Roll Dice, potion buttons, or other controls.
+
+Suggested Direction
+
+```jsx id="jvpyf6"
+<div
+  className="battle-turn-modal-overlay"
+  onClick={closeBattleTurnModal}
+>
+  <div
+    className="battle-turn-modal"
+    onClick={(event) => event.stopPropagation()}
+  >
+    ...
+  </div>
+</div>
+```
+
+* If clicking inside the modal should also close it, do not stop propagation.
+* If clicking only the overlay should close it, stop propagation inside the modal.
+* User requirement says anywhere on the screen, so closing from both overlay and modal area is acceptable.
+
+Dice Roll Requirement
+
+* Battle dice roll animation should last 1 second.
+* After 1 second, show the final dice result and continue the battle sequence according to the existing animation flow.
+* Do not make the dice result unreadable.
+* Do not break forced dice results from Roll Choice.
+
+Important Interaction With Existing 2-Second Pause
+
+* EPIC-014 Bug-006 required showing the dice result for 2 seconds before animations.
+* This feature changes only the dice roll duration unless implementation also needs to rebalance the pause.
+* Keep the existing post-result pause unless explicitly changed later.
+* The dice should roll for 1 second, then show the result, then follow the existing battle animation sequence.
+
+Out Of Scope
+
+* No changes to board dice timing unless shared code requires it and still behaves correctly.
+* No changes to battle token effect timing except dice roll duration.
+* No changes to battle reward timing.
+* No changes to battle potion timing.
+* No unrelated battle layout changes.
+
+Testing Checkpoints
+
+* Start a battle.
+* Confirm battle next-turn modal appears.
+* Confirm it auto-closes after 1 second.
+* Show the modal again and click anywhere.
+* Confirm it closes instantly.
+* Confirm clicking to close does not also click battle controls underneath.
+* Roll battle dice.
+* Confirm dice animation lasts 1 second.
+* Confirm dice result still displays correctly.
+* Confirm battle animations still run after the dice result flow.
+* Confirm forced dice values still work.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reduced the battle turn modal timeout from 2 seconds to 1 second and reused the existing full-screen modal overlay to close it from clicks on either the panel or surrounding screen.
+* The dismissing click is handled by the active overlay, so it closes only the turn modal and does not activate Roll Dice, potion, or other controls underneath.
+* Reduced only the persistent dice roll duration from 2 seconds to 1 second; the existing 2-second persistent result phase and all battle effect timings remain unchanged.
+* Forced Roll Choice values continue through the same persistent dice flow without using random generation.
+* Temporary dice timing remains at 1.5 seconds, so board dice behavior is unchanged.
+* No battle reward, potion, token effect, board timing, route, layout, styling, dependency, or unrelated gameplay changes were added.
+
+---
+
+Feature-006: Prevent white flash when returning to gameplay page
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-011 Bug-004: Prevent visible player image changing prematurely before screen transition completes
+* EPIC-016 Bug-002: Winner screen starry background should match gameplay page exactly
+
+Goal
+
+* Stop the jarring white flash that sometimes appears when returning to the gameplay page.
+* The transition back to gameplay should always show either the starry background or a proper loading state.
+* The player should never see a plain white screen.
+
+Problem Summary
+
+* When moving back to the gameplay page, the screen sometimes flashes white.
+* This may be caused by:
+
+  * route transition timing.
+  * gameplay page remounting slowly.
+  * background CSS loading after render.
+  * default body/root background being white.
+  * image or state loading delay.
+  * conditional rendering returning empty content briefly.
+
+Required Behaviour
+
+* The app should never show a white flash during page transitions.
+* When returning to gameplay, show one of:
+
+  * the existing starry gameplay background immediately.
+  * or a loading screen with the starry background.
+* The transition should feel seamless.
+
+Global Background Requirement
+
+* Set the app root and body background to match the gameplay starry background base colour.
+* This prevents white showing through during route transitions.
+
+Suggested CSS Direction
+
+```css id="8vkn39"
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #050716;
+}
+```
+
+* Use the exact base colour/gradient from the gameplay page if different.
+* Do not introduce a new mismatched colour.
+
+Gameplay Loading Screen Option
+
+* If gameplay needs time to rebuild state, show a loading screen with the same starry background.
+
+Suggested structure:
+
+```jsx id="yyf9zw"
+if (isGameplayLoading) {
+  return (
+    <div className="gameplay-background gameplay-loading-screen">
+      <p className={`larger-text ${languageClass}`}>
+        {loadingText}
+      </p>
+    </div>
+  );
+}
+```
+
+* Loading text is optional.
+* The important part is that the background is not white.
+
+Permanent Background Option
+
+* Another acceptable solution is to keep the starry background mounted at the app shell level.
+* Routes then render over it.
+* This prevents any route from briefly showing white during navigation.
+
+Out Of Scope
+
+* No gameplay logic changes.
+* No route redesign unless required to prevent the flash.
+* No new page transition animation required.
+* No unrelated styling changes.
+
+Testing Checkpoints
+
+* Move from battle back to gameplay repeatedly.
+* Confirm no white flash appears.
+* Move from Decision back to gameplay repeatedly.
+* Confirm no white flash appears.
+* Move from Cave/River/Loot Chest/Village/Hazard back to gameplay.
+* Confirm no white flash appears.
+* Test on slower reload/throttled performance if possible.
+* Confirm gameplay background still looks unchanged.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the gameplay `MagicalNightSky` base colour rather than introducing a new background or loading design.
+* Added `min-height: 100%` and `background-color: #050617` to `html`, `body`, and `#root`, so the browser cannot expose its default white canvas while routes unmount or GameplayPage remounts.
+* The existing gameplay gradient, stars, spell effects, board, sidebar, and route content continue to render above this fallback unchanged.
+* No loading state, route shell, transition animation, gameplay state, navigation logic, component, dependency, or unrelated styling was added.
+
+---
+
+Feature-007: Disable text selection across the game
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-010 Feature-015: Redesign Spell Token Assignment page
+
+Goal
+
+* Prevent text from being highlighted in the game.
+* Drag-and-drop, accidental double-clicks, and repeated clicking should not select UI text.
+* This should make the game feel more polished.
+
+Required Behaviour
+
+* No visible game text should be highlightable by normal mouse/touch interactions.
+* This should apply across:
+
+  * start page
+  * game setup
+  * gameplay
+  * battle
+  * mini games
+  * modals
+  * debug menu
+  * token assignment
+  * reward pages
+  * rules page, unless intentionally overridden
+
+Global CSS Direction
+
+```css id="22s0iv"
+* {
+  user-select: none;
+}
+
+button,
+img,
+.token,
+.potion {
+  -webkit-user-drag: none;
+}
+```
+
+* Include vendor-prefixed versions if needed:
+
+```css id="3judsc"
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+```
+
+Rules Page Exception
+
+* The rules page is mostly text.
+* By default, still disable selection there to match the game requirement.
+* If a future accessibility or copy requirement is added, this can be revisited.
+
+Out Of Scope
+
+* No changes to drag-and-drop functionality.
+* No changes to click handlers.
+* No changes to text content.
+* No unrelated UI redesign.
+
+Testing Checkpoints
+
+* Try dragging over modal text.
+* Confirm text does not highlight.
+* Try double-clicking labels.
+* Confirm text does not highlight.
+* Drag tokens in spell assignment.
+* Confirm text does not highlight while dragging.
+* Test buttons, token names, potion names, and battle text.
+* Confirm drag-and-drop still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a global selection lock in `index.css` using the standard property and the WebKit, Mozilla, and Microsoft vendor-prefixed properties.
+* Added native browser drag suppression for buttons, images, the specification's token and potion selectors, and the existing `token-display` and `potion-icon` component classes.
+* Kept the rules page under the same global selection behavior, as required.
+* No drag-and-drop configuration, click handler, text content, route, component, dependency, or unrelated styling was changed.
+
+---
+
+Feature-008: Add Debug Mode toggle on Game Setup
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-009: Add choose event mode to debug menu
+* EPIC-016 Feature-001: Add hazard debug trigger and hazard result modal
+* EPIC-016 Feature-006: Add Nothing events for environment landings
+
+Goal
+
+* Add a Debug Mode toggle on the Game Setup page.
+* Debug Mode should control whether debug features are visible.
+* By default, Debug Mode should be off.
+* If Debug Mode is off, hide all debug UI.
+* If Debug Mode is on, debug UI should work exactly as it does now.
+
+Game Setup Requirement
+
+* Add a toggle below the Start Game button.
+
+Label:
+
+English:
+
+```txt id="ltjzuk"
+Debug Mode
+```
+
+Japanese:
+
+```txt id="t58404"
+デバッグモード
+```
+
+* Default state:
+
+```txt id="a3mbb7"
+Off / unselected
+```
+
+* The toggle value should be stored in game context or equivalent setup state so it is available across the app.
+
+Visibility Requirement
+
+* If Debug Mode is not selected, hide:
+
+  * debug button in the settings/menu.
+  * debug controls in mini games.
+  * debug controls in battles.
+  * debug controls on gameplay.
+  * hazard debug trigger.
+  * nothing event debug trigger.
+  * choose event mode button.
+  * anywhere mode button.
+  * any other debug-only feature added anywhere.
+
+* If Debug Mode is selected:
+
+  * show all debug features exactly as they appear now.
+  * do not change their functionality.
+  * do not remove or rewrite any debug feature.
+
+Implementation Requirement
+
+* This feature should only control visibility/access.
+* Do not alter the underlying debug feature logic.
+* Existing debug tools should remain available when Debug Mode is on.
+
+Suggested Context State
+
+```js id="9m8nvl"
+gameSettings = {
+  debugMode: false
+};
+```
+
+Suggested Rendering Direction
+
+```jsx id="l2oqkp"
+{debugMode && (
+  <DebugButton />
+)}
+```
+
+Out Of Scope
+
+* No changes to debug tool behaviour.
+* No changes to normal game setup logic.
+* No changes to player selection.
+* No changes to board generation.
+* No password/dev-only protection required.
+
+Testing Checkpoints
+
+* Open Game Setup.
+* Confirm Debug Mode toggle appears below Start Game.
+* Confirm it is off by default.
+* Start a game with Debug Mode off.
+* Confirm no debug menu button appears.
+* Confirm mini game debug buttons are hidden.
+* Confirm battle debug controls are hidden.
+* Confirm gameplay debug controls are hidden.
+* Start a game with Debug Mode on.
+* Confirm debug controls appear exactly as before.
+* Confirm existing debug features still work.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added `debugMode: false` to the initial game setup state and exposed a focused `setDebugMode` context action; older setup objects without the field normalize to off.
+* Added the required bilingual checkbox immediately after the Start Game button and stored its value in the existing game setup context.
+* Gated the settings Debug button and modal, Battle debug controls, and Cave reward debug controls with the shared flag.
+* Hazard, Nothing Event, Roll Again Event, choose-event mode, Anywhere Mode, battle launch, mini-game launch, token, and potion tools remain unchanged inside the gated Debug modal.
+* No debug handler, debug tool behavior, player setup logic, board generation, route, dependency, or unrelated styling was changed.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-009: Add start-page Rules button and bilingual Rules page
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* Feature-008: Add Debug Mode toggle on Game Setup
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+
+Goal
+
+* Add a Rules button to the start page.
+* Add a new Rules page.
+* The Rules page should explain the game in English and Japanese.
+* It should include an English/Japanese toggle at the top.
+* The rules content should appear inside a scrollable modal over the starry background.
+
+Start Page Requirement
+
+* Add a button to the start page.
+
+English:
+
+```txt id="7crfgw"
+Rules
+```
+
+Japanese:
+
+```txt id="b2pu1k"
+ルール
+```
+
+* Clicking it navigates to the Rules page.
+
+Rules Page Layout
+
+* Background:
+
+  * starry background.
+  * same base colour as gameplay.
+
+* Modal:
+
+  * modal background hovering over the starry background.
+  * contains all rules text.
+  * height should be `80%` of the screen.
+  * scrollable.
+  * centred on the page.
+
+Suggested CSS:
+
+```css id="h11gwk"
+.rules-modal {
+  height: 80vh;
+  overflow-y: auto;
+}
+```
+
+Back Buttons
+
+* Add a Back to Start button at the top and bottom of the page/modal.
+
+English:
+
+```txt id="rxa2g9"
+Back to Start
+```
+
+Japanese:
+
+```txt id="cs54f5"
+スタートに戻る
+```
+
+* Both buttons should return to the start page.
+
+Language Toggle Requirement
+
+* Add an English/Japanese toggle at the top of the Rules page.
+* The toggle controls which language is shown.
+* If English is selected, show English rules.
+* If Japanese is selected, show Japanese rules.
+
+Rules Content Requirement
+
+* Include these sections:
+
+  * Rules of the game
+  * Tokens
+  * Battles
+  * Potions
+  * Environments
+  * Features
+
+English Rules Draft
+
+```txt id="tw8esz"
+Rules of the game
+
+Spellix is a turn-based adventure game. Each player travels around the board, collects tokens and potions, survives dangerous encounters, and grows stronger.
+
+To win the game, a player must defeat both Elite Towers first. One Elite Tower is in the north west, and the other is in the south east. After defeating both Elite Towers, that player may enter the boss castle in the north east and challenge the final boss. The first player to defeat the final boss wins the game.
+
+Tokens
+
+Tokens are the main way players become stronger. Tokens can be placed into spell columns. When you roll a number in battle, the tokens in that matching column activate.
+
+You can gain tokens from rewards such as battles, loot chests, villages, decisions, and other events. Some tokens are common, and some are rare. Some rare tokens are shiny versions of common tokens and have stronger effects.
+
+If you lose a battle or respawn, you may lose tokens. Starting tokens cannot be removed. Sacrifice tokens are removed first, then a random eligible token is removed.
+
+Damage tokens deal damage. Guard tokens protect you. Counter tokens damage an enemy if they attack you through that number. Deflect tokens reduce damage if you are attacked through that number. Freeze tokens can freeze your opponent. Health tokens increase your maximum and current HP. Merge tokens can combine adjacent spell columns. Buff tokens increase nearby spell power. Charge tokens charge your slots. Capacity tokens increase the number of tokens that adjacent columns can hold.
+
+Battles
+
+Battles are fought by rolling dice. On your turn in battle, you roll the dice and activate the spell column matching the number you rolled. Your opponent does the same on their turn.
+
+For example, if column 3 has a Damage token and you roll a 3, you deal damage. If column 3 has a Guard token, you gain guard. If you have both Damage and Guard in the same column, both effects happen.
+
+Counter and Deflect depend on the number used to attack. If your opponent attacks you through a number where you have Counter, you can deal counter damage back. If you have Deflect, you can reduce damage from that attack.
+
+Some columns can be merged. A merged column such as 2+3 activates if either 2 or 3 is rolled.
+
+Potions
+
+Potions are special items that can help on the board, in battle, or during mini games. Some potions are used manually with a Use button. Others, such as Cave Runner, can activate automatically when their condition happens.
+
+Usually, you can only use one board potion per board turn and one battle potion per battle turn. Mini potions are separate and work only in their relevant mini game or event.
+
+Potions can heal you, help you roll, duplicate tokens, affect other players, protect you from danger, or change the outcome of an event.
+
+Environments
+
+The board has different environments. Each environment has different risks and rewards.
+
+Fields are safer and often have simple events. Hills can lead to caves. Gravel and mud are more dangerous and have more hazards. Streams and rivers often lead to river mini games. Woods and forests have stronger battles. Mountains are among the most dangerous areas, with stronger enemies, caves, and hazards.
+
+Features
+
+The start zone is where players begin the game and where they return if they respawn.
+
+Villages are helpful places. When you visit a village, you recover to full health. Villages can also give rewards depending on your progress against the Elite Towers.
+
+Elite Towers are special battle locations. Each tower has a powerful enemy. Defeating both Elite Towers is required before you can challenge the final boss.
+
+The boss castle is in the north east. If you enter before defeating both Elite Towers, you are struck down. If you have defeated both Elite Towers, you may fight the final boss. Defeat the boss to win the game.
+```
+
+Japanese Rules Draft
+
+```txt id="7feirs"
+ゲームのルール
+
+Spellixはターン制の冒険ゲームです。プレイヤーはボードを移動し、トークンやポーションを集め、危険な出来事を乗り越えながら強くなっていきます。
+
+ゲームに勝つには、まず2つのエリートタワーを両方攻略する必要があります。1つは北西にあり、もう1つは南東にあります。両方のエリートタワーを攻略すると、そのプレイヤーは北東にあるボスの城に入り、最後のボスに挑戦できます。最初に最後のボスを倒したプレイヤーが勝者です。
+
+トークン
+
+トークンは、プレイヤーを強くするための主な要素です。トークンは呪文の列に配置できます。バトル中にサイコロを振り、出た数字と同じ列のトークンが発動します。
+
+トークンは、バトル、戦利品の宝箱、村、決断、その他のイベントなどで手に入ります。トークンにはコモンとレアがあります。一部のレアトークンは、コモントークンの強化版である輝くトークンです。
+
+バトルに負けたり、リスポーンしたりすると、トークンを失うことがあります。初期トークンは取り除かれません。身代わりトークンが最初に取り除かれ、その後、取り除けるトークンからランダムに選ばれます。
+
+ダメージトークンはダメージを与えます。ガードトークンは自分を守ります。カウンタートークンは、その数字から攻撃された時に反撃ダメージを与えます。受け流しトークンは、その数字から攻撃された時にダメージを減らします。凍結トークンは相手を凍結させます。体力トークンは最大HPと現在HPを増やします。合成トークンは隣接する呪文列を統合できます。強化トークンは近くの呪文を強くします。チャージトークンはスロットをチャージします。容量トークンは隣接する列に入れられるトークン数を増やします。
+
+バトル
+
+バトルはサイコロを振って行います。自分のバトルターンではサイコロを振り、出た数字と同じ呪文列を発動します。相手も自分のターンで同じように行動します。
+
+例えば、3列目にダメージトークンがあり、3を出した場合、相手にダメージを与えます。3列目にガードトークンがあれば、自分にガードを付与します。同じ列にダメージとガードが両方ある場合、両方の効果が発動します。
+
+カウンターと受け流しは、どの数字から攻撃されたかに関係します。相手がカウンターのある数字から攻撃してきた場合、反撃ダメージを与えられます。受け流しがある場合、その攻撃のダメージを減らせます。
+
+列が合成されている場合もあります。例えば2+3の列は、2か3のどちらかが出ると発動します。
+
+ポーション
+
+ポーションは、ボード上、バトル中、ミニゲーム中に役立つ特別なアイテムです。Useボタンで手動で使うポーションもあります。洞窟ランナーのように、条件を満たした時に自動で発動するポーションもあります。
+
+通常、ボード用ポーションは1回のボードターンに1つ、バトル用ポーションは1回のバトルターンに1つだけ使用できます。ミニ用ポーションは別扱いで、対応するミニゲームやイベントでのみ使えます。
+
+ポーションはHPを回復したり、サイコロを助けたり、トークンを複製したり、他のプレイヤーに影響を与えたり、危険から守ったり、イベントの結果を変えたりします。
+
+環境
+
+ボードにはさまざまな環境があります。環境によって危険度や起こるイベントが変わります。
+
+野原は比較的安全で、簡単なイベントが多く起こります。丘では洞窟に出会うことがあります。砂利や泥はより危険で、ハザードも多くなります。小川や川では川のミニゲームが起こりやすくなります。林や森ではより強いバトルが発生します。山は特に危険な場所で、強い敵、洞窟、ハザードが発生します。
+
+特徴
+
+スタートゾーンはプレイヤーがゲームを開始する場所であり、リスポーンした時に戻る場所でもあります。
+
+村はプレイヤーを助けてくれる場所です。村を訪れるとHPが全回復します。また、エリートタワーの攻略状況に応じて報酬をもらえることがあります。
+
+エリートタワーは特別なバトル地点です。それぞれの塔には強力な敵がいます。最後のボスに挑むには、両方のエリートタワーを攻略する必要があります。
+
+ボスの城は北東にあります。両方のエリートタワーを攻略する前に入ると、強大な力に打ち倒されます。両方のエリートタワーを攻略していれば、最後のボスに挑戦できます。ボスを倒すとゲームに勝利します。
+```
+
+Out Of Scope
+
+* No interactive tutorial.
+* No images required inside the rules.
+* No potion-by-potion breakdown.
+* No rules editing UI.
+
+Testing Checkpoints
+
+* Confirm Rules button appears on start page.
+* Click Rules.
+* Confirm Rules page opens.
+* Confirm starry background appears.
+* Confirm modal is 80% screen height and scrollable.
+* Confirm Back to Start button appears at top and bottom.
+* Confirm language toggle works.
+* Confirm all required sections appear in English.
+* Confirm all required sections appear in Japanese.
+* Confirm Back to Start returns to start page.
+* Confirm no text selection if Feature-007 is active.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a bilingual `Rules - ルール` start-page button that navigates directly to the new `/rules` route without resetting game setup state.
+* Added a Rules page that reuses `MagicalNightSky`, the existing modal background asset, shared `Button`, and established English/Japanese font classes.
+* Added the supplied English and Japanese drafts in a feature-local data file, including Rules of the game, Tokens, Battles, Potions, Environments, and Features sections.
+* Added an English/Japanese toggle that displays one complete language at a time, plus localized Back to Start buttons at both the top and bottom.
+* The centred rules modal uses the required `80vh` height and vertical scrolling over the same gameplay sky base.
+* No tutorial, rules images, potion-by-potion reference, editing UI, gameplay state change, dependency, or unrelated route was added.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-010: Add pre-game story page explaining win condition
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-009: Add start-page Rules button and bilingual Rules page
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Goal
+
+* Add a story page before entering the gameplay page.
+* This page should explain the win condition using the actual selected players and assigned Elite/Boss enemies.
+* It should appear after game setup and before gameplay.
+
+Page Requirement
+
+* Show the story text inside a modal over the starry background.
+* Use interpolation for:
+
+  * list of players.
+  * top-left / north-west Elite Tower enemy name.
+  * bottom-right / south-east Elite Tower enemy name.
+  * boss enemy name.
+
+English Text Template
+
+```txt id="hb46ps"
+The {playerList} are taking on a quest to save the kingdom of Spellix. They must defeat {northWestEliteEnemyName} in the north west tower and the {southEastEliteEnemyName} in the south east to become powerful enough to take on the ultimate boss, {bossName} in the north east castle.
+```
+
+Japanese Text Template
+
+```txt id="h95cci"
+{playerList}は、スペリックス王国を救うための冒険に挑みます。北西の塔にいる{northWestEliteEnemyName}と、南東の塔にいる{southEastEliteEnemyName}を倒し、北東の城にいる究極のボス、{bossName}に挑めるほどの力を手に入れなければなりません。
+```
+
+Player List Requirement
+
+* The player list should use the selected players.
+* Example English player list:
+
+```txt id="ay12bt"
+Blue Wizard, Red Wizard and Yellow Witch
+```
+
+* If the player display includes descriptors, it can include them naturally, for example:
+
+```txt id="uwq2ny"
+Blue Wizard, Red Wizard and Yellow Witch
+```
+
+* Use correct grammar for 1, 2, or 3+ players.
+* For Japanese, use a natural list separated by `、`.
+
+Enemy Name Requirement
+
+* Use the actual randomly selected level 4 enemy assignments from EPIC-016 Feature-003.
+* North west tower = top-left Elite Tower enemy.
+* South east tower = bottom-right Elite Tower enemy.
+* North east castle = Boss Battle enemy.
+
+Language Display Requirement
+
+* If there are only English-language players:
+
+  * show only English story text.
+* If there are only Japanese-language players:
+
+  * show only Japanese story text.
+* If there is a mix:
+
+  * show both English and Japanese story text.
+  * place a `30px` margin between them.
+
+Suggested CSS:
+
+```css id="oqdu4o"
+.story-text + .story-text {
+  margin-top: 30px;
+}
+```
+
+Continue Requirement
+
+* Add a Continue button.
+
+English:
+
+```txt id="tkzmnb"
+Continue
+```
+
+Japanese:
+
+```txt id="l883lv"
+続ける
+```
+
+* Clicking Continue should navigate to the gameplay page.
+* The next-turn modal should still appear according to the normal gameplay start flow.
+
+Route Flow Requirement
+
+```txt id="n4hcc2"
+Start page
+Game Setup
+Story page
+Gameplay
+```
+
+Out Of Scope
+
+* No animated cutscene.
+* No images required.
+* No enemy portraits required.
+* No changes to enemy assignment logic.
+* No changes to win condition itself.
+
+Testing Checkpoints
+
+* Start a new game with English-only players.
+* Confirm only English story appears.
+* Start a new game with Japanese-only players.
+* Confirm only Japanese story appears.
+* Start a mixed-language game.
+* Confirm both English and Japanese appear with 30px margin between them.
+* Confirm player names interpolate correctly.
+* Confirm north-west tower enemy name interpolates correctly.
+* Confirm south-east tower enemy name interpolates correctly.
+* Confirm boss name interpolates correctly.
+* Click Continue.
+* Confirm gameplay page loads.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a `/story` route between Game Setup and Gameplay, with Game Setup now navigating to Story and Continue navigating to Gameplay.
+* Added a centred story modal over the existing animated starry background using the shared modal asset and Button component.
+* Story text interpolates the selected players and the actual assigned north-west Elite, south-east Elite, and Boss enemies from the initialized board and existing enemy assignments.
+* English player lists use correct one-, two-, and three-plus-player joining; Japanese lists use localized colour and wizard/witch descriptors separated by `、`.
+* English-only and Japanese-only games show one localized story; mixed-language games show both in English/Japanese order with the required `30px` separation and bilingual Continue label.
+* Story initializes the existing board and turn order only when absent, so Gameplay reuses the same game state and retains its normal startup behavior.
+* No cutscene, portrait, assignment logic, win-condition change, dependency, styling expansion, or unrelated route was added.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-011: Add save and load game using base64 text file
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* Feature-008: Add Debug Mode toggle on Game Setup
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+* EPIC-017 Feature-001: Rebalance board landing event probabilities
+
+Goal
+
+* Allow players to save and load games.
+* Use Game Context as the source for serialising the current game state.
+* Save should create a base64 text file.
+* Load should read a `.txt` file and restore the game to exactly the saved state.
+
+Save Game Button Requirement
+
+* Add a `Save Game` button to the settings menu.
+
+English:
+
+```txt id="i24rcb"
+Save Game
+```
+
+Japanese:
+
+```txt id="b9ohgs"
+ゲームを保存
+```
+
+* The Save Game button should only appear when:
+
+  * the settings menu is opened from the gameplay page.
+* It should not appear when settings is opened from:
+
+  * start page.
+  * game setup.
+  * rules page.
+  * story page.
+  * battle page.
+  * mini game pages.
+  * reward pages.
+  * winner page.
+
+Save Behaviour
+
+* Clicking Save Game should:
+
+  * collect the full current game state from Game Context.
+  * serialise it to JSON.
+  * convert the JSON string to base64.
+  * save it as a `.txt` file to the player’s computer.
+
+Suggested filename:
+
+```txt id="j3abgk"
+spellix-save.txt
+```
+
+Suggested Save Shape
+
+```js id="lq38pl"
+const saveData = {
+  version: 1,
+  savedAt: new Date().toISOString(),
+  gameState: {
+    players,
+    currentPlayerId,
+    board,
+    turnState,
+    playerPositions,
+    playerVisualCells,
+    tokenBags,
+    spellSlots,
+    committedSpells,
+    mergedColumns,
+    potions,
+    activePotions,
+    health,
+    maxHealth,
+    eliteBossEnemyAssignments,
+    eliteProgress,
+    villageProgress,
+    debugMode,
+    eventState,
+    hazardState,
+    decisionState,
+    caveState,
+    riverState,
+    lootState,
+    anyOtherRequiredState
+  }
+};
+```
+
+* Exact structure can follow existing Game Context.
+* The important requirement is that loading the file restores the same playable game.
+
+Base64 Requirement
+
+* The saved text file should contain base64 text.
+* It should not contain plain JSON.
+* On load, decode base64 back into JSON.
+
+Load Game Button Requirement
+
+* Add a `Load Game` button to the homepage/start page.
+
+English:
+
+```txt id="y35lag"
+Load Game
+```
+
+Japanese:
+
+```txt id="hsspyv"
+ゲームを読み込む
+```
+
+* Clicking Load Game should open a file picker.
+* The player should choose the saved `.txt` file.
+* The app should read the file, decode the base64, parse the JSON, validate it, and restore the game.
+
+Load Behaviour
+
+* After a valid save file is loaded:
+
+  * restore all game context state.
+  * navigate to gameplay page.
+  * show the board exactly as it was saved.
+  * preserve the current player.
+  * preserve positions.
+  * preserve health.
+  * preserve tokens.
+  * preserve potions.
+  * preserve Elite Tower progress.
+  * preserve village progress.
+  * preserve assigned Elite/Boss enemies.
+  * preserve debug mode state.
+  * preserve any other state required for the game to continue correctly.
+
+Validation Requirement
+
+* If the file is invalid:
+
+  * do not crash.
+  * show a modal explaining the file could not be loaded.
+
+English:
+
+```txt id="thydz9"
+This save file could not be loaded.
+```
+
+Japanese:
+
+```txt id="pd31ne"
+このセーブファイルを読み込めませんでした。
+```
+
+* If the version is unsupported, show the same or similar message.
+* Log developer details to console if helpful.
+
+Version Requirement
+
+* Include a save file version.
+* Start with:
+
+```txt id="petaza"
+version: 1
+```
+
+* This allows future save migrations.
+
+State Completeness Requirement
+
+* The save file must include everything needed to continue the game.
+* This includes, but is not limited to:
+
+  * board layout.
+  * all players.
+  * current turn.
+  * player positions.
+  * visual cells inside multi-square features.
+  * health and max health.
+  * token bag contents.
+  * committed spell slots.
+  * merged spell columns.
+  * potion slots.
+  * active potion effects.
+  * skipped-turn flags.
+  * death/respawn flags.
+  * elite tower completion ticks.
+  * assigned Elite/Boss enemies.
+  * village reward progress.
+  * debug mode.
+  * choose event mode if active.
+  * anywhere mode if active.
+  * event table relevant state.
+  * any pending turn state needed to safely resume.
+
+Save Timing Requirement
+
+* Players can only save from gameplay.
+* Avoid saving during mid-resolution screens such as:
+
+  * battle animation.
+  * token assignment modal.
+  * loot chest sequence.
+  * decision outcome.
+  * cave mini game.
+  * river mini game.
+* Since the button only appears from gameplay settings, this should naturally avoid most mid-event states.
+
+Out Of Scope
+
+* No cloud saves.
+* No autosave.
+* No save slot management.
+* No encryption.
+* No compression beyond base64.
+* No save editing UI.
+* No loading from non-txt files required.
+
+Testing Checkpoints
+
+* Start a game.
+* Confirm Save Game button appears in settings on gameplay page.
+* Confirm Save Game button does not appear from settings on other pages.
+* Click Save Game.
+* Confirm a `.txt` file is downloaded.
+* Confirm the file contains base64 text.
+* Load the file from the homepage.
+* Confirm the game restores to gameplay.
+* Confirm board layout is identical.
+* Confirm current player is identical.
+* Confirm player positions are identical.
+* Confirm token bags are identical.
+* Confirm committed spells are identical.
+* Confirm merged columns are restored.
+* Confirm health and max health are restored.
+* Confirm potion slots and active potion state are restored.
+* Confirm Elite Tower progress is restored.
+* Confirm village progress is restored.
+* Confirm Elite/Boss enemy assignments are restored.
+* Confirm debug mode is restored correctly.
+* Try loading an invalid file.
+* Confirm the app does not crash.
+* Confirm the error modal appears.
+* Confirm there are no console errors for valid files.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

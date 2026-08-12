@@ -11,6 +11,13 @@ describe('tokenBagAdmin', () => {
     expect(getDebugTokenTypeLabel('red', 'en')).toBe('Damage');
     expect(getDebugTokenTypeLabel('red', 'jp')).toBe('\u30c0\u30e1\u30fc\u30b8');
     expect(getDebugTokenTypeLabel('red-yellow-outline', 'en')).toBe('Shiny Damage');
+    expect(getDebugTokenTypeLabel('green', 'en')).toBe('Deflect');
+    expect(getDebugTokenTypeLabel('green-yellow-outline', 'jp')).toBe(
+      '\u8f1d\u304f\u53d7\u3051\u6d41\u3057'
+    );
+    expect(getDebugTokenTypeLabel('light-green-yellow-outline', 'en')).toBe(
+      'Shiny Health'
+    );
   });
 
   test('creates a unique debug token id based on the player token history', () => {

@@ -70,6 +70,31 @@ describe('non-battle spell effects', () => {
     ).toMatchObject({ currentHealth: 100, maxHealth: 100 });
   });
 
+  test('adds ten health for Shiny Health and recalculates mixed health tokens', () => {
+    const spellSlots = createSpellSlots();
+    spellSlots[0].tokens = [
+      createToken('health-1', 'light-green'),
+      createToken('shiny-health-1', 'light-green-yellow-outline'),
+    ];
+
+    expect(
+      applyLightGreenHealthBonus(
+        { baseMaxHealth: 100, currentHealth: 80, maxHealth: 100 },
+        spellSlots
+      )
+    ).toMatchObject({ currentHealth: 95, maxHealth: 115 });
+
+    spellSlots[0].tokens = [
+      createToken('shiny-health-1', 'light-green-yellow-outline'),
+    ];
+    expect(
+      applyLightGreenHealthBonus(
+        { baseMaxHealth: 100, currentHealth: 114, maxHealth: 115 },
+        spellSlots
+      )
+    ).toMatchObject({ currentHealth: 110, maxHealth: 110 });
+  });
+
   test('stacks Grey capacity only into physically adjacent columns', () => {
     const spellSlots = createSpellSlots();
     spellSlots[0].tokens = [createToken('grey-edge-left', 'grey')];

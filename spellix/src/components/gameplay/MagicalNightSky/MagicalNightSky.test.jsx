@@ -123,4 +123,25 @@ describe('MagicalNightSky', () => {
     expect(cssSource).toMatch(/@keyframes magical-night-sky-swirl/);
     expect(cssSource).toMatch(/@media \(prefers-reduced-motion:\s*reduce\)/);
   });
+
+  test('uses the gameplay sky base colour behind every document layer', () => {
+    const globalCssSource = readFileSync(`${__dirname}/../../../index.css`, 'utf8');
+    const skyCssSource = readFileSync(`${__dirname}/MagicalNightSky.css`, 'utf8');
+
+    expect(skyCssSource).toMatch(/linear-gradient\(180deg,\s*#050617/);
+    expect(globalCssSource).toMatch(
+      /html,\s*body,\s*#root\s*{[^}]*min-height:\s*100%;[^}]*background-color:\s*#050617;/s
+    );
+  });
+
+  test('prevents text selection and native dragging across game UI', () => {
+    const globalCssSource = readFileSync(`${__dirname}/../../../index.css`, 'utf8');
+
+    expect(globalCssSource).toMatch(
+      /\*\s*{[^}]*-webkit-user-select:\s*none;[^}]*-moz-user-select:\s*none;[^}]*-ms-user-select:\s*none;[^}]*user-select:\s*none;/s
+    );
+    expect(globalCssSource).toMatch(
+      /button,\s*img,\s*\.token,\s*\.potion,\s*\.token-display,\s*\.potion-icon\s*{[^}]*-webkit-user-drag:\s*none;/s
+    );
+  });
 });

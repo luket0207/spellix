@@ -26,14 +26,14 @@ describe('death token penalty', () => {
     expect(DEATH_TOKEN_PENALTIES).toEqual({
       level1BattleLoss: 1,
       level2BattleLoss: 1,
-      level3BattleLoss: 2,
-      level4BattleLoss: 3,
+      level3BattleLoss: 1,
+      level4BattleLoss: 2,
       miniGameDeath: 1,
     });
     expect(getDeathTokenPenalty({ battleLevel: 1 })).toBe(1);
     expect(getDeathTokenPenalty({ battleLevel: 2 })).toBe(1);
-    expect(getDeathTokenPenalty({ battleLevel: 3 })).toBe(2);
-    expect(getDeathTokenPenalty({ battleLevel: 4 })).toBe(3);
+    expect(getDeathTokenPenalty({ battleLevel: 3 })).toBe(1);
+    expect(getDeathTokenPenalty({ battleLevel: 4 })).toBe(2);
     expect(getDeathTokenPenalty({ deathType: 'miniGame' })).toBe(1);
   });
 

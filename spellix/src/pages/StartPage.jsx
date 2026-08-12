@@ -156,6 +156,13 @@ function StartPage({ onStart = () => {} }) {
         >
           Start
         </button>
+        <button
+          className="start-page-button"
+          type="button"
+          onClick={() => navigate('/rules')}
+        >
+          Rules - ルール
+        </button>
       </div>
     </main>
   );

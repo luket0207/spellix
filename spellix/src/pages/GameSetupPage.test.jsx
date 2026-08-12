@@ -9,6 +9,7 @@ function GameSetupStateProbe() {
 
   return (
     <div>
+      <p>{`Debug mode: ${gameSetup.debugMode ? 'on' : 'off'}`}</p>
       {gameSetup.players.map((player, index) => (
         <p key={player.id}>{`Player ${player.number ?? index + 1}: ${player.language ?? 'missing'} ${player.gender} ${player.colour} ${player.pieceImage}`}</p>
       ))}
@@ -76,6 +77,26 @@ describe('GameSetupPage piece selection foundation', () => {
     expect(within(playerOne).getByLabelText('Colour - 色')).toHaveValue('red');
     expect(within(playerOne).getByRole('option', { name: 'Red - 赤' })).toBeInTheDocument();
     expect(within(playerTwo).getByLabelText('Language - 言語')).toHaveValue('en');
+  });
+
+  test('stores an off-by-default bilingual Debug Mode toggle below Start Game', () => {
+    renderGameSetupPage();
+
+    const startButton = screen.getByRole('button', { name: 'Start Game - ゲーム開始' });
+    const debugToggle = screen.getByRole('checkbox', {
+      name: 'Debug Mode - デバッグモード',
+    });
+
+    expect(debugToggle).not.toBeChecked();
+    expect(screen.getByText('Debug mode: off')).toBeInTheDocument();
+    expect(
+      startButton.compareDocumentPosition(debugToggle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    fireEvent.click(debugToggle);
+
+    expect(debugToggle).toBeChecked();
+    expect(screen.getByText('Debug mode: on')).toBeInTheDocument();
   });
 
   test('stores independent language choices for each player', () => {

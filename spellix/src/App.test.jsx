@@ -263,7 +263,7 @@ describe('App routing flow', () => {
     ).toHaveValue('blue');
   });
 
-  test('navigates from the start page to setup and gameplay with stored setup data', async () => {
+  test('navigates from the start page through setup and story to gameplay with stored setup data', async () => {
     renderApp();
 
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
@@ -273,17 +273,20 @@ describe('App routing flow', () => {
     fireEvent.change(
       within(screen.getByRole('group', { name: /player 3/i })).getByLabelText(/colour/i),
       {
-      target: { value: 'orange' },
+        target: { value: 'orange' },
       }
     );
     fireEvent.change(
       within(screen.getByRole('group', { name: /player 4/i })).getByLabelText(/colour/i),
       {
-      target: { value: 'purple' },
+        target: { value: 'purple' },
       }
     );
 
     fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    expect(screen.getByText(/taking on a quest to save the kingdom of Spellix/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
     expect(screen.getByLabelText(/board panel/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/gameplay panel/i)).toBeInTheDocument();
     expect(screen.getByText(/it is currently red player's turn\./i)).toBeInTheDocument();
