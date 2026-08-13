@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'fs';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RulesPage from './RulesPage';
@@ -27,19 +27,51 @@ describe('StartPage', () => {
     jest.restoreAllMocks();
   });
 
-  test('shows only the required central title and bespoke Start action', () => {
+  test('shows the bilingual home actions in the required hierarchy and order', () => {
     const onStart = jest.fn();
 
     renderStartPage(onStart);
 
     expect(screen.getByRole('heading', { name: 'Spellix' })).toBeInTheDocument();
     expect(screen.queryByText(/start a new game/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
 
-    const startButton = screen.getByRole('button', { name: 'Start' });
+    const buttonStack = screen.getByRole('group', { name: 'Home actions' });
+    const [newGameButton, loadGameButton, rulesButton] = within(buttonStack).getAllByRole(
+      'button'
+    );
 
-    expect(startButton).toHaveClass('start-page-button');
+    expect(newGameButton).toHaveAccessibleName('New Game 新しいゲーム');
+    expect(loadGameButton).toHaveAccessibleName('Load Game ゲームを読み込む');
+    expect(rulesButton).toHaveAccessibleName('Rules ルール');
+    expect(within(newGameButton).getByText('/')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    expect(within(loadGameButton).getByText('/')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    expect(within(rulesButton).getByText('/')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    expect(newGameButton).toHaveClass(
+      'start-page-button',
+      'start-page-button--primary'
+    );
+    expect(loadGameButton).toHaveClass(
+      'start-page-button',
+      'start-page-button--secondary'
+    );
+    expect(rulesButton).toHaveClass(
+      'start-page-button',
+      'start-page-button--secondary'
+    );
+    expect(within(newGameButton).getByText('New Game')).toHaveClass('language-en');
+    expect(within(newGameButton).getByText('新しいゲーム')).toHaveClass('language-jp');
 
-    fireEvent.click(startButton);
+    fireEvent.click(newGameButton);
 
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Game setup destination')).toBeInTheDocument();
@@ -49,7 +81,7 @@ describe('StartPage', () => {
     const onStart = jest.fn();
 
     renderStartPage(onStart);
-    fireEvent.click(screen.getByRole('button', { name: 'Rules - ルール' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rules ルール' }));
 
     expect(onStart).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Rules of the game' })).toBeInTheDocument();
@@ -231,7 +263,25 @@ describe('StartPage', () => {
       /\.start-page-background--visible\s*{[^}]*opacity:\s*1;/s
     );
     expect(stylesheet).toMatch(
-      /\.start-page-button\s*{[^}]*font-family:\s*'Unkempt',\s*cursive;[^}]*font-size:\s*(?!72px)/s
+      /\.start-page-button\s*{[^}]*font-family:\s*'Unkempt',\s*cursive;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.start-page-button-stack\s*{[^}]*align-items:\s*center;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*gap:\s*24px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.start-page-button\s*{[^}]*box-sizing:\s*border-box;[^}]*flex-direction:\s*row;[^}]*white-space:\s*nowrap;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.start-page-button--primary\s*{[^}]*font-size:\s*24px;[^}]*min-height:\s*70px;[^}]*width:\s*min\(300px,\s*calc\(100vw - 32px\)\);/s
+    );
+    expect(stylesheet).toMatch(
+      /\.start-page-button--secondary\s*{[^}]*background:\s*#D8C79A;[^}]*font-size:\s*18px;[^}]*min-height:\s*52px;[^}]*width:\s*min\(270px,\s*calc\(100vw - 32px\)\);/s
+    );
+    expect(stylesheet).toMatch(
+      /\.start-page-button \.language-jp\s*{[^}]*font-family:\s*'Noto Serif JP',\s*serif;/s
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width:\s*480px\)\s*{[\s\S]*\.start-page-button--primary\s*{[^}]*font-size:\s*clamp\(14px,\s*6vw,\s*24px\);[\s\S]*\.start-page-button--secondary\s*{[^}]*font-size:\s*clamp\(14px,\s*5vw,\s*18px\);/s
     );
     expect(stylesheet).toMatch(/\.start-page-button:hover\s*{/);
     expect(stylesheet).toMatch(

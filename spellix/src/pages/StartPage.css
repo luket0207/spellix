@@ -41,25 +41,58 @@
   }
 }
 
+.start-page-button-stack {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .start-page-button {
+  align-items: center;
   background: #302419;
   border: 4px double #C6CC0C;
   border-radius: 8px;
+  box-sizing: border-box;
   box-shadow: 0 4px 0 #17100B;
   color: #FFF4CF;
   cursor: pointer;
+  display: flex;
+  flex-direction: row;
   font-family: 'Unkempt', cursive;
-  font-size: 36px;
   font-weight: 700;
+  justify-content: center;
   min-width: 180px;
-  padding: 12px 32px;
+  padding: 8px 12px;
   transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  white-space: nowrap;
+}
+
+.start-page-button--primary {
+  font-size: 24px;
+  min-height: 70px;
+  width: min(300px, calc(100vw - 32px));
+}
+
+.start-page-button--secondary {
+  background: #D8C79A;
+  color: #271D13;
+  font-size: 18px;
+  min-height: 52px;
+  width: min(270px, calc(100vw - 32px));
+}
+
+.start-page-button .language-jp {
+  font-family: 'Noto Serif JP', serif;
 }
 
 .start-page-button:hover {
-  background: #4A3522;
   box-shadow: 0 4px 0 #17100B, 0 0 12px #C6CC0C;
   transform: translateY(-2px);
+}
+
+.start-page-button--primary:hover {
+  background: #4A3522;
 }
 
 .start-page-button:focus-visible {
@@ -96,5 +129,13 @@
 
   .start-page-title {
     max-width: 100%;
+  }
+
+  .start-page-button--primary {
+    font-size: clamp(14px, 6vw, 24px);
+  }
+
+  .start-page-button--secondary {
+    font-size: clamp(14px, 5vw, 18px);
   }
 }

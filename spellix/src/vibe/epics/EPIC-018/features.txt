@@ -1761,3 +1761,664 @@ Implementation Notes
 * End Game logic, winner state/navigation, Back to Start, save/load behavior, settings contents, and styling were not changed.
 * No confirmation modal, route, dependency, redesign, abstraction, or unrelated fix was added.
 * Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+
+---
+
+Feature-013: Update home screen button labels, styling, and order
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-009: Add start-page Rules button and bilingual Rules page
+* Feature-011: Add save and load game using base64 text file
+* Feature-010: Add pre-game story page explaining win condition
+
+Goal
+
+* Update the home screen buttons.
+* Rename the Start button to New Game.
+* Add Japanese text to the New Game button.
+* Make Rules and Load Game secondary buttons.
+* Reorder the buttons so Load Game appears in the middle and Rules appears at the bottom.
+
+Required Button Order
+
+The home screen buttons should appear in this order:
+
+```txt id="gyxz78"
+New Game
+Load Game
+Rules
+```
+
+Japanese:
+
+```txt id="5vmh6q"
+新しいゲーム
+ゲームを読み込む
+ルール
+```
+
+New Game Button Requirement
+
+* The current Start button should be renamed to:
+
+English:
+
+```txt id="zjmow3"
+New Game
+```
+
+Japanese:
+
+```txt id="19raay"
+新しいゲーム
+```
+
+* The button should include both English and Japanese on it.
+* Suggested display:
+
+```txt id="14xs7f"
+New Game
+新しいゲーム
+```
+
+* This should remain the primary button on the home screen.
+* It should keep the main large button style.
+
+Secondary Button Requirement
+
+* The Rules and Load Game buttons should become secondary versions of the New Game button.
+* They should be:
+
+  * smaller than the New Game button.
+  * a different colour from the New Game button.
+  * visually related to the New Game button, but clearly secondary.
+
+Secondary button labels:
+
+```txt id="qwvsjd"
+Load Game
+ゲームを読み込む
+```
+
+```txt id="cxcgjj"
+Rules
+ルール
+```
+
+Suggested Styling Direction
+
+```css id="a7nq5a"
+.home-primary-button {
+  width: 260px;
+  min-height: 70px;
+  font-size: 24px;
+}
+
+.home-secondary-button {
+  width: 210px;
+  min-height: 52px;
+  font-size: 18px;
+  background-color: var(--secondary-button-colour);
+}
+```
+
+* Use project colours where possible.
+* Do not introduce a colour that clashes with the existing home screen design.
+* Keep English/Japanese font handling consistent with existing buttons.
+
+Button Layout Requirement
+
+* Buttons should be vertically stacked and centred.
+* New Game should be at the top.
+* Load Game should be in the middle.
+* Rules should be at the bottom.
+* Add enough spacing so the hierarchy is clear.
+
+Suggested Structure
+
+```jsx id="r7oelx"
+<div className="home-button-stack">
+  <button className="home-primary-button">
+    <span>New Game</span>
+    <span>新しいゲーム</span>
+  </button>
+
+  <button className="home-secondary-button">
+    <span>Load Game</span>
+    <span>ゲームを読み込む</span>
+  </button>
+
+  <button className="home-secondary-button">
+    <span>Rules</span>
+    <span>ルール</span>
+  </button>
+</div>
+```
+
+Behaviour Requirement
+
+* New Game should do exactly what Start currently does.
+* Load Game should keep the load-game behaviour from Feature-011.
+* Rules should keep the rules-page navigation from Feature-009.
+* This feature only changes label, styling, and order.
+
+Out Of Scope
+
+* No changes to New Game behaviour.
+* No changes to Load Game file upload behaviour.
+* No changes to Rules page content.
+* No changes to story page flow.
+* No changes to save/load format.
+* No homepage background redesign.
+
+Testing Checkpoints
+
+* Open the home screen.
+* Confirm the old Start button no longer appears.
+* Confirm the primary button says `New Game` and `新しいゲーム`.
+* Confirm New Game still starts the new-game flow.
+* Confirm Load Game appears underneath New Game.
+* Confirm Rules appears underneath Load Game.
+* Confirm Load Game and Rules use the smaller secondary button style.
+* Confirm Load Game still opens the file picker.
+* Confirm Rules still navigates to the Rules page.
+* Confirm English and Japanese text use the correct fonts.
+* Confirm the buttons are centred and visually balanced.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Renamed the existing Start action to the bilingual New Game label while preserving its reset and `/setup` navigation behavior.
+* Reordered the existing actions to New Game, Load Game, and Rules inside a centered vertical group; the file picker and `/rules` navigation handlers were not changed.
+* Kept the established bespoke home button style for the primary action and reused the shared project's existing secondary button colours for the smaller Load Game and Rules variants.
+* Applied the existing `language-en` and `language-jp` classes to separate label spans so each language uses its established project font.
+* No routes, save format, file handling, Rules content, story flow, backgrounds, decorative behavior, dependencies, or unrelated styling were changed.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-014: Update enemy data source of truth for level 3 and level 4 balance
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-017 Feature-002: Rebalance enemy health values
+* EPIC-016 Feature-005: Replace enemy “J” placeholders with joined spell columns
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Goal
+
+* Update the enemy data used by the game.
+* Level 3 and level 4 enemies are currently too powerful.
+* This table is now the source of truth for enemy data.
+* Level 1 and level 2 enemies remain mostly unchanged.
+* Level 3 enemies should now have `45` health.
+* Level 4 enemies should now have `85` health.
+* Several level 3 and level 4 spell slots have also been reduced.
+
+Important Source Of Truth Rule
+
+* Replace the current enemy data with the table in this feature.
+* Do not keep older health or spell slot values from previous features if they conflict with this feature.
+* This feature supersedes the enemy health values from EPIC-017 Feature-002.
+* This feature supersedes previous level 3 and level 4 spell slot values where they differ.
+
+Enemy Data Source Of Truth
+
+```txt id="i39jqf"
+Vilewhisker Rat
+Japanese Name: 毒ヒゲネズミ
+Image File Name: VR.png
+Level: 1
+Health: 20
+Spell Slot 1: Miss
+Spell Slot 2: 1 Orange
+Spell Slot 3: 1 Red
+Spell Slot 4: 1 Red
+Spell Slot 5: 2 Orange
+Spell Slot 6: Miss
+
+Emberhorn Imp
+Japanese Name: 火角インプ
+Image File Name: EI.png
+Level: 1
+Health: 20
+Spell Slot 1: 2 Red
+Spell Slot 2: Miss
+Spell Slot 3: 1 Red
+Spell Slot 4: Miss
+Spell Slot 5: Miss
+Spell Slot 6: 2 Red
+
+Boneveil Acolyte
+Japanese Name: 骨衣の使徒
+Image File Name: BA.png
+Level: 1
+Health: 20
+Spell Slot 1: 1 Green
+Spell Slot 2: 1 Blue
+Spell Slot 3: 1 Red
+Spell Slot 4: 1 Red
+Spell Slot 5: Miss
+Spell Slot 6: 1 Green
+
+Nightplume Raven
+Japanese Name: 夜羽ガラス
+Image File Name: NR.png
+Level: 1
+Health: 20
+Spell Slot 1: 1 Blue
+Spell Slot 2: 1 Red
+Spell Slot 3: 1 Purple
+Spell Slot 4: 1 Red
+Spell Slot 5: Miss
+Spell Slot 6: Miss
+
+Flaskwick Goblin
+Japanese Name: 薬瓶ゴブリン
+Image File Name: FG.png
+Level: 1
+Health: 20
+Spell Slot 1: Miss
+Spell Slot 2: 1 Red
+Spell Slot 3: 1 Green
+Spell Slot 4: 2 Orange
+Spell Slot 5: 1 Red
+Spell Slot 6: Miss
+
+Hexmaw Hag
+Japanese Name: 呪牙の魔女
+Image File Name: HH.png
+Level: 2
+Health: 30
+Spell Slot 1: 1 Red
+Spell Slot 2: 2 Purple
+Spell Slot 3: 1 Blue
+Spell Slot 4: 1 Blue
+Spell Slot 5: 2 Purple
+Spell Slot 6: 1 Red
+
+Runefang Wolf
+Japanese Name: 魔紋狼
+Image File Name: RW.png
+Level: 2
+Health: 30
+Spell Slot 1: 2 Orange
+Spell Slot 2: 1 Blue, 2 Orange
+Spell Slot 3: Miss
+Spell Slot 4: 1 Red
+Spell Slot 5: 2 Orange
+Spell Slot 6: 1 Red
+
+Frostwisp Spirit
+Japanese Name: 氷霊ウィスプ
+Image File Name: FS.png
+Level: 2
+Health: 30
+Spell Slot 1: Miss
+Spell Slot 2: 1 Blue, 1 Orange
+Spell Slot 3: 1 Light Blue
+Spell Slot 4: 1 Blue, 1 Orange
+Spell Slot 5: 2 Red
+Spell Slot 6: 1 Orange
+
+Harvestrot Scarecrow
+Japanese Name: 腐れ案山子
+Image File Name: HS.png
+Level: 2
+Health: 30
+Spell Slot 1: 1 Blue, 1 Green
+Spell Slot 2: 1 Red
+Spell Slot 3: 2 Yellow
+Spell Slot 4: 1 Blue
+Spell Slot 5: 1 Red
+Spell Slot 6: 1 Blue, 1 Green
+
+Wartback Brute
+Japanese Name: イボ背の巨漢
+Image File Name: WB.png
+Level: 2
+Health: 30
+Spell Slot 1: 3 Red
+Spell Slot 2: 1 Green
+Spell Slot 3: Miss
+Spell Slot 4: Miss
+Spell Slot 5: 3 Red
+Spell Slot 6: 1 Green
+
+Gravechant Necromancer
+Japanese Name: 墓歌の屍術師
+Image File Name: GN.png
+Level: 3
+Health: 45
+Spell Slot 1: 1 Red
+Spell Slot 2: 3 Purple, 1 Green
+Spell Slot 3: 2 Red
+Spell Slot 4: 2 Red
+Spell Slot 5: 3 Purple, 1 Green
+Spell Slot 6: 1 Red
+
+Dreadsteel Knight
+Japanese Name: 恐鋼の騎士
+Image File Name: DK.png
+Level: 3
+Health: 45
+Spell Slot 1: 4 Red
+Spell Slot 2: Miss
+Spell Slot 3: 2 Blue, 1 Orange
+Spell Slot 4: 2 Blue, 1 Orange
+Spell Slot 5: Miss
+Spell Slot 6: 4 Red
+
+Skullclub Warlord
+Japanese Name: 髑髏棍の戦王
+Image File Name: SW.png
+Level: 3
+Health: 45
+Spell Slot 1: 2 Blue, 1 Orange
+Spell Slot 2: 1 Green, 2 Orange
+Spell Slot 3: 2 Red
+Spell Slot 4: 2 Red
+Spell Slot 5: 1 Green, 2 Orange
+Spell Slot 6: 2 Blue, 1 Orange
+
+Venomglyph Serpent
+Japanese Name: 毒紋の大蛇
+Image File Name: VS.png
+Level: 3
+Health: 45
+Spell Slot 1: 2 Light Blue
+Spell Slot 2: 1 Orange, 1 Green
+Spell Slot 3: 2 Red
+Spell Slot 4: 2 Red
+Spell Slot 5: 1 Orange, 1 Green
+Spell Slot 6: 2 Light Blue
+
+Cinderveil Demon
+Japanese Name: 炎灰の悪魔
+Image File Name: CD.png
+Level: 3
+Health: 45
+Spell Slot 1: 2 Red, 1 Orange
+Spell Slot 2: 1 Yellow
+Spell Slot 3: 1 Red, 1 Orange
+Spell Slot 4: 1 Red, 1 Orange
+Spell Slot 5: 1 Yellow
+Spell Slot 6: 2 Red, 1 Orange
+
+Crowned Lichlord
+Japanese Name: 冠のリッチ王
+Image File Name: CL.png
+Level: 4
+Health: 85
+Spell Slot 1: 2 Red, 2 Orange
+Spell Slot 2: Joined with 1
+Spell Slot 3: 3 Purple
+Spell Slot 4: 2 Red
+Spell Slot 5: 2 Blue, 1 Green
+Spell Slot 6: 2 Blue, 1 Green
+
+Amethyst Ogre
+Japanese Name: 紫晶のオーガ
+Image File Name: AO.png
+Level: 4
+Health: 85
+Spell Slot 1: 4 Red
+Spell Slot 2: 2 Blue, 2 Green
+Spell Slot 3: 2 Blue, 2 Green
+Spell Slot 4: 2 Red
+Spell Slot 5: 4 Red
+Spell Slot 6: 2 Red
+
+Mossroot Elder
+Japanese Name: 苔根の古老
+Image File Name: ME.png
+Level: 4
+Health: 85
+Spell Slot 1: 2 Blue, 2 Yellow
+Spell Slot 2: 1 Red, 3 Orange
+Spell Slot 3: 2 Blue, 1 Red
+Spell Slot 4: 2 Blue, 1 Red
+Spell Slot 5: 1 Red, 3 Orange
+Spell Slot 6: 2 Blue, 2 Yellow
+
+Duskwyrm Warlock
+Japanese Name: 黄昏竜の魔導士
+Image File Name: DW.png
+Level: 4
+Health: 85
+Spell Slot 1: 1 Light Blue, 2 Red
+Spell Slot 2: 3 Blue
+Spell Slot 3: 1 Light Blue, 3 Orange
+Spell Slot 4: 2 Red
+Spell Slot 5: 1 Light Blue, 3 Blue
+Spell Slot 6: 1 Light Blue, 3 Orange
+
+Hellcrown Reaper
+Japanese Name: 地獄冠の死神
+Image File Name: HR.png
+Level: 4
+Health: 85
+Spell Slot 1: 4 Blue
+Spell Slot 2: 2 Red, 2 Green
+Spell Slot 3: Joined with 2
+Spell Slot 4: 2 Purple
+Spell Slot 5: 2 Red, 2 Green
+Spell Slot 6: Joined with 5
+```
+
+Joined Column Requirement
+
+* Preserve joined-column behaviour from EPIC-016 Feature-005.
+* Do not reintroduce visible `J` placeholders.
+* Do not create separate empty columns for joined slots.
+
+Crowned Lichlord joined column:
+
+```txt id="e3dtts"
+Slots 1+2 are one joined column.
+Label: 1+2
+Tokens: 2 Red, 2 Orange
+Rolling 1 or 2 triggers this joined column once.
+```
+
+Hellcrown Reaper joined columns:
+
+```txt id="ltkwpm"
+Slots 2+3 are one joined column.
+Label: 2+3
+Tokens: 2 Red, 2 Green
+Rolling 2 or 3 triggers this joined column once.
+
+Slots 5+6 are one joined column.
+Label: 5+6
+Tokens: 2 Red, 2 Green
+Rolling 5 or 6 triggers this joined column once.
+```
+
+* The supplied table has `Joined with 5#` for Hellcrown Reaper slot 6.
+* Treat this as `Joined with 5`.
+* Do not include `#` in the game data or UI.
+
+Health Requirement
+
+* Level 1 enemies should have 20 health.
+* Level 2 enemies should have 30 health.
+* Level 3 enemies should have 45 health.
+* Level 4 enemies should have 85 health.
+* Update both base health and max health if the data model stores both.
+* Battle instances should start with the correct health from this table.
+
+Boss Battle Exception
+
+* EPIC-016 Feature-003 still applies.
+* If a level 4 enemy is selected as the Boss Battle enemy, the boss battle instance should still override health to:
+
+```txt id="of0h24"
+150 / 150
+```
+
+* This boss health override should not mutate the base enemy data.
+* Level 4 enemies should still have `85` health in Elite Tower or normal level 4 battle contexts.
+
+Token Name Compatibility Note
+
+* If EPIC-018 Feature-001 has renamed Green from Weaken to Deflect, enemy spell slots that say `Green` should continue to use the Green token type.
+* Do not break enemy spell data because the displayed token name changed.
+* Green enemy tokens should display as Deflect / 受け流し once Feature-001 is implemented.
+
+Out Of Scope
+
+* No changes to enemy images.
+* No changes to enemy levels.
+* No changes to enemy selection logic.
+* No changes to battle reward logic.
+* No changes to boss health override.
+* No new enemies.
+* No new token types beyond those already specified elsewhere.
+
+Testing Checkpoints
+
+* Trigger each level 1 enemy and confirm health is 20.
+* Trigger each level 2 enemy and confirm health is 30.
+* Trigger each level 3 enemy and confirm health is 45.
+* Trigger each level 4 enemy and confirm health is 85 outside Boss Battle.
+* Confirm Gravechant Necromancer uses `3 Purple, 1 Green` in slots 2 and 5.
+* Confirm Dreadsteel Knight uses `4 Red` in slots 1 and 6.
+* Confirm Skullclub Warlord uses the reduced Blue/Orange and Green/Orange values.
+* Confirm Venomglyph Serpent uses `2 Red` in slots 3 and 4.
+* Confirm Cinderveil Demon uses `1 Red, 1 Orange` in slots 3 and 4.
+* Confirm Crowned Lichlord uses joined slot `1+2`.
+* Confirm Crowned Lichlord has no visible placeholder column for slot 2.
+* Confirm Hellcrown Reaper uses joined slots `2+3` and `5+6`.
+* Confirm Hellcrown Reaper has no visible placeholder columns for slots 3 and 6.
+* Confirm no `#` appears in Hellcrown Reaper data or UI.
+* Trigger Boss Battle.
+* Confirm the boss still starts at 150 / 150 health.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Updated the existing enemy definitions so every Level 3 enemy has `45` max health and every Level 4 enemy has `85` max health; battle instances continue to derive their starting health from that value.
+* Replaced all specified Level 3 and Level 4 spell-slot counts with the Feature-014 source-of-truth values while leaving Level 1 and Level 2 definitions unchanged.
+* Preserved Crowned Lichlord's `1+2` joined column and Hellcrown Reaper's `2+3` and `5+6` joined columns, including empty removed slots and the existing merged-column metadata; no visible `J` or `#` data was introduced.
+* Kept Green entries on the existing `green` token type, so the established Deflect / Japanese Deflect labels and behavior continue to apply.
+* Preserved the local Boss Battle `150 / 150` override without mutating the Level 4 base data; normal and Elite Tower Level 4 battles use `85 / 85`.
+* Enemy names, Japanese names, images, levels, selection logic, rewards, token types, routes, dependencies, and UI styling were not changed.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-015: Reduce final boss battle health to 100
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-014: Update enemy data source of truth for level 3 and level 4 balance
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+
+Goal
+
+* Adjust the final boss battle health after the enemy balance changes.
+* The final boss should now always have `100` health.
+* Nothing else about the boss enemy should change.
+
+Required Behaviour
+
+* When the player enters the final boss battle, the boss should always start with:
+
+```txt id="m3o06q"
+100 / 100 HP
+```
+
+* This applies regardless of which level 4 enemy was randomly assigned as the boss.
+* The boss should still use:
+
+  * the assigned boss enemy name.
+  * the assigned boss enemy Japanese name.
+  * the assigned boss enemy image.
+  * the assigned boss enemy spell slots.
+  * the assigned boss enemy joined columns, if applicable.
+
+Important Scope
+
+* This health change applies to the final boss battle only.
+* Do not change the base enemy data.
+* Do not change level 4 enemy health outside the final boss battle.
+* Level 4 enemies should still use the health value from Feature-014 in non-boss contexts.
+
+Updated Boss Health Override
+
+* Replace the previous boss health override:
+
+```txt id="ruc4jv"
+150 / 150 HP
+```
+
+* With the new override:
+
+```txt id="bsuldt"
+100 / 100 HP
+```
+
+Suggested Implementation Direction
+
+```js id="hgzd3i"
+const bossBattleEnemy = {
+  ...assignedBossEnemy,
+  health: 100,
+  maxHealth: 100
+};
+```
+
+* Do not mutate `assignedBossEnemy` directly.
+* Create a battle instance copy with the overridden health values.
+
+Out Of Scope
+
+* No changes to Elite Tower enemy health.
+* No changes to level 4 base enemy health.
+* No changes to boss enemy selection.
+* No changes to boss spell slots.
+* No changes to boss battle background.
+* No changes to boss win condition.
+* No changes to boss rewards, because boss victory already ends the game.
+
+Testing Checkpoints
+
+* Start a game and check which enemy is assigned as the boss.
+* Complete both Elite Towers.
+* Enter the boss castle.
+* Confirm the boss starts with `100 / 100 HP`.
+* Confirm the boss still uses the assigned enemy name and image.
+* Confirm the boss still uses the assigned enemy spell slots.
+* If Crowned Lichlord is boss, confirm joined column `1+2` still works.
+* If Hellcrown Reaper is boss, confirm joined columns `2+3` and `5+6` still work.
+* Trigger a level 4 Elite Tower battle.
+* Confirm the level 4 Elite Tower enemy still uses Feature-014 health, not the boss override.
+* Confirm base enemy data is not mutated after a boss battle starts.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Changed only the existing Boss Battle `enemyMaxHealth` option from `150` to `100` when a ready player lands on the boss encounter.
+* Reused `startBattle`'s existing local battle-state override, which sets current and max health on the active battle without mutating the assigned Level 4 enemy definition.
+* Normal and Elite Tower Level 4 encounters continue to use the Feature-014 base value of `85 / 85`.
+* Boss enemy selection, names, Japanese names, images, spell slots, joined columns, background, win condition, loss behavior, and reward skipping were not changed.
+* No new components, routes, dependencies, styling, abstractions, or unrelated behavior were added.
+* Per the main project rules, only `features.txt` and `testing.txt` were updated; `implementation.txt` was not created or changed despite the stale checkpoint text above.

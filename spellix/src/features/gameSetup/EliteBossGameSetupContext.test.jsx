@@ -51,7 +51,7 @@ function EliteBossProbe() {
         onClick={() =>
           startBattle('player-1', 4, 'amethyst-ogre', 'fields', {
             encounterType: BOSS_BATTLE,
-            enemyMaxHealth: 150,
+            enemyMaxHealth: 100,
           })
         }
       >
@@ -98,7 +98,7 @@ test('elite victory marks only the encounter player and keeps normal rewards', (
   renderProbe();
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Elite' }));
-  expect(screen.getByText('Enemy health: 100/100')).toBeInTheDocument();
+  expect(screen.getByText('Enemy health: 85/85')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Win' }));
 
   expect(screen.getByText('Phase: reward')).toBeInTheDocument();
@@ -107,15 +107,15 @@ test('elite victory marks only the encounter player and keeps normal rewards', (
   expect(screen.getByText(/^Rewards: [1-9]/)).toBeInTheDocument();
 });
 
-test('boss battle uses a local 150 health override and skips rewards on win', () => {
+test('boss battle uses a local 100 health override and skips rewards on win', () => {
   renderProbe();
   const baseBoss = getEnemyById('amethyst-ogre');
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Boss' }));
 
-  expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
-  expect(baseBoss.maxHealth).toBe(100);
-  expect(baseBoss.currentHealth).toBe(100);
+  expect(screen.getByText('Enemy health: 100/100')).toBeInTheDocument();
+  expect(baseBoss.maxHealth).toBe(85);
+  expect(baseBoss.currentHealth).toBe(85);
 
   fireEvent.click(screen.getByRole('button', { name: 'Win' }));
 
@@ -141,6 +141,7 @@ test('normal level four loss uses the two-token battle penalty', () => {
   renderProbe();
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Normal' }));
+  expect(screen.getByText('Enemy health: 85/85')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Lose' }));
 
   expect(screen.getByText('Phase: lost')).toBeInTheDocument();

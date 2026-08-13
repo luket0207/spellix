@@ -169,33 +169,45 @@ function StartPage({ onLoadGame = () => {}, onStart = () => {} }) {
 
       <div className="start-page-safe-zone" ref={safeZoneRef}>
         <h1 className="start-page-title">Spellix</h1>
-        <button
-          className="start-page-button"
-          type="button"
-          onClick={() => {
-            onStart();
-            navigate('/setup');
-          }}
+        <div
+          aria-label="Home actions"
+          className="start-page-button-stack"
+          role="group"
         >
-          Start
-        </button>
-        <button
-          className="start-page-button"
-          type="button"
-          onClick={() => navigate('/rules')}
-        >
-          Rules - ルール
-        </button>
-        <button
-          className="start-page-button"
-          type="button"
-          onClick={() => {
-            setIsLoadErrorOpen(false);
-            loadFileInputRef.current?.click();
-          }}
-        >
-          Load Game - ゲームを読み込む
-        </button>
+          <button
+            className="start-page-button start-page-button--primary"
+            type="button"
+            onClick={() => {
+              onStart();
+              navigate('/setup');
+            }}
+          >
+            <span className="language-en">New Game</span>
+            <span aria-hidden="true" className="start-page-button-separator"> / </span>
+            <span className="language-jp">新しいゲーム</span>
+          </button>
+          <button
+            className="start-page-button start-page-button--secondary"
+            type="button"
+            onClick={() => {
+              setIsLoadErrorOpen(false);
+              loadFileInputRef.current?.click();
+            }}
+          >
+            <span className="language-en">Load Game</span>
+            <span aria-hidden="true" className="start-page-button-separator"> / </span>
+            <span className="language-jp">ゲームを読み込む</span>
+          </button>
+          <button
+            className="start-page-button start-page-button--secondary"
+            type="button"
+            onClick={() => navigate('/rules')}
+          >
+            <span className="language-en">Rules</span>
+            <span aria-hidden="true" className="start-page-button-separator"> / </span>
+            <span className="language-jp">ルール</span>
+          </button>
+        </div>
         <input
           accept=".txt,text/plain"
           aria-label="Load saved game file"

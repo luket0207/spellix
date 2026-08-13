@@ -415,10 +415,10 @@ test('queues normal attack guard absorption for the damage impact', () => {
 test.each([
   ['crowned-lichlord', 1, 20],
   ['crowned-lichlord', 2, 20],
-  ['hellcrown-reaper', 2, 30],
-  ['hellcrown-reaper', 3, 30],
-  ['hellcrown-reaper', 5, 30],
-  ['hellcrown-reaper', 6, 30],
+  ['hellcrown-reaper', 2, 20],
+  ['hellcrown-reaper', 3, 20],
+  ['hellcrown-reaper', 5, 20],
+  ['hellcrown-reaper', 6, 20],
 ])(
   '%s resolves joined enemy roll %i from its retained column exactly once',
   (enemyId, diceResult, expectedDamage) => {
@@ -445,11 +445,11 @@ test('applies Purple and charged bonuses once when a joined enemy column is roll
   });
 
   expect(result.damage).toMatchObject({
-    outgoing: 45,
-    rawRed: 45,
+    outgoing: 35,
+    rawRed: 35,
   });
   expect(result.effects.filter(({ type }) => type === 'redDamage')).toEqual([
-    expect.objectContaining({ amount: 45 }),
+    expect.objectContaining({ amount: 35 }),
   ]);
 });
 

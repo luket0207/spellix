@@ -206,7 +206,7 @@ test('routes an unready player to the locked boss encounter', () => {
   expect(screen.getByText('Enemy: none')).toBeInTheDocument();
 });
 
-test('starts the assigned 150 health boss for a ready player', () => {
+test('starts the assigned 100 health boss for a ready player', () => {
   const setup = createGameplaySetup();
 
   mockDestinationNodeId = 'boss-battle';
@@ -219,11 +219,11 @@ test('starts the assigned 150 health boss for a ready player', () => {
 
   expect(screen.getByText('Encounter: bossBattle')).toBeInTheDocument();
   expect(screen.getByText('Enemy: mossroot-elder')).toBeInTheDocument();
-  expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
+  expect(screen.getByText('Enemy health: 100/100')).toBeInTheDocument();
 });
 
 test.each(['crowned-lichlord', 'hellcrown-reaper'])(
-  'keeps the 150 health boss override for joined-column enemy %s',
+  'keeps the 100 health boss override for joined-column enemy %s',
   (enemyId) => {
     const setup = createGameplaySetup();
 
@@ -237,6 +237,6 @@ test.each(['crowned-lichlord', 'hellcrown-reaper'])(
     rollAndLand();
 
     expect(screen.getByText(`Enemy: ${enemyId}`)).toBeInTheDocument();
-    expect(screen.getByText('Enemy health: 150/150')).toBeInTheDocument();
+    expect(screen.getByText('Enemy health: 100/100')).toBeInTheDocument();
   }
 );

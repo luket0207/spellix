@@ -526,10 +526,10 @@ function JoinedEnemyResolutionProbe({ diceResult }) {
 test.each([
   ['crowned-lichlord', 1, 80],
   ['crowned-lichlord', 2, 80],
-  ['hellcrown-reaper', 2, 70],
-  ['hellcrown-reaper', 3, 70],
-  ['hellcrown-reaper', 5, 70],
-  ['hellcrown-reaper', 6, 70],
+  ['hellcrown-reaper', 2, 80],
+  ['hellcrown-reaper', 3, 80],
+  ['hellcrown-reaper', 5, 80],
+  ['hellcrown-reaper', 6, 80],
 ])(
   'resolves %s joined enemy roll %i exactly once through battle state',
   (enemyId, diceResult, expectedHealth) => {

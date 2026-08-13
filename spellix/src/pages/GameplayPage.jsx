@@ -692,7 +692,7 @@ function GameplayPage({
     if (enemyId) {
       startBattle(currentPlayer.id, 4, enemyId, 'fields', {
         encounterType,
-        enemyMaxHealth: encounterType === BOSS_BATTLE ? 150 : undefined,
+        enemyMaxHealth: encounterType === BOSS_BATTLE ? 100 : undefined,
       });
       onNavigate('/battle');
       return;

@@ -51,6 +51,7 @@ function createBattleSetup() {
       enemyChargeUses: [0, 0, 0, 0, 0, 0],
       enemyCharged: false,
       enemyCurrentHealth: 120,
+      enemyMaxHealth: 120,
       enemyFreezeUses: [0, 0, 0, 0, 0, 0],
       enemyFrozen: false,
       enemyGuard: 0,
@@ -1566,7 +1567,7 @@ describe('BattlePage flows', () => {
     ).toHaveLength(2);
     expect(within(enemyPanel).queryByText('J')).not.toBeInTheDocument();
     expect(
-      within(enemyPanel).getAllByLabelText('3 red tokens in slot 2 and 3')
+      within(enemyPanel).getAllByLabelText('2 red tokens in slot 2 and 3')
     ).toHaveLength(1);
     expect(
       within(enemyPanel).getAllByLabelText('2 green tokens in slot 5 and 6')
@@ -2157,7 +2158,7 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText(/enemy guard: 25/i)).toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 20/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
   });
 
@@ -2196,6 +2197,7 @@ describe('BattlePage flows', () => {
         ...selectedEnemySetup.activeBattle,
         enemyCurrentHealth: enemy.currentHealth,
         enemyId,
+        enemyMaxHealth: enemy.maxHealth,
         level,
       };
       renderBattleFlow(['/battle'], selectedEnemySetup);
@@ -2345,11 +2347,11 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText(/enemy guard: 25/i)).toBeInTheDocument();
+    expect(screen.getByText(/enemy guard: 20/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveAttribute('data-icon', 'shield');
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveClass('battle-guard-shield');
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveStyle({ opacity: '0.6' });
-    expect(screen.getByLabelText(/enemy guard amount/i)).toHaveTextContent('25');
+    expect(screen.getByLabelText(/enemy guard amount/i)).toHaveTextContent('20');
     expect(screen.getByLabelText(/enemy guard amount/i)).toHaveClass('battle-guard-amount');
     expect(screen.getByLabelText(/enemy guard amount/i).parentElement).toContainElement(
       screen.getByLabelText(/enemy guard shield/i)
@@ -2543,7 +2545,7 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByText(/battle player health: 90/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle player health: 100/i)).toBeInTheDocument();
     const playerGreenAnimation = screen.getByLabelText(/green reduction animation/i);
     const playerDeflectIcon = screen.getByLabelText(/deflect ban animation/i);
     expect(playerGreenAnimation).toHaveClass('battle-radiating-effect--player');

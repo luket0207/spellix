@@ -1,0 +1,298 @@
+---
+
+Feature-001: Set up first GitHub Pages deployment using gh-pages branch
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-018 Feature-011: Add save and load game using base64 text file
+* EPIC-018 Feature-006: Prevent white flash when returning to gameplay page
+* Start page / routing / build configuration
+
+Goal
+
+* Set up the public GitHub repo so the game can be deployed to GitHub Pages.
+* Create and push the first `gh-pages` branch deployment.
+* Add an `npm deploy` command.
+* Running `npm deploy` from the terminal should:
+
+  * build the production app.
+  * publish the build output to the `gh-pages` branch.
+  * push the deployment to GitHub.
+* This feature should include the initial deployment commit.
+* Local development must not be affected.
+
+Required Behaviour
+
+* The repo should support:
+
+```bash id="iq4j90"
+npm deploy
+```
+
+* This command should:
+
+  * run the production build.
+  * deploy the build output to the `gh-pages` branch.
+  * create the `gh-pages` branch if it does not already exist.
+  * push the first deployment commit to GitHub.
+
+Package Setup Requirement
+
+* Add the `gh-pages` package as a dev dependency if it is not already installed.
+
+Suggested command:
+
+```bash id="ja018f"
+npm install --save-dev gh-pages
+```
+
+Package Scripts Requirement
+
+* Add deployment scripts to `package.json`.
+
+If the project uses Vite and outputs to `dist`, use:
+
+```json id="w6vg7s"
+{
+  "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  }
+}
+```
+
+If the project uses Create React App and outputs to `build`, use:
+
+```json id="zbnkg4"
+{
+  "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  }
+}
+```
+
+* Use the actual build output folder for this repo.
+* Confirm the output folder by running the existing build command.
+* Do not deploy source files directly.
+* Only deploy the production build output.
+
+Initial Commit Requirement
+
+* This feature should include an initial normal repo commit for the deployment setup changes.
+* Commit the source changes before running the first deployment.
+
+Suggested source commit message:
+
+```txt id="ibw5e5"
+Set up GitHub Pages deployment
+```
+
+* This source commit should include:
+
+  * `gh-pages` dependency.
+  * `package.json` script changes.
+  * any Vite/base/router config changes.
+  * any documentation or implementation notes.
+
+* After the source commit is pushed to the normal branch, run:
+
+```bash id="ca8l7o"
+npm deploy
+```
+
+* The deploy command should create the first deployment commit on the `gh-pages` branch.
+* Confirm that the `gh-pages` branch exists on GitHub after deployment.
+
+Local Development Must Not Be Affected
+
+* Running the app locally should continue to work exactly as before.
+* `npm run dev` should still work.
+* Local asset paths should still work.
+* Local routing should still work.
+* Local URLs should not require the GitHub Pages repo base path.
+
+Vite Base Path Requirement
+
+* If using Vite, do not hard-code the GitHub Pages base in a way that breaks local development.
+* Use conditional base configuration so local development remains unaffected.
+
+Suggested Vite direction:
+
+```js id="r69jsn"
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/REPO_NAME/" : "/",
+  plugins: [react()]
+}));
+```
+
+* Replace `REPO_NAME` with the real repository name.
+* Local dev should use `/`.
+* Production build for GitHub Pages should use `/<repo-name>/`.
+
+Alternative Vite direction:
+
+```js id="i79gf9"
+export default defineConfig(({ mode }) => ({
+  base: mode === "production" ? "/REPO_NAME/" : "/",
+  plugins: [react()]
+}));
+```
+
+* Use whichever pattern best fits the current project setup.
+
+Create React App Homepage Requirement
+
+* If using Create React App instead of Vite, set `homepage` in `package.json`:
+
+```json id="buflwj"
+{
+  "homepage": "https://GITHUB_USERNAME.github.io/REPO_NAME"
+}
+```
+
+* Confirm this does not break local development.
+* CRA usually handles local development correctly with `homepage`, but still test it.
+
+Router Requirement
+
+* Because the app uses `react-router-dom`, confirm routing works on GitHub Pages.
+* GitHub Pages does not naturally support server-side fallback routing for `BrowserRouter`.
+* Use one of the following:
+
+  * `HashRouter` for GitHub Pages compatibility.
+  * or a proper GitHub Pages fallback solution.
+
+Recommended safe approach:
+
+```jsx id="g4l3e8"
+import { HashRouter } from "react-router-dom";
+
+<HashRouter>
+  <App />
+</HashRouter>
+```
+
+* If switching to `HashRouter`, confirm local development still works.
+* URLs will include `#`, but this is acceptable if it avoids broken refreshes on GitHub Pages.
+* If the project already has a working fallback for `BrowserRouter`, document that instead and keep local behaviour safe.
+
+GitHub Pages Settings Requirement
+
+* After running the first deploy:
+
+  * go to GitHub repo settings.
+  * open Pages.
+  * choose deploy from branch.
+  * select `gh-pages`.
+  * select root folder if prompted.
+* Confirm GitHub provides a Pages URL.
+* Visit the URL and confirm the game loads.
+
+Deployment Flow
+
+```txt id="m9y7i0"
+1. Install gh-pages dev dependency.
+2. Add predeploy and deploy scripts.
+3. Configure base path / homepage safely for GitHub Pages.
+4. Confirm local development still works.
+5. Run production build locally.
+6. Commit source changes to the normal branch.
+7. Push the normal branch.
+8. Run npm deploy.
+9. Confirm gh-pages branch is created and pushed.
+10. Enable GitHub Pages from the gh-pages branch.
+11. Open the GitHub Pages URL and test the game.
+```
+
+Build Validation Requirement
+
+* Before deployment, run:
+
+```bash id="fctg3t"
+npm run build
+```
+
+* Fix any production build errors before running:
+
+```bash id="ku1vrx"
+npm deploy
+```
+
+Local Development Validation Requirement
+
+* After configuration changes, run:
+
+```bash id="w9ge7y"
+npm run dev
+```
+
+* Confirm:
+
+  * local dev server starts.
+  * homepage loads.
+  * assets load.
+  * routing works.
+  * New Game flow works.
+  * no local path is broken by the GitHub Pages base path.
+
+Post-Deployment Validation
+
+* After deployment, confirm:
+
+  * GitHub Pages URL loads.
+  * starry background loads.
+  * token images load.
+  * player images load.
+  * enemy images load.
+  * feature backgrounds load.
+  * routing works.
+  * refresh does not break if using HashRouter or fallback strategy.
+  * New Game works.
+  * Rules page works.
+  * Load Game button appears.
+  * no critical console asset path errors appear.
+
+Out Of Scope
+
+* No custom domain.
+* No GitHub Actions deployment yet.
+* No automated CI/CD.
+* No cloud save hosting.
+* No private hosting.
+* No game mechanic changes.
+* No visual redesign.
+* No save-file format changes.
+
+Testing Checkpoints
+
+* Confirm repo is public.
+* Confirm `gh-pages` is installed as a dev dependency.
+* Confirm `package.json` has `predeploy`.
+* Confirm `package.json` has `deploy`.
+* Confirm GitHub Pages base path or homepage is configured.
+* Confirm the configuration does not break local dev.
+* Run `npm run dev`.
+* Confirm local development works.
+* Run `npm run build`.
+* Confirm build completes successfully.
+* Commit source changes with a clear initial deployment setup commit.
+* Push the source branch.
+* Run `npm deploy`.
+* Confirm `gh-pages` branch is created.
+* Confirm first deployment commit appears on `gh-pages`.
+* Confirm `gh-pages` branch is pushed to GitHub.
+* Enable GitHub Pages from the `gh-pages` branch.
+* Open the GitHub Pages URL.
+* Confirm the game loads.
+* Confirm assets load correctly.
+* Confirm routing works.
+* Confirm New Game starts the game flow.
+* Confirm Rules opens correctly.
+* Confirm local development still works after deployment.
+* Confirm there are no critical console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

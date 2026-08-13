@@ -114,7 +114,7 @@ describe('save and load game flow', () => {
 
     renderApp();
     await userEvent.click(
-      screen.getByRole('button', { name: 'Load Game - ゲームを読み込む' })
+      screen.getByRole('button', { name: 'Load Game ゲームを読み込む' })
     );
 
     expect(inputClickSpy).toHaveBeenCalledTimes(1);

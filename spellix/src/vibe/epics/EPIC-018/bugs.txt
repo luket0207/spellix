@@ -273,3 +273,125 @@ Final Fix
 
 * Added a movement-dice-rolled flag to game state, set it as soon as a valid movement roll begins, retained it for same-turn flows such as Roll Again, and reset it only when play advances to another player.
 * Limited the gameplay settings button to the safe pre-roll state and kept it hidden while next-turn or respawn transitions are pending, which also prevents Save Game access after rolling.
+
+---
+
+Bug-004: Homepage button text should stay on one line
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-013: Update home screen button labels, styling, and order
+
+Bug Summary
+
+* Homepage button text is wrapping onto multiple lines.
+* The home screen buttons should not be multi-line.
+* Each button label should always stay on one line.
+
+Required Behaviour
+
+* The following homepage buttons should keep their text on one line:
+
+  * New Game
+  * Load Game
+  * Rules
+
+* The bilingual text should not stack vertically.
+
+* The button text should not wrap onto a second line.
+
+Correct Display Direction
+
+```txt id="xzmw7g"
+New Game / 新しいゲーム
+Load Game / ゲームを読み込む
+Rules / ルール
+```
+
+Incorrect Display Direction
+
+```txt id="q2f8k4"
+New Game
+新しいゲーム
+```
+
+```txt id="dwnyoi"
+Load Game
+ゲームを読み込む
+```
+
+Suggested Styling Direction
+
+```css id="ak2uqi"
+.home-primary-button,
+.home-secondary-button {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+* If needed, reduce font size slightly rather than allowing wrapping.
+* If needed, increase button width slightly.
+* Do not make the buttons so wide that they break the mobile layout.
+
+Suggested JSX Direction
+
+```jsx id="rvt1kc"
+<button className="home-primary-button">
+  New Game / 新しいゲーム
+</button>
+
+<button className="home-secondary-button">
+  Load Game / ゲームを読み込む
+</button>
+
+<button className="home-secondary-button">
+  Rules / ルール
+</button>
+```
+
+Mobile Requirement
+
+* The buttons should still fit cleanly on the mobile-first layout.
+* The text should remain readable.
+* Do not allow horizontal scrolling.
+* If the Japanese text makes the secondary buttons too wide, adjust secondary button width or font size.
+
+Out Of Scope
+
+* No changes to button order.
+* No changes to button behaviour.
+* No changes to Load Game file upload.
+* No changes to Rules navigation.
+* No changes to New Game flow.
+* No unrelated homepage redesign.
+
+Testing Required
+
+* Open the homepage.
+* Confirm New Game text is on one line.
+* Confirm Load Game text is on one line.
+* Confirm Rules text is on one line.
+* Confirm no button text wraps in English/Japanese combined labels.
+* Confirm the buttons still fit on mobile width.
+* Confirm button hierarchy remains clear.
+* Confirm New Game is still the primary button.
+* Confirm Load Game and Rules are still secondary buttons.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Added focused assertions before the fix for inline separators, row layout, nowrap behavior, responsive widths, and mobile font scaling; the pre-fix run failed because the bilingual spans had no separators and the shared button rule explicitly used `flex-direction: column`.
+
+Final Fix
+
+* Kept the existing English and Japanese spans but placed them in one row with a visible slash separator, `white-space: nowrap`, and separators hidden from accessible button names.
+* Added border-box responsive widths and mobile-clamped font sizes so the combined labels stay within the viewport while preserving New Game as the larger primary button and Load Game/Rules as smaller secondary buttons.
+* Preserved button order, New Game setup navigation, Load Game file selection, Rules navigation, project font classes, and all unrelated homepage behavior.

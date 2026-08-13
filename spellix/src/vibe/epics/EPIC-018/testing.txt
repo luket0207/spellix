@@ -472,6 +472,129 @@ Manual Execution
 
 ---
 
+Feature-013: Update home screen button labels, styling, and order
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the home screen and read the three action buttons from top to bottom.
+   Expected: They appear as New Game / 新しいゲーム, Load Game / ゲームを読み込む, and Rules / ルール; the old Start label is absent.
+2. Compare New Game with the other two actions.
+   Expected: New Game retains the large primary home-button treatment, while Load Game and Rules share a smaller secondary treatment using existing project colours.
+3. Inspect each English and Japanese label.
+   Expected: English uses the established English button font and Japanese uses the established Japanese font.
+4. Select New Game.
+   Expected: The existing new-game reset runs and Game Setup opens exactly as before.
+5. Return home and select Load Game.
+   Expected: The existing text-file picker opens and accepts `.txt` files; valid and invalid save handling is unchanged.
+6. Return home and select Rules.
+   Expected: The existing bilingual Rules page opens without starting or resetting a game.
+7. Monitor the browser console while using all three actions.
+   Expected: No new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run failed four assertions because the old Start label, Rules-before-Load order, hyphenated labels, and uniform button styling were still present; seven unaffected tests passed.
+* All 11 focused tests pass across `StartPage.test.jsx` and `SaveLoadGame.test.jsx` for exact bilingual labels and order, primary/secondary classes and dimensions, language font classes, new-game setup navigation, Rules navigation without reset, Load Game picker behavior, and existing Start-page decoration and error handling.
+* Scoped ESLint passes for the Start page and directly affected tests.
+* The production build passes.
+
+Automated Tests Still Needed
+
+* None for labels, DOM order, style rules, navigation, or file-picker invocation. A real browser remains necessary for visual comparison and the operating-system file picker interaction.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-014: Update enemy data source of truth for level 3 and level 4 balance
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start battles against each Level 1 and Level 2 enemy.
+   Expected: Level 1 enemies start at `20 / 20` and Level 2 enemies start at `30 / 30`, with their existing spell slots unchanged.
+2. Start battles against each Level 3 enemy and inspect every spell column.
+   Expected: Each starts at `45 / 45`; Gravechant, Dreadsteel, Skullclub, Venomglyph, and Cinderveil exactly match the Feature-014 table.
+3. Start normal battles against each Level 4 enemy and inspect every spell column.
+   Expected: Each starts at `85 / 85`; Crowned, Amethyst, Mossroot, Duskwyrm, and Hellcrown exactly match the Feature-014 table.
+4. Roll `1` and `2` against Crowned Lichlord.
+   Expected: Both results resolve the retained `1+2` column once, slot 2 has no separate visible column, and no `J` placeholder appears.
+5. Roll `2`, `3`, `5`, and `6` against Hellcrown Reaper.
+   Expected: Results `2` and `3` resolve `2+3` once, results `5` and `6` resolve `5+6` once, removed slots are not displayed, and no `J` or `#` appears.
+6. Inspect Green enemy tokens in English and Japanese.
+   Expected: They remain the Green token type and display the established Deflect labels and behavior.
+7. Start a Level 4 Elite Tower battle, then start a Boss Battle and return to another non-boss Level 4 encounter.
+   Expected: Elite and normal encounters use `85 / 85`, the Boss Battle uses its existing local `150 / 150` override, and the base enemy remains `85 / 85` afterward.
+8. Monitor the browser console throughout these battles.
+   Expected: No new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-implementation balance run failed 20 assertions against the previous Level 3/4 health, spell counts, joined-column damage, and Elite base-health values; 55 unaffected assertions passed.
+* All 123 unique core tests pass across `enemies.test.js`, `battleTurn.test.js`, `GameSetupContext.test.jsx`, `EliteBossGameSetupContext.test.jsx`, and `enemyImages.test.js` for the exact 20-enemy table, all health tiers, joined columns, battle resolution, normal/Elite/Boss health isolation, and unchanged image mappings.
+* All five focused selected-enemy `BattlePage.test.jsx` cases pass for rendered Level 1 through Level 4 enemy health and effective spell columns.
+* The broader `BattlePage.test.jsx` run passed 56 of 62 tests. Its six unrelated existing failures concern CSS sizing/spacing, respawn copy, freeze random-call timing, guard-reset timing, and lethal-turn random-call counts; the Feature-014 Green joined-column flow passed.
+* Scoped ESLint passes for the enemy data and directly affected core tests.
+* The production build and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the enemy data table, battle calculations, image mappings, joined-column representation, or encounter health isolation. The unrelated existing `BattlePage.test.jsx` failures remain outside this feature's scope.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Feature-015: Reduce final boss battle health to 100
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game and note the enemy assigned to Boss Battle in Debug Mode or the existing assignment display.
+   Expected: One existing Level 4 enemy is assigned; its identity and data are unchanged.
+2. Complete both Elite Towers for the current player and enter the boss castle.
+   Expected: The assigned boss starts at exactly `100 / 100`, while retaining its name, Japanese name, image, and spell slots.
+3. Repeat with Crowned Lichlord and roll `1` and `2`.
+   Expected: Both results resolve the existing `1+2` joined column once and the boss remains a `100 / 100` instance.
+4. Repeat with Hellcrown Reaper and roll `2`, `3`, `5`, and `6`.
+   Expected: The existing `2+3` and `5+6` joined columns resolve once for either joined result and the boss remains a `100 / 100` instance.
+5. Start a normal Level 4 battle and a Level 4 Elite Tower battle before and after entering a Boss Battle.
+   Expected: Both non-boss encounter types start at `85 / 85`, proving the Boss Battle override did not mutate base enemy data.
+6. Win and lose separate Boss Battles while monitoring the browser console.
+   Expected: A win still skips rewards and ends the game, a loss retains the existing Level 4 loss flow, and no new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-implementation gameplay-entry run reproduced Feature-015 with three failures: Mossroot Elder, Crowned Lichlord, and Hellcrown Reaper still started Boss Battles at `150 / 150` instead of `100 / 100`.
+* The complete `EliteBossGameSetupContext.test.jsx` and `GameplayEliteBoss.test.jsx` run passes 14 behavioral tests for the `100 / 100` local override, assigned boss identity, both joined-column bosses, unchanged `85 / 85` normal/Elite health, non-mutated base data, boss win/reward behavior, boss loss behavior, and locked-boss routing.
+* The same run retains one unrelated existing CSS assertion expecting `max-height: 100px` while the current Elite progress style is `115px`; all Feature-015 assertions pass.
+* Scoped ESLint passes for `GameplayPage.jsx` and both focused test files.
+* The production build and `git diff --check` pass.
+
+Automated Tests Still Needed
+
+* None for the Boss Battle health override or its isolation from base and Elite enemy health. The unrelated Elite progress CSS assertion remains outside Feature-015 scope.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
 Bug-001: Revert battle dice roll timing change from Feature-005
 
 Test Status
@@ -581,6 +704,44 @@ Automated Tests Completed
 Automated Tests Still Needed
 
 * None for the Bug-003 state lifecycle or settings visibility gate. Existing unrelated `GameplayPage.test.jsx` failures remain outside this bug's scope.
+
+Manual Execution
+
+* Not run in a browser during this automated pass.
+
+---
+
+Bug-004: Homepage button text should stay on one line
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the homepage on a desktop-width browser and inspect New Game, Load Game, and Rules.
+   Expected: Each button shows its English and Japanese labels on one line separated by `/`; no label stacks or wraps.
+2. Reduce the viewport to a typical mobile width and inspect all three buttons again.
+   Expected: Responsive widths remain within the viewport, text scales down while remaining readable, and no horizontal page scrolling appears.
+3. Compare the three buttons at desktop and mobile widths.
+   Expected: New Game remains the larger primary button; Load Game and Rules remain smaller secondary buttons in the existing order.
+4. Select New Game.
+   Expected: The existing reset runs and Game Setup opens.
+5. Return home and select Load Game.
+   Expected: The existing `.txt` file picker opens and save-file handling is unchanged.
+6. Return home and select Rules while monitoring the browser console.
+   Expected: Rules opens without resetting the game, and no new errors or warnings occur.
+
+Automated Tests Completed
+
+* The pre-fix focused run reproduced Bug-004 with two failures: slash separators were absent and `.start-page-button` forced `flex-direction: column` without a nowrap rule; four unrelated Start-page tests passed.
+* All 11 focused tests pass across `StartPage.test.jsx` and `SaveLoadGame.test.jsx` for inline bilingual separators, unchanged accessible names, row/nowrap layout, responsive viewport-limited widths, mobile font clamps, retained hierarchy/order, New Game and Rules navigation, and Load Game picker behavior.
+* Scoped ESLint passes for the Start page and directly affected tests.
+* The production build passes.
+
+Automated Tests Still Needed
+
+* None for the markup, CSS contracts, or existing button behaviors. A real browser remains necessary to visually confirm text fit across specific device font rendering and viewport widths.
 
 Manual Execution
 
