@@ -1,0 +1,37 @@
+Feature-001: Set up first GitHub Pages deployment using gh-pages branch
+
+Test Status
+
+* in progress
+
+Manual Test Steps
+
+1. Run `npm start` and open the local URL.
+   Expected: The development server loads the app at `/`, assets load, and hash-based navigation works without requiring `/spellix/` locally.
+2. Select New Game, return home, open Rules, and inspect Load Game.
+   Expected: Existing local routes and all three home actions continue to work.
+3. Run `npm run build` and inspect `build/index.html`.
+   Expected: The optimized build succeeds and generated asset URLs begin with `/spellix/`.
+4. Run `npm run deploy` after the source setup commit is pushed.
+   Expected: The build runs again, the first deployment commit is published to a new remote `gh-pages` branch, and source files are not deployed directly.
+5. Configure GitHub Pages to deploy the root of `gh-pages`, then open `https://luket0207.github.io/spellix/`.
+   Expected: The public game loads with its starry background and player, token, enemy, and feature images intact.
+6. Navigate through New Game and Rules on the deployed site, refresh a hash route, and inspect the console.
+   Expected: Routes continue to work after refresh and there are no critical asset-path or runtime errors.
+
+Automated Tests Completed
+
+* A pre-implementation configuration audit confirmed `gh-pages`, `homepage`, deployment scripts, and hash routing were absent.
+* Both focused `deploymentConfig.test.js` tests pass for the exact CRA homepage, development dependency, `predeploy`/`deploy` commands, and `HashRouter` entry-point contract.
+* Scoped ESLint passes for `index.jsx` and `deploymentConfig.test.js`.
+* `npm run build` compiles successfully and reports the `/spellix/` hosting base; `build/index.html` contains `/spellix/` JavaScript, CSS, manifest, and icon paths.
+* A temporary local development server returned HTTP `200` from `/` with the React root mount present, then was stopped.
+* The GitHub API confirms `luket0207/spellix` is public with `main` as its default branch, and the pre-deployment remote check confirms no `gh-pages` branch exists yet.
+
+Automated Tests Still Needed
+
+* Push the source setup commit, run `npm run deploy`, confirm the new remote branch and deployment commit, then verify the public Pages response and deployed asset URLs.
+
+Manual Execution
+
+* Local server startup and root response were verified automatically; interactive local route actions and deployed-site browser/console checks remain pending.

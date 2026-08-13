@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { GameSetupProvider } from './features/gameSetup/GameSetupContext';
 import './index.css';
 import App from './App';
@@ -10,9 +10,9 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <GameSetupProvider>
-      <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <HashRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App />
-      </BrowserRouter>
+      </HashRouter>
     </GameSetupProvider>
   </React.StrictMode>
 );

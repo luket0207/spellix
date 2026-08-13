@@ -4,7 +4,7 @@ Feature-001: Set up first GitHub Pages deployment using gh-pages branch
 
 Status
 
-* not started
+* in progress
 
 Related Feature(s)
 
@@ -296,3 +296,13 @@ Testing Checkpoints
 * Confirm local development still works after deployment.
 * Confirm there are no critical console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Confirmed this is a Create React App project and configured the existing `build` output rather than adding Vite configuration.
+* Added `gh-pages` as a development dependency and added `predeploy` and `deploy` scripts so `npm run deploy` builds and publishes only the ignored production `build` directory.
+* Set CRA's `homepage` to `https://luket0207.github.io/spellix`, matching the public `luket0207/spellix` repository and its required `/spellix/` production asset base.
+* Replaced only the root `BrowserRouter` with `HashRouter`, preserving existing routes while making direct GitHub Pages refreshes independent of server-side fallback routing.
+* Local development continues to use `/`; the production bundle uses `/spellix/` asset URLs and hash-based application routes.
+* No game mechanics, save format, page content, visual styling, custom domain, CI/CD, or unrelated source behavior was changed.
+* Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
