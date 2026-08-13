@@ -2,7 +2,7 @@ Feature-001: Set up first GitHub Pages deployment using gh-pages branch
 
 Test Status
 
-* in progress
+* passed
 
 Manual Test Steps
 
@@ -27,11 +27,17 @@ Automated Tests Completed
 * `npm run build` compiles successfully and reports the `/spellix/` hosting base; `build/index.html` contains `/spellix/` JavaScript, CSS, manifest, and icon paths.
 * A temporary local development server returned HTTP `200` from `/` with the React root mount present, then was stopped.
 * The GitHub API confirms `luket0207/spellix` is public with `main` as its default branch, and the pre-deployment remote check confirms no `gh-pages` branch exists yet.
+* Source commit `e099039` was pushed to `origin/main`; `npm run deploy` then rebuilt successfully and reported `Published`.
+* Remote branch verification confirms the first `gh-pages` deployment commit is `c82bb7d`, and authenticated GitHub Pages status reports `built` from branch `gh-pages` at `/`.
+* The public Pages URL returns HTTP `200` with the React root mount, and its generated JavaScript and CSS bundles both return HTTP `200`.
+* Live CSS contains the existing starry-sky and token rules; representative player (`m-red`), enemy (`VR`), feature (`village-field`), and background (`fields`) image URLs all return HTTP `200`.
+* The deployed JavaScript contains the existing New Game, Load Game, and Rules actions, and requesting `#/rules` returns the same working app entry with HTTP `200`.
+* Final `git diff --check` passes.
 
 Automated Tests Still Needed
 
-* Push the source setup commit, run `npm run deploy`, confirm the new remote branch and deployment commit, then verify the public Pages response and deployed asset URLs.
+* None for deployment configuration, branch publication, Pages source/status, public app-shell availability, or representative asset paths. Interactive browser clicks and console inspection remain manual validation.
 
 Manual Execution
 
-* Local server startup and root response were verified automatically; interactive local route actions and deployed-site browser/console checks remain pending.
+* Local and deployed HTTP behavior was verified. Interactive browser route actions, visual rendering, and console inspection were not run during this automated pass.

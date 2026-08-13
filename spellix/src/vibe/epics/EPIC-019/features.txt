@@ -4,7 +4,7 @@ Feature-001: Set up first GitHub Pages deployment using gh-pages branch
 
 Status
 
-* in progress
+* done
 
 Related Feature(s)
 
@@ -305,4 +305,7 @@ Implementation Notes
 * Replaced only the root `BrowserRouter` with `HashRouter`, preserving existing routes while making direct GitHub Pages refreshes independent of server-side fallback routing.
 * Local development continues to use `/`; the production bundle uses `/spellix/` asset URLs and hash-based application routes.
 * No game mechanics, save format, page content, visual styling, custom domain, CI/CD, or unrelated source behavior was changed.
+* Committed the source setup as `e099039` (`Set up GitHub Pages deployment`) and pushed it to `origin/main` before publishing.
+* `npm run deploy` created and pushed the first `gh-pages` deployment commit, `c82bb7d`, containing the production build output only.
+* GitHub Pages is enabled from the root of `gh-pages`, reports `built`, and serves `https://luket0207.github.io/spellix/`.
 * Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
