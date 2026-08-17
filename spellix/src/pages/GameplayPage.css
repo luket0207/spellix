@@ -10,7 +10,7 @@
 }
 
 .gameplay-viewport {
-  align-items: flex-start;
+  align-items: center;
   box-sizing: border-box;
   display: flex;
   height: 100vh;
