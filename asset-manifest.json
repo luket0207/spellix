@@ -1,8 +1,17 @@
 {
   "files": {
-    "main.css": "/spellix/static/css/main.28cea8bf.css",
-    "main.js": "/spellix/static/js/main.3394b59a.js",
+    "main.css": "/spellix/static/css/main.bf4a55e2.css",
+    "main.js": "/spellix/static/js/main.679b21ea.js",
     "static/js/453.9a032747.chunk.js": "/spellix/static/js/453.9a032747.chunk.js",
+    "static/media/alex-morgan-fantasy-adventure-quest-537478.mp3": "/spellix/static/media/alex-morgan-fantasy-adventure-quest-537478.2f492d507bbc80018a5f.mp3",
+    "static/media/rubyzephyr-fantasy-rpg-exploration-v2-461303.mp3": "/spellix/static/media/rubyzephyr-fantasy-rpg-exploration-v2-461303.c2c786ac07083055640a.mp3",
+    "static/media/lexin_music-medieval-fantasy-142837.mp3": "/spellix/static/media/lexin_music-medieval-fantasy-142837.a36ba9d0fe2af5028790.mp3",
+    "static/media/jorisvermeer-fantasy-adventure-journey-574576.mp3": "/spellix/static/media/jorisvermeer-fantasy-adventure-journey-574576.0906ca983d09cece214f.mp3",
+    "static/media/geoffharvey-our-greatest-adventure-427782.mp3": "/spellix/static/media/geoffharvey-our-greatest-adventure-427782.b85b6055b8ba41777e57.mp3",
+    "static/media/jorisvermeer-mysterious-fairytale-journey-563853.mp3": "/spellix/static/media/jorisvermeer-mysterious-fairytale-journey-563853.335f25ab3ab433301acb.mp3",
+    "static/media/hitslab-magic-fantasy-fairy-tale-music-431276.mp3": "/spellix/static/media/hitslab-magic-fantasy-fairy-tale-music-431276.7b54365204ca3fb367c4.mp3",
+    "static/media/geoffharvey-the-magic-tree-150606.mp3": "/spellix/static/media/geoffharvey-the-magic-tree-150606.74e1341e82347327a290.mp3",
+    "static/media/sonican-wizard-rider-enchanted-fantasy-orchestral-369658.mp3": "/spellix/static/media/sonican-wizard-rider-enchanted-fantasy-orchestral-369658.5578ea40802217ab748a.mp3",
     "static/media/river.png": "/spellix/static/media/river.edb90eb76af7fde51625.png",
     "static/media/forest.png": "/spellix/static/media/forest.1f59de558a32f81c5894.png",
     "static/media/boss-castle.png": "/spellix/static/media/boss-castle.ef21a2587a039f9bdba9.png",
@@ -18,6 +27,7 @@
     "static/media/hills.png": "/spellix/static/media/hills.17cb4a76883891a55a6d.png",
     "static/media/fields.png": "/spellix/static/media/fields.9397c7c55402f90597c3.png",
     "static/media/mud.png": "/spellix/static/media/mud.0c5787e5ebdf4e86a0b4.png",
+    "static/media/music_for_videos-fairy-tale-fantasy-123608.mp3": "/spellix/static/media/music_for_videos-fairy-tale-fantasy-123608.1c6fc6e10fd09a515031.mp3",
     "static/media/modalBackground.png": "/spellix/static/media/modalBackground.d82d947fef127dad16ed.png",
     "static/media/sidebarBackground.png": "/spellix/static/media/sidebarBackground.849c44c7675112639f03.png",
     "static/media/home.png": "/spellix/static/media/home.de88107bb5a9b54cfd2f.png",
@@ -108,12 +118,12 @@
     "static/media/rock-6.png": "/spellix/static/media/rock-6.ae0b6aa9fee275aab33a.png",
     "static/media/rock-8.png": "/spellix/static/media/rock-8.eb0c586ff66627c4279b.png",
     "index.html": "/spellix/index.html",
-    "main.28cea8bf.css.map": "/spellix/static/css/main.28cea8bf.css.map",
-    "main.3394b59a.js.map": "/spellix/static/js/main.3394b59a.js.map",
+    "main.bf4a55e2.css.map": "/spellix/static/css/main.bf4a55e2.css.map",
+    "main.679b21ea.js.map": "/spellix/static/js/main.679b21ea.js.map",
     "453.9a032747.chunk.js.map": "/spellix/static/js/453.9a032747.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.28cea8bf.css",
-    "static/js/main.3394b59a.js"
+    "static/css/main.bf4a55e2.css",
+    "static/js/main.679b21ea.js"
   ]
 }
