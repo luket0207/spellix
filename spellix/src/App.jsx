@@ -11,6 +11,7 @@ import { getBattleEnvironmentForBoardEnvironment } from './data/environmentEvent
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
+import MusicPlayer from './features/music/MusicPlayer';
 import RulesBody from './features/rules/RulesBody';
 import { RULES_CONTENT } from './features/rules/rulesContent';
 import {
@@ -566,13 +567,15 @@ function App() {
 
   return (
     <>
+      <MusicPlayer language={settingsPlayerLanguage} />
+
       {location.pathname === '/gameplay' &&
       !gameSetup.hasRolledMovementDice &&
       !pendingNextTurnModal &&
       !gameSetup.pendingTurnRespawn ? (
         <button
           aria-label="Open settings"
-          className="app-settings-button"
+          className="floating-icon-button settings-floating-button"
           disabled={pendingNextTurnModal}
           type="button"
           onClick={handleOpenSettings}

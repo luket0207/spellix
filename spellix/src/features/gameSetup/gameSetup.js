@@ -13,9 +13,9 @@ export const DEFAULT_PLAYER_LANGUAGE = 'en';
 export const PLAYER_LANGUAGES = ['en', 'jp'];
 const SPELL_SLOT_COUNT = 6;
 const SPELL_SLOT_CAPACITY = 5;
+export const STARTING_TOKEN_COUNT = 5;
 const STARTING_TOKEN_COUNTS = {
-  red: 5,
-  blue: 2,
+  red: STARTING_TOKEN_COUNT,
 };
 
 function createInitialTokenBag(playerId) {

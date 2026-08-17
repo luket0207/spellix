@@ -1,11 +1,13 @@
-import { cloneSpellSlots, cloneTokenBag } from '../gameSetup/gameSetup';
+import {
+  cloneSpellSlots,
+  cloneTokenBag,
+  STARTING_TOKEN_COUNT,
+} from '../gameSetup/gameSetup';
 import { canAddTokenToBag } from '../debug/tokenBagAdmin';
 import { getSpellColumnCapacity } from './nonBattleSpellEffects';
 
 export const TOKEN_BAG_DROP_ZONE_ID = 'token-bag';
 export const REWARD_TOKEN_DISCARD_DROP_ZONE_ID = 'reward-discard';
-const STARTING_TOKEN_COUNT = 7;
-
 function normalizeTokens(tokens = []) {
   return [...tokens]
     .map((token) => ({

@@ -61,3 +61,7 @@ export function getNothingEventForEnvironment(environmentId) {
     NOTHING_EVENT_ENVIRONMENTS.find(({ id }) => id === environmentId) ?? null
   );
 }
+
+export function selectNothingEventHealAmount(randomFn = Math.random) {
+  return randomFn() < 0.5 ? 5 : 10;
+}

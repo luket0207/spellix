@@ -81,6 +81,24 @@ describe('PotionIcon', () => {
     );
   });
 
+  test.each([
+    ['en', 'Teleport to the nearest village'],
+    [
+      'jp',
+      '\u6700\u5bc4\u308a\u306e\u6751\u306b\u30c6\u30ec\u30dd\u30fc\u30c8\u3059\u308b',
+    ],
+  ])('shows the updated SOS description in %s', (language, description) => {
+    const sos = POTION_DEFINITIONS.find(({ id }) => id === 'sos');
+
+    render(<PotionIcon language={language} potion={sos} />);
+
+    const icon = screen.getByRole('group', { name: 'SOS potion' });
+
+    expect(icon).toHaveAccessibleDescription(description);
+    expect(icon).toHaveAttribute('title', description);
+    expect(within(icon).getByRole('tooltip')).toHaveTextContent(description);
+  });
+
   test('falls back to non-empty English text when Japanese text is missing', () => {
     render(
       <PotionIcon

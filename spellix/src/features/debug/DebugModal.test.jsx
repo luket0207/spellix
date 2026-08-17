@@ -34,6 +34,27 @@ const potionPlayers = [
 ];
 
 describe('DebugModal', () => {
+  test('renders Close after all debug content in the shared action row', () => {
+    render(
+      <DebugModal
+        currentPlayer={createCurrentPlayer()}
+        isOpen
+        message=""
+        onClose={jest.fn()}
+      />
+    );
+
+    const body = screen.getByTestId('modal-body');
+    const actions = screen.getByTestId('modal-actions');
+
+    expect(
+      within(body).queryByRole('button', { name: /^close$/i })
+    ).not.toBeInTheDocument();
+    expect(
+      within(actions).getByRole('button', { name: /^close$/i })
+    ).toBeInTheDocument();
+  });
+
   test('shows all three fixed Elite and Boss enemy assignments', () => {
     render(
       <DebugModal

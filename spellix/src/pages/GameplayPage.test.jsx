@@ -307,7 +307,12 @@ test('guarantees Loot Chest on a Metal Detector non-feature landing before event
   fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
 
   expect(screen.getByText('Test active potion: metal-detector')).toBeInTheDocument();
-  expect(screen.getByText('0/3')).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('region', { name: 'Active Potion' })).getByText(
+      'Metal Detector'
+    )
+  ).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
   finishDiceSequence();
@@ -355,7 +360,12 @@ test('activates Smokescreen and excludes random battles from a normal landing', 
   fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
 
   expect(screen.getByText('Test active potion: smokescreen')).toBeInTheDocument();
-  expect(screen.getByText('0/3')).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('region', { name: 'Active Potion' })).getByText(
+      'Smokescreen'
+    )
+  ).toBeInTheDocument();
   expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
@@ -1250,7 +1260,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(document.querySelector('.spells-button-wrapper ul, .spells-button-wrapper li')).toBeNull();
   });
 
-  test.each([0, 1, 6])(
+  test.each([0, 1, 4])(
     'keeps forced setup Save disabled with %i starting tokens placed',
     (placedTokenCount) => {
       render(
@@ -1266,15 +1276,15 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       expect(within(spellsDialog).getByRole('button', { name: /^save$/i })).toBeDisabled();
       expect(
         within(spellsDialog).getByText(
-          'You must place all 7 starting tokens into spell slots before rolling dice.'
+          'You must place all 5 starting tokens into spell slots before rolling dice. Place your tokens by dragging them from your token bag into the spell slots.'
         )
       ).toBeInTheDocument();
     }
   );
 
-  test('enables forced setup Save only when all seven starting tokens are placed', () => {
+  test('enables forced setup Save only when all five starting tokens are placed', () => {
     render(
-      <GameSetupProvider initialGameSetup={createForcedGameplaySetup(7)}>
+      <GameSetupProvider initialGameSetup={createForcedGameplaySetup(5)}>
         <GameplayPage />
       </GameSetupProvider>
     );
@@ -2241,7 +2251,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(within(screen.getByRole('region', {
       name: 'Active Potion',
     })).getByText('Spellbound')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+    expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'OK' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
@@ -2255,6 +2265,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
         'player-2 target effect: pending=none; active=none'
       )
     ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Potions' })).toBeInTheDocument();
   });
 
   test('halves a Heavy Weight target board roll, movement, and result text', () => {
@@ -3001,7 +3012,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     const activePotion = screen.getByRole('region', { name: 'Active Potion' });
 
-    expect(within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
     expect(within(activePotion).getByText('Roll Choice')).toBeInTheDocument();
     expect(within(activePotion).getByLabelText('Chosen roll 4')).toHaveClass(
       'language-en'
@@ -3028,9 +3039,12 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(
       screen.queryByRole('region', { name: 'Active Potion' })
     ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Potions' })).getByText('0/3')
+    ).toBeInTheDocument();
   });
 
-  test('shows one localized Active Potion beneath Potions only when state exists', () => {
+  test('shows one localized Active Potion instead of Potions when state exists', () => {
     const initialGameSetup = createCommittedGameplaySetup();
 
     initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
@@ -3043,15 +3057,12 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    const potionSection = screen.getByRole('region', { name: 'Potions' });
     const activeSection = screen.getByRole('region', { name: 'Active Potion' });
 
-    expect(
-      potionSection.compareDocumentPosition(activeSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
     expect(within(activeSection).getByText('Roll Choice')).toBeInTheDocument();
-    expect(activeSection.querySelector('ul, li')).toBeNull();
+    expect(within(activeSection).queryByRole('list')).not.toBeInTheDocument();
+    expect(within(activeSection).queryByRole('listitem')).not.toBeInTheDocument();
 
     unmount();
 
@@ -3072,11 +3083,15 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
         name: '\u767a\u52d5\u4e2d\u306e\u30dd\u30fc\u30b7\u30e7\u30f3',
       })
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: '\u30dd\u30fc\u30b7\u30e7\u30f3' })
+    ).not.toBeInTheDocument();
   });
 
   test('hides Active Potion when the current player has no active potion', () => {
     renderGameplayPage();
 
+    expect(screen.getByRole('region', { name: 'Potions' })).toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Active Potion' })
     ).not.toBeInTheDocument();
@@ -3583,7 +3598,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(mockGetHighlightedNodeIds).not.toHaveBeenCalled();
   });
 
-  test('allows a storm-blocked player to use a Board potion and resolves Devine Chance before blocking movement', () => {
+  test('hides Board potions while Devine Chance resolves before storm-blocked movement', () => {
     const initialGameSetup = createCommittedGameplaySetup();
     const devineChance = POTION_DEFINITIONS.find(
       ({ id }) => id === 'devine-chance'
@@ -3615,15 +3630,14 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       </GameSetupProvider>
     );
 
-    const useButton = screen.getByRole('button', { name: 'Use' });
+    expect(screen.queryByRole('region', { name: 'Potions' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Active Potion' })).getByText(
+        'Devine Chance'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use' })).not.toBeInTheDocument();
 
-    expect(useButton).toBeEnabled();
-    fireEvent.click(useButton);
-    fireEvent.click(
-      within(
-        screen.getByRole('dialog', { name: /use potion confirmation/i })
-      ).getByRole('button', { name: 'Yes' })
-    );
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice' }));
     finishDiceSequence();
 

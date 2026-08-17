@@ -4,7 +4,7 @@ Epic-021: Music system and Nothing event healing
 
 Status
 
-* not started
+* in progress
 
 Epic Goal
 
@@ -24,54 +24,65 @@ Global Implementation Notes
 
 ---
 
-Feature-001: Add persistent random background music
+---
+
+Feature-001: Add persistent random background music with global floating toggle button
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
 * EPIC-018 Feature-012: Only show settings button on gameplay page
-* EPIC-019 Feature-014: Add rules modal inside settings menu
-* App shell / routing / settings menu
+* EPIC-020 Feature-001: Make gameplay layout scale to fit screen height
+* EPIC-020 Feature-014: Add rules modal inside settings menu
+* App shell / routing / global UI controls
 
 Goal
 
 * Add background music to the game.
 * The user has added 10 songs into:
 
-```txt id="ayzr7c"
+```txt id="w9zw6u"
 src/music/
 ```
 
 * Music should automatically start if possible.
-* Music should continue playing regardless of which page the player is on.
-* Add a Music section to the settings menu.
-* The Music section should include a pause/play button.
-* Songs should play in random order.
-* Every song should play once before any song is repeated.
+* Music should continue regardless of what page the player is on.
+* Add a floating music toggle button in the top-left corner of the screen.
+* The music toggle button should always be visible on every page.
+* The music toggle button should use Font Awesome icons to show whether music is on or off.
+* Songs should play in a random order.
+* Every song should play once before any song repeats.
+* While adding the music toggle button, update the settings button to use the same visual styling.
+
+Important Change From Previous Version
+
+* Do not add the music controls inside the settings menu.
+* The music control should now be a global floating button.
+* The button should always be present, even on pages where the settings button is hidden.
 
 Browser Autoplay Note
 
 * Modern browsers often block audio autoplay until the player interacts with the page.
-* The game should still try to start music automatically.
+* The game should still attempt to start music automatically.
 * If autoplay is blocked:
 
   * do not crash.
-  * do not show console errors as app errors.
+  * do not show an app-level error.
   * wait for the first user interaction.
-  * then start music automatically unless the player has manually paused it.
+  * then start music automatically unless the player has toggled music off.
 
-Required Behaviour
+Required Music Behaviour
 
 * Music should start automatically when the game opens if the browser allows it.
-* If autoplay is blocked, music should start after the first player interaction.
+* If autoplay is blocked, music should start after the first user interaction.
 * Music should continue across page changes.
 * Music should not restart from the beginning every time the route changes.
 * Music should not create multiple overlapping audio instances.
-* The player should be able to pause and resume music from settings.
-* If the player pauses music manually, it should stay paused until they press play again.
+* The player should be able to toggle music on and off from the floating music button.
+* If the player turns music off manually, music should stay off until they turn it on again.
 * If the current song ends, the next song should start automatically.
 
 Persistent Music Requirement
@@ -80,9 +91,13 @@ Persistent Music Requirement
 
 * It should not be mounted inside individual pages such as:
 
+  * start page.
+  * game setup.
+  * story page.
   * gameplay.
   * battle.
   * rules.
+  * settings rules modal.
   * village.
   * cave.
   * river.
@@ -92,19 +107,23 @@ Persistent Music Requirement
 
 * Route changes should not unmount the music system.
 
+* Route changes should not reset music state.
+
 Suggested Architecture
 
-```txt id="u8tlkv"
+```txt id="tky38n"
 App
 MusicProvider
+GlobalFloatingControls
 Router
 Pages
 ```
 
 Suggested React structure:
 
-```jsx id="rcgy8k"
+```jsx id="za7j6t"
 <MusicProvider>
+  <GlobalFloatingControls />
   <Router>
     <AppRoutes />
   </Router>
@@ -112,31 +131,33 @@ Suggested React structure:
 ```
 
 * Exact structure can vary.
-* The important rule is that music state and the audio element survive route changes.
+* The important rule is that both the music state and audio element survive route changes.
 
 Music Files Requirement
 
 * Load all 10 songs from `src/music/`.
-* Store them in a single music track list.
+* Store them in one music track list.
 * The track list should be the source of truth for available songs.
 * If the project uses Vite, `import.meta.glob` can be used.
 * If explicit imports are easier, use explicit imports.
 
 Suggested explicit import direction:
 
-```js id="k7kdj0"
+```js id="wsc6fj"
 import song1 from "../music/song1.mp3";
 import song2 from "../music/song2.mp3";
+import song3 from "../music/song3.mp3";
 
 export const musicTracks = [
   song1,
-  song2
+  song2,
+  song3
 ];
 ```
 
 Suggested Vite glob direction:
 
-```js id="xk0hwq"
+```js id="l7tbf7"
 const musicModules = import.meta.glob("../music/*", {
   eager: true,
   query: "?url",
@@ -148,7 +169,8 @@ export const musicTracks = Object.values(musicModules);
 
 * Use the approach that fits the project setup.
 * Do not hard-code only one song.
-* Do not rely on the browser randomly selecting files from a folder without importing them.
+* Do not rely on the browser automatically discovering files from the folder without importing them.
+* If track order from glob is inconsistent, that is acceptable because the game shuffles tracks anyway.
 
 Random Order Requirement
 
@@ -159,7 +181,7 @@ Random Order Requirement
 
 Correct Shuffle Behaviour
 
-```txt id="hk7sy5"
+```txt id="fy8elh"
 1. Start with all 10 songs.
 2. Shuffle them.
 3. Play each song once.
@@ -170,11 +192,11 @@ Correct Shuffle Behaviour
 * A song should not appear twice within the same 10-song cycle.
 * The next cycle does not need to use the same order as the previous cycle.
 * If possible, avoid making the first song of the new cycle the same as the final song of the previous cycle.
-* If avoiding that is awkward, it is acceptable as long as each full cycle still contains all songs once.
+* If avoiding that is awkward, it is acceptable as long as each full cycle still contains all 10 songs once.
 
 Example Valid Cycle
 
-```txt id="ygwx0g"
+```txt id="fayl1z"
 Song 2
 Song 4
 Song 7
@@ -189,7 +211,7 @@ Song 5
 
 Example Next Valid Cycle
 
-```txt id="ztyijv"
+```txt id="bgddqt"
 Song 4
 Song 10
 Song 3
@@ -204,15 +226,15 @@ Song 9
 
 Important
 
-* The illustrative example in the request should be interpreted as “random order”.
+* The examples are illustrative of random order.
 * The implementation rule is stricter:
 
   * all 10 songs should play once before repeats.
-  * no duplicates inside one cycle.
+  * no duplicate songs inside a single 10-song cycle.
 
 Suggested Shuffle Helper
 
-```js id="m4cotv"
+```js id="x7wg73"
 function shuffleTracks(tracks) {
   const shuffled = [...tracks];
 
@@ -230,30 +252,32 @@ function shuffleTracks(tracks) {
 
 Suggested Music State
 
-```js id="xiyqwc"
+```js id="cb9s7b"
 const musicState = {
   tracks,
   queue,
   currentTrack,
+  isMusicEnabled,
   isPlaying,
-  userPaused,
   autoplayBlocked,
-  hasInitialPlayAttemptHappened
+  hasInitialPlayAttemptHappened,
+  hasUserInteracted
 };
 ```
 
 Playback Flow
 
-```txt id="c2x4hz"
+```txt id="mdbaop"
 1. App loads.
 2. MusicProvider creates a shuffled queue from all songs.
 3. MusicProvider selects the first track.
 4. MusicProvider attempts to play.
 5. If play succeeds, music continues.
 6. If play is blocked, wait for first user interaction.
-7. When a song ends, select the next song in the queue.
-8. When the queue is empty, create a new shuffled queue.
-9. Continue until player pauses music.
+7. If music is enabled, try again after the first user interaction.
+8. When a song ends, select the next song in the queue.
+9. When the queue is empty, create a new shuffled queue.
+10. Continue until the player turns music off.
 ```
 
 Autoplay Block Handling
@@ -266,12 +290,12 @@ Autoplay Block Handling
 * On first interaction:
 
   * try to play again.
-  * only do this if `userPaused` is false.
+  * only do this if music is still enabled.
 * Remove first-interaction listeners after successful playback or once no longer needed.
 
-Suggested Direction
+Suggested direction:
 
-```js id="k15tig"
+```js id="cixncn"
 audio.play().catch(() => {
   setAutoplayBlocked(true);
 });
@@ -280,98 +304,243 @@ audio.play().catch(() => {
 * Do not repeatedly spam play attempts every render.
 * Do not create an infinite loop of failed autoplay attempts.
 
-Settings Menu Requirement
+Floating Music Button Requirement
 
-* Add a new Music section in the settings menu.
+* Add a floating button in the top-left corner of the screen.
+* This button should always be present.
+* It should appear on every page, including:
 
-Section title:
+  * start page.
+  * game setup.
+  * story page.
+  * rules page.
+  * gameplay.
+  * battle.
+  * village.
+  * cave.
+  * river.
+  * decision.
+  * loot chest.
+  * settings modal.
+  * winner page.
 
-English:
+Position Requirement
 
-```txt id="nhczul"
-Music
+* The button should be fixed to the viewport.
+* It should be:
+
+```txt id="pi9imk"
+top: 10px
+left: 10px
 ```
 
-Japanese:
+* It should remain in the same place regardless of route/page.
+* It should not move when the gameplay page scales.
+* It should sit above normal page content.
 
-```txt id="m1ftyp"
-音楽
+Suggested CSS:
+
+```css id="jgxuh9"
+.music-toggle-button {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+}
 ```
 
-* Add one pause/play button.
+Icon Requirement
 
-When music is playing:
+* Use Font Awesome icons.
+* When music is enabled/playing, show:
 
-English:
-
-```txt id="b9re8m"
-Pause Music
+```txt id="d3vowd"
+faVolume
 ```
 
-Japanese:
+* When music is disabled/paused, show:
 
-```txt id="fxbge3"
-音楽を一時停止
+```txt id="n3blm5"
+faVolumeXmark
 ```
 
-When music is paused:
+* The icon should visually communicate the current toggle state.
+* Icon size should be:
 
-English:
-
-```txt id="sxl2sj"
-Play Music
+```txt id="l5j1hi"
+30px x 30px
 ```
 
-Japanese:
+Visual Styling Requirement
 
-```txt id="au66ne"
-音楽を再生
+* Music toggle button should have:
+
+  * brown background.
+  * yellow icon.
+  * basic hover effect.
+  * no text label required.
+  * consistent styling with current game UI.
+* The button should look like a small floating game control.
+
+Suggested CSS:
+
+```css id="paf0jh"
+.floating-icon-button {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  background: var(--modal-brown);
+  color: var(--modal-yellow);
+  border: 2px solid var(--modal-yellow);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.floating-icon-button svg {
+  width: 30px;
+  height: 30px;
+}
+
+.floating-icon-button:hover {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+}
 ```
 
-* The button should use the normal settings/modal button style.
-* The section should match the existing settings menu styling.
-* No new settings route is needed.
+* Use the project’s actual brown/yellow variables if they exist.
+* Do not introduce a colour that clashes with existing modal/button styling.
 
-Settings Visibility Requirement
+Music Button Accessibility Requirement
 
-* Previous features restrict the settings button to gameplay.
-* Do not undo that rule.
-* The Music section appears inside settings wherever settings is available.
-* Music itself should continue playing even when settings is not visible.
+* Add an accessible label.
+* The label should change depending on state.
 
-Pause Behaviour
+English examples:
 
-* Clicking Pause Music should:
+```txt id="i6vzhn"
+Turn music off
+Turn music on
+```
 
-  * pause the current song.
-  * keep the current playback position.
-  * set `userPaused` to true.
-* Music should not automatically resume while `userPaused` is true.
-* Changing pages should not restart paused music.
+Japanese examples:
 
-Play Behaviour
+```txt id="h3dhwj"
+音楽をオフにする
+音楽をオンにする
+```
 
-* Clicking Play Music should:
+* Use `aria-label`.
+* The visible UI can remain icon-only.
 
-  * set `userPaused` to false.
-  * resume the current song from its paused position if possible.
-  * if no current song exists, start the current queue’s next song.
-* If the song had ended, start the next track.
+Toggle Behaviour
+
+* Clicking the button when music is on:
+
+  * pauses the current track.
+  * keeps the current playback position.
+  * sets music enabled state to false.
+  * changes icon to `faVolumeXmark`.
+
+* Clicking the button when music is off:
+
+  * sets music enabled state to true.
+  * resumes the current track from its paused position if possible.
+  * if no current track exists, starts the next track in the queue.
+  * changes icon to `faVolume`.
 
 Song End Behaviour
 
 * When the current song ends:
 
   * move to the next track in the shuffled queue.
-  * play it automatically if `userPaused` is false.
+  * play it automatically if music is enabled.
 * If the queue is empty:
 
   * generate a new shuffled queue.
   * start the first track in the new queue.
 
+Settings Button Styling Requirement
+
+* While adding the music toggle button, update the existing settings button to use the exact same visual styling.
+* The settings button should remain on the right-hand side of the screen when it is visible.
+* It should use:
+
+  * brown background.
+  * yellow icon.
+  * icon size `30px x 30px`.
+  * same button size as music button.
+  * same border radius.
+  * same hover effect.
+  * same fixed positioning style.
+
+Settings Button Position Requirement
+
+* Settings button should remain on the right-hand side of the screen.
+* When visible, it should be:
+
+```txt id="vdpu0d"
+top: 10px
+right: 10px
+```
+
+Suggested CSS:
+
+```css id="iijsw6"
+.settings-floating-button {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+}
+```
+
+* The settings button should keep its existing visibility rules.
+* If settings is only visible on gameplay, keep it only visible on gameplay.
+* Do not make the settings button visible on every page unless another feature explicitly says to.
+
+Shared Button Class Requirement
+
+* Music button and settings button should share a base class.
+
+Suggested structure:
+
+```jsx id="ill98v"
+<button className="floating-icon-button music-toggle-button">
+  <FontAwesomeIcon icon={isMusicEnabled ? faVolume : faVolumeXmark} />
+</button>
+
+{showSettingsButton && (
+  <button className="floating-icon-button settings-floating-button">
+    <FontAwesomeIcon icon={faGear} />
+  </button>
+)}
+```
+
+* Use the actual settings icon currently used by the project.
+* Do not change settings button behaviour.
+* Only update its styling and right-side positioning.
+
+Z-Index Requirement
+
+* The floating music button should remain visible above page content.
+* It should not be hidden behind:
+
+  * starry background.
+  * gameplay board.
+  * battle page.
+  * village page.
+  * modal backgrounds.
+* If a blocking modal is open, the music button may remain clickable unless it causes modal interaction problems.
+* If the project intentionally blocks all background controls behind modal overlays, document the decision. Default preference is that the music toggle remains available.
+
 Volume Requirement
 
-* No volume control is required in this feature.
+* No volume slider is required in this feature.
 * Use a sensible default volume.
 * If the project already has a default audio volume constant, use it.
 
@@ -384,47 +553,73 @@ Error Handling
   * log a developer warning.
 * If no tracks can be loaded:
 
-  * music controls can be hidden or disabled.
+  * keep the button visible but disabled, or hide it safely.
   * do not crash the app.
 
 Out Of Scope
 
+* No settings menu music section.
 * No volume slider.
 * No track title display.
 * No skip button.
-* No mute icon in top-level UI.
-* No music selection menu.
+* No playlist menu.
+* No mute icon in settings.
 * No separate battle music.
 * No sound effects.
+* No music selection menu.
 * No saving music preference between browser sessions unless simple localStorage is already used and safe.
-* No requirement to show music controls outside settings.
+* No change to settings button visibility rules.
+* No gameplay mechanic changes.
 
 Testing Checkpoints
 
 * Confirm all 10 songs are loaded from `src/music/`.
 * Open the game and confirm music attempts to start.
 * If browser autoplay blocks music, click anywhere and confirm music starts.
-* Navigate between pages and confirm music continues.
-* Confirm music does not restart on route change.
-* Confirm multiple songs do not overlap.
-* Open settings and confirm Music section appears.
-* Click Pause Music.
+* Confirm the floating music button appears on the start page.
+* Confirm the floating music button appears on game setup.
+* Confirm the floating music button appears on gameplay.
+* Confirm the floating music button appears on battle pages.
+* Confirm the floating music button appears on village pages.
+* Confirm the floating music button appears on rules page.
+* Confirm the button is top-left, 10px from top and left.
+* Confirm the icon is yellow on a brown background.
+* Confirm the icon is 30px x 30px.
+* Confirm the hover effect works.
+* Confirm `faVolume` appears when music is on.
+* Confirm `faVolumeXmark` appears when music is off.
+* Click the button while music is playing.
 * Confirm music pauses.
-* Navigate pages while paused.
+* Confirm icon changes to `faVolumeXmark`.
+* Navigate pages while music is paused.
 * Confirm music stays paused.
-* Click Play Music.
+* Click the button again.
 * Confirm music resumes.
+* Confirm icon changes to `faVolume`.
+* Navigate between pages while music is playing.
+* Confirm music continues and does not restart.
+* Confirm multiple songs do not overlap.
 * Let a song finish.
 * Confirm the next song starts automatically.
 * Confirm songs play in shuffled order.
 * Confirm no song repeats within one full 10-song cycle.
 * Confirm a new shuffled cycle starts after all songs have played.
-* Confirm settings UI displays correct English text.
-* Confirm settings UI displays correct Japanese text.
+* Confirm settings button uses the same visual styling.
+* Confirm settings button remains top-right when visible.
+* Confirm settings button visibility rules are unchanged.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
 
----
+Implementation Notes
+
+* Added one app-shell music player and audio element before the route tree so playback state and the current track survive route changes without overlapping players.
+* Explicitly imported all 10 MP3 files into one track list and used a Fisher-Yates shuffled queue that exhausts each cycle before rebuilding, while avoiding an immediate cycle-boundary repeat when possible.
+* Attempted playback on load, retried blocked autoplay after click, touch, or keyboard interaction, and preserved the current track position when toggled off and back on.
+* Added the always-visible bilingual top-left volume toggle with the requested Font Awesome icons, dimensions, colours, hover behavior, and inaccessible-track disabled state.
+* Reused the same floating-button base style for the existing settings button at the requested top-right position without changing its gameplay-only visibility or behavior.
+* Used a default volume of `0.35`; browser-session persistence remains in app state and no localStorage, settings music section, volume slider, skip control, or other out-of-scope music UI was added.
+* Failed tracks log a developer warning and are removed from the available queue; exhausting all tracks disables the music control without crashing the app.
+
 
 ---
 
@@ -432,7 +627,7 @@ Feature-002: Nothing events heal the player by 5 or 10 HP using village heal pre
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -635,7 +830,16 @@ Testing Checkpoints
 * Confirm health bar text is black and uses Unkempt.
 * Confirm English and Japanese text display correctly.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added an isolated equal-chance Nothing-event heal selector that returns only `5` or `10` and can receive a deterministic random function in tests.
+* Kept both debug-triggered and normal board-landing Nothing events on the existing shared `/nothing-event` route, preserving every environment background and bilingual flavour string.
+* Reused the existing player piece-image resolver and shared `HealthBar`, including its black Unkempt text and width transition, with the same 1-second delay used by village Rest healing.
+* Applied the selected heal to the encounter player's real context state and clamped it against that player's actual `maxHealth`, including token-increased maximum health and already-full players.
+* Disabled Continue until the delayed health update resolves, then preserved the existing gameplay return, next-player advancement, and pending next-turn modal flow.
+* Made no changes to Nothing-event probability, village Rest, potions, event text, routes, or other gameplay mechanics.
 
 ---
 
@@ -643,7 +847,7 @@ Feature-003: Update SOS potion data descriptions
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -752,7 +956,15 @@ Testing Checkpoints
 * Confirm SOS still uses Light Blue colour.
 * Confirm SOS still teleports to the nearest village when used.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Confirmed the English SOS source description already used the required `Teleport to the nearest village` wording.
+* Updated the Japanese SOS source description to the exact required `最寄りの村にテレポートする` text by removing only the obsolete trailing full stop.
+* Kept the SOS id, English and Japanese names, Board availability, Common rarity, light-blue colour, and implemented nearest-village behavior unchanged.
+* Reused the existing central potion definition and description helpers, so tooltips, rewards, replacement displays, active displays, and other shared potion consumers receive the updated text without UI changes.
+* Made no changes to teleport selection, tie randomization, potion consumption, village visits, confirmation flow, or potion layout.
 
 ---
 
@@ -760,7 +972,7 @@ Feature-004: Fix overflowing modal action button positioning
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -927,7 +1139,16 @@ Testing Checkpoints
 * Confirm vertically overflowing modals remain usable.
 * Confirm non-overflowing modals still look correct.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Kept the existing shared default modal structure with the body followed by the action row inside the vertically scrollable, height-limited panel.
+* Changed the shared modal body from a shrinkable flex child to a content-height flex child so overflowing controls cannot paint through the body box and underneath the action row.
+* Made the shared action row a non-shrinking flex child, preserving its existing bottom-centred layout, wrapping, spacing, button styles, and `margin-top: auto` placement for short modals.
+* Added shared modal regression coverage for panel scrolling, body/action ordering, non-shrinking content, and the absence of absolute, fixed, or sticky action positioning.
+* Added a debug-specific regression confirming Close is rendered only in the shared action row after the debug body content.
+* Made no modal copy, background, route, horizontal-overflow, sticky-footer, button-style, or gameplay behavior changes.
 
 ---
 
@@ -935,7 +1156,7 @@ Feature-005: Hide normal potions section when Active Potion section is visible
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -1067,7 +1288,16 @@ Testing Checkpoints
 * Confirm their potion UI depends on their own active potion state.
 * Confirm no empty vertical gap remains.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing `PotionList`, `ActivePotionSection`, and current-player `activePotion` state without changing any component, potion data, or effect logic.
+* Changed the gameplay potion area to render exactly one section: Active Potion when the current player has an active potion, otherwise the normal Potions inventory.
+* Normal potion slots, tooltips, capacity, and Use controls are therefore absent while an active potion is shown and return automatically when that state clears or the turn changes to a player without an active potion.
+* Kept the conditional directly in the existing potion area so hiding the inventory leaves no placeholder element or extra vertical gap.
+* Added gameplay regressions for the no-active baseline, Roll Choice activation and resolution, Metal Detector, Smokescreen, targeted Spellbound turn state, Devine Chance, localization, and player-specific state transitions.
+* Made no changes to potion effects, usage limits, battle potions, active-potion styling, routes, or gameplay layout outside the requested visibility rule.
 
 ---
 
@@ -1075,7 +1305,7 @@ Feature-006: Show token bag capacity and use Unkempt for Japanese spell column n
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -1298,4 +1528,292 @@ Testing Checkpoints
 * Open Redo potion spell modification.
 * Confirm token bag capacity appears and updates.
 * Confirm there are no console errors.
-* Update `implementation.txt` and `testing.txt` before marking this feature done.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing shared `SpellTokenAssignment` used by normal spells, first setup, Wandsmith, Redo, Decision rewards, and battle rewards; no new component or route was added.
+* Added the displayed token-bag count beside the localized title and reused the existing `TOKEN_BAG_MAX_CAPACITY` constant instead of duplicating the current maximum of 5.
+* Counted the currently displayed bag contents so staged reward additions and replacements keep the heading synchronized with the visible tokens.
+* Kept the localized token-bag label under the existing English or Japanese font while applying `Unkempt` only to bag capacity, spell-column capacity, and numeric/merged column labels.
+* Made no changes to bag or column capacity rules, Grey or White mechanics, drag-and-drop, Wandsmith behavior, modal layout, or other styling.
+
+
+---
+
+Feature-007: Update browser tab title and favicon
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Start page / app shell
+* Browser metadata
+* Public HTML / Vite entry files
+
+Goal
+
+* Improve how the game appears in the browser tab.
+* Change the browser tab/site name to:
+
+```txt id="vshx7p"
+Spellix
+```
+
+* Update the favicon to use:
+
+```txt id="b8jttx"
+src/images/favicon.png
+```
+
+Required Behaviour
+
+* The browser tab title should show:
+
+```txt id="hz2n78"
+Spellix
+```
+
+* The favicon shown in the browser tab should use the new image:
+
+```txt id="lj47ru"
+src/images/favicon.png
+```
+
+* This should work in:
+
+  * local development.
+  * production build.
+  * browser tab display.
+  * bookmarks/favourites where supported by the browser.
+
+Title Requirement
+
+* Update the app’s HTML metadata so the page title is `Spellix`.
+* If the project uses Vite, this will usually be in:
+
+```txt id="m60h1m"
+index.html
+```
+
+Suggested direction:
+
+```html id="g42ppo"
+<title>Spellix</title>
+```
+
+* If the app also changes `document.title` from React, update that logic as well.
+* Do not leave older placeholder titles in the app.
+
+Favicon Requirement
+
+* Use the favicon image located at:
+
+```txt id="hb6d7m"
+src/images/favicon.png
+```
+
+* If importing from `src` is not supported directly inside `index.html`, copy or reference the favicon using the project’s existing asset handling pattern.
+* Do not use the old default Vite/React favicon.
+* Do not leave multiple conflicting favicon links if one causes the old icon to remain visible.
+
+Suggested Vite Direction
+
+If the project can reference the source image safely:
+
+```html id="xp18ru"
+<link rel="icon" type="image/png" href="/src/images/favicon.png" />
+```
+
+Alternative safer direction:
+
+```txt id="eyjzsl"
+Move or copy favicon.png to public/favicon.png
+```
+
+Then use:
+
+```html id="hr6szq"
+<link rel="icon" type="image/png" href="/favicon.png" />
+```
+
+* Use the approach that works best with the current project setup.
+* The final app should still conceptually use the favicon from `src/images/favicon.png`; if copied to `public`, document that implementation detail in `features.txt` or `testing.txt`.
+
+Browser Cache Note
+
+* Browsers often cache favicons aggressively.
+* If the favicon does not appear to change immediately, test in:
+
+  * hard refresh.
+  * incognito/private window.
+  * cleared browser cache.
+  * production build preview.
+
+Out Of Scope
+
+* No logo redesign.
+* No homepage visual changes.
+* No generated favicon variants required.
+* No Apple touch icon required.
+* No manifest/theme-colour changes unless already present and easy to update safely.
+* No change to game name inside story/rules text unless it already depends on the site title.
+
+Testing Checkpoints
+
+* Start local development.
+* Confirm browser tab title says `Spellix`.
+* Confirm browser tab favicon uses the new image.
+* Confirm old React/Vite favicon no longer appears.
+* Run production build.
+* Preview production build.
+* Confirm title still says `Spellix`.
+* Confirm favicon still appears correctly.
+* Test with hard refresh or incognito if favicon cache causes confusion.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the user-provided `src/images/favicon.png` as the source asset and copied it unchanged to `public/favicon.png`, which is the Create React App-compatible location for static HTML metadata.
+* Updated the single favicon link to the existing `%PUBLIC_URL%` deployment pattern so local development and the `/spellix/` production base path both resolve the PNG correctly.
+* Changed the HTML title and the existing manifest name fields to `Spellix`, and replaced the manifest's old `.ico` entry with the verified 1254x1254 PNG metadata.
+* Added deployment regression coverage for the exact title, one PNG favicon link, source/public byte parity, manifest identity, and removal of old `React App` and `.ico` metadata references.
+* Made no changes to React pages, app routes, homepage content, logo assets, Apple touch icon, theme colours, or other manifest behavior.
+
+---
+
+Feature-008: Remove starting Guard tokens
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-021 Feature-006: Show token bag capacity and use Unkempt for Japanese spell column numbers
+
+Goal
+
+* Update the player starting tokens.
+* Players should no longer start with any Guard tokens.
+* The only starting tokens should now be 5 Red Damage tokens.
+
+Previous Starting Tokens
+
+```txt id="cu5qqw"
+5 Red Damage tokens
+2 Blue Guard tokens
+```
+
+New Starting Tokens
+
+```txt id="krfivn"
+5 Red Damage tokens
+```
+
+Required Behaviour
+
+* Every player should start the game with exactly 5 Red Damage tokens.
+* Players should not start with any Blue Guard tokens.
+* This applies to every player colour and every player count.
+* The starting token setup should be the same for:
+
+  * 2-player games.
+  * 3-player games.
+  * 4-player games.
+  * 5-player games.
+  * 6-player games.
+
+Starting Token Location Requirement
+
+* The 5 Red Damage tokens should appear wherever starting tokens currently appear at game start.
+* If starting tokens are placed in the token bag first, the token bag should contain:
+
+```txt id="vzkecj"
+5/5 tokens
+```
+
+* If starting tokens are immediately assigned during first spell assignment, only Red Damage tokens should be available.
+* No Blue Guard token should be available during initial spell setup.
+
+Token Bag Capacity Interaction
+
+* If the token bag capacity is still 5 by default, the starting token bag should now begin full with 5 Red Damage tokens.
+* EPIC-021 Feature-006 should display this correctly as:
+
+English:
+
+```txt id="sqgoia"
+Token Bag 5/5
+```
+
+Japanese:
+
+```txt id="vqct8x"
+トークンバッグ 5/5
+```
+
+* Do not increase token bag capacity to preserve the old 7-token start.
+* The removal of the 2 Guard tokens is intentional.
+
+Starting Token Protection Requirement
+
+* Any existing logic that treats starting tokens as protected should continue to work.
+* The 5 Red Damage tokens should still be treated as starting tokens if the game currently tracks that distinction.
+* Since Blue Guard tokens are no longer starting tokens, they should not be protected as starting tokens.
+
+Battle Loss Requirement
+
+* If battle loss or death token-removal logic protects starting tokens:
+
+  * protect the 5 Red Damage starting tokens.
+  * do not assume there are 7 starting tokens.
+  * do not expect 2 starting Guard tokens to exist.
+
+Save / Load Requirement
+
+* New games should use the new starting token setup.
+* Existing save files may still contain Blue Guard tokens if they were created before this feature.
+* Do not forcibly remove Guard tokens from loaded save files unless a save migration explicitly requires it.
+* This feature changes new-game initialisation only.
+
+Out Of Scope
+
+* No change to Red Damage token behaviour.
+* No change to Blue Guard token behaviour once earned normally.
+* No change to Guard token rarity.
+* No change to battle reward pools.
+* No change to token bag capacity.
+* No change to spell slot capacity.
+* No change to first spell assignment rules.
+* No change to existing save files unless needed for compatibility.
+
+Testing Checkpoints
+
+* Start a new 2-player game.
+* Confirm each player starts with exactly 5 Red Damage tokens.
+* Confirm no player starts with Blue Guard tokens.
+* Start games with 3, 4, 5, and 6 players.
+* Confirm every player starts with only 5 Red Damage tokens.
+* Open first spell assignment.
+* Confirm only Red Damage tokens are available.
+* Confirm token bag capacity displays correctly after EPIC-021 Feature-006.
+* Confirm battle loss/death token protection still works with only 5 starting tokens.
+* Confirm Blue Guard tokens can still be earned later through normal rewards if available.
+* Load an older save file if possible.
+* Confirm existing save data is not unexpectedly altered.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* New players are initialised with exactly 5 protected Red Damage tokens from the existing `starting` source.
+* The shared starting-token count is now `5`, so first spell assignment completion and new-game setup use the same source of truth.
+* Existing player token bags are cloned without migration, preserving Blue Guard tokens already present in older saves.
+* The English and Japanese first-assignment warnings now require all 5 starting tokens.
+* Earned Guard behaviour, reward pools, token bag capacity, and spell capacity are unchanged.

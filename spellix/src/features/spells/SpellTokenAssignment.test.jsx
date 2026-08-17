@@ -114,7 +114,9 @@ describe('SpellTokenAssignment', () => {
       />
     );
 
-    expect(within(screen.getByLabelText('Assignment column 1')).getByText('1 / 7')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Assignment column 1')).getByText('1 / 7')).toHaveClass(
+      'spell-column-capacity'
+    );
     expect(within(screen.getByLabelText('Assignment column 2')).getByText('2 / 5')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Assignment column 3')).getByText('0 / 7')).toBeInTheDocument();
   });
@@ -150,10 +152,11 @@ describe('SpellTokenAssignment', () => {
     );
 
     const mergedColumn = screen.getByLabelText('Assignment column 1+2');
+    const mergedHeading = within(mergedColumn).getByRole('heading', { name: '1+2' });
 
     expect(mergedColumn).toHaveClass('spell-slot-item--merged');
     expect(mergedColumn).toHaveAttribute('data-column-span', '2');
-    expect(within(mergedColumn).getByRole('heading', { name: '1+2' })).toBeInTheDocument();
+    expect(mergedHeading).toHaveClass('spell-column-label');
     expect(within(mergedColumn).getByLabelText('Spell slot 1+2')).toBeInTheDocument();
     expect(screen.queryByLabelText('Assignment column 2')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.spell-slot-item')).toHaveLength(5);
@@ -233,6 +236,38 @@ describe('SpellTokenAssignment', () => {
       'title',
       'ガード\nガード＋5'
     );
+  });
+
+  test('shows the current and maximum token bag capacity', () => {
+    const tokenBag = Array.from({ length: 3 }, (_, index) => ({
+      committed: false,
+      id: `red-${index + 1}`,
+      type: 'red',
+    }));
+    const { rerender } = render(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={tokenBag}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Token Bag 3/5' })).toBeInTheDocument();
+    expect(screen.getByText('3/5')).toHaveClass('token-bag-capacity');
+
+    rerender(
+      <SpellTokenAssignment
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[
+          ...tokenBag,
+          { committed: false, id: 'blue-4', type: 'blue' },
+          { committed: false, id: 'green-5', type: 'green' },
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Token Bag 5/5' })).toBeInTheDocument();
   });
 
   test('renders the reusable spell slots and token bag without reward-only controls', () => {
@@ -385,6 +420,7 @@ describe('SpellTokenAssignment', () => {
     expect(
       within(screen.getByLabelText(/reward token box/i)).getByText(/placed in token bag/i)
     ).toHaveClass('reward-token-status');
+    expect(screen.getByRole('heading', { name: 'Token Bag 2/5' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /new reward red token/i })).toHaveLength(1);
   });
 
@@ -496,6 +532,22 @@ describe('SpellTokenAssignment', () => {
     expect(within(firstSlot).queryByText(/Slot 1:/)).not.toBeInTheDocument();
   });
 
+  test('keeps the Japanese token bag label separate from Unkempt capacity numbers', () => {
+    render(
+      <SpellTokenAssignment
+        language="jp"
+        onTokenDrop={jest.fn()}
+        spellSlots={createSpellSlots()}
+        tokenBag={[]}
+      />
+    );
+
+    const title = screen.getByRole('heading', { level: 2, name: /0\/5$/ });
+
+    expect(within(title).getByText(/.+/, { selector: '.token-bag-label' })).toBeInTheDocument();
+    expect(within(title).getByText('0/5')).toHaveClass('token-bag-capacity');
+  });
+
   test('uses Japanese labels and statuses in reward assignment mode', () => {
     render(
       <SpellTokenAssignment
@@ -544,6 +596,14 @@ describe('SpellTokenAssignment', () => {
     expect(emptyBoxRule).not.toMatch(/(?:^|\s)opacity:/);
     expect(stylesheet).toMatch(
       /\.reward-token-status\s*{[^}]*color:\s*#F5FA00;[^}]*font-weight:\s*700;[^}]*text-align:\s*center;/s
+    );
+  });
+
+  test('uses Unkempt for token bag capacity and spell column numeric text', () => {
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+
+    expect(stylesheet).toMatch(
+      /\.spell-column-label,\s*\.spell-column-capacity,\s*\.token-bag-capacity\s*{[^}]*font-family:\s*["']Unkempt["'],\s*cursive;/s
     );
   });
 });

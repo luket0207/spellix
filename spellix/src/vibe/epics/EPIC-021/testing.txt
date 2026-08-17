@@ -1,0 +1,412 @@
+---
+
+Feature-001: Add persistent random background music with global floating toggle button
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the app in a browser that permits autoplay and then in one that blocks autoplay.
+   Expected: Music starts immediately when permitted; otherwise the first click, touch, or key press starts it without an app error.
+2. Visit the start, setup, story, rules, gameplay, battle, village, cave, river, decision, loot, settings-modal, and winner flows.
+   Expected: One music button remains fixed 10px from the top-left on every page and one audio track continues without restarting or overlapping during route changes.
+3. Inspect the enabled music control in English and Japanese, hover it, turn music off, navigate, and turn it on again.
+   Expected: The brown 50px button has a yellow 30px `faVolume` icon and localized off label, changes to `faVolumeXmark` and the localized on label while paused, stays paused across navigation, and resumes the same track at its preserved position.
+4. Enter gameplay before rolling, begin movement, and complete the next-turn flow.
+   Expected: The settings button uses the same base button style at top-right 10px while retaining its existing gameplay-only visibility rules.
+5. Let at least 11 tracks complete while recording their order.
+   Expected: Each of the 10 tracks plays exactly once in the first cycle, a newly shuffled cycle then starts, tracks advance automatically, and no audio overlaps.
+6. Block one MP3 request and then block all MP3 requests using browser developer tools.
+   Expected: One failed track logs a warning and is skipped; exhausting all tracks safely disables the music button without crashing.
+7. Inspect the browser console throughout the flow.
+   Expected: No application errors occur; only the requested developer warning appears for deliberately failed tracks.
+
+Automated Tests Completed
+
+* The pre-implementation focused run failed all 4 suites as expected because the queue, track list, player, and app-shell wiring did not yet exist.
+* All 10 focused music tests pass across the shuffled queue, no duplicates within a cycle, cycle-boundary repeat avoidance, exactly 10 unique MP3 imports, enabled and disabled Font Awesome states, pause/resume position preservation, autoplay retry, failed-track skipping, all-tracks-failed handling, one app-shell mount, and route persistence.
+* Both focused settings-visibility regression tests pass, confirming movement still hides settings and the next-turn flow restores it; the older test file logs JSDOM's existing unimplemented media playback warning because it does not mock `HTMLMediaElement.play`.
+* The complete older settings suite was also sampled and retains one unrelated stale battle-health expectation of `100 / 100`; the music and settings-visibility assertions pass independently.
+* Scoped ESLint passes for the new music production files and tests plus `AppMusic.test.jsx`; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully and its output contains all 10 hashed MP3 assets.
+* `git diff --check` reports no whitespace errors.
+
+Automated Tests Still Needed
+
+* None for the queue, imported track count, player state transitions, autoplay recovery logic, error fallback, icon states, route persistence, settings visibility regression, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real browser audio output, browser autoplay-policy behavior, playback across every listed route/modal, a full 11-track listening cycle, visual positioning/hover inspection, forced network failures, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-002: Nothing events heal the player by 5 or 10 HP using village heal presentation
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Enable Debug Mode during a gameplay turn, trigger Nothing for Field, Hills, Gravel, Mud, and Stream in English and Japanese, and inspect each event.
+   Expected: The selected environment background and existing localized flavour text remain correct, with the current player's image and shared health bar visible.
+2. Trigger Nothing below max health and inspect the event immediately and after one second.
+   Expected: Continue starts disabled, health remains unchanged during the delay, then real player health increases by either 5 or 10 and Continue enables while the shared health bar animates to the new value.
+3. Trigger deterministic 5 HP and 10 HP outcomes while the player's max health is above 100 from health tokens.
+   Expected: Both allowed amounts work and the health bar uses the player's actual increased maximum rather than a hard-coded 100.
+4. Trigger a 10 HP outcome at 96/100 HP and again at 100/100 HP.
+   Expected: The first result ends at 100, the full-health result remains at 100, and both presentations resolve normally after the delay.
+5. Click Continue after healing resolves.
+   Expected: The healed value persists in game state, gameplay returns, the next player becomes current, and the next-turn modal appears before normal controls are available.
+6. Land normally on a square whose selected landing event is Nothing.
+   Expected: The same background, flavour text, delayed healing, persistence, Continue gating, and turn flow occur as in the debug-triggered route.
+7. Compare Nothing healing with village Rest and inspect the browser console.
+   Expected: Player image sizing, health-bar presentation, 1-second timing, black Unkempt health text, and Continue gating match; no application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run produced 10 expected failures for the missing 5/10 selector, player image, health meter, delayed Continue, clamping, full-health handling, and village-style layout while 14 existing Nothing checks remained green.
+* All 24 focused Nothing data and page tests pass across equal-chance boundary selection, every bilingual environment, exact existing text/backgrounds, 5 HP and 10 HP outcomes, max health above 100, 96/100 clamping, full health, player imagery, shared health styling, persistent context health, invalid encounters, and next-turn progression.
+* The real app debug Nothing regression passes from a 90 HP Stream encounter through a deterministic 5 HP delayed heal, enabled Continue, gameplay return, next-player state, and pending next-turn modal.
+* The normal Stream Nothing board-landing routing regression passes, confirming normal event selection reaches the same Nothing route; the older app-level test logs JSDOM's known unimplemented audio playback warning from the global music player but exits successfully.
+* All 12 Village page tests pass, confirming the existing village Rest delay, healing, action choices, rewards, backgrounds, Wandsmith flow, and turn progression remain unchanged.
+* The broader combined Village and board-event run passed 20 checks and retained one unrelated stale board-event Debug Mode fixture; the focused normal Nothing route passes independently.
+* Scoped ESLint passes for the changed Nothing production and test files plus the updated app-level debug regression; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for every Feature-002 file; the repository-wide check remains blocked only by pre-existing trailing whitespace in the unrelated dirty `StartPage.css`.
+
+Automated Tests Still Needed
+
+* None for heal selection, delayed resolution, context persistence, max-health clamping, full-health safety, bilingual environment preservation, shared health presentation contracts, debug flow, normal route selection, village regression, scoped lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser checks for audible/visual timing, every bilingual environment, naturally selected random outcomes, health-token maximums, normal landing resolution, health persistence into a later battle, visual comparison with village Rest, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-003: Update SOS potion data descriptions
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. View SOS in an English potion tooltip, reward/replacement display, and gameplay potion slot where available.
+   Expected: Its name remains `SOS` and its description is exactly `Teleport to the nearest village`.
+2. Repeat the same displays for a Japanese player.
+   Expected: Its name remains `SOS`, its description is exactly `最寄りの村にテレポートする`, and no trailing `。` appears.
+3. Inspect SOS metadata through any debug or reward display that exposes it.
+   Expected: SOS remains a Common Board potion using the existing light-blue colour.
+4. Use SOS with one nearest generated village.
+   Expected: Confirmation works normally, the potion is consumed, the player teleports to that village, and the normal village visit begins.
+5. Use SOS where two generated villages are equally near, then test a board with no generated villages.
+   Expected: Ties still resolve randomly; no-destination use safely retains the potion and does not move the player.
+6. Inspect the browser console throughout the display and use flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-change focused run produced exactly 3 expected failures for the Japanese trailing `。`, while 10 existing potion data and shared-tooltip checks remained green.
+* All 13 focused potion source-of-truth and shared `PotionIcon` tests pass, covering exact bilingual SOS descriptions, Board availability, Common rarity, light-blue colour, unchanged names, English and Japanese tooltip/accessibility output, and absence of deprecated field-village wording from potion data.
+* All 5 focused SOS gameplay regressions pass for cancellation, nearest-village teleport and visit startup, potion consumption, no-generated-village safety, Japanese confirmation, nearest-village selection, and random tie resolution.
+* Scoped ESLint passes for the changed potion source and tests; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for every Feature-003 file.
+
+Automated Tests Still Needed
+
+* None for exact source metadata, shared tooltip propagation, deprecated wording exclusion, nearest-village behavior, tie handling, no-destination safety, Japanese confirmation, scoped lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser inspection of every potion-description surface, favicon-independent browser-console checks, and a complete SOS use flow were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-004: Fix overflowing modal action button positioning
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Debug, reduce the browser height until the panel overflows, and scroll to the end.
+   Expected: All debug controls remain readable and the existing Close button appears after them at the bottom of the scrollable content without overlaying anything.
+2. Open Settings and then the Settings Rules view at a short browser height.
+   Expected: The existing actions remain reachable after their content, including Back to Settings, with no visual or behavioral changes.
+3. Open a full-slot potion replacement, token assignment, and potion confirmation modal.
+   Expected: Choices, token/potion displays, and form controls remain above the existing action buttons and can be reached by vertical scrolling.
+4. Open Spells from gameplay and through Village Wandsmith, including enough token content to make the modal tall.
+   Expected: Save and Cancel remain after the spell content; existing horizontal-overflow handling and button arrangement remain unchanged.
+5. Check loot chest, decision, hazard, village choice/heal, and a short non-overflowing modal.
+   Expected: Actions remain bottom-centred after content, long panels scroll vertically, and short modals retain their prior layout.
+6. Inspect the browser console throughout these checks.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused regression failed on the new non-shrinking modal-body contract as expected, demonstrating the existing flex collapse that allowed overflowing body content to overlap actions.
+* All 8 shared Modal tests pass for body/action source order, panel max-height scrolling, non-shrinking body and actions, no overlay positioning, existing action grouping, default styling, and isolated dice-modal behavior.
+* All 21 DebugModal tests pass, including the new regression confirming Close is outside the debug body and inside the following shared action row after all debug content.
+* The complete Loot Chest Found, Tokensmith replacement, potion confirmation, Rules page, and Village page suites pass alongside the debug suite, covering representative loot, full-bag token, potion, rules, village, and Wandsmith consumers.
+* The broader Spells, Hazard, and app-settings suites retain four unrelated stale assertions for previously updated bilingual spell instructions, hazard title spacing, and an assigned debug enemy's 85 HP; their remaining 22 behavioral checks pass and none of those failures involve modal action flow.
+* Scoped ESLint passes for the shared Modal component/tests and DebugModal regression; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for every Feature-004 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for shared modal structure, scroll ownership, action ordering, non-overlay positioning, debug Close placement, representative consumer behavior, scoped lint, or production compilation.
+
+Manual Execution
+
+* Browser-height reduction, real scrolling, visual overlap inspection, every listed modal state, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-005: Hide normal potions section when Active Potion section is visible
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start an English and Japanese gameplay turn with no active potion and at least one normal potion.
+   Expected: The localized normal Potions section, slots, capacity, tooltips, and eligible Use controls are visible; Active Potion is absent.
+2. Activate Roll Choice and select a roll.
+   Expected: The normal Potions section disappears, Active Potion shows Roll Choice and the selected number, and no empty potion-area gap remains.
+3. Roll to resolve Roll Choice without advancing away from the current gameplay view.
+   Expected: Active Potion disappears and the normal Potions section returns with its updated inventory.
+4. Activate Metal Detector and then Smokescreen in separate turns.
+   Expected: Only Active Potion is shown while each effect remains active; normal potion slots, tooltips, capacity, and Use controls are not visible.
+5. Apply Spellbound, Heavy Weight, Troublemaker, Devine Chance, or another target/roll-waiting active effect to a player and advance to that player where required.
+   Expected: That player sees only their Active Potion section until the effect clears, while another player without an active potion sees their own normal inventory.
+6. Enter battle with battle potions available.
+   Expected: The existing battle potion section and battle-potion usage rules are unchanged.
+7. Inspect the gameplay layout and browser console throughout these flows.
+   Expected: Hiding the normal section removes its vertical space and produces no application errors.
+
+Automated Tests Completed
+
+* The pre-implementation GameplayPage run produced exactly 5 Feature-005 visibility failures for Metal Detector, Smokescreen, targeted Spellbound state, Roll Choice, and an initially active localized potion while 62 existing checks remained green.
+* The completed GameplayPage run passes 67 of 75 checks, including all 7 Feature-005 scenarios for the no-active baseline, activation, resolution, Metal Detector, Smokescreen, player-specific Spellbound state, and Devine Chance while storm-blocked.
+* The remaining 8 GameplayPage failures are unrelated stale assertions for token tooltip text, expanded spell instructions, random Buy and Sell rewards, dice-result copy, and previously changed player/spell image sizing.
+* All 17 existing `ActivePotionSection` and `PotionList` component tests pass, confirming their rendering, localization, capacity, buttons, tooltip, and styling contracts remain unchanged.
+* Production-only scoped ESLint passes for `GameplayPage.jsx`; linting the existing `GameplayPage.test.jsx` still reports 12 unrelated pre-existing `testing-library/no-node-access` violations outside the Feature-005 changes.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for every Feature-005 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for the requested current-player visibility rule, active-state transitions, named persistent effects, localization, component regressions, production lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser inspection of vertical space, every active-potion effect, battle potion isolation, player switching, tooltip absence, and browser-console output was not run during this automated pass and remains covered by the manual steps above.
+
+---
+
+Feature-006: Show token bag capacity and use Unkempt for Japanese spell column numbers
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the normal Spells modal with an empty, partially filled, and full token bag.
+   Expected: The localized heading shows the real count as `Token Bag 0/5`, `Token Bag 3/5`, and `Token Bag 5/5`, or the Japanese equivalent.
+2. Switch to Japanese and inspect the token-bag heading and normal spell columns.
+   Expected: The Japanese title remains in the Japanese font while its capacity, column labels, and column capacities use `Unkempt`.
+3. View edge columns, a Grey-adjusted column, and a merged column such as `1+2`.
+   Expected: Every numeric label and capacity uses `Unkempt`, and the existing effective capacities remain unchanged.
+4. Open first assignment, Wandsmith, and Redo spell modification in both languages.
+   Expected: Each shared view shows the correct live bag count and keeps all existing token movement behavior.
+5. Open Decision and battle reward token assignment, then stage a reward in the bag and stage a full-bag replacement.
+   Expected: The same capacity heading appears, an added staged token increases the displayed count, and a staged replacement preserves the count.
+6. Inspect the browser console throughout these flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The initial focused test command timed out before Jest emitted output; its orphaned Node processes were stopped before the successful retry.
+* All 24 focused `SpellTokenAssignment` tests pass for empty/partial/full capacity formatting, staged reward counts, Japanese label separation, `Unkempt` numeric classes, normal and edge columns, Grey-adjusted capacity, merged `1+2` labels/effective capacity, Redo movement, and reward assignment.
+* The complete `SpellsModal` run passes all 9 relevant normal, first-setup, Wandsmith, Redo, layout, and capacity-title checks in English and Japanese.
+* The same modal run retains 2 unrelated stale bilingual instruction-copy assertions from earlier features; neither failure involves token-bag capacity, numeric classes, or Feature-006 behavior.
+* Production-only scoped ESLint passes for `SpellTokenAssignment.jsx`; the existing test file retains 2 unrelated pre-existing `testing-library` violations at its old merged-column `container.querySelectorAll` assertion.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for every Feature-006 code and test file.
+
+Automated Tests Still Needed
+
+* None for shared capacity rendering, live displayed counts, existing maximum-capacity reuse, Japanese number-font hooks, Grey/merged capacities, mode reuse, scoped production lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser font rendering, drag-and-drop count updates, every listed modal entry path, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-007: Update browser tab title and favicon
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start the local development server and open the app.
+   Expected: The browser tab title is `Spellix` and the tab icon uses the supplied PNG rather than the default React icon.
+2. Navigate between app routes and refresh a nested hash route.
+   Expected: The title and favicon remain unchanged and no route introduces conflicting metadata.
+3. Preview the production build under the configured `/spellix/` base path.
+   Expected: The title remains `Spellix` and `/spellix/favicon.png` loads successfully.
+4. Add or inspect a bookmark/favourite where the browser supports an icon.
+   Expected: The site is identified as `Spellix` and uses the new favicon where supported.
+5. If the old icon appears, hard refresh, use a private window, or clear the browser favicon cache.
+   Expected: The supplied favicon appears after cached metadata is bypassed.
+6. Inspect the browser console and network panel.
+   Expected: The title, manifest, and favicon load without application or missing-asset errors.
+
+Automated Tests Completed
+
+* The pre-implementation focused metadata run failed on the old `React App` title as expected; the later manifest regression failed on its remaining old short name before that metadata was updated.
+* All 3 focused deployment tests pass for the existing GitHub Pages contract, hash routing, exact `Spellix` HTML title, one `%PUBLIC_URL%/favicon.png` link, source/public byte parity, manifest names, PNG dimensions, and absence of old `.ico` manifest references.
+* Scoped ESLint passes for `deploymentConfig.test.js`; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully with the configured `/spellix/` base path.
+* The generated HTML contains `<title>Spellix</title>` and `/spellix/favicon.png`, while the generated manifest contains the `Spellix` name and PNG icon entry.
+* SHA-256 hashes match across `src/images/favicon.png`, `public/favicon.png`, and `build/favicon.png`, confirming the supplied image is copied unchanged into production.
+* Scoped `git diff --check` passes for every Feature-007 text file.
+
+Automated Tests Still Needed
+
+* None for source/public asset parity, exact metadata, manifest identity, GitHub Pages path generation, scoped lint, or production compilation.
+
+Manual Execution
+
+* A real browser tab, favicon cache behavior, bookmark display, local development server, production preview server, network panel, and browser console were not interactively inspected during this automated pass and remain the manual checks above.
+
+---
+
+Feature-008: Remove starting Guard tokens
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start new games with 2, 3, 4, 5, and 6 players.
+   Expected: Every player starts with exactly 5 protected Red Damage tokens and no Blue Guard tokens.
+2. Open first spell assignment in English and Japanese.
+   Expected: Only the 5 Red Damage tokens are available, the bag heading shows `5/5`, and the warning requires all 5 starting tokens.
+3. Assign fewer than 5 starting tokens, then assign all 5.
+   Expected: Confirmation remains disabled until all 5 are assigned, then becomes enabled.
+4. Trigger battle loss or death token removal after earning removable tokens.
+   Expected: The 5 starting Red Damage tokens remain protected without any seven-token assumption.
+5. Earn a Blue Guard token through a normal reward.
+   Expected: Guard can still be earned and behaves normally; reward pools and capacities are unchanged.
+6. Load an older save containing a Blue Guard token in a player bag.
+   Expected: The existing bag is preserved rather than migrated or stripped.
+7. Inspect the browser console throughout these flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run produced exactly 8 expected Feature-008 failures while 58 existing checks remained green.
+* All 59 focused game setup, spell setup, translation, and death-protection tests pass, including 2- through 6-player setup, five-token completion, protected starting metadata, and existing-bag preservation.
+* All 56 reward, battle-reward, and save-game compatibility tests pass, confirming earned Guard rewards and save serialization remain unchanged.
+* The complete GameplayPage run passes 70 of 75 checks, including every Feature-008 first-assignment check at 0, 1, 4, and 5 assigned tokens. Its 5 remaining failures are unrelated stale assertions for Black tooltip copy, random Buy and Sell rewards, dice-result copy, player-piece sizing, and spell-player image sizing.
+* The complete SpellsModal run passes 10 of 11 relevant checks for the five-red-token bag, `5/5` capacity, no starting Guard, assignment completion, and bilingual warning. Its remaining failure is an unrelated stale `20px` warning-size assertion against the existing `18px` stylesheet.
+* The focused App test command could not produce a usable result because the suite ran globally, emitted JSDOM `HTMLMediaElement.play` errors, and crashed in source-map support before tests executed.
+* Scoped ESLint passes for all changed production files and focused unit tests. The existing App, SpellsModal, and GameplayPage integration test files retain 27 unrelated pre-existing Testing Library lint violations.
+* `npm run build` compiles the optimized production build successfully.
+* The stale-assumption search finds no production references to seven starting tokens or two starting Guard tokens.
+* Scoped `git diff --check` passes for every Feature-008 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for new-game token creation, first-assignment completion, protection metadata, existing-save preservation, reward compatibility, localization, scoped lint, or production compilation.
+
+Manual Execution
+
+* Interactive 2- through 6-player setup, browser drag-and-drop assignment, earned Guard rewards, an actual older save, death flow, and browser-console inspection were not run during this automated pass and remain covered by the manual steps above.
+
+---
+
+Bug-001: Favicon is not appearing
+
+Test Status
+
+* blocked by stale GitHub Pages deployment
+
+Manual Regression Steps
+
+1. Start the local development server and open the app in a private window.
+   Expected: The tab title is `Spellix`, the browser requests `/spellix/favicon.png`, and the Spellix PNG appears without a network error.
+2. Build and preview the production output under the configured `/spellix/` base path.
+   Expected: The generated HTML references `/spellix/favicon.png`, the request returns `200 image/png`, and the tab displays the Spellix favicon.
+3. Deploy the verified production build to GitHub Pages, then open `https://luket0207.github.io/spellix/` in a private window.
+   Expected: The live HTML title is `Spellix`, its only favicon link points to `/spellix/favicon.png`, and that URL returns the intended PNG rather than `404`.
+4. Hard refresh and reopen the live tab if an old icon remains cached.
+   Expected: The new PNG appears after the stale favicon cache is bypassed.
+
+Automated Tests Completed
+
+* The live GitHub Pages check reproduces the bug: the page returns `200` but still contains `React App` and `/spellix/favicon.ico`, while `/spellix/favicon.png` returns `404`.
+* The exact local development favicon URL returns `200 image/png`, has a `998908`-byte body, and matches `src/images/favicon.png` by SHA-256.
+* All 3 focused deployment tests pass for the CRA GitHub Pages contract, hash routing, exact `Spellix` metadata, one PNG favicon link, source/public byte parity, and manifest metadata.
+* Scoped ESLint passes for `deploymentConfig.test.js`; this project has no `npm run lint` script.
+* `npm run build` compiles successfully for `/spellix/`, emits the correct PNG favicon link, and copies `favicon.png` into the production output.
+
+Automated Tests Still Needed
+
+* Recheck the live HTML and `/spellix/favicon.png` response after an explicitly approved deployment.
+
+Manual Execution
+
+* A real browser tab and favicon cache were not interactively inspected. The live HTTP failure and local HTTP success were reproduced directly.
+
+---
+
+Bug-002: Favicon still not appearing after adding ico file
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Start the local development server and open the app in a private window.
+   Expected: The title remains `Spellix`, the tab shows the supplied favicon, and the page contains only the ICO favicon link.
+2. Inspect the Network panel request for `/spellix/favicon.ico`.
+   Expected: The request returns `200` with an icon content type and does not fall back to HTML or return `404`.
+3. Build and preview the production output under `/spellix/`.
+   Expected: The generated HTML references `/spellix/favicon.ico`, the copied asset loads, and the tab displays the supplied favicon.
+4. Hard refresh, reopen the tab, or clear the favicon cache if the previous PNG/default icon remains.
+   Expected: The ICO-linked asset appears after stale browser metadata is bypassed.
+5. After a separately approved deployment, repeat the private-window and Network-panel checks on GitHub Pages.
+   Expected: The live site serves the new ICO metadata and asset rather than the older deployed favicon configuration.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 2 checks and failed exactly 1 regression because the HTML still linked `%PUBLIC_URL%/favicon.png` instead of the required ICO.
+* All 3 focused deployment tests pass after implementation for the CRA GitHub Pages contract, hash routing, exact `Spellix` title, one ICO favicon link, source/public ICO parity, and unchanged PNG manifest metadata.
+* The exact local development URL `/spellix/favicon.ico` returns `200 image/x-icon`, has a `998908`-byte body, and matches `src/images/favicon.ico` by SHA-256.
+* `npm run build` compiles successfully for `/spellix/`; generated HTML uses `/spellix/favicon.ico`, and `build/favicon.ico` matches the source asset by SHA-256.
+* Scoped ESLint passes for `deploymentConfig.test.js`; this project has no `npm run lint` script.
+
+Automated Tests Still Needed
+
+* None for the source metadata, single-link cleanup, local HTTP delivery, build output, asset parity, scoped lint, or production compilation.
+
+Manual Execution
+
+* Visual inspection in a real browser, favicon cache clearing, production preview in a browser, and post-deployment GitHub Pages verification were not run. Bug-001 remains blocked on that separate deployment step.

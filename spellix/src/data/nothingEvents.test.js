@@ -3,6 +3,7 @@ import {
   NOTHING_EVENT_ENVIRONMENTS,
   NOTHING_EVENT_TRIGGER_TEXT,
   getNothingEventForEnvironment,
+  selectNothingEventHealAmount,
 } from './nothingEvents';
 
 test('defines only the five required Nothing-event environments and exact text', () => {
@@ -68,4 +69,16 @@ test('provides exact localized actions and safe environment lookup', () => {
     NOTHING_EVENT_ENVIRONMENTS[4]
   );
   expect(getNothingEventForEnvironment('forest')).toBeNull();
+});
+
+test.each([
+  [0, 5],
+  [0.499999, 5],
+  [0.5, 10],
+  [0.999999, 10],
+])('selects an equal-chance Nothing heal for random value $randomValue', (
+  randomValue,
+  expectedHeal
+) => {
+  expect(selectNothingEventHealAmount(() => randomValue)).toBe(expectedHeal);
 });

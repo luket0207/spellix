@@ -22,7 +22,7 @@ describe('spellSetup helpers', () => {
     });
 
     expect(result.didMove).toBe(true);
-    expect(result.tokenBag).toHaveLength(6);
+    expect(result.tokenBag).toHaveLength(4);
     expect(result.spellSlots[0].tokens).toHaveLength(1);
     expect(result.spellSlots[0].tokens[0].id).toBe(tokenToMove.id);
   });
@@ -198,7 +198,7 @@ describe('spellSetup helpers', () => {
     });
 
     expect(returnedState.didMove).toBe(true);
-    expect(returnedState.tokenBag).toHaveLength(7);
+    expect(returnedState.tokenBag).toHaveLength(5);
     expect(returnedState.spellSlots[0].tokens).toHaveLength(0);
   });
 
@@ -483,7 +483,7 @@ describe('spellSetup helpers', () => {
     ).toBe(false);
   });
 
-  test.each([0, 1, 6])(
+  test.each([0, 1, 4])(
     'does not complete starting setup with %i starting tokens placed',
     (placedTokenCount) => {
       const [player] = createPlayers(1);
@@ -503,15 +503,14 @@ describe('spellSetup helpers', () => {
     }
   );
 
-  test('completes starting setup only while all seven starting tokens are placed', () => {
+  test('completes starting setup only while all five starting tokens are placed', () => {
     const [player] = createPlayers(1);
     const spellSlots = player.spellSlots.map((slot) => ({
       ...slot,
       tokens: [],
     }));
 
-    spellSlots[0].tokens = player.tokenBag.slice(0, 5);
-    spellSlots[1].tokens = player.tokenBag.slice(5);
+    spellSlots[0].tokens = [...player.tokenBag];
 
     expect(
       isStartingSpellSetupComplete({ spellSlots, tokenBag: [] })

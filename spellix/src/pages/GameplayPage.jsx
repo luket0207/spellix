@@ -1309,35 +1309,38 @@ function GameplayPage({
           />
         ) : null}
 
-        <PotionList
-          context="board"
-          disabled={Boolean(
-            isTurnStartBlocked ||
-              Boolean(activeLootChestEvent) ||
-              isChooseEventModalOpen ||
-              isRollAgainEventActive ||
-              currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
-              blocksBoardPotionUse(currentPlayer?.activePotion)
-          )}
-          language={currentLanguage}
-          languageClassName={languageClassName}
-          onUsePotion={(potion, potionIndex) =>
-            setPendingPotionUse({
-              playerId: currentPlayer.id,
-              potion,
-              potionIndex,
-            })
-          }
-          potions={currentPlayer?.potions ?? []}
-          title={gameplayTranslations.potions}
-          useText={potionUsageTranslations.use}
-        />
-              <ActivePotionSection
-                activePotion={currentPlayer?.activePotion}
-                language={currentLanguage}
-                languageClassName={languageClassName}
-                title={potionUsageTranslations.activePotionTitle}
-              />
+        {currentPlayer?.activePotion ? (
+          <ActivePotionSection
+            activePotion={currentPlayer.activePotion}
+            language={currentLanguage}
+            languageClassName={languageClassName}
+            title={potionUsageTranslations.activePotionTitle}
+          />
+        ) : (
+          <PotionList
+            context="board"
+            disabled={Boolean(
+              isTurnStartBlocked ||
+                Boolean(activeLootChestEvent) ||
+                isChooseEventModalOpen ||
+                isRollAgainEventActive ||
+                currentPlayer?.turnPotionUsage?.boardPotionUsedThisTurn ||
+                blocksBoardPotionUse(currentPlayer?.activePotion)
+            )}
+            language={currentLanguage}
+            languageClassName={languageClassName}
+            onUsePotion={(potion, potionIndex) =>
+              setPendingPotionUse({
+                playerId: currentPlayer.id,
+                potion,
+                potionIndex,
+              })
+            }
+            potions={currentPlayer?.potions ?? []}
+            title={gameplayTranslations.potions}
+            useText={potionUsageTranslations.use}
+          />
+        )}
             </section>
           </div>
         </div>

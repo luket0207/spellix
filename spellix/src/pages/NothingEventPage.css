@@ -14,9 +14,17 @@
   align-items: center;
   display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 20px;
   justify-content: center;
+  margin-bottom: 20px;
   text-align: center;
   width: 100%;
+}
+
+.nothing-event-player-image {
+  height: 180px;
+  width: auto;
 }
 
 .nothing-event-text {

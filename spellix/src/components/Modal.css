@@ -38,11 +38,12 @@
 }
 
 .modal-body {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
 }
 
 .modal-actions {
+  flex: 0 0 auto;
   margin-top: auto;
   display: flex;
   align-items: center;

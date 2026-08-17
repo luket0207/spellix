@@ -35,14 +35,10 @@ describe('game setup player piece selection foundation', () => {
     expect(players[1].pieceImage).toBe('m-blue.png');
     expect(players[1].number).toBe(2);
     expect(players[1].language).toBe('en');
-    expect(players[0].tokenBag).toHaveLength(7);
-    expect(players[0].tokenBag).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ protected: true, source: 'starting', type: 'red' }),
-        expect.objectContaining({ protected: true, source: 'starting', type: 'blue' }),
-      ])
-    );
+    expect(players[0].tokenBag).toHaveLength(5);
+    expect(players[0].tokenBag.every((token) => token.type === 'red')).toBe(true);
     expect(players[0].tokenBag.every((token) => token.protected)).toBe(true);
+    expect(players[0].tokenBag.every((token) => token.source === 'starting')).toBe(true);
     expect(players[0].hasUnseenTokenBagTokens).toBe(true);
     expect(players[0].eliteProgress).toEqual({
       eliteTowerGravel: false,
@@ -61,6 +57,46 @@ describe('game setup player piece selection foundation', () => {
         wandsmith: false,
       },
     });
+  });
+
+  test.each([2, 3, 4, 5, 6])(
+    'creates all players in a %i-player game with only five starting Damage tokens',
+    (playerCount) => {
+      const players = createPlayers(playerCount);
+
+      expect(players).toHaveLength(playerCount);
+      players.forEach((player, playerIndex) => {
+        expect(player.tokenBag).toEqual(
+          Array.from({ length: 5 }, (_, tokenIndex) => ({
+            committed: false,
+            id: `player-${playerIndex + 1}-red-${tokenIndex + 1}`,
+            protected: true,
+            source: 'starting',
+            type: 'red',
+          }))
+        );
+      });
+    }
+  );
+
+  test('preserves Guard tokens already present in existing player data', () => {
+    const existingPlayers = createPlayers(2);
+    const legacyTokenBag = [
+      {
+        committed: false,
+        id: 'player-1-blue-1',
+        protected: true,
+        source: 'starting',
+        type: 'blue',
+      },
+    ];
+
+    existingPlayers[0].tokenBag = legacyTokenBag;
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].tokenBag).toEqual(legacyTokenBag);
+    expect(recreatedPlayers[0].tokenBag).not.toBe(legacyTokenBag);
   });
 
   test('maps boy and girl selections to the expected piece filenames', () => {

@@ -359,6 +359,10 @@ describe('gameplay translations', () => {
       trash: 'ゴミ箱',
     });
     expect(japanese.placedInSpellSlot(3)).toBe('呪文スロット3に配置');
+    expect(english.startingTokenWarning).toContain('all 5 starting tokens');
+    expect(english.startingTokenWarning).not.toContain('7 starting tokens');
+    expect(japanese.startingTokenWarning).toContain('5個');
+    expect(japanese.startingTokenWarning).not.toContain('7個');
     expect(english.mergeConfirmation(2, 3, 3)).toBe(
       'Committing this change will merge columns 2 and 3. This means you will lose the tokens from column 3. Is this ok?'
     );

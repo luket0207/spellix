@@ -32,7 +32,7 @@ const EXPECTED_POTIONS = [
   ['cosmic-intervention', 'Cosmic Intervention', '宇宙の介入', 'Battle', 'Common', 'Deal 10 damage to your opponent', '対戦相手に10ダメージを与える。', 'red'],
   ['shields-down', 'Shields Down', 'シールドダウン', 'Battle', 'Common', 'Remove all guard from your opponent this turn', 'このターン、対戦相手のガードをすべて取り除く。', 'blue'],
   ['thaw', 'Thaw', '解凍', 'Battle', 'Common', 'Auto unfreeze yourself', '自分の凍結状態を自動的に解除する。', 'orange'],
-  ['sos', 'SOS', 'SOS', 'Board', 'Common', 'Teleport to the nearest village', '最寄りの村にテレポートする。', 'light-blue'],
+  ['sos', 'SOS', 'SOS', 'Board', 'Common', 'Teleport to the nearest village', '最寄りの村にテレポートする', 'light-blue'],
 ];
 
 function toComparablePotion(potion) {
@@ -58,6 +58,34 @@ describe('potion definitions', () => {
   test('contains no deprecated potion records', () => {
     expect(POTION_DEFINITIONS.map(({ id }) => id)).not.toEqual(
       expect.arrayContaining(['teleport-to-feature', 'gambeller'])
+    );
+  });
+
+  test('uses the exact implemented SOS metadata and nearest-village descriptions', () => {
+    const sos = POTION_DEFINITIONS.find(({ id }) => id === 'sos');
+
+    expect(sos).toEqual({
+      availability: 'Board',
+      colour: 'light-blue',
+      description: 'Teleport to the nearest village',
+      id: 'sos',
+      japaneseDescription:
+        '\u6700\u5bc4\u308a\u306e\u6751\u306b\u30c6\u30ec\u30dd\u30fc\u30c8\u3059\u308b',
+      japaneseName: 'SOS',
+      name: 'SOS',
+      rarity: 'Common',
+    });
+    expect(getPotionDescription(sos, 'en')).toBe(
+      'Teleport to the nearest village'
+    );
+    expect(getPotionDescription(sos, 'jp')).toBe(
+      '\u6700\u5bc4\u308a\u306e\u6751\u306b\u30c6\u30ec\u30dd\u30fc\u30c8\u3059\u308b'
+    );
+    expect(JSON.stringify(POTION_DEFINITIONS)).not.toContain(
+      'Teleport to the field village'
+    );
+    expect(JSON.stringify(POTION_DEFINITIONS)).not.toContain(
+      '\u30d5\u30a3\u30fc\u30eb\u30c9\u306e\u6751\u306b\u30c6\u30ec\u30dd\u30fc\u30c8\u3059\u308b'
     );
   });
 

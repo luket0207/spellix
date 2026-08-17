@@ -52,6 +52,38 @@ describe('Modal variants', () => {
     handlers.forEach((handler) => expect(handler).toHaveBeenCalledTimes(1));
   });
 
+  test('keeps overflowing body content and actions in normal panel flow', () => {
+    render(
+      <Modal
+        actions={<button type="button">Close</button>}
+        ariaLabel="Overflowing modal"
+        isOpen
+      >
+        <div>Long modal content</div>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Overflowing modal' });
+    const body = screen.getByTestId('modal-body');
+    const actions = screen.getByTestId('modal-actions');
+    const source = readFileSync(`${__dirname}/Modal.jsx`, 'utf8');
+    const stylesheet = readFileSync(`${__dirname}/Modal.css`, 'utf8');
+
+    expect(within(dialog).getByTestId('modal-body')).toBe(body);
+    expect(within(dialog).getByTestId('modal-actions')).toBe(actions);
+    expect(source).toMatch(
+      /<div className="modal-body"[^>]*>[\s\S]*?\{children\}[\s\S]*?<div className="modal-actions"/
+    );
+    expect(stylesheet).toMatch(
+      /\.modal-panel--default\s*{[^}]*max-height:[^;}]+;[^}]*overflow:\s*auto;/s
+    );
+    expect(stylesheet).toMatch(/\.modal-body\s*{[^}]*flex:\s*0 0 auto;/s);
+    expect(stylesheet).toMatch(/\.modal-actions\s*{[^}]*flex:\s*0 0 auto;/s);
+    expect(stylesheet).not.toMatch(
+      /\.modal-actions\s*{[^}]*position:\s*(?:absolute|fixed|sticky)/s
+    );
+  });
+
   test('forwards panel clicks to an optional modal click handler', () => {
     const handleClick = jest.fn();
 
@@ -103,8 +135,10 @@ describe('Modal variants', () => {
     expect(stylesheet).toMatch(
       /\.modal-panel--default\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
     );
-    expect(stylesheet).toMatch(/\.modal-body\s*{[^}]*flex:\s*1;/s);
-    expect(stylesheet).toMatch(/\.modal-actions\s*{[^}]*margin-top:\s*auto;/s);
+    expect(stylesheet).toMatch(/\.modal-body\s*{[^}]*flex:\s*0 0 auto;/s);
+    expect(stylesheet).toMatch(
+      /\.modal-actions\s*{[^}]*flex:\s*0 0 auto;[^}]*margin-top:\s*auto;/s
+    );
   });
 
   test('marks only the gameplay dice result modal with the dice variant', () => {
@@ -113,14 +147,14 @@ describe('Modal variants', () => {
       'utf8'
     );
 
-    expect(gameplaySource.match(/<Modal[\s>]/g)).toHaveLength(5);
+    expect(gameplaySource.match(/<Modal[\s>]/g)).toHaveLength(6);
     expect(gameplaySource.match(/variant="dice"/g)).toHaveLength(1);
     expect(gameplaySource).toMatch(
       /<Modal\s+ariaLabel="Dice result"\s+isOpen={showDiceModal}\s+variant="dice"\s*>/s
     );
   });
 
-  test('uses larger text only for current text-only modal paragraphs', () => {
+  test('uses larger text only for current intended modal paragraphs', () => {
     const gameplaySource = readFileSync(
       `${__dirname}/../pages/GameplayPage.jsx`,
       'utf8'
@@ -140,9 +174,9 @@ describe('Modal variants', () => {
     );
     const appStylesheet = readFileSync(`${__dirname}/../App.css`, 'utf8');
 
-    expect(gameplaySource.match(/larger-text/g)).toHaveLength(3);
+    expect(gameplaySource.match(/larger-text/g)).toHaveLength(6);
     expect(gameplaySource).toMatch(
-      /<p className=\{`larger-text \$\{languageClassName\}`\}>\{spellAssignmentTranslations\.cancelConfirmation\}<\/p>/
+      /<p className=\{`larger-text \$\{languageClassName\}`\}>\s*\{isWandsmithMode[\s\S]*?spellAssignmentTranslations\.cancelConfirmation\}\s*<\/p>/
     );
     expect(gameplaySource).toMatch(
       /<p className=\{`larger-text \$\{languageClassName\}`\}>\{spellAssignmentTranslations\.saveConfirmation\}<\/p>/
@@ -150,7 +184,8 @@ describe('Modal variants', () => {
     expect(gameplaySource).toMatch(
       /<p className={`larger-text \${languageClassName}`}>\s*{miniGameReturnNotice\?\.type/s
     );
-    [appSource, battleSource, debugSource, spellsSource].forEach((source) => {
+    expect(battleSource.match(/larger-text/g)).toHaveLength(2);
+    [appSource, debugSource, spellsSource].forEach((source) => {
       expect(source).not.toContain('larger-text');
     });
     expect(appStylesheet).toMatch(

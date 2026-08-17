@@ -104,6 +104,12 @@
   margin-bottom: 20px;
 }
 
+.spell-column-label,
+.spell-column-capacity,
+.token-bag-capacity {
+  font-family: "Unkempt", cursive;
+}
+
 .spell-drop-zone {
   min-height: 44px;
   display: flex;

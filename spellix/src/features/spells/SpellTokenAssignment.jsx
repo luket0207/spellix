@@ -17,6 +17,7 @@ import {
   getGameplayLanguage,
   getSpellAssignmentTranslations,
 } from '../../i18n/translations';
+import { TOKEN_BAG_MAX_CAPACITY } from '../debug/tokenBagAdmin';
 import {
   REWARD_TOKEN_DISCARD_DROP_ZONE_ID,
   TOKEN_BAG_DROP_ZONE_ID,
@@ -242,7 +243,7 @@ function SpellTokenAssignment({
                     data-column-span={isMerged ? '2' : '1'}
                     key={isMerged ? `merged-${label}` : slot.id}
                   >
-                    <h4>{label}</h4>
+                    <h4 className="spell-column-label">{label}</h4>
                     <TokenDropZone id={slot.id} label={`Spell slot ${label}`}>
                       {displayedTokens.length > 0 ? (
                         displayedTokens.map((token) => (
@@ -262,7 +263,9 @@ function SpellTokenAssignment({
                         <span>{translations.dropTokensHere}</span>
                       )}
                     </TokenDropZone>
-                    <p>{`${displayedTokens.length} / ${columnCapacities[groupIndex]}`}</p>
+                    <p className="spell-column-capacity">
+                      {`${displayedTokens.length} / ${columnCapacities[groupIndex]}`}
+                    </p>
                   </div>
                 );
               })}
@@ -270,7 +273,14 @@ function SpellTokenAssignment({
           </div>
         </section>
         <section className="spell-token-source">
-          <h2>{tokenSourceLabel ?? translations.tokenBag}</h2>
+          <h2>
+            <span className="token-bag-label">
+              {tokenSourceLabel ?? translations.tokenBag}
+            </span>{' '}
+            <span className="token-bag-capacity">
+              {displayedTokenBag.length}/{TOKEN_BAG_MAX_CAPACITY}
+            </span>
+          </h2>
           <TokenDropZone id={TOKEN_BAG_DROP_ZONE_ID} label="Token bag drop zone">
             {displayedTokenBag.length > 0 ? (
               displayedTokenBag.map((token) => (

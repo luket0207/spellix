@@ -1,0 +1,374 @@
+---
+
+Bug-001: Favicon is not appearing
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-007: Update browser tab title and favicon
+
+Bug Summary
+
+* The browser tab title update may be working, but the favicon is not appearing.
+* The game should use the favicon image from:
+
+```txt id="f4h9ub"
+src/images/favicon.png
+```
+
+* The old default favicon should not appear.
+* The browser should show the Spellix favicon in local development and production builds.
+
+Required Behaviour
+
+* The browser tab should show the new favicon.
+* The favicon should use:
+
+```txt id="tdio9s"
+src/images/favicon.png
+```
+
+* The app should not show:
+
+  * default Vite favicon.
+  * default React favicon.
+  * blank favicon.
+  * missing image icon.
+
+Likely Cause
+
+* `index.html` may not be able to reliably reference files from `src/images/` directly.
+* Browser favicon caching may also make it look like the favicon has not changed.
+* There may be multiple favicon `<link>` tags, with the old one still being used.
+* The favicon path may be incorrect for the build setup.
+
+Recommended Fix
+
+* Copy or move the favicon file into the public folder so it can be referenced directly by the browser.
+
+Recommended destination:
+
+```txt id="u1y4mc"
+public/favicon.png
+```
+
+Then update `index.html` to use:
+
+```html id="x7k5nm"
+<link rel="icon" type="image/png" href="/favicon.png" />
+```
+
+* If the project already has a favicon link, replace it.
+* Do not leave multiple competing favicon links.
+* Do not keep the old Vite/React favicon link.
+
+Vite Requirement
+
+* For Vite projects, favicons are usually safest when placed in `public/`.
+* Files inside `public/` are served from the root.
+* `public/favicon.png` should be referenced as:
+
+```txt id="m05m4f"
+/favicon.png
+```
+
+Not:
+
+```txt id="t8n01e"
+./favicon.png
+```
+
+And not:
+
+```txt id="f85zny"
+/src/images/favicon.png
+```
+
+unless the project has confirmed that path works in both development and production.
+
+Source Image Requirement
+
+* The intended favicon source remains:
+
+```txt id="iekaem"
+src/images/favicon.png
+```
+
+* If the browser cannot use that path directly, copy that exact image into:
+
+```txt id="tth72t"
+public/favicon.png
+```
+
+* Document this in `testing.txt`.
+
+HTML Requirement
+
+* In `index.html`, confirm the title and favicon metadata look like:
+
+```html id="o8nmvm"
+<title>Spellix</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+```
+
+* Remove old favicon references such as:
+
+```html id="lxf1wq"
+<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+```
+
+Cache Testing Requirement
+
+* Browsers cache favicons aggressively.
+* After fixing, test with:
+
+  * hard refresh.
+  * incognito/private window.
+  * cleared browser cache.
+  * closing and reopening the tab.
+  * production preview.
+
+Out Of Scope
+
+* No favicon redesign.
+* No new favicon file generation.
+* No Apple touch icon.
+* No manifest icon update unless the app already has a manifest and it is causing conflicts.
+* No change to browser tab title beyond keeping `Spellix`.
+
+Testing Checkpoints
+
+* Confirm `favicon.png` exists at the path used by `index.html`.
+* Confirm old favicon links are removed.
+* Confirm `index.html` references `/favicon.png` if the file is in `public/`.
+* Start local development.
+* Open the app in a fresh incognito/private window.
+* Confirm the new favicon appears.
+* Run production build.
+* Preview production build.
+* Confirm the favicon appears in the production preview.
+* Confirm the browser tab title still says `Spellix`.
+* Confirm there are no 404 errors for favicon in the console/network tab.
+* Update `testing.txt` before marking this bug fixed.
+
+Investigation Result
+
+* The issue is reproduced on the currently deployed GitHub Pages site.
+* The deployed HTML still uses the old `React App` title and `/spellix/favicon.ico` reference.
+* The deployed `/spellix/favicon.png` request returns `404`.
+* Current source already has one `%PUBLIC_URL%/favicon.png` link, the `Spellix` title, and matching PNG manifest metadata.
+* `public/favicon.png` is byte-for-byte identical to `src/images/favicon.png`.
+* The exact local development URL `/spellix/favicon.png` returns `200 image/png` and the source-identical file.
+* A fresh production build emits `/spellix/favicon.png` and includes the source-identical asset.
+
+Attempted Fixes
+
+* Rechecked the existing Feature-007 public asset, HTML metadata, manifest metadata, and GitHub Pages base-path handling.
+* Verified the intended image is valid and visibly contains the Spellix mark.
+* Verified local development delivery and rebuilt the production output.
+* No additional code change was made because the current source and generated build already satisfy the bug requirements.
+
+Current Blocker
+
+* GitHub Pages is serving an older deployment that does not contain the current favicon changes.
+* Fixing the live site requires deploying the current production build.
+* Deployment was not run because it would publish the repository's cumulative dirty worktree and was not explicitly requested by this bug command.
+
+---
+
+Bug-002: Favicon still not appearing after adding ico file
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-007: Update browser tab title and favicon
+* Bug-001: Favicon is not appearing
+
+Bug Summary
+
+* The favicon is still not appearing in the browser.
+* A new `.ico` file has now been added in both:
+
+  * `src/images`
+  * `public`
+* The `.ico` file in the `public` folder should be used for the browser favicon.
+* The browser should show the Spellix favicon instead of a blank/default favicon.
+
+Required Behaviour
+
+* The browser tab should show the Spellix favicon.
+* Use the `.ico` file from the `public` folder as the main favicon source.
+* The app should not rely on the `src/images` favicon path for the browser tab icon.
+* The browser tab title should remain:
+
+```txt id="ztea7r"
+Spellix
+```
+
+Recommended Fix
+
+* Use the `.ico` file in the `public` folder.
+* Reference it directly from `index.html`.
+
+Recommended `index.html` direction:
+
+```html id="gi6u86"
+<title>Spellix</title>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+```
+
+* If the `.ico` file has a different exact filename, use that exact filename.
+* Do not leave the path pointing to `src/images`.
+* Do not leave the path pointing to `favicon.png` if the `.ico` file is now the intended fix.
+* Do not leave old Vite or React favicon links in place.
+
+Favicon File Location Requirement
+
+* The browser-facing favicon should be in:
+
+```txt id="iccfzi"
+public/favicon.ico
+```
+
+* The `src/images` version can remain as a source/reference asset if desired.
+* The actual browser metadata should reference the `public` file.
+
+Correct Path Requirement
+
+* If the file is in `public/favicon.ico`, the `href` should be:
+
+```txt id="l5z79c"
+/favicon.ico
+```
+
+* Do not use:
+
+```txt id="lqyjjl"
+./favicon.ico
+```
+
+* Do not use:
+
+```txt id="tg9v37"
+/src/images/favicon.ico
+```
+
+* Do not use:
+
+```txt id="p4m5pa"
+src/images/favicon.ico
+```
+
+Old Link Cleanup Requirement
+
+* Remove or replace old favicon links such as:
+
+```html id="fxkr0v"
+<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+```
+
+```html id="wq719a"
+<link rel="icon" type="image/png" href="/favicon.png" />
+```
+
+```html id="re17tp"
+<link rel="icon" type="image/png" href="/src/images/favicon.png" />
+```
+
+* There should not be multiple conflicting favicon links unless they deliberately point to compatible versions of the same favicon.
+
+Optional Multi-Favicon Direction
+
+* If the project wants to keep both `.ico` and `.png`, use `.ico` first and ensure both files exist in `public`.
+
+Example:
+
+```html id="f596gt"
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+```
+
+* Only do this if both files are confirmed to work.
+* The safer fix for this bug is to use only the `.ico` file first.
+
+Browser Cache Requirement
+
+* Favicons are cached aggressively.
+* After updating, test with:
+
+  * hard refresh.
+  * incognito/private window.
+  * closing and reopening the tab.
+  * clearing browser cache.
+  * opening DevTools Network tab and disabling cache.
+* Also check the network request for `/favicon.ico`.
+
+Network Check Requirement
+
+* In DevTools Network tab, confirm:
+
+```txt id="mq42tr"
+/favicon.ico
+```
+
+returns a successful response.
+
+* It should not return:
+
+  * `404`
+  * wrong MIME/type issue that prevents loading.
+  * old cached icon.
+
+Out Of Scope
+
+* No favicon redesign.
+* No new image generation.
+* No app manifest update unless a manifest is overriding the favicon.
+* No Apple touch icon.
+* No change to the site title beyond keeping `Spellix`.
+
+Testing Checkpoints
+
+* Confirm `.ico` file exists in `public`.
+* Confirm exact filename is used in `index.html`.
+* Confirm `index.html` contains `<link rel="icon" href="/favicon.ico" sizes="any" />`.
+* Confirm old favicon links are removed or no longer conflicting.
+* Start local development.
+* Open the app in a fresh incognito/private window.
+* Confirm favicon appears.
+* Check DevTools Network.
+* Confirm `/favicon.ico` returns successfully.
+* Run production build.
+* Preview production build.
+* Confirm favicon appears in production preview.
+* Confirm browser tab title still says `Spellix`.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Investigation Result
+
+* The focused regression reproduced the bug: the page still contained the PNG favicon link instead of the required ICO link.
+* `public/favicon.ico` and `src/images/favicon.ico` exist and are byte-for-byte identical.
+* The supplied `.ico` files contain PNG-encoded image bytes; they were used unchanged as explicitly provided rather than regenerated.
+
+Attempted Fixes
+
+* Updated the focused deployment regression first to require one `%PUBLIC_URL%/favicon.ico` link with `sizes="any"` and source/public ICO parity.
+* Confirmed that regression failed only on the existing PNG link before implementation.
+* Replaced the browser favicon link and its explanatory path comment with the ICO path.
+
+Final Fix
+
+* `public/index.html` now uses `<link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />`.
+* Create React App resolves the link to `/spellix/favicon.ico` for both the configured development and production base path.
+* The browser tab title remains `Spellix`.
+* The PNG manifest metadata, Apple touch icon, and supplied image files are unchanged.
+* The separate Bug-001 live-deployment blocker remains until the updated build is explicitly deployed.
+
+

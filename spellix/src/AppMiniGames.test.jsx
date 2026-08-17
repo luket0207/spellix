@@ -257,7 +257,18 @@ test('debug Hazards selects by environment, applies delayed health, and advances
 });
 
 test('debug Nothing Event uses the selected environment and advances through the next-turn modal', () => {
-  renderApp('/gameplay');
+  jest.useFakeTimers();
+  jest.spyOn(Math, 'random').mockReturnValue(0);
+  jest
+    .spyOn(window.HTMLMediaElement.prototype, 'pause')
+    .mockImplementation(() => {});
+  jest
+    .spyOn(window.HTMLMediaElement.prototype, 'play')
+    .mockResolvedValue();
+  const setup = createGameplayReadySetup({ debugMode: true });
+
+  setup.players[0].currentHealth = 90;
+  renderApp('/gameplay', setup);
 
   fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
   fireEvent.click(screen.getByRole('button', { name: /^debug$/i }));
@@ -284,14 +295,32 @@ test('debug Nothing Event uses the selected environment and advances through the
   ).toHaveClass('larger-text', 'language-en');
   expect(within(nothingDialog).queryByRole('list')).not.toBeInTheDocument();
   expect(within(nothingDialog).queryByRole('listitem')).not.toBeInTheDocument();
+  expect(
+    within(nothingDialog).getByRole('meter', { name: 'Health bar' })
+  ).toHaveAttribute('aria-valuenow', '90');
 
-  fireEvent.click(
-    within(nothingDialog).getByRole('button', { name: 'Continue' })
-  );
+  const continueButton = within(nothingDialog).getByRole('button', {
+    name: 'Continue',
+  });
+
+  expect(continueButton).toBeDisabled();
+
+  act(() => {
+    jest.advanceTimersByTime(1000);
+  });
+
+  expect(
+    within(nothingDialog).getByRole('meter', { name: 'Health bar' })
+  ).toHaveAttribute('aria-valuenow', '95');
+  expect(continueButton).toBeEnabled();
+
+  fireEvent.click(continueButton);
 
   expect(screen.getByText('Blue Players Turn')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
-  expect(screen.getByRole('button', { name: /open settings/i })).toBeDisabled();
+  expect(
+    screen.queryByRole('button', { name: /open settings/i })
+  ).not.toBeInTheDocument();
 });
 
 test('debug Roll Again keeps the same turn and permits only the required reroll', () => {

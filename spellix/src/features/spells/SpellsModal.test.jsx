@@ -28,10 +28,11 @@ function renderSpellsModal({
         pieceImage: getPlayerPieceImageName({ colour: 'red', gender: 'girl' }),
       }}
       draftSpellSlots={draftSpellSlots}
-      draftTokenBag={[
-        { id: 'red-1', type: 'red', committed: false },
-        { id: 'blue-1', type: 'blue', committed: false },
-      ]}
+      draftTokenBag={Array.from({ length: 5 }, (_, index) => ({
+        id: `red-${index + 1}`,
+        type: 'red',
+        committed: false,
+      }))}
       isForcedSetup={isForcedSetup}
       isRedoMode={isRedoMode}
       isWandsmithMode={isWandsmithMode}
@@ -80,7 +81,7 @@ describe('SpellsModal layout', () => {
 
     const title = screen.getByRole('heading', { name: 'Spells' });
     const warning = screen.getByText(
-      'You must place all 7 starting tokens into spell slots before rolling dice.'
+      'You must place all 5 starting tokens into spell slots before rolling dice. Place your tokens by dragging them from your token bag into the spell slots.'
     );
     const playerPiece = screen.getByRole('img', { name: /spell player piece/i });
     const componentSource = readFileSync(`${__dirname}/SpellsModal.jsx`, 'utf8');
@@ -113,7 +114,7 @@ describe('SpellsModal layout', () => {
     renderSpellsModal({ isForcedSetup: true });
 
     const spellSlotsList = screen.getByLabelText(/^spell slots$/i);
-    const tokenBagHeading = screen.getByText(/^Token Bag$/i);
+    const tokenBagHeading = screen.getByRole('heading', { name: /^Token Bag 5\/5$/i });
     const spellSlotHeadings = screen.getAllByRole('heading', { level: 4 });
     const tokenCounts = screen.getAllByText(/^0 \/ 5$/i);
     const spellPlayerPiece = screen.getByRole('img', { name: /spell player piece/i });
@@ -134,6 +135,8 @@ describe('SpellsModal layout', () => {
       '6',
     ]);
     expect(tokenCounts).toHaveLength(6);
+    expect(screen.getAllByRole('button', { name: /moveable red token/i })).toHaveLength(5);
+    expect(screen.queryByRole('button', { name: /blue token/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
   });
@@ -147,7 +150,7 @@ describe('SpellsModal layout', () => {
     expect(spellPlayerPiece).toHaveAttribute('src', expect.stringContaining('f-red.png'));
     expect(spellPlayerPiece).not.toHaveClass('battle-player-piece');
     expect(spellPlayerPiece).toHaveClass('spells-player-piece');
-    expect(screen.getByText(/^Token Bag$/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Token Bag 5\/5$/i })).toBeInTheDocument();
     expect(screen.queryByText(/^Starting Tokens$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Red tokens:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Blue tokens:/i)).not.toBeInTheDocument();
@@ -175,6 +178,7 @@ describe('SpellsModal layout', () => {
       'spells-starting-warning',
       `language-${language}`
     );
+    expect(screen.getByRole('heading', { level: 2, name: /5\/5$/ })).toBeInTheDocument();
     expect(document.querySelectorAll('.spells-starting-warning')).toHaveLength(1);
     expect(
       screen.queryByText(
@@ -209,6 +213,7 @@ describe('SpellsModal layout', () => {
       'spells-starting-warning',
       `language-${language}`
     );
+    expect(screen.getByRole('heading', { level: 2, name: /5\/5$/ })).toBeInTheDocument();
     screen
       .getAllByRole('button', { name: /moveable red token/i })
       .forEach((tokenButton) => expect(tokenButton).toBeEnabled());
@@ -224,7 +229,7 @@ describe('SpellsModal layout', () => {
     );
     expect(
       within(dialog).getByText(
-        'サイコロを振る前に、7個の初期トークンをすべて呪文スロットに配置してください。'
+        getSpellAssignmentTranslations('jp').startingTokenWarning
       )
     ).toBeInTheDocument();
     expect(within(dialog).getByText('トークンバッグ')).toBeInTheDocument();

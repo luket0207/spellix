@@ -321,7 +321,8 @@ describe('App routing flow', () => {
 
     players.forEach((player) => {
       expect(player.tokenBag.filter((token) => token.type === 'red')).toHaveLength(5);
-      expect(player.tokenBag.filter((token) => token.type === 'blue')).toHaveLength(2);
+      expect(player.tokenBag.filter((token) => token.type === 'blue')).toHaveLength(0);
+      expect(player.tokenBag).toHaveLength(5);
       expect(player.spellSlots).toHaveLength(6);
       expect(player.spellSlots.every((slot) => slot.maxTokens === 5)).toBe(true);
       expect(player.spellSlots.every((slot) => slot.tokens.length === 0)).toBe(true);

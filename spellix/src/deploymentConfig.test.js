@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import packageJson from '../package.json';
 
 test('configures the CRA GitHub Pages deployment contract', () => {
@@ -15,4 +15,27 @@ test('uses hash routing for refresh-safe GitHub Pages routes', () => {
   expect(entrySource).toMatch(/<HashRouter[\s>]/);
   expect(entrySource).toMatch(/<\/HashRouter>/);
   expect(entrySource).not.toMatch(/BrowserRouter/);
+});
+
+test('uses Spellix browser metadata and the provided ico favicon', () => {
+  const html = readFileSync('public/index.html', 'utf8');
+  const manifest = JSON.parse(readFileSync('public/manifest.json', 'utf8'));
+  const faviconLinks = html.match(/<link\s+rel="icon"[^>]*>/g) ?? [];
+
+  expect(html).toMatch(/<title>Spellix<\/title>/);
+  expect(html).not.toMatch(/<title>React App<\/title>/);
+  expect(faviconLinks).toEqual([
+    '<link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />',
+  ]);
+  expect(existsSync('public/favicon.ico')).toBe(true);
+  expect(readFileSync('public/favicon.ico')).toEqual(
+    readFileSync('src/images/favicon.ico')
+  );
+  expect(manifest.short_name).toBe('Spellix');
+  expect(manifest.name).toBe('Spellix');
+  expect(manifest.icons[0]).toEqual({
+    src: 'favicon.png',
+    sizes: '1254x1254',
+    type: 'image/png',
+  });
 });

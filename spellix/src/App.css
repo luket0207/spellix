@@ -1,12 +1,47 @@
-.app-settings-button {
+.floating-icon-button {
   position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 1100;
-  width: 40px;
-  height: 40px;
-  border: 1px solid #000000;
-  background: #ffffff;
+  width: 50px;
+  height: 50px;
+  background: #302419;
+  color: #C6CC0C;
+  border: 2px solid #C6CC0C;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.floating-icon-button svg {
+  width: 30px;
+  height: 30px;
+}
+
+.floating-icon-button:not(:disabled):hover {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+}
+
+.floating-icon-button:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 3px;
+}
+
+.floating-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.music-toggle-button {
+  top: 10px;
+  left: 10px;
+}
+
+.settings-floating-button {
+  top: 10px;
+  right: 10px;
 }
 
 .larger-text {
