@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/spellix/static/css/main.d903a3be.css",
-    "main.js": "/spellix/static/js/main.dce6478d.js",
+    "main.css": "/spellix/static/css/main.28cea8bf.css",
+    "main.js": "/spellix/static/js/main.3394b59a.js",
     "static/js/453.9a032747.chunk.js": "/spellix/static/js/453.9a032747.chunk.js",
     "static/media/river.png": "/spellix/static/media/river.edb90eb76af7fde51625.png",
     "static/media/forest.png": "/spellix/static/media/forest.1f59de558a32f81c5894.png",
@@ -108,12 +108,12 @@
     "static/media/rock-6.png": "/spellix/static/media/rock-6.ae0b6aa9fee275aab33a.png",
     "static/media/rock-8.png": "/spellix/static/media/rock-8.eb0c586ff66627c4279b.png",
     "index.html": "/spellix/index.html",
-    "main.d903a3be.css.map": "/spellix/static/css/main.d903a3be.css.map",
-    "main.dce6478d.js.map": "/spellix/static/js/main.dce6478d.js.map",
+    "main.28cea8bf.css.map": "/spellix/static/css/main.28cea8bf.css.map",
+    "main.3394b59a.js.map": "/spellix/static/js/main.3394b59a.js.map",
     "453.9a032747.chunk.js.map": "/spellix/static/js/453.9a032747.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.d903a3be.css",
-    "static/js/main.dce6478d.js"
+    "static/css/main.28cea8bf.css",
+    "static/js/main.3394b59a.js"
   ]
 }
