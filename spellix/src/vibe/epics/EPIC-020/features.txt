@@ -1,0 +1,2862 @@
+---
+
+Epic-020: Balance, village systems, responsive layout, and quality-of-life updates
+
+Status
+
+* not started
+
+Epic Goal
+
+* Improve the overall playability and polish of Spellix.
+* Make the game fit more reliably across desktop/laptop screen sizes.
+* Continue balancing battles, rewards, enemy health, and token rarity.
+* Complete missing potion behaviours.
+* Expand villages into a larger system with rewards, Rest, Wandsmith, and Leave choices.
+* Improve rules/help access.
+* Fix visual polish issues around health bars, spell dragging, battle death timing, hover labels, and Japanese typography.
+
+Global Implementation Notes
+
+* Preserve the existing no `ul` / `li` UI rule.
+* Use `div` with flex or grid for lists, choices, token rows, and option groups.
+* Text-only modal paragraphs should use `larger-text`.
+* Preserve the next-turn modal invariant whenever turn changes.
+* When a flow ends and advances the turn, the next-turn modal must be the first thing shown.
+* Avoid changing unrelated battle, board, potion, or reward behaviours unless explicitly required by a feature in this epic.
+* Any new Japanese UI text should use the game’s Japanese language handling and, after Feature-017, the `M PLUS Rounded 1c` font unless specifically excluded.
+* Health bar text is a deliberate exception: it should always use `Unkempt`, even in Japanese.
+
+---
+
+Feature-001: Make gameplay layout scale to fit screen height
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-004 Feature-004: Board generation
+* EPIC-004 Feature-005: Board movement and dice movement
+* EPIC-016 Feature-002: Multi-square board features landing/movement/highlighting
+* EPIC-018 Feature-006: Prevent white flash when returning to gameplay page
+* EPIC-020 Feature-016: Show environment or feature name when hovering highlighted movement squares
+
+Goal
+
+* Make the gameplay page responsive across different desktop and laptop resolutions.
+* This does not need to make the game properly playable on mobile.
+* The important requirement is that the board, player UI, potion UI, spell display, and modal layer fit within the visible height of the screen.
+* The same scale should be maintained throughout the app so modals and overlay content do not feel mismatched from the board.
+
+Problem Summary
+
+* On some resolutions, the full gameplay page does not fit on screen.
+* The board and surrounding gameplay UI can overflow vertically.
+* This makes the player scroll or lose access to important UI.
+* Modals can also appear too large relative to the visible screen.
+
+Required Behaviour
+
+* The gameplay page must always fit within the viewport height.
+* The board should scale down when vertical space is limited.
+* The gameplay UI should scale down with the board.
+* Modal pages and overlay panels should scale consistently with the board/gameplay shell.
+* Scaling should preserve:
+
+  * board aspect ratio.
+  * square alignment.
+  * player position alignment.
+  * movement highlight alignment.
+  * drag-and-drop token alignment.
+  * hover label positioning.
+  * modal proportions.
+
+Desktop-First Responsive Requirement
+
+* This is not a mobile redesign.
+* The game does not need to become touch-optimised or phone-friendly.
+* The target is desktop/laptop screens with different heights.
+* Avoid designing around a narrow mobile portrait layout.
+* Maintain the existing visual style and composition.
+
+Base Layout Requirement
+
+* Define one base gameplay design size.
+* The current board is 31 x 31 squares.
+* If the current square size is 30px, the unscaled board size is:
+
+```txt id="z0870m"
+930px x 930px
+```
+
+* The full gameplay shell should account for:
+
+  * top player/turn UI.
+  * dice controls.
+  * potion sections.
+  * active potion section.
+  * committed spell slot display.
+  * board.
+  * any required spacing around those elements.
+
+Suggested Scaling Direction
+
+* Use a wrapper around the full gameplay page content.
+* Calculate a scale based on available viewport height.
+* Apply the scale to the gameplay shell.
+* Keep the wrapper centred horizontally.
+
+Suggested CSS direction:
+
+```css id="l7z982"
+.gameplay-page {
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.gameplay-scale-root {
+  --gameplay-base-height: 1120px;
+  --game-scale: min(1, calc((100vh - 24px) / var(--gameplay-base-height)));
+
+  transform: scale(var(--game-scale));
+  transform-origin: top center;
+}
+```
+
+* Use the real base height after measuring the current layout.
+* Do not hard-code a guessed value if the project already has a better layout container.
+* If the board and UI need separate scaling, prefer one shared CSS variable rather than independent scale calculations.
+
+Board Scaling Requirement
+
+* The board should remain square.
+* Each square should remain visually consistent.
+* Player pieces should remain aligned to squares.
+* Multi-square features should keep correct dimensions.
+* Internal feature footprint logic should not change.
+* Movement highlight overlays must scale with the board.
+
+Suggested direction:
+
+```css id="thtijb"
+.board-wrapper {
+  width: calc(930px * var(--game-scale));
+  height: calc(930px * var(--game-scale));
+}
+```
+
+Alternative:
+
+```css id="qefgt2"
+.board-and-ui-shell {
+  transform: scale(var(--game-scale));
+  transform-origin: top center;
+}
+```
+
+* Use whichever approach preserves existing coordinate calculations best.
+* If the board already uses absolute coordinates, wrapping with `transform: scale()` may be safer than recalculating every square size.
+
+Modal Scaling Requirement
+
+* Modal pages should not overflow the viewport height.
+* Modals should use the same scale logic or be constrained relative to viewport height.
+* For standard modal panels:
+
+  * use `max-height`.
+  * allow internal vertical scrolling only when content genuinely needs it.
+* The modal background art should scale cleanly.
+
+Suggested modal direction:
+
+```css id="z18jwy"
+.modal-background {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+```
+
+* Do not globally force `overflow-x: hidden` on every modal unless it is safe.
+* Feature-015 separately scopes horizontal overflow fixing to the spells modal.
+
+Full-App Consistency Requirement
+
+* Maintain the same scale or sizing approach throughout:
+
+  * gameplay.
+  * battle.
+  * hazard.
+  * decision.
+  * village.
+  * cave.
+  * river.
+  * loot chest.
+  * spell assignment.
+  * settings rules modal.
+* If some pages are separate routes, they should still use the same starry background and responsive modal sizing.
+
+Interaction Requirement
+
+* Scaling must not break:
+
+  * board square click detection.
+  * valid move calculation.
+  * hover detection.
+  * token drag-and-drop.
+  * potion tooltips.
+  * token tooltips.
+  * board debug tools if debug mode is enabled.
+
+Suggested Implementation Steps
+
+* Identify the highest-level gameplay container.
+* Measure current natural gameplay height.
+* Add a scale variable based on `window.innerHeight` or CSS viewport units.
+* Prefer CSS-only scaling if possible.
+* If React state is needed, debounce resize handling.
+* Apply the same scale to board, board overlays, and UI panels.
+* Audit modal pages and adjust max-height/internal scrolling.
+* Test hover/click/drag after scaling.
+
+Out Of Scope
+
+* No mobile redesign.
+* No change to board dimensions or number of squares.
+* No change to movement logic.
+* No change to procedural generation.
+* No new mobile controls.
+* No zoom buttons.
+* No browser fullscreen requirement.
+
+Testing Checkpoints
+
+* Test on a large desktop screen.
+* Test on a shorter laptop screen.
+* Test with browser dev tools at several viewport heights.
+* Confirm the whole gameplay layout fits within the screen height.
+* Confirm the board remains square.
+* Confirm no important UI is cut off.
+* Confirm no vertical page scroll is required during normal gameplay.
+* Confirm modals fit the screen or scroll internally.
+* Confirm token drag-and-drop still works after scaling.
+* Confirm movement highlights still align with board squares.
+* Confirm hover labels from Feature-016 still align with the board.
+* Confirm battle page remains usable.
+* Confirm village page remains usable.
+* Confirm rules/settings modal remains usable.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Measured the existing natural gameplay footprint as 1320px wide by 940px high: the 940px board footprint, 20px column gap, and 360px sidebar footprint.
+* Added one centred gameplay viewport and one transformed scale root around the board and sidebar so the board, player UI, dice controls, potion UI, active potion UI, and committed spells all use the same scale.
+* The scale uses the smaller of the available viewport-height and viewport-width ratios, preserves the original size on larger screens, reserves a 12px inset on every side, and updates through a 50ms debounced resize listener.
+* Kept the board at 31 by 31 squares with its existing 30px square size and did not change board generation, movement, click handling, feature footprints, highlights, player positioning, or hover coordinate logic.
+* Kept gameplay modals outside the transformed board shell so fixed overlays and drag-and-drop coordinates remain stable.
+* Added dynamic viewport-height constraints and internal scrolling support to the shared standard modal panel while retaining `vh` fallbacks for browsers without `dvh` support.
+* Updated the shared starry gameplay page height to use the dynamic viewport with its existing fallback, preventing the responsive shell from creating normal page scrolling.
+* Battle, Village, Rules, Settings, and other separate flows retain their existing composition and benefit from the shared viewport-constrained modal behavior; no route, mechanics, mobile redesign, zoom controls, or unrelated styling was added.
+* Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-002: Add 5 health to level 1, 2, and 3 enemies only
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-014: Update enemy data source of truth for level 3 and level 4 balance
+* EPIC-018 Feature-015: Reduce final boss battle health to 100
+* EPIC-020 Feature-003: Elite Tower wins should reward 3 distinct rare tokens only
+
+Goal
+
+* Slightly increase enemy health for level 1, level 2, and level 3 enemies.
+* Level 4 enemies should remain unchanged.
+* Final boss health should remain unchanged.
+* This is a balance adjustment after the previous enemy nerfs.
+
+Updated Health Values
+
+```txt id="e3996q"
+Level 1 enemies: 25 health
+Level 2 enemies: 35 health
+Level 3 enemies: 50 health
+Level 4 enemies: 85 health
+Final Boss Battle: 100 health
+```
+
+Source Of Truth Rule
+
+* This feature supersedes earlier enemy health values for level 1, 2, and 3 enemies.
+* EPIC-018 Feature-014 remains the source of truth for level 4 enemy spell slots and level 4 base health.
+* EPIC-018 Feature-015 remains the source of truth for final boss battle health.
+* Do not revert level 3 or level 4 spell slot nerfs from EPIC-018 Feature-014.
+
+Required Behaviour
+
+* All level 1 enemies should start battles with:
+
+```txt id="l87wbv"
+25 / 25 HP
+```
+
+* All level 2 enemies should start battles with:
+
+```txt id="ioxut6"
+35 / 35 HP
+```
+
+* All level 3 enemies should start battles with:
+
+```txt id="t4o9hi"
+50 / 50 HP
+```
+
+* All level 4 enemies should remain:
+
+```txt id="8y7f1x"
+85 / 85 HP
+```
+
+* Final boss battle should remain:
+
+```txt id="tzx3kw"
+100 / 100 HP
+```
+
+Enemy List Affected
+
+* Level 1:
+
+  * Vilewhisker Rat
+  * Emberhorn Imp
+  * Boneveil Acolyte
+  * Nightplume Raven
+  * Flaskwick Goblin
+
+* Level 2:
+
+  * Hexmaw Hag
+  * Runefang Wolf
+  * Frostwisp Spirit
+  * Harvestrot Scarecrow
+  * Wartback Brute
+
+* Level 3:
+
+  * Gravechant Necromancer
+  * Dreadsteel Knight
+  * Skullclub Warlord
+  * Venomglyph Serpent
+  * Cinderveil Demon
+
+Not Affected
+
+* Level 4:
+
+  * Crowned Lichlord
+  * Amethyst Ogre
+  * Mossroot Elder
+  * Duskwyrm Warlock
+  * Hellcrown Reaper
+
+* Final boss battle:
+
+  * remains overridden to 100 HP.
+
+Implementation Requirement
+
+* Update base enemy data for levels 1 to 3.
+* If battle instances copy `health` and `maxHealth`, update both.
+* Do not update only display text.
+* Do not mutate base data when creating the boss battle instance.
+
+Out Of Scope
+
+* No spell slot changes.
+* No enemy image changes.
+* No enemy name changes.
+* No level 4 health changes.
+* No final boss health changes.
+* No battle reward changes.
+* No battle damage changes.
+
+Testing Checkpoints
+
+* Trigger each level 1 enemy and confirm it has 25 HP.
+* Trigger each level 2 enemy and confirm it has 35 HP.
+* Trigger each level 3 enemy and confirm it has 50 HP.
+* Trigger a level 4 Elite Tower battle and confirm the enemy still has 85 HP.
+* Trigger final boss battle and confirm the boss still has 100 HP.
+* Confirm enemy spell slots are unchanged from EPIC-018 Feature-014.
+* Confirm no old level 1/2/3 HP values remain in battle UI.
+* Confirm base enemy data is not mutated by boss override.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Updated the centralized base enemy definitions so all five level 1 enemies use 25 maximum health, all five level 2 enemies use 35, and all five level 3 enemies use 50.
+* Existing enemy instances continue deriving `currentHealth` from each definition's `maxHealth`, so battles begin at the new full-health values without display-only overrides.
+* Kept all five level 4 enemy definitions at 85 maximum health and kept the existing final-boss battle override at 100 current and maximum health.
+* Kept every enemy name, image, spell slot, merged column, reward, damage rule, and battle flow unchanged.
+* Confirmed the boss override is applied only to the cloned battle state and does not mutate the selected level 4 base enemy.
+* Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-003: Elite Tower wins should reward 3 distinct rare tokens only
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-003: Implement Elite Tower battles, Boss Battle access, and win condition
+* EPIC-018 Feature-002: Battle reward token choices must be different
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-020 Feature-004: Make Buff common and update its description
+
+Goal
+
+* Change the reward offered after winning an Elite Tower battle.
+* Elite Tower victories should feel special and should help prepare the player for the final boss.
+* Winning an Elite Tower should offer 3 rare token choices only.
+* No potions and no common tokens should be offered.
+* All 3 rare token choices must be different token types.
+
+Required Behaviour
+
+* When a player wins an Elite Tower battle:
+
+  * do not use the normal battle reward table.
+  * do not offer potions.
+  * do not offer common tokens.
+  * generate exactly 3 rare token choices.
+  * all 3 token choices must be distinct.
+  * the player chooses 1 of the 3 tokens.
+  * the chosen token then follows the existing token reward/assignment flow.
+
+Valid Example
+
+```txt id="i1eq2b"
+Shiny Damage
+Shiny Guard
+Charge
+```
+
+Invalid Example: Duplicate Rare Token
+
+```txt id="d0apmc"
+Shiny Damage
+Shiny Damage
+Charge
+```
+
+Invalid Example: Common Token And Potion
+
+```txt id="iialvt"
+Damage
+Shiny Guard
+Heal Potion
+```
+
+Rare Token Pool Requirement
+
+* Use the current rare token pool after token data updates.
+* Shiny tokens should be eligible if they are rare.
+* Shiny Health should be eligible once EPIC-018 Feature-001 is implemented.
+* Buff should not be eligible after Feature-004 makes Buff common.
+
+Expected rare pool after this epic:
+
+```txt id="lgugde"
+White / Merge
+Yellow / Charge
+Grey / Capacity
+Shiny Damage
+Shiny Guard
+Shiny Counter
+Shiny Deflect
+Shiny Health
+```
+
+* If other rare tokens exist in the current codebase, include them only if their token data rarity is still `Rare`.
+
+Distinct Token Requirement
+
+* The 3 options must be different token types.
+* Compare by stable token ID, not object reference.
+* Damage and Shiny Damage are different token types.
+* Two Shiny Damage token objects are not different.
+
+Suggested helper:
+
+```js id="sri30n"
+function getDistinctRandomTokens(tokenPool, count) {
+  const uniquePool = removeDuplicateTokenTypes(tokenPool);
+
+  if (uniquePool.length < count) {
+    console.warn("Not enough unique rare tokens for Elite Tower reward.");
+    return uniquePool;
+  }
+
+  return shuffle(uniquePool).slice(0, count);
+}
+```
+
+Reward Modal Requirement
+
+* Use the current battle reward choice modal styling.
+* Title can remain the existing reward title unless a specific Elite Tower reward title already exists.
+* Show 3 token components horizontally if the existing design supports it.
+* Each token should show:
+
+  * token icon.
+  * token name.
+  * tooltip on hover.
+  * Choose button.
+
+Reward Resolution Requirement
+
+* Once the player chooses a token:
+
+  * show the selected reward as normal.
+  * open the token assignment modal if that is the existing token reward behaviour.
+  * allow assignment or trash according to existing token reward rules.
+  * then return to board or complete the Elite Tower win flow.
+* The Elite Tower progress tick must still be applied for that player.
+
+Out Of Scope
+
+* No changes to normal non-Elite battle rewards.
+* No changes to boss victory rewards.
+* No changes to village rewards.
+* No change to Elite Tower enemy selection.
+* No new rare token weighting.
+* No guaranteed Shiny token requirement.
+
+Testing Checkpoints
+
+* Win the north-west Elite Tower battle.
+* Confirm exactly 3 token choices are shown.
+* Confirm all 3 are rare tokens.
+* Confirm all 3 token types are different.
+* Confirm no potion choice appears.
+* Confirm no common token appears.
+* Choose one token.
+* Confirm existing token assignment flow opens correctly.
+* Confirm the chosen token can be assigned or trashed.
+* Confirm the Elite Tower progress tick is applied.
+* Win the south-east Elite Tower battle and repeat.
+* Confirm Buff is not included once Feature-004 is implemented.
+* Confirm Shiny Health can appear if rare token pool includes it.
+* Confirm normal battles still use normal battle rewards.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added an Elite Tower reward generator that creates exactly three `Rare Token` choices from the centralized live token definitions.
+* Reused the existing reward-item exclusion support so each generated choice has a different stable token `type`; no duplicate token types, potions, or common tokens are offered.
+* Routed only `eliteTowerGravel` and `eliteTowerWoods` victories through the Elite generator. Normal battles retain their existing level-based reward table, and boss victories retain their existing no-reward win flow.
+* Reused the current Reward page and shared token reward resolution, preserving token icons, localized names, hover descriptions, Choose actions, spell-slot assignment, token-bag placement/replacement, trash, and completion behavior.
+* Elite progress is still applied by the existing per-player encounter update before reward resolution.
+* The generator reads token rarity at generation time. Shiny Health is eligible now; Buff remains eligible while its current data is Rare and will be excluded automatically when Feature-004 changes it to Common.
+* If the live rare pool unexpectedly contains fewer than three unique types, generation warns and returns only the available unique choices rather than violating the no-duplicate rule.
+* No reward weighting, Elite enemy selection, normal/boss/village rewards, token data, reward styling, or unrelated battle behavior was changed.
+* Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-004: Make Buff common and update its description
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-011 Feature-004: Add non-battle token effects
+* EPIC-020 Feature-003: Elite Tower wins should reward 3 distinct rare tokens only
+
+Goal
+
+* Change Buff from a rare token to a common token.
+* Update Buff’s English and Japanese descriptions.
+* Keep the existing Buff functionality unless the implementation currently conflicts with the description.
+
+Updated Buff Token Entry
+
+```txt id="pbsisj"
+Colour: Purple
+Name: Buff
+Japanese Name: 強化
+Description: Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.
+Japanese Description: バフが配置されている列の両隣の2列を強化し、次のターンのみダメージまたはガードを5増加させる。
+Rarity: Common
+```
+
+Required Data Changes
+
+* Update Buff rarity from:
+
+```txt id="2wq34g"
+Rare
+```
+
+to:
+
+```txt id="vzi6g2"
+Common
+```
+
+* Update English description.
+* Update Japanese description.
+* Keep colour as Purple.
+* Keep English name as Buff.
+* Keep Japanese name as 強化.
+
+Reward Pool Requirement
+
+* Buff should now be included in common token reward pools.
+* Buff should not be included in rare-only token reward pools.
+* Elite Tower rare-only rewards from Feature-003 must not offer Buff.
+* Any common-token-only rewards, including the first post-Elite village reward from Feature-010, may offer Buff.
+
+Tooltip Requirement
+
+* Token tooltip title:
+
+English:
+
+```txt id="jiixry"
+Buff
+```
+
+Japanese:
+
+```txt id="hdbx6q"
+強化
+```
+
+* Token tooltip body:
+
+English:
+
+```txt id="o7opvs"
+Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.
+```
+
+Japanese:
+
+```txt id="b1d2hn"
+バフが配置されている列の両隣の2列を強化し、次のターンのみダメージまたはガードを5増加させる。
+```
+
+Functionality Requirement
+
+* Buff should continue to affect the two adjacent columns.
+* It should increase damage or guard by 5 next turn only.
+* Existing merged/effective column adjacency rules should still apply.
+* Edge columns only have one adjacent column.
+* Merged columns should use effective adjacency, as already specified in prior epics.
+
+Out Of Scope
+
+* No new Buff mechanics.
+* No change to Buff colour.
+* No shiny Buff token.
+* No change to Buff animation.
+* No change to token capacity.
+
+Testing Checkpoints
+
+* Confirm Buff rarity is Common.
+* Confirm Buff appears in common token reward pools.
+* Confirm Buff does not appear in rare-only token reward pools.
+* Confirm Elite Tower rare rewards do not include Buff.
+* Confirm Buff tooltip shows updated English description.
+* Confirm Buff tooltip shows updated Japanese description.
+* Confirm Buff still affects adjacent columns correctly.
+* Confirm Buff works with edge columns.
+* Confirm Buff works with merged/effective columns.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Changed only the centralized Purple/Buff token definition from Rare to Common.
+* Replaced the short English and Japanese Buff descriptions with the required adjacent-column, damage/guard, and next-turn-only wording.
+* Kept the Purple label, Buff / Japanese Buff names, token colour, and all visual behavior unchanged.
+* Existing reward generators read the centralized rarity dynamically, so Buff is now available to common-token rewards and excluded from rare-only and Elite Tower reward pools without hard-coded pool changes.
+* Kept the existing Buff mechanics unchanged because they already grant 5 per Purple token to effective adjacent columns, activate on the caster's next turn only, affect Red damage or Blue guard, support edge columns, and respect merged/effective adjacency.
+* No shiny Buff, animation, token-capacity, reward-weighting, or unrelated token changes were made.
+* Per the main project rules, only `features.txt` and `testing.txt` are used for this feature; `implementation.txt` was not created or changed despite the stale checkpoint text above.
+
+---
+
+Feature-005: Show final hit, death icon, and complete animations before battle ends
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-014 Feature-006: Battle dice result visible before animations
+* EPIC-017 Bug-001: Guard shield should appear before counter damage removes it
+* EPIC-017 Bug-003: Guard shield should remain visible until removed by damage or turn end
+* EPIC-015 Feature-007: Add death state in turn change modal before respawn
+
+Goal
+
+* Make the final hit of a battle visible.
+* Currently, if damage kills a character, the battle can end too quickly.
+* The player should see:
+
+  * the final damage land.
+  * health being removed.
+  * any counters complete.
+  * the defeated character reach 0 HP.
+  * a grey skull icon animation.
+  * then the battle ends.
+
+Required Death Sequence
+
+When a battle hit causes a character to reach `0 HP`, the flow should be:
+
+```txt id="th6efv"
+1. Dice result is shown.
+2. Spell animations begin.
+3. Damage/counter/guard/deflect/freeze animations complete their intended cycle.
+4. Health is removed when damage hits, as normal.
+5. If health reaches 0, show faSkullCrossbones over the defeated character.
+6. The skull icon grows from the centre and shakes.
+7. After the skull animation completes, the battle ends.
+8. The normal win/loss flow begins.
+```
+
+Animation Completion Requirement
+
+* Do not end the battle immediately when lethal damage is calculated.
+* Do not skip queued counter damage if it should still happen.
+* Do not skip guard/deflect visual resolution.
+* Do not hide the battle UI before the final health bar update is visible.
+* The battle should end only after the death visual has completed.
+
+Counter Interaction Requirement
+
+* If the killing attack also triggers counter damage:
+
+  * the counter animation should still complete if it is part of the same battle resolution.
+  * counter damage should still apply if rules say it applies.
+  * if counter damage also kills the attacker, resolve this safely and visibly.
+* If both characters reach 0 HP in the same exchange, avoid crashing.
+* If the game has no draw rule, use existing battle winner logic, but still show both relevant health/death animations.
+
+Health Requirement
+
+* Health should be removed at the normal damage impact moment.
+* The health bar must visibly reach `0`.
+* The skull icon should appear only after the defeated character’s health is at 0.
+* Do not show the skull before health is removed.
+
+Skull Icon Requirement
+
+* Use Font Awesome:
+
+```txt id="ld4oza"
+faSkullCrossbones
+```
+
+* Colour:
+
+```txt id="cx045y"
+grey
+```
+
+* The icon should:
+
+  * appear over the defeated character image.
+  * be centred over the character.
+  * grow from the centre.
+  * shake.
+  * use the same animation style as the potion-applied icon animation.
+  * complete before the battle result/loss/win flow begins.
+
+Suggested CSS Direction
+
+```css id="uis8it"
+.battle-death-icon {
+  color: #555;
+  animation: battleDeathIcon 1.5s ease-out forwards;
+  pointer-events: none;
+}
+```
+
+Suggested Keyframe Direction
+
+```css id="jsf8n6"
+@keyframes battleDeathIcon {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1) translateX(-5px) rotate(-4deg);
+  }
+
+  65% {
+    transform: scale(1) translateX(5px) rotate(4deg);
+  }
+
+  80% {
+    transform: scale(1) translateX(-3px) rotate(-2deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0);
+  }
+}
+```
+
+State Requirement
+
+* Add an explicit battle resolution phase if needed.
+
+* Suggested phase names:
+
+  * `rolling`
+  * `resultShown`
+  * `resolvingAnimations`
+  * `deathAnimation`
+  * `battleComplete`
+
+* Do not route away during `resolvingAnimations` or `deathAnimation`.
+
+Out Of Scope
+
+* No changes to death punishment values.
+* No changes to battle rewards.
+* No changes to respawn logic.
+* No changes to winner screen.
+* No new sound effect.
+* No new draw rule unless existing logic requires a safe fallback.
+
+Testing Checkpoints
+
+* Deal lethal damage to an enemy.
+* Confirm final damage animation completes.
+* Confirm enemy health reaches 0 visibly.
+* Confirm skull icon appears over enemy.
+* Confirm skull icon grows and shakes.
+* Confirm battle ends only after skull animation.
+* Take lethal damage from an enemy.
+* Confirm player health reaches 0 visibly.
+* Confirm skull icon appears over player.
+* Trigger lethal damage with counter damage also occurring.
+* Confirm counter animation completes before battle ends.
+* Trigger lethal counter damage if possible.
+* Confirm the sequence does not crash.
+* Confirm battle reward/loss modal appears only after death sequence.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added an explicit `deathAnimation` battle phase after all queued battle effects finish and lethal health has been applied.
+* Kept the battle UI mounted with disabled controls and visible zero-health bars until every defeated actor completes its death animation.
+* Added a centred grey Font Awesome `faSkullCrossbones` overlay that grows and shakes over the defeated player or enemy image for 1.5 seconds.
+* Deferred the existing reward, loss, death-penalty, respawn, and final-boss winner flows until the skull animation reports completion.
+* Preserved the existing loss-first outcome rule for simultaneous lethal attack and counter damage while displaying and waiting for both skulls.
+* Left damage values, counters, guard, deflect, freeze, rewards, death punishment, respawn, winner behavior, routes, and sound unchanged.
+
+---
+
+Feature-006: Standardise health bar text colour and font
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+* EPIC-015 Feature-002: Implement Decision page rewards and punishments
+* EPIC-014 Feature-009: Rearrange battle page with dice between characters
+* EPIC-020 Feature-017: Change Japanese font to M PLUS Rounded 1c
+
+Goal
+
+* Ensure every health bar in the game uses the same text styling.
+* Health bar text should always be black.
+* Health bar text should always use the `Unkempt` font.
+* This applies in English and Japanese.
+
+Problem Summary
+
+* When being healed in a village, the health bar does not have the correct text colour or font.
+* This should be fixed globally so every health bar is consistent.
+
+Required Behaviour
+
+* Every health bar should display its text using:
+
+  * black text.
+  * `Unkempt` font.
+* This applies regardless of the current language.
+* Japanese health bar text should not use the Japanese UI font.
+* Village healing health bars must be fixed.
+* Any shared HealthBar component should enforce this directly.
+
+Required CSS Direction
+
+```css id="gltxia"
+.health-bar-text {
+  color: black;
+  font-family: "Unkempt", cursive;
+}
+```
+
+Scope
+
+* Apply to health bars in:
+
+  * gameplay top UI.
+  * battle player side.
+  * battle enemy side.
+  * village healing.
+  * decision health-loss events.
+  * hazard health-loss events.
+  * respawn/death screens.
+  * boss entry punishment.
+  * any other health bar component or variant.
+
+Font Exception Requirement
+
+* Feature-017 changes Japanese game font to `M PLUS Rounded 1c`.
+* Health bar text must remain `Unkempt`.
+* Do not let generic `.jp` or Japanese font classes override health bar text.
+
+Suggested CSS Specificity
+
+```css id="rwa7m6"
+.health-bar .health-bar-text,
+.health-bar-text.jp,
+.health-bar-text.japanese-text {
+  color: black;
+  font-family: "Unkempt", cursive;
+}
+```
+
+Out Of Scope
+
+* No changes to health values.
+* No changes to damage/healing calculations.
+* No changes to health bar animation.
+* No unrelated font changes.
+
+Testing Checkpoints
+
+* View health bar in gameplay.
+* View health bar in battle.
+* View enemy health bar in battle.
+* View health bar during village healing.
+* View health bar during hazard damage.
+* View health bar during decision damage.
+* View health bar during boss entry punishment.
+* Switch to Japanese.
+* Confirm every health bar still uses Unkempt.
+* Confirm every health bar text is black.
+* Confirm Feature-017 Japanese font does not override health bar font.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing shared `HealthBar` component and `HealthBar.css` rule already used by gameplay, battle, village, decision, hazard, boss punishment, and mini-game respawn screens.
+* Added the required explicit `'Unkempt', cursive` font family to shared health text while preserving its existing black `#000` colour.
+* Removed the only page-level health text colour override, which made the mini-game failure health value yellow.
+* Added no new components, routes, selectors, health behavior, animation changes, or unrelated font changes.
+
+---
+
+Feature-007: Implement SOS potion
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-012 Feature-003: Potion data source of truth
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+* EPIC-020 Feature-010: Expand to 4 villages and update village reward rules
+* EPIC-020 Feature-011: Add village action choice page
+
+Goal
+
+* Implement the SOS potion.
+* SOS should immediately move the player to the nearest village.
+* The normal village sequence should then play.
+* The potion should be discarded.
+* This consumes the player’s turn exactly like landing on a village.
+
+Potion Type
+
+* SOS is a Board potion.
+* It should be available from the board potion UI.
+* It should use the standard potion confirmation modal before activation.
+
+Use Confirmation
+
+* Use the existing standard potion confirmation flow.
+
+English structure:
+
+```txt id="jld74i"
+Are you sure you want to use SOS?
+```
+
+Japanese structure:
+
+```txt id="s8anqx"
+SOSを使用してもよろしいですか？
+```
+
+* If the player selects No:
+
+  * close confirmation.
+  * do not consume SOS.
+  * do not move the player.
+  * board potion use should not be locked.
+* If the player selects Yes:
+
+  * consume SOS.
+  * move the player to the nearest village.
+  * begin village sequence.
+
+Nearest Village Requirement
+
+* Calculate the nearest village from the player’s current board position.
+* Use orthogonal board distance.
+* Do not count diagonal distance.
+* Suggested distance:
+
+```txt id="frlw5b"
+distance = abs(playerX - villageX) + abs(playerY - villageY)
+```
+
+* If the player is on a multi-square feature or village footprint, use their logical position or nearest occupied/visual cell consistently with current board movement logic.
+* If two or more villages are tied for nearest:
+
+  * choose one randomly.
+
+Village Destination Requirement
+
+* SOS can move the player to any village currently generated on the board:
+
+  * Field Village.
+  * Forest Village.
+* After Feature-010, there should be 4 villages.
+* SOS should choose the nearest among all 4.
+
+Movement Requirement
+
+* No pathfinding animation is required.
+* The player can immediately appear at the destination village.
+* If the village is multi-square:
+
+  * place the player using the current feature visual cell placement rules.
+  * avoid overlapping another player if possible.
+* The player's logical position becomes that village feature.
+
+Village Sequence Requirement
+
+* After teleporting, run the same logic as landing on that village normally.
+* This means:
+
+  * eligible village rewards from Feature-010 can trigger.
+  * village action choice page from Feature-011 appears after rewards.
+  * Rest/Wandsmith/Leave rules apply.
+  * village action lock/reset rules apply.
+  * turn ends according to the chosen village action.
+
+Turn Requirement
+
+* SOS takes up the player’s turn.
+* The player should not roll/move after SOS.
+* The turn should end only after the village sequence has fully resolved.
+* If the player chooses Rest, Wandsmith, or Leave, follow that flow to turn end.
+
+Active Potion Requirement
+
+* SOS should not go into Active Potion.
+* It resolves immediately.
+* It is discarded once used.
+
+Debug / Edge Case Requirements
+
+* If no villages exist because of a generation error:
+
+  * do not crash.
+  * show a safe error modal or log developer warning.
+  * do not consume SOS if no destination can be found.
+* If the player is already on a village:
+
+  * the nearest village may be the current village.
+  * begin the village sequence normally.
+
+Out Of Scope
+
+* No teleport animation required.
+* No player choice of village destination.
+* No new village reward rules.
+* No change to village generation except Feature-010.
+* No change to other teleport effects.
+
+Testing Checkpoints
+
+* Give a player SOS.
+* Use SOS from different positions on the board.
+* Confirm confirmation modal appears.
+* Click No and confirm SOS is not consumed.
+* Click Yes and confirm SOS is consumed.
+* Confirm player moves to nearest village.
+* Place player equal distance from two villages.
+* Confirm one tied village is chosen randomly.
+* Confirm village sequence begins.
+* Confirm village rewards trigger if eligible.
+* Confirm village choice page appears after rewards.
+* Confirm player turn ends after village action resolves.
+* Confirm SOS does not appear in Active Potion.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added a pure nearest-village selector that dynamically considers every generated Field or Forest Village, measures orthogonal distance to each full village footprint, treats the player's current logical village as distance zero, and uses randomness only to resolve tied villages.
+* Reused the standard Board potion confirmation and consumption flow. No leaves SOS and movement untouched; Yes discards it, records Board potion use, and never assigns it as Active Potion.
+* Reused the existing multi-square visual placement helper so the teleported player keeps the village's logical feature identity, avoids occupied village cells when possible, records that Start has been left, and clears one-use Anywhere movement mode.
+* Reused `startVillageVisit` and the existing `/village` navigation so current rewards, healing, turn completion, and later Feature-010/Feature-011 village extensions remain one shared sequence.
+* A missing generated village logs a developer warning and closes confirmation without consuming SOS, moving the player, or locking Board potion use.
+* Updated the centralized English and Japanese SOS descriptions to refer to the nearest village. Added no route, modal, animation, styling, generation rule, reward rule, or player destination choice.
+
+---
+
+Feature-008: Implement Metal Detector potion
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-012 Feature-003: Potion data source of truth
+* EPIC-016 Feature-008: Trigger board events based on landed environment
+* EPIC-011 Feature-001: Loot Chest page
+* EPIC-020 Feature-010: Expand to 4 villages and update village reward rules
+
+Goal
+
+* Implement Metal Detector.
+* When played, it should guarantee that the player finds loot on this turn if they land on a non-feature square.
+* It should go into the Active Potion section for this turn only.
+* After the turn resolves, it should be discarded.
+
+Potion Type
+
+* Metal Detector is a Board potion.
+* It should use the standard Board potion use flow.
+* It counts as the player’s one board potion for the turn.
+
+Use Behaviour
+
+* When the player confirms using Metal Detector:
+
+  * remove it from potion slots.
+  * place it in Active Potion.
+  * mark `metalDetectorActive` for the current player/turn.
+  * allow the player to roll and move as normal.
+
+Active Potion Requirement
+
+* Metal Detector should appear in the Active Potion section.
+* It should remain visible until the landing event resolves.
+* It should then be discarded/cleared.
+* If Roll Again occurs before landing resolution ends, define carefully:
+
+  * Metal Detector should apply to the first valid non-feature landing that resolves an event.
+  * once it triggers Loot Chest or is discarded by a feature landing, it should no longer apply.
+
+Landing Requirement
+
+* After the player rolls and chooses a square:
+
+  * check whether the destination is a feature.
+* If the destination is not a feature:
+
+  * skip normal environment event probability selection.
+  * trigger the Loot Chest found flow.
+  * run the normal Loot Chest sequence.
+  * end the turn after Loot Chest completes.
+  * discard Metal Detector.
+
+Feature Exclusion
+
+* Metal Detector should not override feature squares.
+* If the player lands on:
+
+  * Village
+  * Elite Tower
+  * Boss Battle
+* then that feature’s normal logic happens.
+* Metal Detector is discarded at the end of the turn after the feature sequence resolves.
+
+Non-Feature Definition
+
+* Non-feature squares include normal environments:
+
+  * Field
+  * Hills
+  * Gravel
+  * Mud
+  * Stream
+  * River
+  * Woods
+  * Forest
+  * Mountains
+
+* Features include:
+
+  * Village
+  * Elite Tower
+  * Boss Battle
+  * any future special multi-square feature.
+
+Loot Chest Requirement
+
+* Use the existing Loot Chest found modal if the game already has one.
+
+English:
+
+```txt id="pqr56z"
+You found a Loot Chest!
+```
+
+Japanese:
+
+```txt id="zbdot5"
+戦利品の宝箱を見つけました！
+```
+
+Button:
+
+```txt id="ypy1l5"
+Open Chest / 宝箱を開ける
+```
+
+* Then run the existing Loot Chest sequence.
+* After Loot Chest finishes, return to board and advance to next player.
+
+Interaction With Smokescreen
+
+* If Metal Detector and Smokescreen could somehow both be active, Metal Detector takes priority on non-feature landing because it replaces normal event selection with Loot Chest.
+* This should be rare because only one board potion should normally be usable per board turn.
+
+Out Of Scope
+
+* No special loot rewards.
+* No different chest visuals.
+* No stacking multiple loot chests.
+* No change to normal Loot Chest reward odds.
+* No animation required.
+
+Testing Checkpoints
+
+* Use Metal Detector.
+* Confirm it moves to Active Potion.
+* Roll and land on Field.
+* Confirm Loot Chest is guaranteed.
+* Confirm normal Field event selection is skipped.
+* Complete Loot Chest.
+* Confirm turn advances.
+* Confirm Metal Detector is discarded.
+* Use Metal Detector and land on Village.
+* Confirm Village sequence happens instead of Loot Chest.
+* Confirm Metal Detector is discarded after the village sequence.
+* Use Metal Detector and land on Elite Tower.
+* Confirm Elite Tower battle happens.
+* Confirm Metal Detector is discarded after the turn resolves.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the existing standard Board potion confirmation and consumption flow. No leaves Metal Detector in its slot and Board use unlocked; Yes removes it, marks Board use, and stores it in the existing `activePotion` field for the current turn.
+* Used `activePotion.id === 'metal-detector'` as the `metalDetectorActive` marker instead of duplicating derived player state.
+* Added the guaranteed Loot Chest branch only after Village, Elite Tower, Boss Battle, and other feature handling, but before debug event choice and random environment event selection.
+* Reused the existing `boardLanding` Loot Chest event, localized found modal, Loot Chest page, reward assignment, return routing, and next-player transition without changing rewards or odds.
+* Added Metal Detector to shared Board-turn potion expiration so it remains visible through Loot Chest or feature resolution and clears only when that turn advances.
+* The existing one-Board-potion rule prevents normal Metal Detector/Smokescreen stacking. Metal Detector's landing branch precedes normal event selection, preserving its required priority if later effects also inspect non-feature landings.
+* Added no component, route, modal, field, styling, animation, loot rule, or feature override.
+
+---
+
+Feature-009: Implement Smokescreen potion
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-012 Feature-003: Potion data source of truth
+* EPIC-016 Feature-008: Trigger board events based on landed environment
+* EPIC-020 Feature-008: Implement Metal Detector potion
+
+Goal
+
+* Implement Smokescreen.
+* When played, it prevents the player from encountering random battles for this turn.
+* It should go into the Active Potion section for this turn only.
+* Other events should still be possible.
+
+Potion Type
+
+* Smokescreen is a Board potion.
+* It should use the standard Board potion confirmation flow.
+* It counts as the player’s one board potion for the turn.
+
+Use Behaviour
+
+* When the player confirms using Smokescreen:
+
+  * remove it from potion slots.
+  * place it in Active Potion.
+  * mark `smokescreenActive` for the current player/turn.
+  * allow the player to roll and move as normal.
+
+Active Potion Requirement
+
+* Smokescreen should appear in the Active Potion section.
+* It should remain until the player’s landing event resolves.
+* It should then be discarded.
+
+Battle Prevention Requirement
+
+* While Smokescreen is active, random environment event selection must exclude:
+
+  * Level 1 Battle
+  * Level 2 Battle
+  * Level 3 Battle
+
+* The remaining valid non-zero event chances should be reweighted proportionally.
+
+* The player can still encounter:
+
+  * Nothing
+  * River Mini Game
+  * Cave Mini Game
+  * Decision
+  * Hazard
+  * Loot Chest
+  * Roll Again
+  * any other non-battle event for that environment.
+
+Example: Field
+
+* If Field normally offers:
+
+  * Nothing
+  * Level 1 Battle
+  * Decision
+  * Hazard
+  * Loot Chest
+  * Roll Again
+
+* With Smokescreen active, remove Level 1 Battle and choose from:
+
+  * Nothing
+  * Decision
+  * Hazard
+  * Loot Chest
+  * Roll Again
+
+Example: Woods
+
+* Woods normally has Level 1 Battle and Level 2 Battle.
+* With Smokescreen active, both battle options are removed.
+* Woods should choose from remaining non-battle options.
+
+Reweighting Direction
+
+```js id="drhtkr"
+const filteredEvents = availableEvents.filter(
+  (event) => !battleEventTypes.includes(event.type)
+);
+
+const selectedEvent = weightedRandom(filteredEvents);
+```
+
+* Do not leave a “missing” probability gap.
+* Do not allow zero-chance events to appear.
+
+Feature Square Requirement
+
+* Smokescreen does not prevent feature battles.
+* If the player lands on:
+
+  * Elite Tower
+  * Boss Battle
+* the feature battle still happens.
+* Smokescreen only prevents random environment battle encounters.
+
+Roll Again Requirement
+
+* If Smokescreen is active and the selected event is Roll Again:
+
+  * Smokescreen should continue to protect the same ongoing turn until the eventual landing event resolves.
+  * It should not be discarded just because the Roll Again modal appeared.
+* Once a non-Roll Again landing event resolves, discard Smokescreen.
+
+Out Of Scope
+
+* No battle prevention beyond the current board turn.
+* No change to Elite Tower or Boss Battle.
+* No change to battle reward logic.
+* No animation required.
+* No effect on battles already started.
+
+Testing Checkpoints
+
+* Use Smokescreen.
+* Confirm it moves to Active Potion.
+* Land on Field repeatedly with event debug.
+* Confirm random Level 1 Battle cannot be selected while active.
+* Confirm non-battle Field events still work.
+* Land on Woods while active.
+* Confirm Level 1 and Level 2 random battles are excluded.
+* Land on Forest while active.
+* Confirm Level 2 and Level 3 random battles are excluded.
+* Land on Elite Tower while active.
+* Confirm Elite Tower battle still happens.
+* Trigger Roll Again while Smokescreen is active.
+* Confirm Smokescreen remains active for the continued turn.
+* Resolve a non-Roll Again event.
+* Confirm Smokescreen is discarded.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-010: Expand to 4 villages and update village reward rules
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+* EPIC-016 Feature-002: Multi-square board features landing/movement/highlighting
+* EPIC-020 Feature-011: Add village action choice page
+* EPIC-020 Feature-007: Implement SOS potion
+
+Goal
+
+* Update village generation and village reward logic.
+* The board should now contain 4 villages:
+
+  * 2 Field Villages in the easy zone.
+  * 2 Forest Villages in the hard zone.
+* Village rewards should become per-player, once-per-condition rewards.
+* Village reward eligibility should be independent for every player.
+
+Village Generation Requirement
+
+* Generate exactly 4 villages:
+
+  * 2 Field Villages.
+  * 2 Forest Villages.
+
+* Field Villages should be in the easy zone.
+
+* Forest Villages should be in the hard zone.
+
+* Villages should remain multi-square features if the existing village implementation uses multi-square feature footprints.
+
+Placement Distance Requirement
+
+* Villages must always be at least 12 squares away from any other feature.
+* Use orthogonal distance only.
+* Do not count diagonal distance.
+
+Features to avoid:
+
+```txt id="e1lna2"
+Other villages
+Elite Towers
+Starting zone
+Boss Battle
+```
+
+* Distance should use Manhattan distance.
+* Suggested formula:
+
+```txt id="a7humh"
+distance = abs(x1 - x2) + abs(y1 - y2)
+```
+
+Edge Distance Requirement
+
+* Villages must always be at least 3 squares from the edge of the board.
+* This means the full village footprint should not be closer than 3 squares from any board edge.
+* If village features are 2x2, validate the full footprint, not just the top-left cell.
+
+Placement Failure Requirement
+
+* If the generator cannot place villages with all constraints:
+
+  * retry board generation.
+  * or retry village placement.
+  * do not silently place invalid villages.
+* Avoid infinite loops by using a retry limit and developer warning.
+
+Reward Tracking Requirement
+
+* Village rewards are tracked per player.
+* Player 1 collecting a reward has no effect on Player 2.
+* Rewards do not reset on death.
+* Rewards do not reset on respawn.
+* Rewards do not reset when visiting the other village.
+* Rewards should persist for the whole game.
+
+Suggested player reward state:
+
+```js id="vll1wz"
+villageRewards: {
+  fieldVillageLootClaimed: false,
+  forestVillageLootClaimed: false,
+  firstEliteVillageRewardClaimed: false,
+  secondEliteVillageRewardClaimed: false
+}
+```
+
+Field Village Loot Reward
+
+* First time in the game that a player lands on any Field Village:
+
+  * give that player a Loot Chest.
+* After this happens:
+
+  * do not give that player another Field Village first-visit Loot Chest.
+  * not from the same Field Village.
+  * not from the other Field Village.
+  * not after death.
+  * not after respawn.
+
+Forest Village Loot Reward
+
+* First time in the game that a player lands on any Forest Village:
+
+  * give that player a Loot Chest.
+* After this happens:
+
+  * do not give that player another Forest Village first-visit Loot Chest.
+  * not from the same Forest Village.
+  * not from the other Forest Village.
+  * not after death.
+  * not after respawn.
+
+First Elite Tower Village Reward
+
+* When a player defeats their first Elite Tower:
+
+  * the next village they land on should give the first Elite village reward.
+* This reward is now:
+
+  * one random common token.
+* It is no longer:
+
+  * a potion.
+* The existing reward text can remain the same.
+* This reward happens once only for that player.
+* It does not matter which village they visit.
+* After this reward is claimed, it never happens again for that player.
+
+Second Elite Tower Village Reward
+
+* When a player defeats their second Elite Tower:
+
+  * the next village they land on should give the second Elite village reward.
+* This reward is:
+
+  * one guaranteed rare token.
+* It happens once only for that player.
+* It does not matter which village they visit.
+* After this reward is claimed, it never happens again for that player.
+
+Elite Count Requirement
+
+* Determine reward eligibility from the player’s own Elite Tower progress.
+* Do not use global tower completion.
+* A player with one tower defeated should be eligible for the first Elite village reward if not already claimed.
+* A player with two towers defeated should be eligible for the second Elite village reward if not already claimed.
+
+Reward Resolution Order
+
+* If multiple village rewards are eligible on the same visit, resolve them in a stable order.
+
+* Preferred order:
+
+  * Field/Forest village-type Loot Chest.
+  * first Elite common token reward.
+  * second Elite rare token reward.
+  * village action choice page from Feature-011.
+
+* This allows a player’s first visit to a village after Elite progress to still receive all eligible queued rewards.
+
+* If this produces too many modal steps, implementation may resolve one reward at a time only if documented, but the preferred behaviour is sequential resolution.
+
+Token Reward Flow
+
+* Common token reward:
+
+  * generate one random common token.
+  * use existing token reward display.
+  * open token assignment flow if that is the existing token reward behaviour.
+  * then continue village sequence.
+
+* Rare token reward:
+
+  * generate one random rare token.
+  * use existing token reward display.
+  * open token assignment flow if that is the existing token reward behaviour.
+  * then continue village sequence.
+
+Loot Chest Flow
+
+* Use existing Loot Chest sequence.
+* After Loot Chest completes, return to the village sequence, not directly to board.
+* Continue processing remaining rewards or show village action choice page.
+
+Out Of Scope
+
+* Wandsmith implementation; Feature-012 handles it.
+* Village action page; Feature-011 handles it.
+* No new village artwork required unless existing field/forest village assets need duplication.
+* No change to Elite Tower battle logic.
+* No change to Loot Chest reward contents.
+
+Testing Checkpoints
+
+* Generate a board.
+* Confirm exactly 4 villages exist.
+* Confirm exactly 2 Field Villages exist in easy zone.
+* Confirm exactly 2 Forest Villages exist in hard zone.
+* Confirm all villages are at least 12 orthogonal squares from other features.
+* Confirm all villages are at least 3 squares from board edge.
+* Player 1 visits first Field Village and gets Loot Chest.
+* Player 1 visits second Field Village and does not get another Field Village Loot Chest.
+* Player 2 visits a Field Village and still gets their own Field Village Loot Chest.
+* Repeat for Forest Villages.
+* Player defeats first Elite Tower, then visits a village.
+* Confirm random common token reward.
+* Confirm this reward happens only once.
+* Player defeats second Elite Tower, then visits a village.
+* Confirm guaranteed rare token reward.
+* Confirm this reward happens only once.
+* Confirm death/respawn does not reset village reward collection.
+* Confirm village action choice page appears after rewards.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-011: Add village action choice page
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-010: Expand to 4 villages and update village reward rules
+* Feature-012: Implement Wandsmith village option
+* EPIC-016 Feature-004: Implement village visits, village rewards, and village healing
+
+Goal
+
+* Add a new page/state to the village sequence.
+* This page appears after any village rewards have completed.
+* The player chooses what to do during their village visit.
+* The available actions are:
+
+  * Rest
+  * Wandsmith
+  * Leave
+
+Page Timing Requirement
+
+* The village action choice page should appear after any rewards the village is offering.
+* Reward examples:
+
+  * Field Village first-visit Loot Chest.
+  * Forest Village first-visit Loot Chest.
+  * first Elite village common token reward.
+  * second Elite village rare token reward.
+* Once all eligible rewards for that visit are resolved, show the action choice page.
+
+Village Choice Text
+
+English:
+
+```txt id="tjhdei"
+What would you like to do on your visit to the village?
+```
+
+Japanese:
+
+```txt id="e0er9p"
+村を訪れている間、何をしますか？
+```
+
+* Text should use `larger-text`.
+* It should appear at the top of the modal/page.
+* It should be centred.
+
+Choice Buttons
+
+Options:
+
+```txt id="mcjy6e"
+Rest / 休む
+Wandsmith / 杖職人
+Leave / 出発する
+```
+
+* Place the choice buttons below the text.
+* Use a `60px` margin between the text and the choice button area.
+* Rest and Wandsmith should use normal modal button styling.
+* Leave should use secondary/cancel-style button styling.
+* Use `div` layout, not `ul` or `li`.
+
+Suggested Structure
+
+```jsx id="pgi9or"
+<div className="village-choice-modal modal-background">
+  <p className={`larger-text ${languageClass}`}>
+    {villageChoiceText}
+  </p>
+
+  <div className="village-choice-buttons">
+    <button disabled={restDisabled}>Rest</button>
+    <button disabled={wandsmithDisabled}>Wandsmith</button>
+    <button className="secondary-button">Leave</button>
+  </div>
+</div>
+```
+
+Rest Behaviour
+
+* Rest starts the existing village heal sequence.
+* The current heal modal and health restore behaviour should be reused.
+* After healing completes:
+
+  * return to board.
+  * advance to next player.
+  * show next-turn modal first.
+
+Wandsmith Placeholder Behaviour
+
+* In this feature only, Wandsmith is still placeholder functionality.
+
+* Clicking Wandsmith should:
+
+  * record that Wandsmith was chosen for same-village lock rules.
+  * end the player’s turn.
+  * return to board.
+  * advance to next player.
+  * show next-turn modal first.
+
+* Feature-012 replaces this placeholder with full Wandsmith behaviour.
+
+Leave Behaviour
+
+* Leave acts like a cancel/no-action option.
+* Leave is never disabled.
+* Clicking Leave should show a modal:
+
+English:
+
+```txt id="n5l0o3"
+You left the village
+```
+
+Japanese:
+
+```txt id="dkctg6"
+村を出ました。
+```
+
+* The text should use `larger-text`.
+* Then the player’s turn ends:
+
+  * return to board.
+  * advance to next player.
+  * show next-turn modal first.
+
+Same-Village Option Lock Requirement
+
+* On a player’s first visit to a specific village after a reset:
+
+  * Rest is enabled.
+  * Wandsmith is enabled.
+  * Leave is enabled.
+
+* If the player visits the same village again without a reset:
+
+  * disable the non-Leave options they already chose at that same village during this lock period.
+  * Leave remains enabled.
+
+* Rest can become disabled.
+
+* Wandsmith can become disabled.
+
+* Leave can never become disabled.
+
+Same-Village Lock Example
+
+```txt id="i7gx6q"
+1. Player visits Field Village A and chooses Wandsmith.
+2. Player later visits Field Village A again without visiting another feature.
+3. Wandsmith is disabled, Rest is enabled, Leave is enabled.
+4. Player chooses Rest.
+5. Player later visits Field Village A again without visiting another feature.
+6. Rest and Wandsmith are disabled, Leave is enabled.
+7. Player must choose Leave.
+8. Future visits to Field Village A still have Rest and Wandsmith disabled until a reset happens.
+```
+
+Reset Rules
+
+* The options should re-enable if the player:
+
+  * dies and respawns.
+  * visits any other feature.
+  * visits a different village.
+  * visits an Elite Tower.
+  * visits Boss Battle.
+
+* “Any other feature” means the same-village lock should reset when the player’s feature context changes.
+
+* Normal environment squares should not reset the same-village lock.
+
+* Random events on normal environment squares should not reset unless they route to a feature.
+
+Per-Player Requirement
+
+* Track village action lock state per player.
+* Player 1’s choices must not affect Player 2.
+* Each player has their own same-village history.
+
+Per-Village Requirement
+
+* Track by specific village ID.
+* The two Field Villages are separate villages.
+* The two Forest Villages are separate villages.
+* Visiting a different village resets the previous same-village lock context.
+
+Suggested State Direction
+
+```js id="witlat"
+playerVillageActionState: {
+  lastFeatureVisitedId: null,
+  currentVillageLockId: null,
+  usedActionsForCurrentVillage: {
+    rest: false,
+    wandsmith: false
+  }
+}
+```
+
+* Do not track Leave as a disabled action.
+* Leave should not change disabled action state except ending the visit.
+
+Detailed Scenario To Support
+
+```txt id="wv5sni"
+1. Player visits a field village and chooses Wandsmith.
+2. Player visits the same village 3 turns later without visiting another feature.
+3. Wandsmith is disabled, so they choose Rest.
+4. Player visits the same village again 3 turns later without visiting another feature.
+5. Rest and Wandsmith are disabled, so they must choose Leave.
+6. Player visits the same village again 2 turns later without visiting another feature.
+7. Rest and Wandsmith are still disabled, so they must choose Leave again.
+8. Player visits another village.
+9. All options are enabled at that other village, and they choose Rest.
+10. Player returns to the first village.
+11. All options are enabled again because they visited another village.
+12. Player chooses Wandsmith.
+13. Player visits an Elite Tower and wins.
+14. Player returns to the first village, receives any eligible reward, and all options are enabled again because they visited an Elite Tower.
+15. Player chooses Rest.
+16. Player later dies.
+17. Player respawns and revisits the first village.
+18. All options are enabled because death/respawn reset the lock.
+```
+
+Out Of Scope
+
+* Full Wandsmith functionality; Feature-012 handles it.
+* Village reward rules; Feature-010 handles them.
+* No new village artwork.
+* No change to heal amount; Rest uses existing full-heal sequence.
+
+Testing Checkpoints
+
+* Visit a village for the first time.
+* Confirm Rest, Wandsmith, and Leave are enabled.
+* Choose Wandsmith.
+* Revisit the same village without visiting another feature.
+* Confirm Wandsmith is disabled.
+* Confirm Rest and Leave are enabled.
+* Choose Rest.
+* Revisit the same village again without reset.
+* Confirm Rest and Wandsmith are disabled.
+* Confirm Leave remains enabled.
+* Choose Leave.
+* Revisit the same village again without reset.
+* Confirm Rest and Wandsmith are still disabled.
+* Visit another village.
+* Confirm all options are enabled there.
+* Return to the first village.
+* Confirm all options are enabled again.
+* Visit an Elite Tower, then return to the village.
+* Confirm all options are enabled again.
+* Die and respawn, then visit the village.
+* Confirm all options are enabled again.
+* Confirm Player 2 is unaffected by Player 1’s choices.
+* Confirm Leave modal text appears correctly in English and Japanese.
+* Confirm next-turn modal appears first after turn advance.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-012: Implement Wandsmith village option
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-011: Add village action choice page
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-013 Feature-006: Redo potion behaviour
+* EPIC-011 Feature-004: Add non-battle token effects
+
+Goal
+
+* Implement the Wandsmith option in villages.
+* Wandsmith lets the player rearrange their spell tokens freely.
+* This should behave like a full rearrangement opportunity.
+* After committing or cancelling, the player’s turn ends.
+
+Wandsmith Entry Requirement
+
+* When the player chooses Wandsmith from the village choice page:
+
+  * open the spells modal.
+  * put the spells modal into Wandsmith mode.
+  * all spells should be moveable.
+  * previously committed tokens are temporarily uncommitted for this Wandsmith session.
+  * the player may rearrange tokens between spell columns and token bag.
+  * no tokens are permanently committed until the player confirms.
+
+Spell Movement Requirement
+
+* The player must still obey all existing limits:
+
+  * spell column slot capacity.
+  * token bag capacity.
+  * Grey capacity effects.
+  * White merge rules.
+  * merged column restrictions.
+  * two merges per game if still applicable.
+  * already merged columns cannot merge again.
+* Wandsmith should not allow illegal spell states.
+* Wandsmith should not bypass token bag limits.
+
+Wandsmith Warning Text
+
+Replace `spells-starting-warning` text during Wandsmith with:
+
+English:
+
+```txt id="bq5fp8"
+The Wandsmith helps you arrange your tokens however you wish.
+```
+
+Japanese:
+
+```txt id="wyrcyx"
+杖職人が、トークンを好きなように並べ替えるのを手伝ってくれます。
+```
+
+Global Commit Warning Update
+
+* Update the normal commit warning everywhere it appears in the game.
+* This includes:
+
+  * first spell assignment.
+  * normal spell save confirmation.
+  * Wandsmith.
+  * Redo potion, if it uses the same warning.
+  * any future shared spell commit modal.
+
+Old wording:
+
+```txt id="ikha80"
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.
+```
+
+New English wording:
+
+```txt id="g7da8a"
+Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using a Wandsmith or potions once they are saved.
+```
+
+New Japanese wording:
+
+```txt id="m147ed"
+これらのスペルスロットにトークンを配置して確定してもよろしいですか？一度保存すると、杖職人またはポーションを使用しない限り、配置を変更することはできません。
+```
+
+Wandsmith Cancel Warning
+
+* If the player chooses to cancel/leave Wandsmith without committing, show an Are You Sure modal.
+
+English:
+
+```txt id="pg9418"
+Are you sure you want to leave without making any changes? The Wandsmith will close after you leave.
+```
+
+Japanese:
+
+```txt id="z7te4z"
+変更せずに退出してもよろしいですか？退出すると、杖職人の画面は閉じます。
+```
+
+* If the player chooses No:
+
+  * close confirmation.
+  * return to Wandsmith spell arrangement.
+  * do not end turn.
+* If the player chooses Yes:
+
+  * discard Wandsmith session changes.
+  * restore previous committed spell arrangement.
+  * close Wandsmith.
+  * end the player’s turn.
+  * return to board.
+  * advance to next player.
+
+Commit Behaviour
+
+* If the player commits:
+
+  * show the updated global commit warning.
+  * if confirmed, save the new committed spell arrangement.
+  * apply any resulting non-battle token effects correctly.
+  * update max/current HP if Health or Shiny Health tokens changed.
+  * update Grey capacity if changed.
+  * update White merge state if changed.
+  * close Wandsmith.
+  * end the player’s turn.
+  * return to board.
+  * advance to next player.
+
+No-Change Commit Requirement
+
+* If the player opens Wandsmith and commits without making changes:
+
+  * allow it.
+  * still end the player’s turn after confirmation.
+* The user explicitly said the turn ends once the player has committed their choices, whether they made changes or not.
+
+Session State Requirement
+
+* Wandsmith changes should be temporary until committed.
+* If the player cancels and confirms leaving:
+
+  * restore the exact previous committed state.
+* Do not partially save token moves before commit.
+
+Suggested Implementation Direction
+
+* Reuse Redo potion spell rearrangement logic where possible.
+* Add a `spellEditMode` or `spellAssignmentSource`.
+
+Suggested values:
+
+```txt id="t6r6o8"
+firstAssignment
+normal
+redoPotion
+wandsmith
+rewardAssignment
+```
+
+* Wandsmith mode can share much of Redo’s “temporarily uncommit spells” logic.
+* Wandsmith has different intro text and different cancel/turn-end behaviour.
+
+Turn End Requirement
+
+* Wandsmith consumes the village visit and the player’s turn.
+* After commit or confirmed cancel:
+
+  * return to board.
+  * advance turn.
+  * show next-turn modal first.
+
+Out Of Scope
+
+* No Wandsmith reward.
+* No Wandsmith potion.
+* No new spell slot UI redesign.
+* No bypassing existing token rules.
+* No free tokens.
+
+Testing Checkpoints
+
+* Visit village and choose Wandsmith.
+* Confirm spells modal opens in Wandsmith mode.
+* Confirm Wandsmith warning text appears.
+* Confirm committed tokens are moveable.
+* Confirm token bag limits still apply.
+* Confirm spell column capacities still apply.
+* Confirm Grey capacity still works.
+* Confirm White merge still works.
+* Commit with changes.
+* Confirm global commit warning uses new Wandsmith wording.
+* Confirm new spell arrangement is saved.
+* Confirm turn ends.
+* Open Wandsmith again and cancel.
+* Confirm cancel warning appears.
+* Choose No and confirm Wandsmith remains open.
+* Choose Yes and confirm previous committed spell arrangement is restored.
+* Confirm turn ends after confirmed cancel.
+* Open Wandsmith and commit with no changes.
+* Confirm turn still ends.
+* Confirm first spell assignment also uses the updated commit warning.
+* Confirm Redo potion still works if it shares the spell edit system.
+* Confirm next-turn modal appears first after turn advance.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-013: Add village actions section to rules page
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-009: Add start-page Rules button and bilingual Rules page
+* Feature-011: Add village action choice page
+* Feature-012: Implement Wandsmith village option
+* Feature-014: Add rules modal inside settings menu
+
+Goal
+
+* Update the Rules page with a new section explaining village actions.
+* Place this new section below the existing Features section.
+* Add Japanese translation.
+* Do not mention village rewards in this section.
+
+Placement Requirement
+
+* Add the new section directly below the current Features section.
+* Keep the same rules page layout and language toggle behaviour.
+* The section should appear in:
+
+  * homepage Rules page.
+  * settings Rules modal from Feature-014, if it reuses the same content.
+
+Important Content Restriction
+
+* Do not outline village rewards.
+* Do not mention:
+
+  * field village loot chest reward.
+  * forest village loot chest reward.
+  * post-Elite common token reward.
+  * post-Elite rare token reward.
+* This section should only explain:
+
+  * Rest.
+  * Wandsmith.
+  * Leave.
+  * how options become disabled.
+  * how options are re-enabled.
+
+Section Title
+
+English:
+
+```txt id="xjdbjq"
+Village Actions
+```
+
+Japanese:
+
+```txt id="l80jid"
+村でできること
+```
+
+English Rules Text
+
+```txt id="fvez2h"
+When you visit a village, you can choose what to do there.
+
+Rest lets you recover your health before continuing your journey.
+
+Wandsmith lets you rearrange your spell tokens. Once your tokens are committed, they normally cannot be moved unless you use a Wandsmith or certain potions.
+
+Leave lets you leave the village without resting or using the Wandsmith.
+
+If you visit the same village again without visiting another feature first, the option you chose last time may be disabled. Rest and Wandsmith can become disabled this way. Leave is always available.
+
+These options reset when you visit another feature, visit a different village, or die and respawn.
+```
+
+Japanese Rules Text
+
+```txt id="bez0bi"
+村を訪れると、そこで何をするかを選べます。
+
+休むを選ぶと、冒険を続ける前にHPを回復できます。
+
+杖職人を選ぶと、スペルトークンを並べ替えることができます。一度トークンを確定すると、通常は杖職人や一部のポーションを使わない限り動かせません。
+
+出発するを選ぶと、休んだり杖職人を使ったりせずに村を出ます。
+
+別の特徴マスを訪れずに同じ村を再び訪れた場合、前回選んだ選択肢が無効になることがあります。休むと杖職人はこの条件で無効になることがあります。出発するは常に選べます。
+
+これらの選択肢は、別の特徴マスを訪れる、別の村を訪れる、または死亡してリスポーンすると再び選べるようになります。
+```
+
+Style Requirement
+
+* Match existing Rules page typography and spacing.
+* Use correct English/Japanese fonts.
+* Section title should match other section titles.
+* Body text should match other body rules text.
+* Keep text inside the scrollable modal.
+
+Out Of Scope
+
+* No village reward explanation.
+* No rules page redesign.
+* No new language toggle.
+* No new tutorial screens.
+* No diagrams.
+
+Testing Checkpoints
+
+* Open Rules page from homepage.
+* Confirm Village Actions section appears below Features.
+* Confirm English title and body text display correctly.
+* Switch to Japanese.
+* Confirm Japanese title and body text display correctly.
+* Confirm no village rewards are mentioned.
+* Open Rules from settings after Feature-014.
+* Confirm the same section appears there.
+* Confirm rules modal still scrolls correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-014: Add rules modal inside settings menu
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-009: Add start-page Rules button and bilingual Rules page
+* EPIC-018 Feature-012: Only show settings button on gameplay page
+* Feature-013: Add village actions section to rules page
+
+Goal
+
+* Add a Rules button to the settings menu.
+* Clicking it should open the game rules in a modal over the game.
+* Closing the rules modal should return to the settings modal being open.
+* In this settings version, buttons should say Back to Settings instead of Back to Start.
+
+Settings Button Requirement
+
+* Add a new button inside the settings menu.
+
+English:
+
+```txt id="n11dwc"
+Rules
+```
+
+Japanese:
+
+```txt id="ywo3pp"
+ルール
+```
+
+* This button should appear wherever the settings menu is available.
+* Since EPIC-018 Feature-012 limits settings to gameplay only, this will normally mean gameplay settings.
+
+Rules Modal Requirement
+
+* Clicking Rules opens a rules modal over the current game screen.
+* The rules modal should reuse the same rules content as the Rules page.
+* It should include the new Village Actions section from Feature-013.
+* The modal should be scrollable if content exceeds available height.
+* It should use the normal modal background.
+* It should preserve the starry/gameplay background behind it.
+
+Settings Return Requirement
+
+* The settings modal should not be lost.
+* When the player closes the rules modal, the settings modal should be open again.
+* This should feel like a nested modal/state inside settings.
+
+Back Button Text
+
+* In the settings rules modal, buttons should say:
+
+English:
+
+```txt id="brwmqf"
+Back to Settings
+```
+
+Japanese:
+
+```txt id="jki8ee"
+設定に戻る
+```
+
+* Do not show Back to Start in this modal.
+* The homepage Rules page should still use Back to Start.
+
+Suggested State Direction
+
+```js id="mhiceg"
+settingsModalState = "main" | "rules";
+```
+
+* `main` shows normal settings.
+* `rules` shows rules content with Back to Settings.
+* Back to Settings returns to `main`.
+
+Alternative
+
+* Use separate modal components if easier.
+* The required behaviour is that the player returns to settings, not gameplay directly.
+
+Out Of Scope
+
+* No changes to homepage Rules page behaviour.
+* No rules content rewrite except Feature-013.
+* No settings redesign.
+* No change to End Game.
+* No new route required.
+
+Testing Checkpoints
+
+* Open settings from gameplay.
+* Confirm Rules button appears.
+* Click Rules.
+* Confirm rules modal opens.
+* Confirm Back buttons say Back to Settings / 設定に戻る.
+* Scroll rules modal.
+* Confirm content is readable.
+* Click Back to Settings.
+* Confirm normal settings modal is open again.
+* Confirm homepage Rules page still says Back to Start.
+* Confirm closing rules does not accidentally close settings entirely.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-015: Prevent horizontal scrollbar in spells modal during token drag
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-010 Feature-015: Redesign Spell Token Assignment page
+* EPIC-003 Feature-002: Add spell token assignment system
+* Feature-012: Implement Wandsmith village option
+
+Goal
+
+* Fix horizontal overflow in the spells modal.
+* When the player drags tokens inside `spell-slot-list`, a horizontal scrollbar appears on the modal.
+* This should not happen.
+* The fix should be scoped to the spells modal only so other scrolling modals are not broken.
+
+Problem Summary
+
+* During drag-and-drop, the dragged token can move near the sides of the `spell-slot-list`.
+* This appears to increase horizontal overflow.
+* The modal then shows a horizontal scrollbar.
+* This is visually messy and unnecessary.
+
+Required Behaviour
+
+* Dragging tokens near the left or right side of `spell-slot-list` should not create a horizontal scrollbar.
+* The spells modal should hide horizontal overflow.
+* Vertical scrolling should remain available if the spells modal needs it.
+* Other modals should keep their current scroll behaviour.
+
+Scoped CSS Requirement
+
+* Apply the fix only to the spells modal or its specific content wrapper.
+* Do not globally apply `overflow-x: hidden` to all modals unless absolutely necessary.
+
+Suggested CSS Direction
+
+```css id="pczcro"
+.spells-modal {
+  overflow-x: hidden;
+}
+```
+
+Alternative scoped direction:
+
+```css id="d8xobh"
+.spells-modal .modal-content,
+.spells-modal .spell-slot-list-wrapper {
+  overflow-x: hidden;
+}
+```
+
+* Use the actual project class names.
+* Prefer the smallest safe scope.
+
+Drag Preview Requirement
+
+* If the drag preview is causing overflow:
+
+  * keep drag preview visually visible.
+  * prevent it from forcing modal layout width.
+* Consider rendering dragged token in a portal or fixed overlay if existing drag system supports it.
+* Do not clip the token in a way that makes dragging unusable.
+
+Out Of Scope
+
+* No drag-and-drop rewrite unless needed to prevent overflow.
+* No token assignment redesign.
+* No changes to other modal scroll behaviour.
+* No changes to token capacity.
+* No changes to Wandsmith logic.
+
+Implementation Notes
+
+* Reused the existing `.modal-panel--spells` class to hide horizontal overflow only on the spells modal.
+* Kept vertical modal scrolling available and left the existing visible spell-slot wrapper and dnd-kit `DragOverlay` behavior unchanged.
+* Did not change shared modal overflow, token movement, capacity, Wandsmith logic, or other modal behavior.
+
+Testing Checkpoints
+
+* Open normal spells modal.
+* Drag a token to the left edge of `spell-slot-list`.
+* Confirm no horizontal scrollbar appears.
+* Drag a token to the right edge of `spell-slot-list`.
+* Confirm no horizontal scrollbar appears.
+* Open Wandsmith spells modal.
+* Repeat left/right drag tests.
+* Confirm vertical scrolling still works if needed.
+* Open Rules modal.
+* Confirm Rules scrolling is not affected.
+* Open other large modals.
+* Confirm they are not broken.
+* Confirm token drag/drop still works correctly.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-016: Show environment or feature name when hovering highlighted movement squares
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-004 Feature-005: Board movement and dice movement
+* EPIC-016 Feature-002: Multi-square board features landing/movement/highlighting
+* Feature-001: Make gameplay layout scale to fit screen height
+
+Goal
+
+* Help the player understand what type of square they are about to land on.
+* When movement options are highlighted, hovering a valid highlighted square should show the environment or feature name.
+* This should work for normal environment squares and feature squares.
+
+Trigger Requirement
+
+* Only show the label when:
+
+  * the player has rolled the movement dice.
+  * valid movement destinations are highlighted.
+  * the cursor is hovering over a highlighted valid destination square.
+  * or the cursor is hovering over a highlighted feature footprint.
+
+* Do not show the label:
+
+  * before rolling.
+  * when hovering non-highlighted squares.
+  * after movement is completed.
+  * after highlights are cleared.
+  * during next-turn modal.
+  * during modals or event resolution.
+
+Position Requirement
+
+* The label should be absolutely positioned over the board.
+* It should be horizontally centred relative to the board.
+* It should not follow the cursor.
+* It should appear either near the top or bottom of the board depending on the hovered square.
+
+If hovered square is in bottom half of board:
+
+```txt id="l583kn"
+Show label at top centre of board.
+Position 50px from top edge of board.
+```
+
+If hovered square is in top half of board:
+
+```txt id="v6kyk4"
+Show label at bottom centre of board.
+Position 50px from bottom edge of board.
+```
+
+* Use the square’s board row or y-coordinate to determine top/bottom half.
+* For multi-square features, use the hovered cell or feature footprint centre consistently.
+
+Style Requirement
+
+* Use:
+
+  * brown background.
+  * yellow text.
+  * current game modal/button style.
+  * `larger-text` font size.
+  * correct English/Japanese font.
+  * horizontally centred text.
+  * enough padding to look like a game label.
+
+Suggested CSS Direction
+
+```css id="si0589"
+.board-hover-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--modal-brown);
+  color: var(--modal-yellow);
+  padding: 12px 24px;
+  border-radius: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.board-hover-label.top {
+  top: 50px;
+}
+
+.board-hover-label.bottom {
+  bottom: 50px;
+}
+```
+
+Language Values
+
+```txt id="xe270e"
+Field / 野原
+Hills / 丘陵
+Gravel / 砂利地
+Mud / 泥地
+Stream / 小川
+River / 川
+Woods / 林
+Forest / 森
+Mountains / 山岳
+Village / 村
+Elite Tower / エリートタワー
+Boss Battle / ボスバトル
+```
+
+Feature Name Requirement
+
+* Features should show feature labels, not underlying environment labels.
+* Any village should show:
+
+```txt id="lc72tt"
+Village / 村
+```
+
+* Any Elite Tower should show:
+
+```txt id="r6mo76"
+Elite Tower / エリートタワー
+```
+
+* Boss Battle should show:
+
+```txt id="zo71rg"
+Boss Battle / ボスバトル
+```
+
+Multi-Square Feature Requirement
+
+* If any cell in a multi-square feature footprint is highlighted:
+
+  * hovering any highlighted cell should show the feature label.
+* Do not show separate labels for each internal feature cell.
+* Do not trigger underlying environment labels inside feature footprints.
+
+Suggested Data Direction
+
+```js id="brx0jx"
+const squareLabels = {
+  field: { en: "Field", jp: "野原" },
+  hills: { en: "Hills", jp: "丘陵" },
+  gravel: { en: "Gravel", jp: "砂利地" },
+  mud: { en: "Mud", jp: "泥地" },
+  stream: { en: "Stream", jp: "小川" },
+  river: { en: "River", jp: "川" },
+  woods: { en: "Woods", jp: "林" },
+  forest: { en: "Forest", jp: "森" },
+  mountains: { en: "Mountains", jp: "山岳" },
+  village: { en: "Village", jp: "村" },
+  eliteTower: { en: "Elite Tower", jp: "エリートタワー" },
+  bossBattle: { en: "Boss Battle", jp: "ボスバトル" }
+};
+```
+
+Responsive Scaling Requirement
+
+* The label must remain correctly positioned after Feature-001 scaling.
+* If the board uses a transformed wrapper, the label should be inside the same board positioning context.
+* Avoid placing the label relative to the viewport if that causes mismatch with the board.
+
+Out Of Scope
+
+* No event probability preview.
+* No battle/enemy preview.
+* No loot/hazard preview.
+* No tooltip following cursor.
+* No click behaviour changes.
+* No mobile/touch long-press requirement.
+
+Implementation Notes
+
+* Added a board-local bilingual label resolver for the nine environment types, Village, Elite Tower, and Boss Battle.
+* Reused canonical movement node IDs and generated feature image names so highlighted multi-square footprints show one feature label instead of underlying terrain.
+* Kept hover state and the absolutely positioned label inside `BoardGrid`, which is already inside the responsive board scaling context.
+* Gameplay enables labels only after a movement roll has produced valid destinations and disables them during existing modal, result, event, next-turn, and respawn states.
+* Did not change movement calculation, feature footprints, board clicks, event selection, scaling, or touch behavior.
+
+Testing Checkpoints
+
+* Roll movement dice.
+* Hover a highlighted Field square.
+* Confirm Field / 野原 appears.
+* Hover Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains.
+* Confirm all labels display correctly in English and Japanese.
+* Hover a highlighted Village.
+* Confirm Village / 村 appears.
+* Hover an Elite Tower.
+* Confirm Elite Tower / エリートタワー appears.
+* Hover Boss Battle.
+* Confirm Boss Battle / ボスバトル appears.
+* Hover a bottom-half square.
+* Confirm label appears top centre, 50px from top.
+* Hover a top-half square.
+* Confirm label appears bottom centre, 50px from bottom.
+* Move cursor away.
+* Confirm label disappears.
+* Hover non-highlighted square.
+* Confirm no label appears.
+* Confirm label scales/positions correctly after Feature-001.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+---
+
+Feature-017: Change Japanese font to M PLUS Rounded 1c
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-009: Add start-page Rules button and bilingual Rules page
+* Feature-006: Standardise health bar text colour and font
+* Feature-016: Show environment or feature name when hovering highlighted movement squares
+
+Goal
+
+* Change the Japanese font used in the game to `M PLUS Rounded 1c`.
+* Japanese UI text should use this font across the game.
+* Health bar text is the main exception and should remain `Unkempt`.
+
+Required Font
+
+```txt id="zb8qxm"
+M PLUS Rounded 1c
+```
+
+Required Behaviour
+
+* Japanese text should use `M PLUS Rounded 1c` across the app.
+* This includes:
+
+  * start page.
+  * game setup.
+  * story page.
+  * rules page.
+  * gameplay UI.
+  * board hover labels.
+  * settings modal.
+  * village text.
+  * battle text.
+  * potion text.
+  * token text.
+  * reward text.
+  * hazard text.
+  * decision text.
+  * cave/river mini game text.
+  * debug text, when debug mode is visible.
+
+Font Loading Requirement
+
+* Add the font import or asset loading in the appropriate global style location.
+* If using Google Fonts, load the font once globally.
+* Ensure the font loads in:
+
+  * local development.
+  * production build.
+* Do not load the font separately inside many components.
+
+Suggested Google Font Import
+
+```css id="kayzxu"
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap");
+```
+
+Suggested CSS Direction
+
+```css id="dw2ny0"
+.jp,
+.japanese-text,
+[data-language="jp"] {
+  font-family: "M PLUS Rounded 1c", sans-serif;
+}
+```
+
+* Use the project’s existing language class names.
+* Do not invent new language classes if existing ones already work.
+
+Health Bar Exception
+
+* Health bar text should not use `M PLUS Rounded 1c`.
+* Health bar text should use `Unkempt` in all languages from Feature-006.
+* Add a more specific rule if needed:
+
+```css id="x6r5hm"
+.health-bar-text {
+  font-family: "Unkempt", cursive;
+}
+```
+
+English Font Requirement
+
+* Do not change English font behaviour.
+* English should continue using the project’s existing English fonts.
+
+Fallback Requirement
+
+* If the font fails to load, use a sensible sans-serif fallback.
+* Do not allow broken font names or invisible text.
+
+Out Of Scope
+
+* No English font changes.
+* No health bar font changes.
+* No layout redesign.
+* No text rewrite.
+* No new language toggle behaviour.
+
+Testing Checkpoints
+
+* Switch game to Japanese.
+* Confirm start page Japanese text uses M PLUS Rounded 1c.
+* Confirm game setup Japanese text uses M PLUS Rounded 1c.
+* Confirm gameplay Japanese text uses M PLUS Rounded 1c.
+* Confirm buttons use M PLUS Rounded 1c.
+* Confirm modals use M PLUS Rounded 1c.
+* Confirm rules page uses M PLUS Rounded 1c.
+* Confirm village text uses M PLUS Rounded 1c.
+* Confirm battle text uses M PLUS Rounded 1c.
+* Confirm token and potion names use M PLUS Rounded 1c.
+* Confirm hover labels use M PLUS Rounded 1c.
+* Confirm health bar text still uses Unkempt.
+* Confirm English text is unchanged.
+* Confirm font loads in local development.
+* Confirm font loads in production build.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Replaced the single global Noto Serif JP Google Fonts import with M PLUS Rounded 1c weights 400, 500, and 700.
+* Reused the existing `.language-jp` class with a sans-serif fallback and preserved the existing `.language-en` Unkempt rule.
+* Updated only the existing shared Button, dice result, start-page button, and game-setup font overrides that could otherwise supersede or bypass the global Japanese class.
+* Preserved the shared HealthBar's explicit Unkempt font exception and made no layout, text, language-toggle, route, or behavior changes.

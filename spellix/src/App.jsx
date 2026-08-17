@@ -11,6 +11,8 @@ import { getBattleEnvironmentForBoardEnvironment } from './data/environmentEvent
 import DebugModal from './features/debug/DebugModal';
 import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
+import RulesBody from './features/rules/RulesBody';
+import { RULES_CONTENT } from './features/rules/rulesContent';
 import {
   createSaveFileText,
   downloadSaveFile,
@@ -59,6 +61,8 @@ function App() {
     updatePlayerSpells,
   } = useGameSetup();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsModalView, setSettingsModalView] = useState('main');
+  const [settingsRulesLanguage, setSettingsRulesLanguage] = useState('en');
   const [isDebugOpen, setIsDebugOpen] = useState(false);
   const [isChooseEventModeEnabled, setIsChooseEventModeEnabled] = useState(false);
   const [selectedDebugTokenType, setSelectedDebugTokenType] = useState('red');
@@ -80,6 +84,10 @@ function App() {
   const [activeNothingEvent, setActiveNothingEvent] = useState(null);
   const [activeRollAgainEvent, setActiveRollAgainEvent] = useState(null);
   const [debugMessage, setDebugMessage] = useState('');
+  const settingsPlayerLanguage =
+    currentPlayer?.language ??
+    gameSetup.players[gameSetup.currentTurnIndex]?.language ??
+    'en';
 
   const resetDebugState = () => {
     setPendingDebugTokenType('');
@@ -151,7 +159,14 @@ function App() {
 
     setIsDebugOpen(false);
     resetDebugState();
+    setSettingsModalView('main');
+    setSettingsRulesLanguage(settingsPlayerLanguage);
     setIsSettingsOpen(true);
+  };
+
+  const handleOpenSettingsRules = () => {
+    setSettingsRulesLanguage(settingsPlayerLanguage);
+    setSettingsModalView('rules');
   };
 
   const handleCloseDebug = () => {
@@ -629,29 +644,47 @@ function App() {
 
       <Modal
         actions={
-          <>
-            {gameSetup.debugMode ? (
-              <Button type="button" onClick={handleOpenDebug}>
-                Debug
+          settingsModalView === 'main' ? (
+            <>
+              {gameSetup.debugMode ? (
+                <Button type="button" onClick={handleOpenDebug}>
+                  Debug
+                </Button>
+              ) : null}
+              {location.pathname === '/gameplay' ? (
+                <Button type="button" onClick={handleSaveGame}>
+                  {currentPlayer?.language === 'jp' ? 'ゲームを保存' : 'Save Game'}
+                </Button>
+              ) : null}
+              <Button type="button" onClick={handleOpenSettingsRules}>
+                {settingsPlayerLanguage === 'jp' ? 'ルール' : 'Rules'}
               </Button>
-            ) : null}
-            {location.pathname === '/gameplay' ? (
-              <Button type="button" onClick={handleSaveGame}>
-                {currentPlayer?.language === 'jp' ? 'ゲームを保存' : 'Save Game'}
+              <Button type="button" onClick={handleEndGame}>
+                End Game
               </Button>
-            ) : null}
-            <Button type="button" onClick={handleEndGame}>
-              End Game
-            </Button>
-            <Button type="button" onClick={() => setIsSettingsOpen(false)}>
-              Close
-            </Button>
-          </>
+              <Button type="button" onClick={() => setIsSettingsOpen(false)}>
+                Close
+              </Button>
+            </>
+          ) : null
         }
-        ariaLabel="Settings"
+        ariaLabel={
+          settingsModalView === 'rules'
+            ? RULES_CONTENT[settingsRulesLanguage].title
+            : 'Settings'
+        }
         isOpen={isSettingsOpen}
       >
-        <p>Settings</p>
+        {settingsModalView === 'rules' ? (
+          <RulesBody
+            backLabels={{ en: 'Back to Settings', jp: '設定に戻る' }}
+            language={settingsRulesLanguage}
+            onBack={() => setSettingsModalView('main')}
+            onLanguageChange={setSettingsRulesLanguage}
+          />
+        ) : (
+          <p>Settings</p>
+        )}
       </Modal>
 
       {gameSetup.debugMode ? (

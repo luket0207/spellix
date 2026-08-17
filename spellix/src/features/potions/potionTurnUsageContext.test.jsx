@@ -9,6 +9,9 @@ import { createInitialGameSetup } from '../gameSetup/gameSetup';
 const boardPotion = POTION_DEFINITIONS.find(
   ({ id }) => id === 'metal-detector'
 );
+const smokescreenPotion = POTION_DEFINITIONS.find(
+  ({ id }) => id === 'smokescreen'
+);
 const battlePotion = POTION_DEFINITIONS.find(
   ({ id }) => id === 'first-aid'
 );
@@ -58,6 +61,7 @@ function PotionTurnUsageProbe() {
         Start Battle
       </button>
       <p>{`Potions: ${player.potions.map(({ id }) => id).join(',') || 'none'}`}</p>
+      <p>{`Active: ${player.activePotion?.id ?? 'none'}`}</p>
       <p>{`Board used: ${player.turnPotionUsage?.boardPotionUsedThisTurn ?? false}`}</p>
       <p>{`Battle used: ${activeBattle?.playerPotionUsedThisTurn ?? false}`}</p>
       <p>{`Battle actor: ${activeBattle?.currentBattleActor ?? 'none'}`}</p>
@@ -88,6 +92,28 @@ function createActiveBattle() {
 }
 
 describe('potion turn usage context', () => {
+  test('activates Smokescreen for one Board turn and clears it on turn advance', () => {
+    render(
+      <GameSetupProvider
+        initialGameSetup={createPotionTurnSetup([smokescreenPotion, bothPotion])}
+      >
+        <PotionTurnUsageProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
+
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
+    expect(screen.getByText('Active: smokescreen')).toBeInTheDocument();
+    expect(screen.getByText('Board used: true')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
+    expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Advance Board' }));
+    expect(screen.getByText('Active: none')).toBeInTheDocument();
+  });
+
   test('allows one Board potion and resets only when that player next begins a Board turn', () => {
     render(
       <GameSetupProvider
@@ -99,12 +125,14 @@ describe('potion turn usage context', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
     expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
+    expect(screen.getByText('Active: metal-detector')).toBeInTheDocument();
     expect(screen.getByText('Board used: true')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Consume Board' }));
     expect(screen.getByText('Potions: small-heal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Advance Board' }));
+    expect(screen.getByText('Active: none')).toBeInTheDocument();
     expect(screen.getByText('Board used: true')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Advance Board' }));
     expect(screen.getByText('Board used: false')).toBeInTheDocument();

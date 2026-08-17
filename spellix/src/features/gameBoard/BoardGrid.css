@@ -55,6 +55,27 @@
   z-index: 2;
 }
 
+.board-hover-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3a2013;
+  color: #F5FA00;
+  padding: 12px 24px;
+  border-radius: 10px;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+}
+
+.board-hover-label--top {
+  top: 50px;
+}
+
+.board-hover-label--bottom {
+  bottom: 50px;
+}
+
 .board-player-marker {
   position: absolute;
   z-index: 1;

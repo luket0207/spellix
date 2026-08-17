@@ -34,7 +34,10 @@ import {
 } from '../potions/multiDice';
 import { isTargetPlayerPotion } from '../potions/targetPlayerPotions';
 import { createTokensmithMove } from '../potions/tokensmith';
-import { generateBattleRewardChoices } from '../rewards/rewardItems';
+import {
+  generateBattleRewardChoices,
+  generateEliteTowerRewardChoices,
+} from '../rewards/rewardItems';
 import {
   createCavePotionRewardAssignment,
   createCaveTokenRewardAssignment,
@@ -71,8 +74,12 @@ import {
   getSpellColumnCapacity,
 } from '../spells/nonBattleSpellEffects';
 import {
+  advanceVillageVisitReward,
+  createVillageActionState,
   createVillageProgress,
   createVillageVisit,
+  enterVillageActionLock,
+  recordVillageAction,
 } from '../villages/villageVisits';
 
 const GameSetupContext = createContext(null);
@@ -88,6 +95,8 @@ function clearBoardTurnPotion(player) {
     'devine-chance',
     'double-dice',
     'heavy-weight',
+    'metal-detector',
+    'smokescreen',
     'spellbound',
     'starting-charge',
     'storm-master',
@@ -452,7 +461,10 @@ function createWonBattleSetup(currentSetup, activeBattle) {
       pendingEffects: [],
       phase: 'reward',
       rewardChoices:
-        activeBattle.rewardChoices ?? generateBattleRewardChoices(activeBattle.level),
+        activeBattle.rewardChoices ??
+        (isEliteTowerBattle
+          ? generateEliteTowerRewardChoices()
+          : generateBattleRewardChoices(activeBattle.level)),
     },
     players: isEliteTowerBattle
       ? currentSetup.players.map((player) =>
@@ -525,6 +537,15 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       villageVisit: setup.villageVisit
         ? {
             ...setup.villageVisit,
+            pendingRewards: (setup.villageVisit.pendingRewards ?? []).map(
+              (reward) => ({
+                ...reward,
+                rewardItem: reward.rewardItem
+                  ? { ...reward.rewardItem }
+                  : null,
+              })
+            ),
+            rewardClaimKeys: [...(setup.villageVisit.rewardClaimKeys ?? [])],
             rewardItem: setup.villageVisit.rewardItem
               ? { ...setup.villageVisit.rewardItem }
               : null,
@@ -601,6 +622,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             ),
           },
           villageProgress: createVillageProgress(player.villageProgress),
+          villageActionState: createVillageActionState(
+            player.villageActionState
+          ),
           hasUnseenTokenBagTokens:
             player.hasUnseenTokenBagTokens ??
             Boolean(player.tokenBag?.length),
@@ -857,6 +881,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                 currentHealth: currentPlayer.maxHealth,
                 diedLastTurn: false,
                 position: getFirstStartAreaPosition(currentSetup.board),
+                villageActionState: createVillageActionState(),
               }
             : currentPlayer
         ),
@@ -1141,10 +1166,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           miniGameResult: null,
           players: nextPlayers,
           villageVisit: currentSetup.villageVisit
-            ? {
-                ...currentSetup.villageVisit,
-                phase: 'heal',
-              }
+            ? advanceVillageVisitReward(currentSetup.villageVisit)
             : null,
         };
       }
@@ -1298,7 +1320,17 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     setGameSetup((currentSetup) => ({
       ...currentSetup,
       players: currentSetup.players.map((player) =>
-        player.id === playerId ? { ...player, ...playerUpdates, position } : player
+        player.id === playerId
+          ? {
+              ...player,
+              ...playerUpdates,
+              position,
+              villageActionState:
+                player.diedLastTurn && playerUpdates.diedLastTurn === false
+                  ? createVillageActionState()
+                  : player.villageActionState,
+            }
+          : player
       ),
     }));
   };
@@ -1451,6 +1483,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const isDevineChance = potion?.id === 'devine-chance';
       const isIceBeam = potion?.id === 'ice-beam';
       const isMultiDice = isMultiDicePotion(potion);
+      const isMetalDetector = potion?.id === 'metal-detector';
+      const isSmokescreen = potion?.id === 'smokescreen';
       const isRollChoice = potion?.id === 'roll-choice';
       const isShieldsDown = potion?.id === 'shields-down';
       const isStartingCharge = potion?.id === 'starting-charge';
@@ -1532,6 +1566,8 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
                     : (isDevineChance ||
                         isStartingCharge ||
                         isStormMaster ||
+                        isMetalDetector ||
+                        isSmokescreen ||
                         isMultiDice) &&
                       isBoardUse
                       ? { ...potion }
@@ -2370,6 +2406,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       const player = currentSetup.players.find(({ id }) => id === playerId);
       const hasStartingCharge =
         player?.activePotion?.id === 'starting-charge';
+      const shouldResetVillageActionLock = Boolean(options.encounterType);
 
       return {
         ...currentSetup,
@@ -2408,10 +2445,15 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
           shieldsDownPending: false,
         },
-        players: hasStartingCharge
+        players: hasStartingCharge || shouldResetVillageActionLock
           ? currentSetup.players.map((currentPlayer) =>
               currentPlayer.id === playerId
-                ? clearStartingCharge(currentPlayer)
+                ? {
+                    ...clearStartingCharge(currentPlayer),
+                    villageActionState: shouldResetVillageActionLock
+                      ? createVillageActionState()
+                      : currentPlayer.villageActionState,
+                  }
                 : currentPlayer
             )
           : currentSetup.players,
@@ -2427,13 +2469,19 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         phase: 'bossNotReady',
         playerId,
       },
+      players: currentSetup.players.map((player) =>
+        player.id === playerId
+          ? { ...player, villageActionState: createVillageActionState() }
+          : player
+      ),
     }));
   };
 
   const startVillageVisit = (
     playerId,
     villageId,
-    randomFn = Math.random
+    randomFn = Math.random,
+    villageFeatureId = villageId
   ) => {
     setGameSetup((currentSetup) => {
       const player = currentSetup.players.find(({ id }) => id === playerId);
@@ -2441,6 +2489,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         assignments: currentSetup.eliteBossEnemyAssignments,
         player,
         randomFn,
+        villageFeatureId,
         villageId,
       });
 
@@ -2451,25 +2500,102 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       return {
         ...currentSetup,
         villageVisit,
-        players: villageVisit.rewardType
-          ? currentSetup.players.map((currentPlayer) =>
-              currentPlayer.id === playerId
-                ? {
-                    ...currentPlayer,
-                    villageProgress: {
-                      ...currentPlayer.villageProgress,
-                      [villageId]: {
-                        claimedEliteCounts: [
-                          ...(currentPlayer.villageProgress?.[villageId]
-                            ?.claimedEliteCounts ?? []),
-                          villageVisit.defeatedEliteCount,
-                        ],
-                      },
-                    },
-                  }
-                : currentPlayer
-            )
-          : currentSetup.players,
+        players: currentSetup.players.map((currentPlayer) =>
+          currentPlayer.id === playerId
+            ? {
+                ...currentPlayer,
+                villageActionState: enterVillageActionLock(
+                  currentPlayer.villageActionState,
+                  villageVisit.villageFeatureId
+                ),
+                villageProgress: villageVisit.rewardClaimKeys.reduce(
+                  (progress, rewardClaimKey) => ({
+                    ...progress,
+                    [rewardClaimKey]: true,
+                  }),
+                  createVillageProgress(currentPlayer.villageProgress)
+                ),
+              }
+            : currentPlayer
+        ),
+      };
+    });
+  };
+
+  const resetVillageActionLock = (playerId) => {
+    setGameSetup((currentSetup) => ({
+      ...currentSetup,
+      players: currentSetup.players.map((player) =>
+        player.id === playerId
+          ? { ...player, villageActionState: createVillageActionState() }
+          : player
+      ),
+    }));
+  };
+
+  const chooseVillageAction = (action) => {
+    setGameSetup((currentSetup) => {
+      const villageVisit = currentSetup.villageVisit;
+      const player = currentSetup.players.find(
+        ({ id }) => id === villageVisit?.playerId
+      );
+      const actionState = createVillageActionState(
+        player?.villageActionState
+      );
+
+      if (
+        villageVisit?.phase !== 'choice' ||
+        !player ||
+        !['rest', 'wandsmith', 'leave'].includes(action) ||
+        (action !== 'leave' &&
+          actionState.usedActionsForCurrentVillage[action])
+      ) {
+        return currentSetup;
+      }
+
+      if (action === 'wandsmith') {
+        return {
+          ...currentSetup,
+          villageVisit: {
+            ...villageVisit,
+            phase: 'wandsmith',
+          },
+          players: currentSetup.players.map((currentPlayer) =>
+            currentPlayer.id === player.id
+              ? {
+                  ...currentPlayer,
+                  villageActionState: recordVillageAction(
+                    currentPlayer.villageActionState,
+                    villageVisit.villageFeatureId,
+                    action
+                  ),
+                }
+              : currentPlayer
+          ),
+        };
+      }
+
+      return {
+        ...currentSetup,
+        players:
+          action === 'rest'
+            ? currentSetup.players.map((currentPlayer) =>
+                currentPlayer.id === player.id
+                  ? {
+                      ...currentPlayer,
+                      villageActionState: recordVillageAction(
+                        currentPlayer.villageActionState,
+                        villageVisit.villageFeatureId,
+                        action
+                      ),
+                    }
+                  : currentPlayer
+              )
+            : currentSetup.players,
+        villageVisit: {
+          ...villageVisit,
+          phase: action === 'rest' ? 'heal' : 'left',
+        },
       };
     });
   };
@@ -2508,17 +2634,13 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       if (!villageVisit.rewardItem) {
         return {
           ...currentSetup,
-          villageVisit: {
-            ...villageVisit,
-            phase: 'heal',
-            rewardType: null,
-          },
+          villageVisit: advanceVillageVisitReward(villageVisit),
         };
       }
 
       const rewardChoice = {
         category: villageVisit.rewardItem.rarity,
-        id: `village-${villageVisit.villageId}-${villageVisit.defeatedEliteCount}`,
+        id: `village-${villageVisit.villageId}-${villageVisit.rewardClaimKey}`,
         item: { ...villageVisit.rewardItem },
         itemType: villageVisit.rewardType,
       };
@@ -2578,10 +2700,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         ...currentSetup,
         activeBattle: null,
         miniGameResult: null,
-        villageVisit: {
-          ...currentSetup.villageVisit,
-          phase: 'heal',
-        },
+        villageVisit: advanceVillageVisitReward(
+          currentSetup.villageVisit
+        ),
       };
     });
   };
@@ -2624,7 +2745,32 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       );
 
       if (
-        villageVisit?.phase !== 'healed' ||
+        !['healed', 'left'].includes(villageVisit?.phase) ||
+        playerTurnIndex < 0 ||
+        currentSetup.turnOrder.length === 0
+      ) {
+        return currentSetup;
+      }
+
+      return transitionToPlayerTurn(
+        {
+          ...currentSetup,
+          villageVisit: null,
+        },
+        (playerTurnIndex + 1) % currentSetup.turnOrder.length
+      );
+    });
+  };
+
+  const finishVillageWandsmith = () => {
+    setGameSetup((currentSetup) => {
+      const villageVisit = currentSetup.villageVisit;
+      const playerTurnIndex = currentSetup.turnOrder.indexOf(
+        villageVisit?.playerId
+      );
+
+      if (
+        villageVisit?.phase !== 'wandsmith' ||
         playerTurnIndex < 0 ||
         currentSetup.turnOrder.length === 0
       ) {
@@ -2826,11 +2972,30 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         return currentSetup;
       }
 
-      if (outcome === 'loss') {
-        return createLostBattleSetup(currentSetup, activeBattle);
+      return {
+        ...currentSetup,
+        activeBattle: {
+          ...activeBattle,
+          isResolvingTurn: false,
+          outcome,
+          pendingEffects: [],
+          phase: 'deathAnimation',
+        },
+      };
+    });
+  };
+
+  const completeBattleDeathAnimation = () => {
+    setGameSetup((currentSetup) => {
+      const activeBattle = currentSetup.activeBattle;
+
+      if (!activeBattle || activeBattle.phase !== 'deathAnimation') {
+        return currentSetup;
       }
 
-      return createWonBattleSetup(currentSetup, activeBattle);
+      return activeBattle.outcome === 'loss'
+        ? createLostBattleSetup(currentSetup, activeBattle)
+        : createWonBattleSetup(currentSetup, activeBattle);
     });
   };
 
@@ -3294,9 +3459,11 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         clearPlayerForcedRoll,
         claimLootChestReward,
         completeBuyAndSell,
+        completeBattleDeathAnimation,
         completeTurnRespawn,
         completeStormMasterForcedTurn,
         completeVillageReward,
+        chooseVillageAction,
         continueCaveRewardResolution,
         currentPlayer: getCurrentPlayer(gameSetup),
         completeMiniGame,
@@ -3320,6 +3487,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         pendingTurnRespawn: gameSetup.pendingTurnRespawn ?? null,
         pendingPotionGrant: gameSetup.pendingPotionGrant ?? null,
         replaceSelectedRewardTokenInBag,
+        resetVillageActionLock,
         removePlayerPotion,
         resolvePendingPotionGrant,
         resolveCopyPastePotion,
@@ -3332,6 +3500,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         resolveTokensmithPotion,
         resolveSelectedPotionReward,
         finalizeBattleEffects,
+        finishVillageWandsmith,
         finishVillageVisit,
         resetGame,
         restoreGame,

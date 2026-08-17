@@ -228,7 +228,7 @@ describe('GameSetupPage piece selection foundation', () => {
       /\.game-setup-panel\s*{[^}]*background-image:\s*url\('\.\.\/images\/misc\/modalBackground\.png'\);[^}]*background-size:\s*100% 100%;[^}]*height:\s*min\(600px,\s*calc\(100vh - 32px\)\);[^}]*width:\s*min\(800px,\s*calc\(100vw - 32px\)\);/s
     );
     expect(stylesheet).toMatch(
-      /\.game-setup-title\s*{[^}]*color:\s*#C6CC0C;[^}]*font-family:\s*'Fontdiner Swanky',\s*'Noto Serif JP',\s*serif;/s
+      /\.game-setup-title\s*{[^}]*color:\s*#C6CC0C;[^}]*font-family:\s*'Fontdiner Swanky',\s*'M PLUS Rounded 1c',\s*sans-serif;/s
     );
     expect(stylesheet).toMatch(
       /\.game-setup-player-pod\s*{[^}]*height:\s*150px;[^}]*width:\s*350px;/s

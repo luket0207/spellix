@@ -39,6 +39,7 @@ const CHOOSE_EVENT_TEXT = {
 
 function ChooseEventModal({
   environment,
+  excludedEventTypes = [],
   isOpen,
   language = 'en',
   onChoose = () => {},
@@ -46,7 +47,10 @@ function ChooseEventModal({
   const normalizedLanguage = getGameplayLanguage(language);
   const languageClassName = `language-${normalizedLanguage}`;
   const text = CHOOSE_EVENT_TEXT[normalizedLanguage];
-  const availableEvents = getAvailableEventsForEnvironment(environment);
+  const availableEvents = getAvailableEventsForEnvironment(
+    environment,
+    excludedEventTypes
+  );
 
   return (
     <Modal

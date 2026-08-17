@@ -11,6 +11,7 @@ import {
   useGameSetup,
 } from '../features/gameSetup/GameSetupContext';
 import { createInitialGameSetup } from '../features/gameSetup/gameSetup';
+import { POTION_DEFINITIONS } from '../data/potions';
 import GameplayPage from './GameplayPage';
 
 let mockDestinationNodeId = 'elite-battle-top-left';
@@ -53,21 +54,28 @@ jest.mock('../features/gameBoard/multiSquareFeatures', () => ({
 }));
 
 function EncounterProbe() {
-  const { activeBattle, battleEnemy } = useGameSetup();
+  const { activeBattle, battleEnemy, currentPlayer } = useGameSetup();
 
   return (
     <div>
       <p>{`Encounter: ${activeBattle?.encounterType}`}</p>
       <p>{`Enemy: ${battleEnemy?.id ?? 'none'}`}</p>
       <p>{`Enemy health: ${battleEnemy?.currentHealth ?? 'none'}/${battleEnemy?.maxHealth ?? 'none'}`}</p>
+      <p>{`Active: ${currentPlayer?.activePotion?.id ?? 'none'}`}</p>
     </div>
   );
 }
 
 function VillageProbe() {
-  const { gameSetup } = useGameSetup();
+  const { currentPlayer, gameSetup } = useGameSetup();
 
-  return <p>{`Village: ${gameSetup.villageVisit?.villageId ?? 'none'}`}</p>;
+  return (
+    <>
+      <p>{`Village: ${gameSetup.villageVisit?.villageId ?? 'none'}`}</p>
+      <p>{`Village feature: ${gameSetup.villageVisit?.villageFeatureId ?? 'none'}`}</p>
+      <p>{`Active: ${currentPlayer?.activePotion?.id ?? 'none'}`}</p>
+    </>
+  );
 }
 
 function GameplayRoute() {
@@ -195,6 +203,47 @@ test('routes a generated village landing into the village visit flow', () => {
   rollAndLand();
 
   expect(screen.getByText('Village: fieldVillage')).toBeInTheDocument();
+  expect(
+    screen.getByText('Village feature: board-feature-feature-1')
+  ).toBeInTheDocument();
+});
+
+test.each([
+  ['board-feature-feature-1', 'Village: fieldVillage'],
+  ['elite-battle-top-left', 'Encounter: eliteTowerGravel'],
+])('does not replace feature destination %s with Metal Detector loot', (destinationNodeId, expected) => {
+  const setup = createGameplaySetup();
+
+  mockDestinationNodeId = destinationNodeId;
+  setup.players[0].activePotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'metal-detector'
+  );
+  renderGameplay(setup);
+  rollAndLand();
+
+  expect(screen.getByText(expected)).toBeInTheDocument();
+  expect(screen.getByText('Active: metal-detector')).toBeInTheDocument();
+});
+
+test.each([
+  ['elite-battle-top-left', 'Encounter: eliteTowerGravel'],
+  ['boss-battle', 'Encounter: bossBattle'],
+])('does not prevent Smokescreen feature battle at %s', (destinationNodeId, expected) => {
+  const setup = createGameplaySetup();
+
+  mockDestinationNodeId = destinationNodeId;
+  setup.players[0].activePotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'smokescreen'
+  );
+  setup.players[0].eliteProgress = {
+    eliteTowerGravel: true,
+    eliteTowerWoods: true,
+  };
+  renderGameplay(setup);
+  rollAndLand();
+
+  expect(screen.getByText(expected)).toBeInTheDocument();
+  expect(screen.getByText('Active: smokescreen')).toBeInTheDocument();
 });
 
 test('routes an unready player to the locked boss encounter', () => {

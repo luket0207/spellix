@@ -1,4 +1,5 @@
 import { cloneSpellSlots, cloneTokenBag } from '../gameSetup/gameSetup';
+import { canAddTokenToBag } from '../debug/tokenBagAdmin';
 import { getSpellColumnCapacity } from './nonBattleSpellEffects';
 
 export const TOKEN_BAG_DROP_ZONE_ID = 'token-bag';
@@ -72,6 +73,8 @@ function findTokenLocation(tokenId, tokenBag, spellSlots) {
 export function moveSpellTokenInDraft({
   allowCommittedTokenMovement = false,
   destinationId,
+  enforceTokenBagCapacity = false,
+  keepMovedTokensUncommitted = false,
   mergedColumns = [],
   spellSlots,
   tokenBag,
@@ -104,7 +107,10 @@ export function moveSpellTokenInDraft({
   if (
     !location ||
     (location.token.committed && !allowCommittedTokenMovement) ||
-    (location.containerId === destinationId && !allowCommittedTokenMovement)
+    (location.containerId === destinationId && !allowCommittedTokenMovement) ||
+    (enforceTokenBagCapacity &&
+      destinationId === TOKEN_BAG_DROP_ZONE_ID &&
+      !canAddTokenToBag(nextTokenBag))
   ) {
     return {
       didMove: false,
@@ -138,7 +144,7 @@ export function moveSpellTokenInDraft({
     const [tokenToMove] = destinationSlot.tokens.splice(location.tokenIndex, 1);
     destinationSlot.tokens.push({
       ...tokenToMove,
-      committed: true,
+      committed: !keepMovedTokensUncommitted,
     });
 
     return {
@@ -168,6 +174,7 @@ export function moveSpellTokenInDraft({
     ...location.token,
     committed:
       allowCommittedTokenMovement &&
+      !keepMovedTokensUncommitted &&
       destinationId !== TOKEN_BAG_DROP_ZONE_ID,
   };
 
@@ -199,6 +206,22 @@ export function createCommittedSpellData({ spellSlots, tokenBag }) {
       tokens: slot.tokens.map((token) => ({
         ...token,
         committed: true,
+      })),
+    })),
+  };
+}
+
+export function createRearrangeableSpellData({ spellSlots, tokenBag }) {
+  return {
+    tokenBag: cloneTokenBag(tokenBag).map((token) => ({
+      ...token,
+      committed: false,
+    })),
+    spellSlots: cloneSpellSlots(spellSlots).map((slot) => ({
+      ...slot,
+      tokens: slot.tokens.map((token) => ({
+        ...token,
+        committed: false,
       })),
     })),
   };

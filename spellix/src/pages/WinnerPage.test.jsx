@@ -233,6 +233,6 @@ test('shares the complete gameplay sky background treatment', () => {
   expect(sharedRule).toMatch(/radial-gradient/);
   expect(sharedRule).toMatch(/linear-gradient/);
   expect(gameplaySource).toContain(
-    'gameplay-layout magical-night-sky-page'
+    'gameplay-page magical-night-sky-page'
   );
 });

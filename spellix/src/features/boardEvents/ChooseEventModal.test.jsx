@@ -96,6 +96,28 @@ test('renders exact Japanese labels and delegates the selected event type', () =
   expect(onChoose).toHaveBeenCalledWith('level1Battle');
 });
 
+test('hides excluded battle events while keeping non-battle choices', () => {
+  render(
+    <ChooseEventModal
+      environment="woods"
+      excludedEventTypes={[
+        'level1Battle',
+        'level2Battle',
+        'level3Battle',
+      ]}
+      isOpen
+      language="en"
+    />
+  );
+
+  const dialog = screen.getByRole('dialog', { name: 'Choose Event' });
+
+  expect(within(dialog).queryByRole('button', { name: /battle/i })).not.toBeInTheDocument();
+  expect(
+    within(dialog).getAllByRole('button').map((button) => button.textContent)
+  ).toEqual(['Decision', 'Hazard', 'Loot Chest']);
+});
+
 test.each([
   ['mountains', 'level2Battle', '\u30ec\u30d9\u30eb2\u30d0\u30c8\u30eb'],
   ['forest', 'level3Battle', '\u30ec\u30d9\u30eb3\u30d0\u30c8\u30eb'],

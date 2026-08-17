@@ -32,7 +32,7 @@ const EXPECTED_POTIONS = [
   ['cosmic-intervention', 'Cosmic Intervention', '宇宙の介入', 'Battle', 'Common', 'Deal 10 damage to your opponent', '対戦相手に10ダメージを与える。', 'red'],
   ['shields-down', 'Shields Down', 'シールドダウン', 'Battle', 'Common', 'Remove all guard from your opponent this turn', 'このターン、対戦相手のガードをすべて取り除く。', 'blue'],
   ['thaw', 'Thaw', '解凍', 'Battle', 'Common', 'Auto unfreeze yourself', '自分の凍結状態を自動的に解除する。', 'orange'],
-  ['sos', 'SOS', 'SOS', 'Board', 'Common', 'Teleport to the field village', 'フィールドの村にテレポートする。', 'light-blue'],
+  ['sos', 'SOS', 'SOS', 'Board', 'Common', 'Teleport to the nearest village', '最寄りの村にテレポートする。', 'light-blue'],
 ];
 
 function toComparablePotion(potion) {

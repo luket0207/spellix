@@ -16,7 +16,7 @@
   color: #F5FA00;
   display: flex;
   flex-direction: column;
-  font-family: 'Unkempt', 'Noto Serif JP', serif;
+  font-family: 'Unkempt', 'M PLUS Rounded 1c', sans-serif;
   gap: 4px;
   height: min(670px, calc(100vh - 32px));
   overflow: auto;
@@ -28,7 +28,7 @@
 
 .game-setup-title {
   color: #C6CC0C;
-  font-family: 'Fontdiner Swanky', 'Noto Serif JP', serif;
+  font-family: 'Fontdiner Swanky', 'M PLUS Rounded 1c', sans-serif;
   font-size: 32px;
   line-height: 1;
   margin: 0;
@@ -117,7 +117,7 @@
   background: #FFF4CF;
   border: 2px solid #C6CC0C;
   color: #302419;
-  font-family: 'Unkempt', 'Noto Serif JP', serif;
+  font-family: 'Unkempt', 'M PLUS Rounded 1c', sans-serif;
   min-width: 0;
   padding: 2px 4px;
 }

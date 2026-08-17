@@ -287,9 +287,9 @@ export const POTION_DEFINITIONS = [
   {
     availability: 'Board',
     colour: 'light-blue',
-    description: 'Teleport to the field village',
+    description: 'Teleport to the nearest village',
     id: 'sos',
-    japaneseDescription: 'フィールドの村にテレポートする。',
+    japaneseDescription: '最寄りの村にテレポートする。',
     japaneseName: 'SOS',
     name: 'SOS',
     rarity: 'Common',

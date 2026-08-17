@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { POTION_DEFINITIONS } from '../data/potions';
 import { getEnemyById } from '../features/battle/enemies';
+import { BOSS_BATTLE } from '../features/gameBoard/eliteBossEncounters';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import { createPlayers } from '../features/gameSetup/gameSetup';
 import BattlePage from './BattlePage';
@@ -167,6 +168,7 @@ function renderBattleFlow(initialEntries = ['/battle'], initialGameSetup = creat
             }
           />
           <Route path="/gameplay" element={<GameStateSnapshot />} />
+          <Route path="/winner" element={<GameStateSnapshot />} />
         </Routes>
       </MemoryRouter>
     </GameSetupProvider>
@@ -201,6 +203,24 @@ describe('BattlePage flows', () => {
     expect(debugControlsRule).toMatch(/position:\s*absolute/);
     expect(debugControlsRule).toMatch(/left:\s*10px/);
     expect(debugControlsRule).not.toMatch(/right\s*:/);
+  });
+
+  test('defines the centred grey growing and shaking battle death icon animation', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const deathIconRule = stylesheet.match(
+      /\.battle-death-icon\s*\{([^}]*)\}/
+    )?.[1];
+    const deathAnimation = stylesheet.match(
+      /@keyframes battle-death-icon\s*\{([\s\S]*?)\n\}/
+    )?.[1];
+
+    expect(deathIconRule).toMatch(/animation:\s*battle-death-icon 1\.5s ease-out forwards/);
+    expect(deathIconRule).toMatch(/color:\s*#555/i);
+    expect(deathIconRule).toMatch(/left:\s*50%/);
+    expect(deathIconRule).toMatch(/top:\s*50%/);
+    expect(deathAnimation).toMatch(/scale\(0\)/);
+    expect(deathAnimation).toMatch(/translateX\(-5px\) rotate\(-4deg\)/);
+    expect(deathAnimation).toMatch(/translateX\(5px\) rotate\(4deg\)/);
   });
 
   test('groups the battle title and fixed-height potion bar in one wooden panel', () => {
@@ -525,6 +545,14 @@ describe('BattlePage flows', () => {
     act(() => {
       jest.advanceTimersByTime(2000);
     });
+
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy defeated/i)).toBeInTheDocument();
+    expect(document.querySelector('.battle-dice')).toHaveClass(
+      'battle-dice--hidden'
+    );
+
+    fireEvent.animationEnd(screen.getByLabelText(/enemy defeated/i));
 
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
     expect(document.querySelector('.battle-dice')).not.toBeInTheDocument();
@@ -2858,11 +2886,20 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
+    expect(screen.getByText(/battle enemy health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy defeated/i)).toHaveClass('battle-death-icon');
+    expect(screen.queryByRole('button', { name: /^choose$/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
+
+    fireEvent.animationEnd(screen.getByLabelText(/enemy defeated/i));
+
     expect(screen.getAllByRole('button', { name: /^choose$/i })).toHaveLength(1);
     expect(screen.getByText(/battle phase: reward/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy defeated/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /roll dice/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^choose$/i }));
 
@@ -2924,17 +2961,24 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText(/battle player health: 0/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 died last turn: yes/i)).toBeInTheDocument();
-    expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player defeated/i)).toHaveClass('battle-death-icon');
+    expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+
+    fireEvent.animationEnd(screen.getByLabelText(/player defeated/i));
+
+    expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
     expect(
       within(screen.getByRole('dialog', { name: /battle lost/i })).getAllByTestId(
         'death-result-token-row'
       )
     ).toHaveLength(1);
-    expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    expect(screen.queryByLabelText(/player defeated/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /respawn/i }));
 
@@ -2942,6 +2986,92 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/battle phase: none/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 position: 0,29/i)).toBeInTheDocument();
     expect(screen.getByText(/player 1 died last turn: no/i)).toBeInTheDocument();
+  });
+
+  test('shows both deaths and waits for both skull animations after a lethal counter', () => {
+    const doubleKnockoutSetup = createBattleSetup();
+    doubleKnockoutSetup.activeBattle = {
+      ...doubleKnockoutSetup.activeBattle,
+      enemyCurrentHealth: 10,
+      enemyId: 'vilewhisker-rat',
+      level: 1,
+    };
+    doubleKnockoutSetup.players[0].currentHealth = 5;
+    doubleKnockoutSetup.players[0].spellSlots[4] = {
+      ...doubleKnockoutSetup.players[0].spellSlots[4],
+      tokens: [{ committed: true, id: 'player-1-red-5', type: 'red' }],
+    };
+    renderBattleFlow(['/battle'], doubleKnockoutSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force 5' }));
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByText(/battle enemy health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle player health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy defeated/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player defeated/i)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
+
+    fireEvent.animationEnd(screen.getByLabelText(/enemy defeated/i));
+
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
+
+    fireEvent.animationEnd(screen.getByLabelText(/player defeated/i));
+
+    expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
+  });
+
+  test('waits for the enemy skull before continuing to the existing boss win flow', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const bossBattleSetup = createBattleSetup();
+    bossBattleSetup.activeBattle = {
+      ...bossBattleSetup.activeBattle,
+      encounterType: BOSS_BATTLE,
+      enemyCurrentHealth: 20,
+      enemyMaxHealth: 100,
+    };
+    renderBattleFlow(['/battle'], bossBattleSetup);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText(/battle enemy health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy defeated/i)).toBeInTheDocument();
+
+    fireEvent.animationEnd(screen.getByLabelText(/enemy defeated/i));
+
+    expect(screen.getByText(/battle phase: wonGame/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy defeated/i)).not.toBeInTheDocument();
   });
 
   test('automatically rolls a lethal enemy turn into the existing loss flow once', () => {
@@ -2985,11 +3115,18 @@ describe('BattlePage flows', () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(randomSpy).toHaveBeenCalledTimes(4);
+    expect(randomSpy).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/battle player health: 0/i)).toBeInTheDocument();
-    expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/player defeated/i)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();
+
+    fireEvent.animationEnd(screen.getByLabelText(/player defeated/i));
+
+    expect(randomSpy).toHaveBeenCalledTimes(3);
+    expect(screen.getByText(/battle phase: lost/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /battle lost/i })).toBeInTheDocument();
   });
 });

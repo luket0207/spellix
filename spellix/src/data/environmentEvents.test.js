@@ -60,6 +60,47 @@ test('selects events at exact weighted boundaries', () => {
   expect(selectEventForEnvironment('field', () => 0.9)).toBe('rollAgain');
 });
 
+test.each([
+  ['field', ['nothing', 'decision', 'hazard', 'lootChest', 'rollAgain']],
+  ['woods', ['decision', 'hazard', 'lootChest']],
+  ['forest', ['decision', 'hazard', 'lootChest']],
+])(
+  'excludes random battles and keeps only positive-weight %s events',
+  (environment, expectedEventTypes) => {
+    expect(
+      getAvailableEventsForEnvironment(environment, [
+        'level1Battle',
+        'level2Battle',
+        'level3Battle',
+      ]).map(({ eventType }) => eventType)
+    ).toEqual(expectedEventTypes);
+  }
+);
+
+test('reweights the remaining Smokescreen events without a probability gap', () => {
+  const excludedBattleEvents = [
+    'level1Battle',
+    'level2Battle',
+    'level3Battle',
+  ];
+
+  expect(
+    selectEventForEnvironment('field', () => 0.46, excludedBattleEvents)
+  ).toBe('nothing');
+  expect(
+    selectEventForEnvironment('field', () => 0.47, excludedBattleEvents)
+  ).toBe('decision');
+  expect(
+    selectEventForEnvironment('field', () => 0.9999, excludedBattleEvents)
+  ).toBe('rollAgain');
+  expect(
+    selectEventForEnvironment('woods', () => 0, excludedBattleEvents)
+  ).toBe('decision');
+  expect(
+    selectEventForEnvironment('forest', () => 0.9999, excludedBattleEvents)
+  ).toBe('lootChest');
+});
+
 test('handles unsupported environments and battle field naming', () => {
   expect(getAvailableEventsForEnvironment('unsupported')).toEqual([]);
   expect(selectEventForEnvironment('unsupported', () => 0)).toBeNull();

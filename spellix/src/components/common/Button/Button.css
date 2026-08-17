@@ -11,6 +11,10 @@
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
+.fantasy-button.language-jp {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+}
+
 .fantasy-button--primary {
   background: #302419;
   border-color: #C6CC0C;

@@ -81,18 +81,25 @@ const HAZARD_TRANSLATIONS = {
 
 const VILLAGE_TRANSLATIONS = {
   en: {
+    choice: 'What would you like to do on your visit to the village?',
     continue: 'Continue',
     heal:
       'Take a rest and recover in our village.',
     lootChest:
       'Thank you for visiting our village traveller. We have this old chest here if you wish to open it.',
     openLootChest: 'Open Loot Chest',
+    leave: 'Leave',
+    left: 'You left the village',
     potion: (enemyName) =>
       `Thank you for defeating ${enemyName}! The village will be much safer with you around. Please take this as a sign of our appreciation.`,
     token:
       'Wow, you really are powerful. Now you have defeated both of the towers, take this to help you defeat the main boss in his castle, north east of here.',
+    rest: 'Rest',
+    wandsmith: 'Wandsmith',
   },
   jp: {
+    choice:
+      '\u6751\u3092\u8a2a\u308c\u3066\u3044\u308b\u9593\u3001\u4f55\u3092\u3057\u307e\u3059\u304b\uff1f',
     continue: '\u7d9a\u3051\u308b',
     heal:
       '\u79c1\u305f\u3061\u306e\u6751\u3067\u4f11\u3093\u3067\u3001\u4f53\u529b\u3092\u56de\u5fa9\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
@@ -100,10 +107,14 @@ const VILLAGE_TRANSLATIONS = {
       '\u79c1\u305f\u3061\u306e\u6751\u3078\u3088\u3046\u3053\u305d\u3001\u65c5\u4eba\u3055\u3093\u3002\u3053\u3053\u306b\u53e4\u3044\u5b9d\u7bb1\u304c\u3042\u308a\u307e\u3059\u3002\u3088\u308d\u3057\u3051\u308c\u3070\u3001\u958b\u3051\u3066\u307f\u307e\u305b\u3093\u304b\uff1f',
     openLootChest:
       '\u6226\u5229\u54c1\u306e\u5b9d\u7bb1\u3092\u958b\u3051\u308b',
+    leave: '\u51fa\u767a\u3059\u308b',
+    left: '\u6751\u3092\u51fa\u307e\u3057\u305f\u3002',
     potion: (enemyName) =>
       `${enemyName}\u3092\u5012\u3057\u3066\u304f\u308c\u3066\u3042\u308a\u304c\u3068\u3046\uff01\u3042\u306a\u305f\u304c\u3044\u3066\u304f\u308c\u308c\u3070\u3001\u3053\u306e\u6751\u3082\u305a\u3063\u3068\u5b89\u5168\u306b\u306a\u308a\u307e\u3059\u3002\u611f\u8b1d\u306e\u3057\u308b\u3057\u306b\u3001\u3053\u3061\u3089\u3092\u304a\u53d7\u3051\u53d6\u308a\u304f\u3060\u3055\u3044\u3002`,
     token:
       '\u3059\u3054\u3044\u3001\u672c\u5f53\u306b\u5f37\u3044\u3093\u3067\u3059\u306d\u3002\u3053\u308c\u30672\u3064\u306e\u5854\u3092\u4e21\u65b9\u653b\u7565\u3057\u307e\u3057\u305f\u3002\u3053\u3053\u304b\u3089\u5317\u6771\u306b\u3042\u308b\u57ce\u306e\u30dc\u30b9\u3092\u5012\u3059\u305f\u3081\u306b\u3001\u3053\u308c\u3092\u5f79\u7acb\u3066\u3066\u304f\u3060\u3055\u3044\u3002',
+    rest: '\u4f11\u3080',
+    wandsmith: '\u6756\u8077\u4eba',
   },
 };
 
@@ -369,7 +380,7 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
       'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.',
     save: 'Save',
     saveConfirmation:
-      'Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using potions once they are saved.',
+      'Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using a Wandsmith or potions once they are saved.',
     spellSlotLocation: (slotNumber) => `spell slot ${slotNumber}`,
     spells: 'Spells',
     startingTokenWarning:
@@ -379,6 +390,10 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     tokenBag: 'Token Bag',
     tokenBagLocation: 'token bag',
     trash: 'Trash',
+    wandsmithCancelConfirmation:
+      'Are you sure you want to leave without making any changes? The Wandsmith will close after you leave.',
+    wandsmithWarning:
+      'The Wandsmith helps you arrange your tokens however you wish.',
     yes: 'Yes',
   },
   jp: {
@@ -406,7 +421,7 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
       '\u30c8\u30fc\u30af\u30f3\u306f\u597d\u304d\u306a\u3060\u3051\u4e26\u3079\u66ff\u3048\u308b\u3053\u3068\u304c\u3067\u304d\u307e\u3059\u304c\u3001\u914d\u7f6e\u3092\u78ba\u5b9a\u3059\u308b\u3068\u518d\u3073\u56fa\u5b9a\u3055\u308c\u307e\u3059\u3002',
     save: '保存',
     saveConfirmation:
-      'これらの呪文スロットにトークンを確定しますか？保存後は、ポーションを使用しない限り変更できません。',
+      'これらのスペルスロットにトークンを配置して確定してもよろしいですか？一度保存すると、杖職人またはポーションを使用しない限り、配置を変更することはできません。',
     spellSlotLocation: (slotNumber) => `呪文スロット${slotNumber}`,
     spells: '呪文',
      startingTokenWarning:
@@ -416,6 +431,10 @@ const SPELL_ASSIGNMENT_TRANSLATIONS = {
     tokenBag: 'トークンバッグ',
     tokenBagLocation: 'トークンバッグ',
     trash: 'ゴミ箱',
+    wandsmithCancelConfirmation:
+      '変更せずに退出してもよろしいですか？退出すると、杖職人の画面は閉じます。',
+    wandsmithWarning:
+      '杖職人が、トークンを好きなように並べ替えるのを手伝ってくれます。',
     yes: 'はい',
   },
 };

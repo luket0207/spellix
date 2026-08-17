@@ -1,7 +1,10 @@
 import { DEFAULT_PLAYER_GENDER, getPlayerPieceImageName } from './pieceImages';
 import { applyLightGreenHealthBonus } from '../spells/nonBattleSpellEffects';
 import { selectEliteBossEnemyAssignments } from '../gameBoard/eliteBossEncounters';
-import { createVillageProgress } from '../villages/villageVisits';
+import {
+  createVillageActionState,
+  createVillageProgress,
+} from '../villages/villageVisits';
 
 export const MIN_PLAYER_COUNT = 2;
 export const MAX_PLAYER_COUNT = 6;
@@ -117,6 +120,9 @@ export function createPlayers(playerCount, existingPlayers = []) {
         ),
       },
       villageProgress: createVillageProgress(existingPlayer?.villageProgress),
+      villageActionState: createVillageActionState(
+        existingPlayer?.villageActionState
+      ),
     };
 
     return applyLightGreenHealthBonus(player, player.spellSlots);

@@ -1,7 +1,11 @@
 import { POTION_DEFINITIONS } from '../../data/potions';
 import { TOKEN_DEFINITIONS } from '../../data/tokens';
 import { REWARD_CATEGORIES } from './battleRewards';
-import { generateBattleRewardChoices, generateRewardItem } from './rewardItems';
+import {
+  generateBattleRewardChoices,
+  generateEliteTowerRewardChoices,
+  generateRewardItem,
+} from './rewardItems';
 
 function getExpectedTokenTypes(rarity) {
   return Object.entries(TOKEN_DEFINITIONS)
@@ -30,6 +34,75 @@ function selectEveryItem(category, itemCount, availability) {
 }
 
 describe('rewardItems', () => {
+  test('generates exactly three distinct rare token choices for Elite Towers', () => {
+    const choices = generateEliteTowerRewardChoices(() => 0);
+    const tokenTypes = choices.map(({ item }) => item.type);
+
+    expect(choices).toHaveLength(3);
+    expect(choices.map(({ id }) => id)).toEqual([
+      'reward-choice-1',
+      'reward-choice-2',
+      'reward-choice-3',
+    ]);
+    expect(new Set(tokenTypes)).toHaveProperty('size', 3);
+    expect(
+      choices.every(
+        ({ category, item, itemType }) =>
+          category === REWARD_CATEGORIES.RARE_TOKEN &&
+          item.rarity === 'Rare' &&
+          itemType === 'token'
+      )
+    ).toBe(true);
+  });
+
+  test('uses the live rare pool and can select Shiny Health for Elite Towers', () => {
+    const choices = generateEliteTowerRewardChoices(() => 0.9999);
+
+    expect(choices[0].item.type).toBe('light-green-yellow-outline');
+    expect(choices.map(({ item }) => item.type)).toEqual(
+      expect.arrayContaining([
+        'light-green-yellow-outline',
+        'green-yellow-outline',
+        'orange-yellow-outline',
+      ])
+    );
+  });
+
+  test('automatically excludes tokens whose live rarity is no longer Rare', () => {
+    const originalRarity = TOKEN_DEFINITIONS.purple.rarity;
+    TOKEN_DEFINITIONS.purple.rarity = 'Common';
+
+    try {
+      const choices = generateEliteTowerRewardChoices(() => 0);
+
+      expect(choices.map(({ item }) => item.type)).toEqual([
+        'white',
+        'yellow',
+        'grey',
+      ]);
+    } finally {
+      TOKEN_DEFINITIONS.purple.rarity = originalRarity;
+    }
+  });
+
+  test('includes Buff only in common token rewards and excludes it from Elite rewards', () => {
+    const commonTypes = selectEveryItem(
+      REWARD_CATEGORIES.COMMON_TOKEN,
+      getExpectedTokenTypes('Common').length
+    ).map(({ item }) => item.type);
+    const rareTypes = selectEveryItem(
+      REWARD_CATEGORIES.RARE_TOKEN,
+      getExpectedTokenTypes('Rare').length
+    ).map(({ item }) => item.type);
+    const eliteTypes = generateEliteTowerRewardChoices(() => 0).map(
+      ({ item }) => item.type
+    );
+
+    expect(commonTypes).toContain('purple');
+    expect(rareTypes).not.toContain('purple');
+    expect(eliteTypes).not.toContain('purple');
+  });
+
   test.each([
     [1, 1],
     [2, 2],

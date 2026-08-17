@@ -2,7 +2,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSkullCrossbones } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import { POTION_DEFINITIONS } from '../data/potions';
-import { selectEventForEnvironment } from '../data/environmentEvents';
+import {
+  BATTLE_ENVIRONMENT_EVENT_TYPES,
+  selectEventForEnvironment,
+} from '../data/environmentEvents';
 import Button from '../components/common/Button/Button';
 import DiceRoll from '../components/dice/DiceRoll';
 import MagicalNightSky from '../components/gameplay/MagicalNightSky/MagicalNightSky';
@@ -11,6 +14,7 @@ import Modal from '../components/Modal';
 import Token from '../components/tokens/Token';
 import BoardGrid from '../features/gameBoard/BoardGrid';
 import { getEnemyById } from '../features/battle/enemies';
+import { getFeatureBackgroundSource } from '../features/gameBoard/featureBackgrounds';
 import {
   BOSS_BATTLE,
   ELITE_TOWER_GRAVEL,
@@ -27,7 +31,10 @@ import { chooseVisualPositionForFeature } from '../features/gameBoard/multiSquar
 import { cloneSpellSlots, cloneTokenBag } from '../features/gameSetup/gameSetup';
 import { getPieceImageSource } from '../features/gameSetup/pieceImages';
 import { useGameSetup } from '../features/gameSetup/GameSetupContext';
-import { getVillageIdFromDestination } from '../features/villages/villageVisits';
+import {
+  getNearestVillageDestination,
+  getVillageIdFromDestination,
+} from '../features/villages/villageVisits';
 import PotionList from '../features/potions/PotionList';
 import ActivePotionSection from '../features/potions/ActivePotionSection';
 import HeavyWeightDiceResult from '../features/potions/HeavyWeightDiceResult';
@@ -59,6 +66,7 @@ import SpellMergeConfirmationModal from '../features/spells/SpellMergeConfirmati
 import SpellsModal from '../features/spells/SpellsModal';
 import {
   createCommittedSpellData,
+  createRearrangeableSpellData,
   hasDraftSpellChanges,
   isStartingSpellSetupComplete,
   moveSpellTokenInDraft,
@@ -79,12 +87,14 @@ import {
   getRiverMiniGameTranslations,
   getSpellAssignmentTranslations,
 } from '../i18n/translations';
+import { getBrowserGameplayScale } from './gameplayViewport';
 import './GameplayPage.css';
 
 function GameplayPage({
   activeLootChestEvent = null,
   activeRollAgainEvent = null,
   isChooseEventModeEnabled = false,
+  isVillageWandsmithRoute = false,
   onOpenLootChest = () => {},
   onConsumeRollAgainEvent = () => {},
   onContinueRollAgainEvent = () => {},
@@ -104,6 +114,7 @@ function GameplayPage({
     dismissTroublemakerResult,
     dismissMiniGameReturnNotice,
     dismissNextTurnModal,
+    finishVillageWandsmith,
     gameSetup,
     initializeBoard,
     initializeTurnOrder,
@@ -112,6 +123,7 @@ function GameplayPage({
     miniGameReturnNotice,
     pendingNextTurnModal,
     pendingTurnRespawn,
+    resetVillageActionLock,
     setPlayerPosition,
     updatePlayerSpells,
     consumePlayerPotion,
@@ -138,6 +150,7 @@ function GameplayPage({
   const [showDiceModal, setShowDiceModal] = useState(false);
   const [showSpellsModal, setShowSpellsModal] = useState(false);
   const [isRedoMode, setIsRedoMode] = useState(false);
+  const [isWandsmithMode, setIsWandsmithMode] = useState(false);
   const [showSpellCancelConfirmation, setShowSpellCancelConfirmation] = useState(false);
   const [showSpellSaveConfirmation, setShowSpellSaveConfirmation] = useState(false);
   const [spellValidationMessage, setSpellValidationMessage] = useState('');
@@ -152,6 +165,7 @@ function GameplayPage({
   const [pendingTokensmithUse, setPendingTokensmithUse] = useState(null);
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const [pendingChooseEvent, setPendingChooseEvent] = useState(null);
+  const [gameplayScale, setGameplayScale] = useState(getBrowserGameplayScale);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const rollAgainPlayer = gameSetup.players.find(
     ({ id }) => id === activeRollAgainEvent?.playerId
@@ -200,6 +214,14 @@ function GameplayPage({
   const removedRespawnToken =
     pendingTurnRespawn?.removedTokens?.[0]?.token ?? null;
   const isForcedSpellSetup = Boolean(currentPlayer && !currentPlayer.hasCommittedInitialSpells);
+  const isWandsmithVisit = Boolean(
+    gameSetup.villageVisit?.phase === 'wandsmith' &&
+      gameSetup.villageVisit.playerId === currentPlayer?.id
+  );
+  const wandsmithBackgroundSource = isWandsmithVisit
+    ? getFeatureBackgroundSource(gameSetup.villageVisit.villageId)
+    : '';
+  const isSpellRearrangementMode = isRedoMode || isWandsmithMode;
   const showSpellsNotification = Boolean(
     currentPlayer?.hasUnseenTokenBagTokens &&
       currentPlayer.tokenBag?.length
@@ -217,7 +239,7 @@ function GameplayPage({
     spellSlots: draftSpellSlots,
     tokenBag: draftTokenBag,
   });
-  const validationSpellSlots = isRedoMode
+  const validationSpellSlots = isSpellRearrangementMode
     ? createCommittedSpellData({
         spellSlots: draftSpellSlots,
         tokenBag: draftTokenBag,
@@ -233,8 +255,13 @@ function GameplayPage({
       : '';
   const isSpellSaveDisabled = isForcedSpellSetup
     ? !isStartingSetupComplete || overCapacityColumns.length > 0
-    : !hasUnsavedSpellChanges || overCapacityColumns.length > 0;
+    : (!hasUnsavedSpellChanges && !isWandsmithMode) ||
+      overCapacityColumns.length > 0;
   const isHeavyWeightActive = currentPlayer?.activePotion?.id === 'heavy-weight';
+  const isMetalDetectorActive =
+    currentPlayer?.activePotion?.id === 'metal-detector';
+  const isSmokescreenActive =
+    currentPlayer?.activePotion?.id === 'smokescreen';
   const isDevineChanceActive =
     currentPlayer?.activePotion?.id === 'devine-chance';
   const isTroublemakerActive =
@@ -260,6 +287,35 @@ function GameplayPage({
         POTION_DEFINITIONS.find(({ id }) => id === potionId)
       )
       .filter(Boolean) ?? [];
+  const isGameplayOverlayOpen = Boolean(
+    showDiceModal ||
+      showSpellsModal ||
+      showSpellCancelConfirmation ||
+      showSpellSaveConfirmation ||
+      mergeSaveDraft?.pendingMerge ||
+      isTurnStartBlocked ||
+      activeLootChestEvent ||
+      isChooseEventModalOpen ||
+      isRollAgainEventModalOpen ||
+      pendingPotionUse ||
+      pendingBuyAndSellUse ||
+      buyAndSellTransaction ||
+      cauldronChoiceState ||
+      pendingCopyPasteUse ||
+      pendingCopyPasteDuplicate ||
+      pendingRollChoiceUse ||
+      pendingTargetPlayerPotionUse ||
+      pendingTokensmithUse ||
+      troublemakerResult ||
+      devineChanceResult ||
+      stormMasterResult ||
+      miniGameReturnNotice
+  );
+  const showBoardHoverLabels = Boolean(
+    currentDiceRoll !== null &&
+      highlightedNodeIds.length > 0 &&
+      !isGameplayOverlayOpen
+  );
 
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
@@ -309,9 +365,59 @@ function GameplayPage({
           'board'
         );
         markPlayerTokenBagSeen(pendingPotionUse.playerId);
+        setIsWandsmithMode(false);
         setIsRedoMode(true);
         setShowSpellsModal(true);
         setPendingPotionUse(null);
+        return;
+      }
+
+      if (pendingPotionUse.potion.id === 'sos') {
+        const potionPlayer = gameSetup.players.find(
+          ({ id }) => id === pendingPotionUse.playerId
+        );
+        const destination = getNearestVillageDestination(
+          gameSetup.board,
+          potionPlayer?.position
+        );
+
+        if (!destination) {
+          console.warn(
+            'SOS potion could not find a generated village destination.'
+          );
+          setPendingPotionUse(null);
+          return;
+        }
+
+        const destinationPosition = chooseVisualPositionForFeature({
+          board: gameSetup.board,
+          destinationSquare: destination.destinationSquare,
+          players: gameSetup.players,
+        });
+
+        consumePlayerPotion(
+          pendingPotionUse.playerId,
+          pendingPotionUse.potionIndex,
+          'board'
+        );
+        setPlayerPosition(
+          pendingPotionUse.playerId,
+          destinationPosition,
+          {
+            anywhereMode: false,
+            hasLeftStartArea: true,
+          }
+        );
+        setCurrentDiceRoll(null);
+        setHighlightedNodeIds([]);
+        startVillageVisit(
+          pendingPotionUse.playerId,
+          destination.villageId,
+          undefined,
+          destination.destinationNodeId
+        );
+        setPendingPotionUse(null);
+        onNavigate('/village');
         return;
       }
 
@@ -473,10 +579,37 @@ function GameplayPage({
   }, [gameSetup.players.length, gameSetup.turnOrder.length, initializeTurnOrder]);
 
   useEffect(() => {
-    if (!gameSetup.board && gameSetup.players.length > 0) {
+    let resizeTimer = null;
+
+    const handleResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        setGameplayScale(getBrowserGameplayScale());
+      }, 50);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.clearTimeout(resizeTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isVillageWandsmithRoute &&
+      !gameSetup.board &&
+      gameSetup.players.length > 0
+    ) {
       initializeBoard();
     }
-  }, [gameSetup.board, gameSetup.players.length, initializeBoard]);
+  }, [
+    gameSetup.board,
+    gameSetup.players.length,
+    initializeBoard,
+    isVillageWandsmithRoute,
+  ]);
 
   useEffect(() => {
     if (currentPlayer && isForcedSpellSetup && !isTurnStartBlocked) {
@@ -491,17 +624,43 @@ function GameplayPage({
   ]);
 
   useEffect(() => {
+    if (!currentPlayer || !isWandsmithVisit || showSpellsModal) {
+      return;
+    }
+
+    markPlayerTokenBagSeen(currentPlayer.id);
+    setIsRedoMode(false);
+    setIsWandsmithMode(true);
+    setShowSpellsModal(true);
+  }, [
+    currentPlayer,
+    isWandsmithVisit,
+    markPlayerTokenBagSeen,
+    showSpellsModal,
+  ]);
+
+  useEffect(() => {
     if (!showSpellsModal || !currentPlayer) {
       return;
     }
 
-    setDraftTokenBag(cloneTokenBag(currentPlayer.tokenBag));
-    setDraftSpellSlots(cloneSpellSlots(currentPlayer.spellSlots));
+    const spellData = isWandsmithMode
+      ? createRearrangeableSpellData({
+          spellSlots: currentPlayer.spellSlots,
+          tokenBag: currentPlayer.tokenBag,
+        })
+      : {
+          spellSlots: cloneSpellSlots(currentPlayer.spellSlots),
+          tokenBag: cloneTokenBag(currentPlayer.tokenBag),
+        };
+
+    setDraftTokenBag(spellData.tokenBag);
+    setDraftSpellSlots(spellData.spellSlots);
     setShowSpellCancelConfirmation(false);
     setShowSpellSaveConfirmation(false);
     setSpellValidationMessage('');
     setMergeSaveDraft(null);
-  }, [currentPlayer, showSpellsModal]);
+  }, [currentPlayer, isWandsmithMode, showSpellsModal]);
 
   const handleRollDice = () => {
     if (
@@ -529,6 +688,7 @@ function GameplayPage({
 
     markPlayerTokenBagSeen(currentPlayer.id);
     setIsRedoMode(false);
+    setIsWandsmithMode(false);
     setShowSpellsModal(true);
   };
 
@@ -676,7 +836,12 @@ function GameplayPage({
     );
 
     if (villageId) {
-      startVillageVisit(currentPlayer.id, villageId);
+      startVillageVisit(
+        currentPlayer.id,
+        villageId,
+        undefined,
+        destinationNodeId
+      );
       onNavigate('/village');
       return;
     }
@@ -699,7 +864,18 @@ function GameplayPage({
     }
 
     if (square.featureId || square.areaType !== 'normal') {
+      resetVillageActionLock(currentPlayer.id);
       advanceTurn();
+      return;
+    }
+
+    if (isMetalDetectorActive) {
+      onTriggerBoardEvent({
+        environment: square.environmentType,
+        eventType: 'lootChest',
+        playerId: currentPlayer.id,
+        source: 'boardLanding',
+      });
       return;
     }
 
@@ -711,7 +887,11 @@ function GameplayPage({
       return;
     }
 
-    const eventType = selectEventForEnvironment(square.environmentType);
+    const eventType = selectEventForEnvironment(
+      square.environmentType,
+      Math.random,
+      isSmokescreenActive ? BATTLE_ENVIRONMENT_EVENT_TYPES : []
+    );
 
     if (!eventType) {
       advanceTurn();
@@ -772,8 +952,10 @@ function GameplayPage({
 
   const handleSpellTokenDrop = (tokenId, destinationId) => {
     const movementResult = moveSpellTokenInDraft({
-      allowCommittedTokenMovement: isRedoMode,
+      allowCommittedTokenMovement: isSpellRearrangementMode,
       destinationId,
+      enforceTokenBagCapacity: isWandsmithMode,
+      keepMovedTokensUncommitted: isWandsmithMode,
       mergedColumns: currentPlayer.mergedColumns,
       spellSlots: draftSpellSlots,
       tokenBag: draftTokenBag,
@@ -787,6 +969,7 @@ function GameplayPage({
     setDraftTokenBag(movementResult.tokenBag);
     setDraftSpellSlots(movementResult.spellSlots);
     setSpellValidationMessage('');
+    setMergeSaveDraft(null);
   };
 
   const handleSpellCancelRequest = () => {
@@ -794,9 +977,10 @@ function GameplayPage({
       return;
     }
 
-    if (!hasUnsavedSpellChanges) {
+    if (!hasUnsavedSpellChanges && !isWandsmithMode) {
       setShowSpellsModal(false);
       setIsRedoMode(false);
+      setIsWandsmithMode(false);
       return;
     }
 
@@ -804,7 +988,10 @@ function GameplayPage({
   };
 
   const handleSpellSaveRequest = () => {
-    if (!currentPlayer || (!isForcedSpellSetup && !hasUnsavedSpellChanges)) {
+    if (
+      !currentPlayer ||
+      (!isForcedSpellSetup && !hasUnsavedSpellChanges && !isWandsmithMode)
+    ) {
       return;
     }
 
@@ -850,6 +1037,8 @@ function GameplayPage({
       return;
     }
 
+    const wasWandsmithMode = isWandsmithMode;
+
     updatePlayerSpells(currentPlayer.id, {
       ...createCommittedSpellData({
         spellSlots,
@@ -863,10 +1052,25 @@ function GameplayPage({
     setMergeSaveDraft(null);
     setShowSpellsModal(false);
     setIsRedoMode(false);
+    setIsWandsmithMode(false);
     setSpellValidationMessage('');
+
+    if (wasWandsmithMode) {
+      finishVillageWandsmith();
+    }
   };
 
   const handleConfirmSpellSave = () => {
+    if (mergeSaveDraft && !mergeSaveDraft.pendingMerge) {
+      commitSpellSave({
+        columnMergesUsed: mergeSaveDraft.columnMergesUsed,
+        mergedColumns: mergeSaveDraft.mergedColumns,
+        spellSlots: mergeSaveDraft.spellSlots,
+        tokenBag: mergeSaveDraft.tokenBag,
+      });
+      return;
+    }
+
     commitSpellSave();
   };
 
@@ -901,19 +1105,30 @@ function GameplayPage({
       return;
     }
 
-    commitSpellSave({
+    setMergeSaveDraft({
+      ...mergeSaveDraft,
       columnMergesUsed,
       mergedColumns,
+      pendingMerge: null,
       spellSlots,
       tokenBag: mergeSaveDraft.tokenBag,
     });
+    setShowSpellSaveConfirmation(true);
   };
 
   const handleConfirmSpellCancel = () => {
+    const wasWandsmithMode = isWandsmithMode;
+
     setShowSpellCancelConfirmation(false);
     setShowSpellsModal(false);
     setIsRedoMode(false);
+    setIsWandsmithMode(false);
+    setMergeSaveDraft(null);
     setSpellValidationMessage('');
+
+    if (wasWandsmithMode) {
+      finishVillageWandsmith();
+    }
   };
 
   const renderPlayerPiece = ({ ariaLabel, className, height, player, style = {} }) => {
@@ -935,20 +1150,38 @@ function GameplayPage({
   };
 
   return (
-    <main className="gameplay-layout magical-night-sky-page">
-      <MagicalNightSky />
-      {gameSetup.board ? (
-        <BoardGrid
-          board={gameSetup.board}
-          currentPlayerId={currentPlayer?.id ?? ''}
-          highlightedColour={currentPlayer?.colour ?? ''}
-          highlightedNodeIds={highlightedNodeIds}
-          onSquareClick={handleSquareClick}
-          players={gameSetup.players}
-        />
-      ) : null}
+    <main
+      className={`gameplay-page${
+        isWandsmithVisit ? ' gameplay-page--village' : ' magical-night-sky-page'
+      }`}
+      style={
+        wandsmithBackgroundSource
+          ? { backgroundImage: `url(${wandsmithBackgroundSource})` }
+          : undefined
+      }
+    >
+      {!isWandsmithVisit ? <MagicalNightSky /> : null}
+      {!isVillageWandsmithRoute ? (
+        <div className="gameplay-viewport">
+        <div
+          className="gameplay-scale-root"
+          style={{ '--gameplay-scale': gameplayScale }}
+        >
+          <div className="gameplay-layout">
+            {gameSetup.board ? (
+              <BoardGrid
+                board={gameSetup.board}
+                currentPlayerId={currentPlayer?.id ?? ''}
+                highlightedColour={currentPlayer?.colour ?? ''}
+                highlightedNodeIds={highlightedNodeIds}
+                language={currentLanguage}
+                onSquareClick={handleSquareClick}
+                players={gameSetup.players}
+                showHoverLabels={showBoardHoverLabels}
+              />
+            ) : null}
 
-      <section aria-label="Gameplay panel" className="gameplay-sidebar">
+            <section aria-label="Gameplay panel" className="gameplay-sidebar">
         {currentPlayer ? (
           <div className="gameplay-current-player-summary">
             <div className="gameplay-current-player-image">
@@ -1099,16 +1332,23 @@ function GameplayPage({
           title={gameplayTranslations.potions}
           useText={potionUsageTranslations.use}
         />
-      <ActivePotionSection
-          activePotion={currentPlayer?.activePotion}
-          language={currentLanguage}
-          languageClassName={languageClassName}
-          title={potionUsageTranslations.activePotionTitle}
-        />
-      </section>
+              <ActivePotionSection
+                activePotion={currentPlayer?.activePotion}
+                language={currentLanguage}
+                languageClassName={languageClassName}
+                title={potionUsageTranslations.activePotionTitle}
+              />
+            </section>
+          </div>
+        </div>
+        </div>
+      ) : null}
 
       <ChooseEventModal
         environment={pendingChooseEvent?.environment}
+        excludedEventTypes={
+          isSmokescreenActive ? BATTLE_ENVIRONMENT_EVENT_TYPES : []
+        }
         isOpen={isChooseEventModalOpen}
         language={chooseEventPlayer?.language}
         onChoose={handleChooseEvent}
@@ -1213,6 +1453,7 @@ function GameplayPage({
         isForcedSetup={isForcedSpellSetup}
         isOpen={showSpellsModal}
         isRedoMode={isRedoMode}
+        isWandsmithMode={isWandsmithMode}
         onCancel={handleSpellCancelRequest}
         onSave={handleSpellSaveRequest}
         isSaveDisabled={isSpellSaveDisabled}
@@ -1252,7 +1493,11 @@ function GameplayPage({
         ariaLabel="Cancel spells confirmation"
         isOpen={showSpellCancelConfirmation}
       >
-        <p className={`larger-text ${languageClassName}`}>{spellAssignmentTranslations.cancelConfirmation}</p>
+        <p className={`larger-text ${languageClassName}`}>
+          {isWandsmithMode
+            ? spellAssignmentTranslations.wandsmithCancelConfirmation
+            : spellAssignmentTranslations.cancelConfirmation}
+        </p>
       </Modal>
 
       <Modal
@@ -1270,7 +1515,10 @@ function GameplayPage({
               className={languageClassName}
               type="button"
               variant="secondary"
-              onClick={() => setShowSpellSaveConfirmation(false)}
+              onClick={() => {
+                setShowSpellSaveConfirmation(false);
+                setMergeSaveDraft(null);
+              }}
             >
               {spellAssignmentTranslations.no}
             </Button>

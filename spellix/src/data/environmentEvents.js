@@ -11,6 +11,12 @@ export const ENVIRONMENT_EVENT_TYPES = [
   'rollAgain',
 ];
 
+export const BATTLE_ENVIRONMENT_EVENT_TYPES = [
+  'level1Battle',
+  'level2Battle',
+  'level3Battle',
+];
+
 export const ENVIRONMENT_EVENT_TABLE = {
   field: {
     nothing: 30,
@@ -122,7 +128,10 @@ export const ENVIRONMENT_EVENT_TABLE = {
   },
 };
 
-export function getAvailableEventsForEnvironment(environment) {
+export function getAvailableEventsForEnvironment(
+  environment,
+  excludedEventTypes = []
+) {
   const eventWeights = ENVIRONMENT_EVENT_TABLE[environment];
 
   if (!eventWeights) {
@@ -134,14 +143,21 @@ export function getAvailableEventsForEnvironment(environment) {
       eventType,
       weight: eventWeights[eventType],
     }))
-    .filter(({ weight }) => weight > 0);
+    .filter(
+      ({ eventType, weight }) =>
+        weight > 0 && !excludedEventTypes.includes(eventType)
+    );
 }
 
 export function selectEventForEnvironment(
   environment,
-  randomFn = Math.random
+  randomFn = Math.random,
+  excludedEventTypes = []
 ) {
-  const availableEvents = getAvailableEventsForEnvironment(environment);
+  const availableEvents = getAvailableEventsForEnvironment(
+    environment,
+    excludedEventTypes
+  );
   const totalWeight = availableEvents.reduce(
     (total, { weight }) => total + weight,
     0

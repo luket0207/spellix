@@ -33,10 +33,10 @@ describe('token definitions', () => {
       'light-blue',
       'light-green',
       'black',
+      'purple',
     ]);
     expect(TOKEN_TYPES.filter((type) => TOKEN_DEFINITIONS[type].rarity === 'Rare')).toEqual([
       'white',
-      'purple',
       'yellow',
       'grey',
       'red-yellow-outline',
@@ -164,7 +164,10 @@ describe('token definitions', () => {
         name: { en: 'Merge', jp: '\u5408\u6210' },
       },
       purple: {
-        description: { en: 'Plus 5 Buff', jp: '\u30d0\u30d5\uff0b5' },
+        description: {
+          en: 'Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.',
+          jp: '\u30d0\u30d5\u304c\u914d\u7f6e\u3055\u308c\u3066\u3044\u308b\u5217\u306e\u4e21\u96a3\u306e2\u5217\u3092\u5f37\u5316\u3057\u3001\u6b21\u306e\u30bf\u30fc\u30f3\u306e\u307f\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u30925\u5897\u52a0\u3055\u305b\u308b\u3002',
+        },
         name: { en: 'Buff', jp: '\u5f37\u5316' },
       },
       yellow: {

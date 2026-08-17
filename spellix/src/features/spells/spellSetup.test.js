@@ -1,11 +1,13 @@
 import { createPlayers } from '../gameSetup/gameSetup';
 import {
   createCommittedSpellData,
+  createRearrangeableSpellData,
   hasDraftSpellChanges,
   isStartingSpellSetupComplete,
   moveSpellTokenInDraft,
   TOKEN_BAG_DROP_ZONE_ID,
 } from './spellSetup';
+import { TOKEN_BAG_MAX_CAPACITY } from '../debug/tokenBagAdmin';
 
 describe('spellSetup helpers', () => {
   test('moves an uncommitted token from the bag into a spell slot', () => {
@@ -280,6 +282,111 @@ describe('spellSetup helpers', () => {
     const committedState = createCommittedSpellData(redoMove);
 
     expect(committedState.spellSlots[1].tokens[0].committed).toBe(true);
+  });
+
+  test('creates a temporary uncommitted Wandsmith draft without changing saved spells', () => {
+    const [player] = createPlayers(1);
+    const committedToken = {
+      ...player.tokenBag[0],
+      committed: true,
+    };
+    const spellSlots = player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens: index === 0 ? [committedToken] : [],
+    }));
+
+    const draft = createRearrangeableSpellData({
+      spellSlots,
+      tokenBag: player.tokenBag.slice(1),
+    });
+
+    expect(draft.spellSlots[0].tokens[0].committed).toBe(false);
+    expect(spellSlots[0].tokens[0].committed).toBe(true);
+    expect(draft.spellSlots).not.toBe(spellSlots);
+    expect(draft.tokenBag).not.toBe(player.tokenBag);
+  });
+
+  test('keeps Wandsmith tokens uncommitted through repeated draft moves', () => {
+    const [player] = createPlayers(1);
+    const committedToken = {
+      ...player.tokenBag[0],
+      committed: true,
+    };
+    const savedSpellSlots = player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens: index === 0 ? [committedToken] : [],
+    }));
+    const draft = createRearrangeableSpellData({
+      spellSlots: savedSpellSlots,
+      tokenBag: player.tokenBag.slice(1),
+    });
+    const movedToAnotherSlot = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: draft.spellSlots[1].id,
+      keepMovedTokensUncommitted: true,
+      spellSlots: draft.spellSlots,
+      tokenBag: draft.tokenBag,
+      tokenId: committedToken.id,
+    });
+    const movedWithinSlot = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: draft.spellSlots[1].id,
+      keepMovedTokensUncommitted: true,
+      spellSlots: movedToAnotherSlot.spellSlots,
+      tokenBag: movedToAnotherSlot.tokenBag,
+      tokenId: committedToken.id,
+    });
+    const movedToBag = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: TOKEN_BAG_DROP_ZONE_ID,
+      keepMovedTokensUncommitted: true,
+      spellSlots: movedWithinSlot.spellSlots,
+      tokenBag: movedWithinSlot.tokenBag,
+      tokenId: committedToken.id,
+    });
+    const movedBackToSlots = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: draft.spellSlots[2].id,
+      keepMovedTokensUncommitted: true,
+      spellSlots: movedToBag.spellSlots,
+      tokenBag: movedToBag.tokenBag,
+      tokenId: committedToken.id,
+    });
+
+    expect(movedToAnotherSlot.spellSlots[1].tokens[0].committed).toBe(false);
+    expect(movedWithinSlot.spellSlots[1].tokens[0].committed).toBe(false);
+    expect(
+      movedToBag.tokenBag.find(({ id }) => id === committedToken.id)?.committed
+    ).toBe(false);
+    expect(movedBackToSlots.spellSlots[2].tokens[0].committed).toBe(false);
+    expect(savedSpellSlots[0].tokens[0].committed).toBe(true);
+  });
+
+  test('does not move a spell token into a full token bag during rearrangement', () => {
+    const [player] = createPlayers(1);
+    const committedToken = {
+      committed: true,
+      id: 'committed-red',
+      type: 'red',
+    };
+    const spellSlots = player.spellSlots.map((slot, index) => ({
+      ...slot,
+      tokens: index === 0 ? [committedToken] : [],
+    }));
+    const fullTokenBag = player.tokenBag.slice(0, TOKEN_BAG_MAX_CAPACITY);
+
+    const result = moveSpellTokenInDraft({
+      allowCommittedTokenMovement: true,
+      destinationId: TOKEN_BAG_DROP_ZONE_ID,
+      enforceTokenBagCapacity: true,
+      spellSlots,
+      tokenBag: fullTokenBag,
+      tokenId: committedToken.id,
+    });
+
+    expect(result.didMove).toBe(false);
+    expect(result.spellSlots[0].tokens).toHaveLength(1);
+    expect(result.tokenBag).toHaveLength(TOKEN_BAG_MAX_CAPACITY);
   });
 
   test('keeps moved Redo tokens active for Grey capacity while assigned', () => {

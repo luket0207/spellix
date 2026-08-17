@@ -1,0 +1,411 @@
+---
+
+Bug-001: Wandsmith should keep village background and show tokens as uncommitted
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-012: Implement Wandsmith village option
+* Feature-011: Add village action choice page
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-013 Feature-006: Redo potion behaviour
+
+Bug Summary
+
+* There are two visual bugs in the Wandsmith sequence when using Wandsmith from a village.
+* First, the Wandsmith modal is no longer using the correct village background.
+* Second, when a token is moved inside the Wandsmith modal, it visually becomes committed after being dropped.
+* The token is not functionally committed because the player can still move it again, but the visual state is wrong.
+
+Required Behaviour
+
+* Wandsmith should remain visually connected to the village the player landed on.
+* If the player used Wandsmith from a Field Village, the background should remain the Field Village background.
+* If the player used Wandsmith from a Forest Village, the background should remain the Forest Village background.
+* Tokens inside Wandsmith should remain visually uncommitted until the player confirms and commits their final arrangement.
+* Moving a token during Wandsmith should not make it visually look committed.
+
+Village Background Requirement
+
+* When Wandsmith opens from a village, preserve the current village context.
+* The background should remain:
+
+```txt id="okaj3d"
+Field Village background
+```
+
+or:
+
+```txt id="sipcaz"
+Forest Village background
+```
+
+depending on the village the player landed on.
+
+* Do not fall back to:
+
+  * generic gameplay background.
+  * normal spells modal background.
+  * blank background.
+  * wrong village type background.
+
+Suggested Implementation Direction
+
+* Store the active village background or active village type before opening Wandsmith.
+* Pass that value into the Wandsmith/spells modal.
+* Wandsmith mode should use the village background instead of resetting background context.
+
+Suggested state direction:
+
+```js id="mqbl2z"
+const wandsmithContext = {
+  source: "village",
+  villageId,
+  villageType,
+  backgroundImage
+};
+```
+
+Visual Token State Requirement
+
+* Tokens in Wandsmith should remain visually uncommitted while the Wandsmith session is open.
+
+* This includes:
+
+  * tokens that were already committed before entering Wandsmith.
+  * tokens moved from one spell column to another.
+  * tokens moved from the token bag into a spell column.
+  * tokens moved from a spell column into the token bag.
+  * tokens moved multiple times during the same Wandsmith session.
+
+* A token should only visually become committed after:
+
+  * the player chooses to save/commit.
+  * the commit confirmation is accepted.
+  * the Wandsmith session closes.
+
+Incorrect Behaviour
+
+```txt id="nmzfc6"
+1. Player opens Wandsmith.
+2. Player moves a token into a new spell column.
+3. Token visually changes to committed styling.
+4. Player can still move it, so the visual state does not match the functional state.
+```
+
+Correct Behaviour
+
+```txt id="a7pmtk"
+1. Player opens Wandsmith.
+2. All tokens are visually editable/uncommitted.
+3. Player moves a token into a new spell column.
+4. Token remains visually editable/uncommitted.
+5. Player can continue rearranging.
+6. Token only becomes visually committed after final commit confirmation.
+```
+
+Likely Cause
+
+* Wandsmith may be reusing normal committed spell-slot rendering after a token is dropped.
+* The functional edit mode is correct, but the visual class or token state is being recalculated as committed too early.
+
+Suggested Implementation Direction
+
+* Add or reuse an explicit spell edit mode check.
+
+Suggested modes:
+
+```txt id="ttl6s3"
+firstAssignment
+normal
+redoPotion
+wandsmith
+rewardAssignment
+```
+
+* In `wandsmith` mode:
+
+  * render tokens with uncommitted/editable styling.
+  * do not apply committed token visual classes.
+  * do not mark moved tokens as visually committed on drop.
+  * keep drag handles/drag behaviour active.
+
+Suggested condition:
+
+```js id="b4zzm7"
+const shouldShowAsCommitted =
+  isCommittedToken && spellEditMode !== "wandsmith" && spellEditMode !== "redoPotion";
+```
+
+* Use actual project state names.
+* If Redo potion already keeps tokens visually uncommitted, Wandsmith should share that same visual logic.
+
+Commit Requirement
+
+* When the player confirms the Wandsmith commit:
+
+  * save the new spell arrangement.
+  * close the Wandsmith session.
+  * then tokens may return to normal committed styling in the regular committed spell display.
+
+Cancel Requirement
+
+* If the player cancels Wandsmith and confirms leaving:
+
+  * restore the previous committed arrangement.
+  * close the Wandsmith session.
+  * normal committed styling should return outside Wandsmith.
+
+Out Of Scope
+
+* No change to Wandsmith functionality.
+* No change to spell capacity rules.
+* No change to token bag limits.
+* No change to White merge behaviour.
+* No change to Grey capacity behaviour.
+* No change to village option lock rules.
+* No change to village rewards.
+* No redesign of the spells modal.
+
+Testing Checkpoints
+
+* Land on a Field Village.
+* Choose Wandsmith.
+* Confirm the Wandsmith modal uses the Field Village background.
+* Land on a Forest Village.
+* Choose Wandsmith.
+* Confirm the Wandsmith modal uses the Forest Village background.
+* Move an already committed token to another spell column.
+* Confirm it remains visually uncommitted/editable after being dropped.
+* Move a token from the token bag into a spell column.
+* Confirm it remains visually uncommitted/editable after being dropped.
+* Move the same token again.
+* Confirm it is still draggable.
+* Commit the Wandsmith changes.
+* Confirm tokens become committed only after the commit is confirmed and Wandsmith closes.
+* Reopen Wandsmith and cancel.
+* Confirm previous committed arrangement is restored.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Reproduced both regressions with focused tests before changing production code: the gameplay page had no village background in either Wandsmith village variant, and the shared draft mover recommitted a token on drop.
+
+Final Fix
+
+* Reused the existing feature background resolver to apply the active Field or Forest Village background while the Wandsmith visit remains active, and suppressed the ordinary gameplay sky only for that state.
+* Added a Wandsmith-only option to the existing spell draft mover so repeated slot and token-bag drops preserve `committed: false`; normal and Redo movement behavior remains unchanged.
+* Preserved the existing final save path, which commits the completed arrangement only after confirmation, and the existing cancel path, which restores the saved arrangement.
+
+
+---
+
+Bug-002: Wandsmith should stay in village route and not briefly show reward text or gameplay background
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-012: Implement Wandsmith village option
+* Feature-011: Add village action choice page
+* Feature-010: Expand to 4 villages and update village reward rules
+* Bug-001: Wandsmith should keep village background and show tokens as uncommitted
+
+Bug Summary
+
+* Something strange happens when the player chooses Wandsmith from a village.
+* The game briefly flashes the rare token village reward text for a fraction of a second.
+* Then it navigates away back to the gameplay page.
+* The spells modal then appears over the board/gameplay page.
+* This is not the intended Wandsmith flow.
+
+Required Behaviour
+
+* Choosing Wandsmith should keep the player inside the village route/sequence.
+* The spells modal should open over the correct village background.
+* It should not navigate back to the gameplay page before Wandsmith opens.
+* It should not briefly show old village reward text.
+* It should not show the spells modal over the board/gameplay page.
+
+Correct Flow
+
+```txt id="c3cqoh"
+1. Player lands on a village.
+2. Any eligible village rewards resolve.
+3. Village choice page appears.
+4. Player chooses Wandsmith.
+5. Game remains in the village route/context.
+6. Spells modal opens in Wandsmith mode over the village background.
+7. Player commits or cancels Wandsmith.
+8. Only then does the turn end and return to the board.
+9. Next-turn modal appears first.
+```
+
+Incorrect Current Flow
+
+```txt id="grjfgx"
+1. Player chooses Wandsmith.
+2. Rare token village reward text flashes briefly.
+3. Game navigates back to gameplay.
+4. Spells modal opens over the board/gameplay page.
+```
+
+Village Route Requirement
+
+* Wandsmith should be treated as part of the village sequence.
+* Do not call the normal “return to gameplay” or “advance turn” behaviour when the Wandsmith button is clicked.
+* The player should remain on the village route/page while the Wandsmith modal is active.
+* The board/gameplay page should not become visible underneath the Wandsmith modal.
+
+Background Requirement
+
+* The Wandsmith modal should use the current village background:
+
+  * Field Village background if the player landed on a Field Village.
+  * Forest Village background if the player landed on a Forest Village.
+
+* This should be preserved from the village context.
+
+* Do not switch to:
+
+  * gameplay board background.
+  * starry gameplay page only.
+  * previous reward modal background.
+  * generic spells modal background.
+
+Reward Text Flash Requirement
+
+* The rare token village reward text should not flash when choosing Wandsmith.
+* Any completed village reward state should be cleared before the village choice page is shown.
+* Clicking Wandsmith should not re-enter or briefly render the previous reward step.
+* The village sequence should have a stable state for:
+
+```txt id="fsk5pb"
+villageChoice
+wandsmith
+villageHeal
+leave
+complete
+```
+
+Suggested State Direction
+
+```js id="g05w7x"
+const villageStep = {
+  reward: "reward",
+  choice: "choice",
+  wandsmith: "wandsmith",
+  heal: "heal",
+  leave: "leave",
+  complete: "complete"
+};
+```
+
+* When Wandsmith is selected, set the village step to `wandsmith`.
+* Do not set the route to gameplay.
+* Do not set the village step back to reward.
+* Do not advance turn yet.
+
+Suggested Wandsmith Context
+
+```js id="g7t3us"
+const wandsmithContext = {
+  source: "village",
+  villageId,
+  villageType,
+  backgroundImage,
+  returnTo: "village",
+  endTurnOnClose: true
+};
+```
+
+* The spells modal should use this context to know:
+
+  * which background to render.
+  * that it is in Wandsmith mode.
+  * that it should return to/complete the village sequence only after commit or confirmed cancel.
+
+Commit Behaviour
+
+* When the player commits Wandsmith changes:
+
+  * save the new spell arrangement.
+  * close the Wandsmith modal.
+  * complete the village sequence.
+  * return to board.
+  * advance turn.
+  * show the next-turn modal first.
+
+Cancel Behaviour
+
+* When the player cancels Wandsmith and confirms leaving:
+
+  * restore the previous spell arrangement.
+  * close the Wandsmith modal.
+  * complete the village sequence.
+  * return to board.
+  * advance turn.
+  * show the next-turn modal first.
+
+No Premature Turn End Requirement
+
+* The player’s turn should not end when the Wandsmith button is clicked.
+* The turn should only end after:
+
+  * Wandsmith commit is confirmed.
+  * or Wandsmith cancel is confirmed.
+
+Likely Cause
+
+* The Wandsmith button may still be using the placeholder behaviour from Feature-011.
+* That placeholder ended the player’s turn immediately and returned to gameplay.
+* Feature-012 should replace that placeholder entirely.
+* The old reward text flash suggests the village reward/choice/wandsmith state is not being cleared or transitioned cleanly.
+
+Out Of Scope
+
+* No change to Wandsmith token movement rules.
+* No change to Wandsmith warning text.
+* No change to village reward eligibility.
+* No change to village Rest behaviour.
+* No change to Leave behaviour.
+* No change to gameplay board rendering.
+* No change to spell capacity rules.
+
+Testing Checkpoints
+
+* Land on a Field Village.
+* Complete any eligible rewards.
+* Choose Wandsmith.
+* Confirm no rare token reward text flashes.
+* Confirm the game does not navigate back to gameplay immediately.
+* Confirm Wandsmith opens over the Field Village background.
+* Land on a Forest Village.
+* Choose Wandsmith.
+* Confirm Wandsmith opens over the Forest Village background.
+* Confirm the board/gameplay page is not visible underneath the Wandsmith modal.
+* Commit Wandsmith changes.
+* Confirm the turn ends only after commit.
+* Confirm the game returns to board after commit.
+* Confirm next-turn modal appears first.
+* Open Wandsmith again and cancel.
+* Confirm the turn ends only after confirmed cancel.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Attempted Fixes
+
+* Replaced the obsolete route test and reproduced both village variants before production edits; each Wandsmith click immediately reached `/gameplay`, left the village visit active, and rendered no Spells modal.
+
+Final Fix
+
+* Removed the Wandsmith button's immediate gameplay navigation so the existing `wandsmith` village phase remains owned by `/village`.
+* Reused GameplayPage's existing Wandsmith modal/controller from VillagePage, with a narrow route prop that hides and does not initialize the gameplay viewport while preserving the active village background.
+* Kept the existing confirmed save and cancel completion paths; when either finishes the village visit and advances the turn, VillagePage's existing empty-visit redirect returns to gameplay with the next-turn modal pending.
+* Added no reward, Rest, Leave, token-movement, capacity, warning-copy, board-rendering, or route changes outside the active Wandsmith phase.

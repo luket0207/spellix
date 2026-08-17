@@ -1,10 +1,45 @@
+.gameplay-page {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+}
+
+.gameplay-page--village {
+  background-position: center;
+  background-size: cover;
+}
+
+.gameplay-viewport {
+  align-items: flex-start;
+  box-sizing: border-box;
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  justify-content: center;
+  overflow: hidden;
+  padding: 12px;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.gameplay-scale-root {
+  flex: 0 0 1320px;
+  height: 940px;
+  transform: scale(var(--gameplay-scale));
+  transform-origin: top center;
+  width: 1320px;
+}
+
 .gameplay-layout {
   display: grid;
   grid-template-columns: 940px 360px;
   gap: 20px;
   align-items: center;
   justify-content: center;
-  margin: auto;
+  height: 940px;
+  margin: 0;
+  width: 1320px;
 }
 
 .gameplay-layout > .board-panel,

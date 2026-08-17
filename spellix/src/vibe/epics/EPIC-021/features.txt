@@ -1,0 +1,1301 @@
+---
+
+Epic-021: Music system and Nothing event healing
+
+Status
+
+* not started
+
+Epic Goal
+
+* Add persistent background music to the game.
+* Give the player basic music controls through the settings menu.
+* Update Nothing events so they provide a small healing benefit instead of only advancing the turn.
+
+Global Implementation Notes
+
+* Preserve the existing modal, font, and language rules.
+* Do not use `ul` or `li` in new UI.
+* Use `div` with flex/grid for new sections.
+* Text-only modal paragraphs should use `larger-text`.
+* Any turn advancement must still preserve the next-turn modal invariant.
+* Do not break settings menu visibility rules from previous epics.
+* Music should persist across route/page changes if possible.
+
+---
+
+Feature-001: Add persistent random background music
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-018 Feature-012: Only show settings button on gameplay page
+* EPIC-019 Feature-014: Add rules modal inside settings menu
+* App shell / routing / settings menu
+
+Goal
+
+* Add background music to the game.
+* The user has added 10 songs into:
+
+```txt id="ayzr7c"
+src/music/
+```
+
+* Music should automatically start if possible.
+* Music should continue playing regardless of which page the player is on.
+* Add a Music section to the settings menu.
+* The Music section should include a pause/play button.
+* Songs should play in random order.
+* Every song should play once before any song is repeated.
+
+Browser Autoplay Note
+
+* Modern browsers often block audio autoplay until the player interacts with the page.
+* The game should still try to start music automatically.
+* If autoplay is blocked:
+
+  * do not crash.
+  * do not show console errors as app errors.
+  * wait for the first user interaction.
+  * then start music automatically unless the player has manually paused it.
+
+Required Behaviour
+
+* Music should start automatically when the game opens if the browser allows it.
+* If autoplay is blocked, music should start after the first player interaction.
+* Music should continue across page changes.
+* Music should not restart from the beginning every time the route changes.
+* Music should not create multiple overlapping audio instances.
+* The player should be able to pause and resume music from settings.
+* If the player pauses music manually, it should stay paused until they press play again.
+* If the current song ends, the next song should start automatically.
+
+Persistent Music Requirement
+
+* The music player should live at the app shell/context level.
+
+* It should not be mounted inside individual pages such as:
+
+  * gameplay.
+  * battle.
+  * rules.
+  * village.
+  * cave.
+  * river.
+  * decision.
+  * loot chest.
+  * winner page.
+
+* Route changes should not unmount the music system.
+
+Suggested Architecture
+
+```txt id="u8tlkv"
+App
+MusicProvider
+Router
+Pages
+```
+
+Suggested React structure:
+
+```jsx id="rcgy8k"
+<MusicProvider>
+  <Router>
+    <AppRoutes />
+  </Router>
+</MusicProvider>
+```
+
+* Exact structure can vary.
+* The important rule is that music state and the audio element survive route changes.
+
+Music Files Requirement
+
+* Load all 10 songs from `src/music/`.
+* Store them in a single music track list.
+* The track list should be the source of truth for available songs.
+* If the project uses Vite, `import.meta.glob` can be used.
+* If explicit imports are easier, use explicit imports.
+
+Suggested explicit import direction:
+
+```js id="k7kdj0"
+import song1 from "../music/song1.mp3";
+import song2 from "../music/song2.mp3";
+
+export const musicTracks = [
+  song1,
+  song2
+];
+```
+
+Suggested Vite glob direction:
+
+```js id="xk0hwq"
+const musicModules = import.meta.glob("../music/*", {
+  eager: true,
+  query: "?url",
+  import: "default"
+});
+
+export const musicTracks = Object.values(musicModules);
+```
+
+* Use the approach that fits the project setup.
+* Do not hard-code only one song.
+* Do not rely on the browser randomly selecting files from a folder without importing them.
+
+Random Order Requirement
+
+* Songs should play in a random order.
+* Every song should play once before any song repeats.
+* Use a shuffled bag/queue.
+* When the queue is empty, create a new shuffled queue from all songs.
+
+Correct Shuffle Behaviour
+
+```txt id="hk7sy5"
+1. Start with all 10 songs.
+2. Shuffle them.
+3. Play each song once.
+4. When all 10 have played, create a new shuffled list.
+5. Start the next cycle.
+```
+
+* A song should not appear twice within the same 10-song cycle.
+* The next cycle does not need to use the same order as the previous cycle.
+* If possible, avoid making the first song of the new cycle the same as the final song of the previous cycle.
+* If avoiding that is awkward, it is acceptable as long as each full cycle still contains all songs once.
+
+Example Valid Cycle
+
+```txt id="ygwx0g"
+Song 2
+Song 4
+Song 7
+Song 10
+Song 1
+Song 3
+Song 9
+Song 8
+Song 6
+Song 5
+```
+
+Example Next Valid Cycle
+
+```txt id="ztyijv"
+Song 4
+Song 10
+Song 3
+Song 2
+Song 7
+Song 8
+Song 5
+Song 1
+Song 6
+Song 9
+```
+
+Important
+
+* The illustrative example in the request should be interpreted as “random order”.
+* The implementation rule is stricter:
+
+  * all 10 songs should play once before repeats.
+  * no duplicates inside one cycle.
+
+Suggested Shuffle Helper
+
+```js id="m4cotv"
+function shuffleTracks(tracks) {
+  const shuffled = [...tracks];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [
+      shuffled[randomIndex],
+      shuffled[index]
+    ];
+  }
+
+  return shuffled;
+}
+```
+
+Suggested Music State
+
+```js id="xiyqwc"
+const musicState = {
+  tracks,
+  queue,
+  currentTrack,
+  isPlaying,
+  userPaused,
+  autoplayBlocked,
+  hasInitialPlayAttemptHappened
+};
+```
+
+Playback Flow
+
+```txt id="c2x4hz"
+1. App loads.
+2. MusicProvider creates a shuffled queue from all songs.
+3. MusicProvider selects the first track.
+4. MusicProvider attempts to play.
+5. If play succeeds, music continues.
+6. If play is blocked, wait for first user interaction.
+7. When a song ends, select the next song in the queue.
+8. When the queue is empty, create a new shuffled queue.
+9. Continue until player pauses music.
+```
+
+Autoplay Block Handling
+
+* Attempt to call `audio.play()`.
+* If the promise rejects:
+
+  * set `autoplayBlocked` to true.
+  * wait for a click/touch/keydown interaction.
+* On first interaction:
+
+  * try to play again.
+  * only do this if `userPaused` is false.
+* Remove first-interaction listeners after successful playback or once no longer needed.
+
+Suggested Direction
+
+```js id="k15tig"
+audio.play().catch(() => {
+  setAutoplayBlocked(true);
+});
+```
+
+* Do not repeatedly spam play attempts every render.
+* Do not create an infinite loop of failed autoplay attempts.
+
+Settings Menu Requirement
+
+* Add a new Music section in the settings menu.
+
+Section title:
+
+English:
+
+```txt id="nhczul"
+Music
+```
+
+Japanese:
+
+```txt id="m1ftyp"
+音楽
+```
+
+* Add one pause/play button.
+
+When music is playing:
+
+English:
+
+```txt id="b9re8m"
+Pause Music
+```
+
+Japanese:
+
+```txt id="fxbge3"
+音楽を一時停止
+```
+
+When music is paused:
+
+English:
+
+```txt id="sxl2sj"
+Play Music
+```
+
+Japanese:
+
+```txt id="au66ne"
+音楽を再生
+```
+
+* The button should use the normal settings/modal button style.
+* The section should match the existing settings menu styling.
+* No new settings route is needed.
+
+Settings Visibility Requirement
+
+* Previous features restrict the settings button to gameplay.
+* Do not undo that rule.
+* The Music section appears inside settings wherever settings is available.
+* Music itself should continue playing even when settings is not visible.
+
+Pause Behaviour
+
+* Clicking Pause Music should:
+
+  * pause the current song.
+  * keep the current playback position.
+  * set `userPaused` to true.
+* Music should not automatically resume while `userPaused` is true.
+* Changing pages should not restart paused music.
+
+Play Behaviour
+
+* Clicking Play Music should:
+
+  * set `userPaused` to false.
+  * resume the current song from its paused position if possible.
+  * if no current song exists, start the current queue’s next song.
+* If the song had ended, start the next track.
+
+Song End Behaviour
+
+* When the current song ends:
+
+  * move to the next track in the shuffled queue.
+  * play it automatically if `userPaused` is false.
+* If the queue is empty:
+
+  * generate a new shuffled queue.
+  * start the first track in the new queue.
+
+Volume Requirement
+
+* No volume control is required in this feature.
+* Use a sensible default volume.
+* If the project already has a default audio volume constant, use it.
+
+Error Handling
+
+* If one music file fails to load:
+
+  * skip that track.
+  * continue with the next track if possible.
+  * log a developer warning.
+* If no tracks can be loaded:
+
+  * music controls can be hidden or disabled.
+  * do not crash the app.
+
+Out Of Scope
+
+* No volume slider.
+* No track title display.
+* No skip button.
+* No mute icon in top-level UI.
+* No music selection menu.
+* No separate battle music.
+* No sound effects.
+* No saving music preference between browser sessions unless simple localStorage is already used and safe.
+* No requirement to show music controls outside settings.
+
+Testing Checkpoints
+
+* Confirm all 10 songs are loaded from `src/music/`.
+* Open the game and confirm music attempts to start.
+* If browser autoplay blocks music, click anywhere and confirm music starts.
+* Navigate between pages and confirm music continues.
+* Confirm music does not restart on route change.
+* Confirm multiple songs do not overlap.
+* Open settings and confirm Music section appears.
+* Click Pause Music.
+* Confirm music pauses.
+* Navigate pages while paused.
+* Confirm music stays paused.
+* Click Play Music.
+* Confirm music resumes.
+* Let a song finish.
+* Confirm the next song starts automatically.
+* Confirm songs play in shuffled order.
+* Confirm no song repeats within one full 10-song cycle.
+* Confirm a new shuffled cycle starts after all songs have played.
+* Confirm settings UI displays correct English text.
+* Confirm settings UI displays correct Japanese text.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+---
+
+Feature-002: Nothing events heal the player by 5 or 10 HP using village heal presentation
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-016 Feature-006: Add Nothing events for environment landings
+* EPIC-016 Feature-008: Trigger board events based on landed environment
+* EPIC-020 Feature-006: Standardise health bar text colour and font
+* EPIC-020 Feature-011: Add village action choice page
+* EPIC-020 Feature-012: Implement Wandsmith village option
+
+Goal
+
+* Update Nothing events so they heal the player a small amount.
+* A Nothing event should randomly heal the player by either `5 HP` or `10 HP`.
+* The heal should be shown in the same visual style and flow as the existing village heal screen.
+* Nothing events should still keep their existing flavour text and environment background.
+
+Required Behaviour
+
+* When the player receives a Nothing result after landing on a square:
+
+  * show the existing Nothing event modal/page.
+  * use the landed environment background.
+  * show the correct Nothing event flavour text.
+  * show the player image and health bar in the same layout/style as the village heal screen.
+  * randomly choose a heal amount of either `5` or `10`.
+  * apply the heal to the current player.
+  * clamp healing to the player’s max HP.
+  * animate/update the health bar in the same way the village heal screen does.
+  * enable Continue after the heal presentation has completed.
+  * Continue returns to the board and advances to the next player.
+
+Heal Amount Requirement
+
+* The heal amount should be randomly selected from:
+
+```txt id="83f92a"
+5
+10
+```
+
+* Both values should have equal chance.
+
+Suggested implementation direction:
+
+```js id="8b48qc"
+const healAmount = Math.random() < 0.5 ? 5 : 10;
+```
+
+Health Clamp Requirement
+
+* Healing must not exceed the player’s current max HP.
+* Use the player’s actual max HP, not a hard-coded value.
+* Max HP may be above 100 because of Health or Shiny Health tokens.
+
+Example:
+
+```txt id="ajv1vi"
+Current HP: 96
+Max HP: 100
+Heal roll: 10
+Actual heal: 4
+Final HP: 100
+```
+
+* The displayed health bar should end at the actual final HP.
+
+Village Heal Presentation Requirement
+
+* The Nothing heal should visually match the village heal screen.
+* Reuse the village heal component/helper if possible.
+* The player should see:
+
+  * player image.
+  * health bar.
+  * health increasing after a short delay.
+  * Continue button disabled until the heal has resolved.
+
+Suggested flow:
+
+```txt id="h89oyy"
+1. Nothing event opens.
+2. Player image and current health bar are shown.
+3. Continue is disabled.
+4. Wait using the same timing as the village heal screen.
+5. Apply the random heal amount.
+6. Health bar updates using the same village heal presentation.
+7. Continue becomes enabled.
+8. Continue returns to board and advances the turn.
+```
+
+* Do not create a completely different healing UI for Nothing events.
+* The player should immediately recognise it as the same style of healing feedback used in villages.
+
+Nothing Text Requirement
+
+* Preserve the existing Nothing flavour text.
+* Existing texts remain:
+
+```txt id="gzlqff"
+Field: You rest in an open field / 広々とした野原で休みます
+Hills: You stop on a hilltop / 丘の頂上で足を止めます
+Gravel: You sit on a boulder to rest / 大きな岩に腰掛けて休みます
+Mud: You take a moment to wash your boots / 少し立ち止まってブーツの泥を洗い落とします
+Stream: You sit by the stream for a while / 小川のそばに座って、しばらく休みます
+```
+
+* If Nothing events are later available for additional environments, use the same healing behaviour for them too.
+
+Health Bar Styling Requirement
+
+* The health bar text must follow EPIC-020 Feature-006:
+
+  * black text.
+  * `Unkempt` font.
+  * applies in English and Japanese.
+
+Continue Button Requirement
+
+English:
+
+```txt id="osp04w"
+Continue
+```
+
+Japanese:
+
+```txt id="2fbtlz"
+続ける
+```
+
+* Continue should be disabled until the healing presentation has completed.
+* Clicking Continue should:
+
+  * return to board.
+  * advance to next player.
+  * show the next-turn modal first.
+
+State Requirement
+
+* Update the player’s real game-state health.
+* Do not only update the modal’s local display value.
+* The healed HP should persist after returning to the board.
+* If the player enters battle later, the healed HP should be used.
+
+Full Health Requirement
+
+* If the player is already at full health:
+
+  * do not exceed max HP.
+  * still show the Nothing event and village-style heal presentation.
+  * health bar remains full.
+  * Continue becomes enabled after the normal short presentation delay.
+
+Debug Requirement
+
+* Nothing events triggered through debug should use the same healing behaviour.
+* Nothing events triggered through normal landing event selection should use the same healing behaviour.
+
+Turn Requirement
+
+* Nothing events still consume the player’s landing event.
+* After the Nothing heal resolves and Continue is clicked:
+
+  * return to board.
+  * advance to next player.
+  * preserve the next-turn modal invariant.
+
+Out Of Scope
+
+* No change to Nothing event probability.
+* No new Nothing event texts.
+* No heal values other than 5 or 10.
+* No overhealing above max HP.
+* No change to village Rest healing.
+* No potion interaction.
+* No new separate heal animation if the village heal presentation can be reused.
+
+Testing Checkpoints
+
+* Trigger a Nothing event from debug.
+* Confirm the correct environment background appears.
+* Confirm the correct Nothing flavour text appears.
+* Confirm player image appears.
+* Confirm health bar appears in the same style as village healing.
+* Confirm Continue is disabled before the heal resolves.
+* Confirm the heal amount is either 5 or 10.
+* Confirm the health bar updates like the village heal screen.
+* Confirm health does not exceed max HP.
+* Trigger Nothing at 96 / 100 HP with a 10 HP heal.
+* Confirm final HP becomes 100.
+* Trigger Nothing at full health.
+* Confirm the modal still resolves safely.
+* Click Continue.
+* Confirm game returns to board.
+* Confirm turn advances.
+* Confirm next-turn modal appears first.
+* Trigger Nothing through normal event selection.
+* Confirm the same healing behaviour happens.
+* Confirm healed HP persists after returning to board.
+* Confirm health bar text is black and uses Unkempt.
+* Confirm English and Japanese text display correctly.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Update SOS potion data descriptions
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-012 Feature-003: Potion data source of truth
+* EPIC-021 Feature-001: Add persistent random background music
+* EPIC-020 Feature-007: Implement SOS potion
+
+Goal
+
+* Update the SOS potion data description in both English and Japanese.
+* SOS has now been implemented.
+* The description should match the new behaviour: teleporting to the nearest village.
+
+Updated SOS Potion Entry
+
+```txt id="vyi8d8"
+Feature?: Y
+Implemented?: Y
+Name: SOS
+Japanese Name: SOS
+Battle/Board: Board
+Rarity: Common
+Description: Teleport to the nearest village
+Japanese Description: 最寄りの村にテレポートする
+Colour: Light Blue
+```
+
+Required Data Change
+
+* Replace the old SOS description if it still says:
+
+```txt id="5c3fju"
+Teleport to the field village
+```
+
+* Replace it with:
+
+```txt id="w8qcri"
+Teleport to the nearest village
+```
+
+* Replace the old Japanese description if it still says:
+
+```txt id="vfqnkm"
+フィールドの村にテレポートする。
+```
+
+* Replace it with:
+
+```txt id="dygg1d"
+最寄りの村にテレポートする
+```
+
+Source Of Truth Requirement
+
+* The SOS potion data should now use the updated table entry above.
+* Keep all other SOS data unchanged:
+
+  * name remains `SOS`.
+  * Japanese name remains `SOS`.
+  * type remains `Board`.
+  * rarity remains `Common`.
+  * colour remains `Light Blue`.
+  * implemented status remains `Y`.
+
+Display Requirement
+
+* The updated SOS description should appear everywhere potion descriptions are shown:
+
+  * potion tooltip.
+  * potion reward modal.
+  * potion replacement modal.
+  * active potion display if applicable.
+  * debug potion list.
+  * rules page, if potion descriptions are shown there.
+
+Functionality Requirement
+
+* This feature only updates data/descriptions.
+* SOS functionality should remain as specified in EPIC-020 Feature-007:
+
+  * teleport to nearest village.
+  * if two villages are equal distance, choose randomly.
+  * discard the potion.
+  * begin the normal village sequence.
+  * consume the player’s turn.
+
+Out Of Scope
+
+* No change to SOS behaviour.
+* No change to SOS rarity.
+* No change to SOS colour.
+* No change to board potion trigger rules.
+* No change to village logic.
+* No change to potion UI layout.
+
+Testing Checkpoints
+
+* View SOS in English.
+* Confirm description says `Teleport to the nearest village`.
+* View SOS in Japanese.
+* Confirm description says `最寄りの村にテレポートする`.
+* Confirm old `field village` wording no longer appears.
+* Confirm SOS still appears as a Board potion.
+* Confirm SOS still appears as Common rarity.
+* Confirm SOS still uses Light Blue colour.
+* Confirm SOS still teleports to the nearest village when used.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Fix overflowing modal action button positioning
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-020 Feature-001: Make gameplay layout scale to fit screen height
+* EPIC-020 Feature-014: Add rules modal inside settings menu
+* EPIC-020 Feature-015: Prevent horizontal scrollbar in spells modal during token drag
+* Settings modal
+* Debug menu modal
+
+Goal
+
+* Fix modal layouts when the modal content overflows on the y axis.
+* Action buttons should never be placed over the top of overflowing modal content.
+* Action buttons should always appear at the bottom of the modal content.
+* A clear example of the current problem is the Close button at the bottom of the debug menu.
+
+Problem Summary
+
+* Some modals now overflow vertically.
+* When this happens, the modal action buttons can overlap the overflowing content.
+* This makes the content harder to read and can make the buttons feel incorrectly positioned.
+* The modal should treat action buttons as part of the content flow, not as an overlay on top of the content.
+
+Required Behaviour
+
+* Modal action buttons should always appear after the modal content.
+* Buttons should not cover text, form controls, debug options, token lists, potion lists, or any other modal content.
+* If a modal needs vertical scrolling:
+
+  * the content should scroll safely.
+  * the buttons should remain reachable.
+  * the buttons should still appear at the bottom of the content.
+* The Close button in the debug menu should appear below all debug content, not over it.
+
+Important Layout Rule
+
+* Action buttons should not be absolutely positioned over modal body content.
+* Action buttons should not use fixed positioning inside the modal.
+* Action buttons should not float above scrollable content.
+* Action buttons should participate in the normal modal layout flow.
+
+Correct Layout Direction
+
+```txt id="v85xi2"
+Modal container
+Modal title
+Modal body content
+Modal action buttons
+```
+
+Incorrect Layout Direction
+
+```txt id="z38ue9"
+Modal container
+Modal title
+Modal body content
+Action buttons visually overlaying the body content
+```
+
+Suggested Structure
+
+```jsx id="ol84vu"
+<div className="modal-background">
+  <div className="modal-content">
+    <div className="modal-body">
+      {content}
+    </div>
+
+    <div className="modal-actions">
+      {buttons}
+    </div>
+  </div>
+</div>
+```
+
+Suggested CSS Direction
+
+```css id="e7cddp"
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.modal-body {
+  position: relative;
+}
+
+.modal-actions {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 40px;
+  padding-bottom: 20px;
+  flex-shrink: 0;
+}
+```
+
+Debug Menu Requirement
+
+* The debug menu should be specifically checked.
+* The Close button at the bottom of the debug menu should:
+
+  * appear after all debug menu content.
+  * not overlay the debug controls.
+  * be reachable by scrolling if the debug menu is taller than the screen.
+  * keep the existing button style.
+
+Scrollable Modal Requirement
+
+* For long modals, prefer this behaviour:
+
+  * the modal panel has a maximum height.
+  * the panel scrolls vertically.
+  * the buttons are at the end of the scrollable content.
+* Do not pin the buttons on top of the content unless a future feature explicitly asks for a sticky footer.
+
+Button Group Requirement
+
+* Existing modal button styling should be preserved.
+* Buttons should remain bottom-centred unless a specific modal has a different existing layout requirement.
+* Multiple action buttons should keep their existing horizontal or vertical arrangement.
+* Secondary/cancel buttons should keep their secondary style.
+
+Affected Areas To Check
+
+* Debug menu.
+* Settings modal.
+* Rules modal inside settings.
+* Potion confirmation modals.
+* Potion replacement modals.
+* Token assignment modals.
+* Wandsmith/spells modal.
+* Loot Chest reward modals.
+* Decision outcome modals.
+* Hazard modals.
+* Village choice and heal modals.
+* Any modal with long content or scrollable content.
+
+Out Of Scope
+
+* No redesign of modal visuals.
+* No change to modal background images.
+* No change to button text.
+* No change to modal behaviour.
+* No change to horizontal overflow handling, except where already covered by EPIC-020 Feature-015.
+* No sticky footer requirement.
+
+Testing Checkpoints
+
+* Open the debug menu.
+* Reduce browser height until the debug menu overflows vertically.
+* Confirm the Close button does not overlay debug content.
+* Scroll to the bottom of the debug menu.
+* Confirm the Close button appears after all debug content.
+* Open settings modal and confirm buttons are correctly placed.
+* Open settings rules modal and confirm Back to Settings is below the content.
+* Open a potion replacement modal with full potion slots.
+* Confirm action buttons do not overlap potion choices.
+* Open token assignment modal and confirm Confirm/Cancel buttons do not overlap token content.
+* Open village choice modal and confirm buttons sit below the prompt.
+* Confirm vertically overflowing modals remain usable.
+* Confirm non-overflowing modals still look correct.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Hide normal potions section when Active Potion section is visible
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-012 Feature-002: One potion per turn limits and Active Potion section
+* EPIC-013 Feature-004: Starting Charge potion behaviour
+* EPIC-013 Feature-008: Double Dice and Triple Dice
+* EPIC-020 Feature-008: Implement Metal Detector potion
+* EPIC-020 Feature-009: Implement Smokescreen potion
+
+Goal
+
+* Simplify the gameplay potion UI.
+* When the Active Potion section is visible, the normal potions section should be hidden.
+* This prevents the UI from becoming too tall and helps with the responsive layout changes.
+
+Required Behaviour
+
+* If the current player has an active potion shown in the Active Potion section:
+
+  * hide the normal potions section.
+  * show only the Active Potion section.
+* If the current player does not have an active potion:
+
+  * show the normal potions section as usual.
+  * hide the Active Potion section.
+
+Definition Of Normal Potions Section
+
+* The normal potions section is the gameplay UI area that shows the player’s available potion slots.
+* This includes:
+
+  * potion slot display.
+  * available board potion Use buttons.
+  * empty potion slots.
+  * potion tooltips.
+
+Definition Of Active Potion Section
+
+* The Active Potion section is the gameplay UI area introduced for potions that are currently affecting this turn.
+* Examples include:
+
+  * Starting Charge.
+  * Roll Choice after selecting a roll.
+  * Double Dice.
+  * Triple Dice.
+  * Spellbound effect on target.
+  * Heavy Weight effect on target.
+  * Troublemaker while waiting for roll.
+  * Devine Chance while waiting for roll.
+  * Storm Master while waiting for roll.
+  * Metal Detector.
+  * Smokescreen.
+
+Display Rule
+
+```txt id="0u9wfc"
+Active Potion visible = hide normal potions section
+Active Potion hidden = show normal potions section
+```
+
+Suggested JSX Direction
+
+```jsx id="vwcm4d"
+const hasActivePotion = Boolean(currentPlayer.activePotion);
+
+return (
+  <div className="gameplay-potion-area">
+    {!hasActivePotion && (
+      <NormalPotionsSection player={currentPlayer} />
+    )}
+
+    {hasActivePotion && (
+      <ActivePotionSection activePotion={currentPlayer.activePotion} />
+    )}
+  </div>
+);
+```
+
+* Use the actual project state names.
+* If the active potion state supports multiple active potions, hide the normal section whenever the active potion list is not empty.
+
+Potion Use Rules
+
+* This feature only changes visibility.
+* It does not change potion-use logic.
+* If a potion is active, the player should not see or use normal board potion buttons until the Active Potion section clears.
+* Existing one-board-potion-per-turn logic still applies.
+* Existing one-battle-potion-per-turn logic still applies separately.
+
+Turn Flow Requirement
+
+* When the active potion resolves and is removed:
+
+  * the normal potions section may become visible again if the same player is still in a valid pre-roll gameplay state.
+* If the turn advances:
+
+  * the next player’s potion UI should render according to their own active potion state.
+
+Responsive Layout Requirement
+
+* Hiding the normal potions section should reduce vertical space used by the gameplay UI.
+* Do not leave a large empty gap where the normal potions section was hidden.
+* The Active Potion section should occupy the potion area cleanly.
+
+Out Of Scope
+
+* No changes to potion data.
+* No changes to potion effects.
+* No changes to potion limits.
+* No changes to battle potion section.
+* No redesign of Active Potion component.
+* No new active potion behaviour.
+
+Testing Checkpoints
+
+* Start a turn with no active potion.
+* Confirm normal potions section is visible.
+* Confirm Active Potion section is hidden.
+* Use a board potion that moves to Active Potion.
+* Confirm normal potions section disappears.
+* Confirm Active Potion section is visible.
+* Resolve the active potion.
+* Confirm UI updates correctly.
+* Use Metal Detector.
+* Confirm normal potion section hides while Metal Detector is active.
+* Use Smokescreen.
+* Confirm normal potion section hides while Smokescreen is active.
+* Start another player’s turn.
+* Confirm their potion UI depends on their own active potion state.
+* Confirm no empty vertical gap remains.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-006: Show token bag capacity and use Unkempt for Japanese spell column numbers
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-003 Feature-002: Add spell token assignment system
+* EPIC-010 Feature-015: Redesign Spell Token Assignment page
+* EPIC-011 Feature-008: Spell Token Assignment must display merged columns as one effective droppable column
+* EPIC-020 Feature-012: Implement Wandsmith village option
+* EPIC-020 Feature-017: Change Japanese font to M PLUS Rounded 1c
+
+Goal
+
+* Improve clarity in the spells modal and modifying spells component.
+* Show the token bag capacity next to the Token Bag title.
+* Ensure spell column capacity numbers use `Unkempt` font in Japanese.
+* Numbers should always use `Unkempt`.
+
+Part 1: Token Bag Capacity Display
+
+Required Behaviour
+
+* In the spells modal and modifying spells component, display the token bag capacity next to the token bag title.
+* If the token bag is empty and has 5 total spaces, show:
+
+English:
+
+```txt id="sb10ue"
+Token Bag 0/5
+```
+
+Japanese:
+
+```txt id="0f5zi0"
+トークンバッグ 0/5
+```
+
+* The first number is the number of tokens currently in the token bag.
+* The second number is the token bag’s maximum capacity.
+
+Capacity Format
+
+```txt id="a2ohh6"
+{title} {currentCount}/{maxCapacity}
+```
+
+Examples:
+
+```txt id="3viyrn"
+Token Bag 0/5
+Token Bag 3/5
+Token Bag 5/5
+```
+
+Japanese examples:
+
+```txt id="7r1yl5"
+トークンバッグ 0/5
+トークンバッグ 3/5
+トークンバッグ 5/5
+```
+
+Where This Should Appear
+
+* Normal spells modal.
+* First spell assignment.
+* Wandsmith spells modal.
+* Redo potion spell modification modal.
+* Any modifying spells component that shows the token bag.
+* Any reward token assignment version if it uses the same token bag component.
+
+Suggested JSX Direction
+
+```jsx id="oswozu"
+<h2 className={`token-bag-title ${languageClass}`}>
+  {language === "jp" ? "トークンバッグ" : "Token Bag"}{" "}
+  <span className="number-text">
+    {tokenBag.length}/{tokenBagCapacity}
+  </span>
+</h2>
+```
+
+* Use the real token bag array/state names.
+* Use the real capacity source of truth.
+* Do not hard-code `5` if token bag capacity can change in the future.
+
+Token Bag Capacity Source Of Truth
+
+* Use the current token bag maximum capacity from player state or game constants.
+* If token bag max capacity is always 5 right now, it is acceptable to use the existing constant.
+* If future features allow token bag capacity changes, this display should update automatically.
+
+Part 2: Numbers Should Always Use Unkempt
+
+Required Behaviour
+
+* Numbers in the spells modal should use `Unkempt`, even in Japanese.
+* Specifically, the capacity numbers for spell columns in the Japanese version should use `Unkempt`.
+* The token bag capacity numbers should also use `Unkempt`.
+* This rule applies to numeric text, not necessarily surrounding Japanese labels.
+
+Examples
+
+Japanese token bag title:
+
+```txt id="xkd0fo"
+トークンバッグ 3/5
+```
+
+* `トークンバッグ` should use the Japanese font.
+* `3/5` should use `Unkempt`.
+
+Japanese spell column capacity:
+
+```txt id="2i7fug"
+2/5
+```
+
+* `2/5` should use `Unkempt`.
+
+CSS Requirement
+
+* Add or reuse a class for number text.
+
+Suggested CSS:
+
+```css id="9yr28d"
+.number-text,
+.capacity-number,
+.token-bag-capacity,
+.spell-column-capacity {
+  font-family: "Unkempt", cursive;
+}
+```
+
+* Use more specific selectors if the Japanese font class overrides this.
+* Numbers should remain readable and aligned.
+
+Suggested More Specific CSS
+
+```css id="nyu8ea"
+.jp .number-text,
+.jp .capacity-number,
+.jp .token-bag-capacity,
+.jp .spell-column-capacity {
+  font-family: "Unkempt", cursive;
+}
+```
+
+Spell Column Capacity Requirement
+
+* In Japanese, any spell column capacity number should use `Unkempt`.
+* This includes:
+
+  * normal columns.
+  * edge columns.
+  * columns affected by Grey capacity.
+  * merged/effective columns.
+  * Wandsmith mode.
+  * Redo mode.
+  * first spell assignment.
+  * reward token assignment if spell columns are shown.
+
+Merged Column Requirement
+
+* Merged column labels such as `1+2` should also use `Unkempt` because they are numeric.
+* Capacity values on merged columns should use `Unkempt`.
+* Do not let merged column labels switch to Japanese font.
+
+Examples:
+
+```txt id="mq28km"
+1+2
+2+3
+5/6
+```
+
+* All of these should use `Unkempt`.
+
+Language Requirement
+
+* English:
+
+  * token bag title can continue using existing English font.
+  * numbers should use `Unkempt`, which should already match the English numeric style.
+
+* Japanese:
+
+  * Japanese words should use Japanese font from EPIC-020 Feature-017.
+  * numbers should use `Unkempt`.
+
+Out Of Scope
+
+* No change to token bag capacity rules.
+* No change to spell column capacity rules.
+* No change to Grey capacity behaviour.
+* No change to White merge behaviour.
+* No change to spell modal layout beyond capacity text.
+* No change to token drag-and-drop.
+* No change to Wandsmith functionality.
+
+Testing Checkpoints
+
+* Open normal spells modal in English.
+* Confirm title shows `Token Bag 0/5` when empty.
+* Add tokens to bag.
+* Confirm count updates correctly.
+* Fill token bag.
+* Confirm title shows `Token Bag 5/5`.
+* Switch to Japanese.
+* Confirm title shows `トークンバッグ 0/5` when empty.
+* Confirm the Japanese label uses the Japanese font.
+* Confirm `0/5` uses `Unkempt`.
+* Check spell column capacity numbers in Japanese.
+* Confirm capacity numbers use `Unkempt`.
+* Create or view a merged column.
+* Confirm merged label such as `1+2` uses `Unkempt`.
+* Use Grey token to increase adjacent column capacity.
+* Confirm updated capacity numbers use `Unkempt`.
+* Open Wandsmith.
+* Confirm token bag capacity appears and updates.
+* Open Redo potion spell modification.
+* Confirm token bag capacity appears and updates.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

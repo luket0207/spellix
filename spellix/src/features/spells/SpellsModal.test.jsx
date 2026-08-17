@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { render, screen, within } from '@testing-library/react';
 import { getPlayerPieceImageName } from '../gameSetup/pieceImages';
+import { getSpellAssignmentTranslations } from '../../i18n/translations';
 import SpellsModal from './SpellsModal';
 
 function createDraftSpellSlots() {
@@ -12,8 +13,10 @@ function createDraftSpellSlots() {
 }
 
 function renderSpellsModal({
+  draftSpellSlots = createDraftSpellSlots(),
   isForcedSetup = true,
   isRedoMode = false,
+  isWandsmithMode = false,
   language = 'en',
 } = {}) {
   return render(
@@ -24,13 +27,14 @@ function renderSpellsModal({
         language,
         pieceImage: getPlayerPieceImageName({ colour: 'red', gender: 'girl' }),
       }}
-      draftSpellSlots={createDraftSpellSlots()}
+      draftSpellSlots={draftSpellSlots}
       draftTokenBag={[
         { id: 'red-1', type: 'red', committed: false },
         { id: 'blue-1', type: 'blue', committed: false },
       ]}
       isForcedSetup={isForcedSetup}
       isRedoMode={isRedoMode}
+      isWandsmithMode={isWandsmithMode}
       isOpen
       onCancel={jest.fn()}
       onSave={jest.fn()}
@@ -41,6 +45,36 @@ function renderSpellsModal({
 }
 
 describe('SpellsModal layout', () => {
+  test.each([
+    ['normal', false],
+    ['Wandsmith', true],
+  ])('prevents horizontal modal overflow in %s mode only', (_mode, isWandsmithMode) => {
+    renderSpellsModal({
+      isForcedSetup: false,
+      isWandsmithMode,
+    });
+
+    const stylesheet = readFileSync(`${__dirname}/spells.css`, 'utf8');
+    const sharedModalStylesheet = readFileSync(
+      `${__dirname}/../../components/Modal.css`,
+      'utf8'
+    );
+    const spellsModalRule = stylesheet.match(
+      /\.modal-panel--spells\s*{([^}]*)}/s
+    )?.[1];
+    const defaultModalRule = sharedModalStylesheet.match(
+      /\.modal-panel--default\s*{([^}]*)}/s
+    )?.[1];
+
+    expect(screen.getByRole('dialog', { name: 'Spells' })).toHaveClass(
+      'modal-panel--spells'
+    );
+    expect(spellsModalRule).toMatch(/overflow-x:\s*hidden;/);
+    expect(spellsModalRule).toMatch(/overflow-y:\s*auto;/);
+    expect(defaultModalRule).toMatch(/overflow:\s*auto;/);
+    expect(defaultModalRule).not.toMatch(/overflow-x:\s*hidden;/);
+  });
+
   test('keeps the translated title and warning grouped beside the larger player image', () => {
     renderSpellsModal({ isForcedSetup: true });
 
@@ -149,6 +183,37 @@ describe('SpellsModal layout', () => {
     ).not.toBeInTheDocument();
   });
 
+  test.each([
+    [
+      'en',
+      'The Wandsmith helps you arrange your tokens however you wish.',
+    ],
+    [
+      'jp',
+      '\u6756\u8077\u4eba\u304c\u3001\u30c8\u30fc\u30af\u30f3\u3092\u597d\u304d\u306a\u3088\u3046\u306b\u4e26\u3079\u66ff\u3048\u308b\u306e\u3092\u624b\u4f1d\u3063\u3066\u304f\u308c\u307e\u3059\u3002',
+    ],
+  ])('shows movable tokens and the Wandsmith warning in %s', (language, warning) => {
+    const draftSpellSlots = createDraftSpellSlots();
+
+    draftSpellSlots[0].tokens = [
+      { committed: false, id: 'wandsmith-red', type: 'red' },
+    ];
+    renderSpellsModal({
+      draftSpellSlots,
+      isForcedSetup: false,
+      isWandsmithMode: true,
+      language,
+    });
+
+    expect(screen.getByText(warning)).toHaveClass(
+      'spells-starting-warning',
+      `language-${language}`
+    );
+    screen
+      .getAllByRole('button', { name: /moveable red token/i })
+      .forEach((tokenButton) => expect(tokenButton).toBeEnabled());
+  });
+
   test('uses Japanese modal copy and font class for a Japanese player', () => {
     renderSpellsModal({ isForcedSetup: true, language: 'jp' });
 
@@ -168,4 +233,13 @@ describe('SpellsModal layout', () => {
     expect(within(dialog).queryByText('新しい報酬トークン')).not.toBeInTheDocument();
     expect(within(dialog).queryByText('破棄')).not.toBeInTheDocument();
   });
+});
+
+test('uses the updated shared commit warning in English and Japanese', () => {
+  expect(getSpellAssignmentTranslations('en').saveConfirmation).toBe(
+    'Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using a Wandsmith or potions once they are saved.'
+  );
+  expect(getSpellAssignmentTranslations('jp').saveConfirmation).toBe(
+    '\u3053\u308c\u3089\u306e\u30b9\u30da\u30eb\u30b9\u30ed\u30c3\u30c8\u306b\u30c8\u30fc\u30af\u30f3\u3092\u914d\u7f6e\u3057\u3066\u78ba\u5b9a\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f\u4e00\u5ea6\u4fdd\u5b58\u3059\u308b\u3068\u3001\u6756\u8077\u4eba\u307e\u305f\u306f\u30dd\u30fc\u30b7\u30e7\u30f3\u3092\u4f7f\u7528\u3057\u306a\u3044\u9650\u308a\u3001\u914d\u7f6e\u3092\u5909\u66f4\u3059\u308b\u3053\u3068\u306f\u3067\u304d\u307e\u305b\u3093\u3002'
+  );
 });

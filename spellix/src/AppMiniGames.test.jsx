@@ -909,6 +909,6 @@ test('River return modal language classes use the established English and Japane
     /\.language-en\s*{[^}]*font-family:\s*'Unkempt',\s*cursive;/s
   );
   expect(stylesheet).toMatch(
-    /\.language-jp\s*{[^}]*font-family:\s*'Noto Serif JP',\s*serif;/s
+    /\.language-jp\s*{[^}]*font-family:\s*'M PLUS Rounded 1c',\s*sans-serif;/s
   );
 });

@@ -21,3 +21,14 @@
   height: 180px;
   width: auto;
 }
+
+.village-content--choice {
+  gap: 0;
+}
+
+.village-choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 60px;
+}

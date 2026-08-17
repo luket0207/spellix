@@ -33,24 +33,24 @@
   gap: 8px;
 }
 
-.rules-modal h1,
-.rules-modal h2 {
+.rules-content h1,
+.rules-content h2 {
   text-align: center;
 }
 
-.rules-modal h1 {
+.rules-content h1 {
   font-size: 48px;
 }
 
-.rules-modal h2 {
+.rules-content h2 {
   font-size: 32px;
 }
 
-.rules-modal p {
+.rules-content p {
   font-size: 22px;
 }
 
-.rules-modal > .fantasy-button:last-child {
+.rules-content > .fantasy-button:last-child {
   display: block;
   margin: 24px auto 0;
 }

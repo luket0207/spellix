@@ -93,3 +93,28 @@ export function generateBattleRewardChoices(battleLevel, randomFn = Math.random)
     };
   });
 }
+
+export function generateEliteTowerRewardChoices(randomFn = Math.random) {
+  const selectedTokenTypes = new Set();
+
+  return Array.from({ length: 3 }, (_, index) => {
+    const reward = generateRewardItem(
+      REWARD_CATEGORIES.RARE_TOKEN,
+      randomFn,
+      'Battle',
+      selectedTokenTypes
+    );
+
+    if (!reward) {
+      console.warn('Elite Tower reward token pool has no unique choices remaining.');
+      return null;
+    }
+
+    selectedTokenTypes.add(reward.item.type);
+
+    return {
+      id: `reward-choice-${index + 1}`,
+      ...reward,
+    };
+  }).filter(Boolean);
+}

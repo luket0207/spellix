@@ -165,8 +165,8 @@ function hasTwoByTwoWaterBlock(square, squareLookup) {
 }
 
 function getSquareDistance(firstSquare, secondSquare) {
-  return Math.max(
-    Math.abs(firstSquare.x - secondSquare.x),
+  return (
+    Math.abs(firstSquare.x - secondSquare.x) +
     Math.abs(firstSquare.y - secondSquare.y)
   );
 }
@@ -733,7 +733,7 @@ describe('App routing flow', () => {
     expect(bossMountainClusterSquareKeys.size).toBeLessThanOrEqual(20);
   });
 
-  test('generates two centrally inset 2x2 feature areas across the easy and hard sections', () => {
+  test('generates four inset 2x2 villages across the easy and hard sections', () => {
     const board = createBoard(
       createCyclingRandomFn([0.1, 0.7, 0.3, 0.9, 0.2, 0.8, 0.4, 0.6, 0.5])
     );
@@ -742,9 +742,9 @@ describe('App routing flow', () => {
     );
     const fixedSquares = board.squares.filter((square) => square.isFixedArea);
 
-    expect(board.features).toHaveLength(2);
-    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(1);
-    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(1);
+    expect(board.features).toHaveLength(4);
+    expect(board.features.filter((feature) => feature.section === 'easy')).toHaveLength(2);
+    expect(board.features.filter((feature) => feature.section === 'hard')).toHaveLength(2);
 
     board.features.forEach((feature) => {
       const featureSquares = [
@@ -764,9 +764,9 @@ describe('App routing flow', () => {
       expect(featureSquares.every((square) => square.section === feature.section)).toBe(true);
       expect(featureSquares.every((square) => square.environmentType === null)).toBe(true);
       expect(featureSquares.every((square) => square.environmentVariation === null)).toBe(true);
-      expect(featureSquares.every((square) => square.x >= 7 && square.x <= 23)).toBe(true);
-      expect(featureSquares.every((square) => square.y >= 7 && square.y <= 23)).toBe(true);
-      expect(getMinimumDistanceBetweenSquareSets(featureSquares, fixedSquares)).toBeGreaterThanOrEqual(7);
+      expect(featureSquares.every((square) => square.x >= 3 && square.x <= 27)).toBe(true);
+      expect(featureSquares.every((square) => square.y >= 3 && square.y <= 27)).toBe(true);
+      expect(getMinimumDistanceBetweenSquareSets(featureSquares, fixedSquares)).toBeGreaterThanOrEqual(12);
     });
 
     board.features.forEach((feature, featureIndex) => {
@@ -785,7 +785,7 @@ describe('App routing flow', () => {
           squareLookup.get(getSquareKey(otherFeature.x + 1, otherFeature.y + 1)),
         ];
 
-        expect(getMinimumDistanceBetweenSquareSets(featureSquares, otherFeatureSquares)).toBeGreaterThanOrEqual(7);
+        expect(getMinimumDistanceBetweenSquareSets(featureSquares, otherFeatureSquares)).toBeGreaterThanOrEqual(12);
       });
     });
   });
@@ -829,6 +829,81 @@ describe('App routing flow', () => {
       expect(screen.queryByRole('dialog', { name: /settings/i })).not.toBeInTheDocument();
     });
     expect(screen.getByRole('heading', { name: /spellix/i })).toBeInTheDocument();
+  });
+
+  test('opens shared English Rules from gameplay Settings and returns to Settings', async () => {
+    renderApp('/gameplay', { initialGameSetup: createGameplayReadySetup() });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+
+    const settingsDialog = screen.getByRole('dialog', { name: 'Settings' });
+
+    await userEvent.click(
+      within(settingsDialog).getByRole('button', { name: 'Rules' })
+    );
+
+    const rulesDialog = screen.getByRole('dialog', { name: 'Rules of the game' });
+
+    expect(rulesDialog).toHaveClass('modal-panel--default');
+    expect(
+      within(rulesDialog).getByRole('heading', { name: 'Village Actions' })
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        'When you visit a village, you can choose what to do there.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getAllByRole('button', { name: 'Back to Settings' })
+    ).toHaveLength(2);
+    expect(
+      within(rulesDialog).queryByRole('button', { name: 'Back to Start' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('dialog', { name: 'Settings' })
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      within(rulesDialog).getAllByRole('button', { name: 'Back to Settings' })[0]
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('dialog', { name: 'Rules of the game' })
+    ).not.toBeInTheDocument();
+  });
+
+  test('localizes Settings Rules for a Japanese current player', async () => {
+    const initialGameSetup = createGameplayReadySetup();
+
+    initialGameSetup.players[0].language = 'jp';
+    renderApp('/gameplay', { initialGameSetup });
+
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
+
+    const settingsDialog = screen.getByRole('dialog', { name: 'Settings' });
+
+    await userEvent.click(
+      within(settingsDialog).getByRole('button', { name: 'ルール' })
+    );
+
+    const rulesDialog = screen.getByRole('dialog', { name: 'ゲームのルール' });
+
+    expect(
+      within(rulesDialog).getByRole('heading', { name: '村でできること' })
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getAllByRole('button', { name: '設定に戻る' })
+    ).toHaveLength(2);
+    expect(
+      within(rulesDialog).queryByRole('button', { name: 'スタートに戻る' })
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      within(rulesDialog).getAllByRole('button', { name: '設定に戻る' })[1]
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
   });
 
   test('ends the game and resets setup state', () => {

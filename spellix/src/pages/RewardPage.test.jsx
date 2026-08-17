@@ -412,7 +412,7 @@ describe('RewardPage choice flow', () => {
     expect(within(potionRewardDialog).queryByRole('list')).not.toBeInTheDocument();
   });
 
-  test('returns a resolved village reward to the village heal phase', () => {
+  test('returns a resolved village reward to the village choice phase', () => {
     renderRewardPage([], (setup) => {
       const potion = POTION_DEFINITIONS.find(
         ({ id }) => id === 'roll-choice'
@@ -452,13 +452,13 @@ describe('RewardPage choice flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(screen.getByText('Village')).toBeInTheDocument();
-    expect(screen.getByText('Village phase: heal')).toBeInTheDocument();
+    expect(screen.getByText('Village phase: choice')).toBeInTheDocument();
     expect(screen.getByText('Selected choice: none')).toBeInTheDocument();
     expect(screen.getByText('Current player: player-1')).toBeInTheDocument();
     expect(screen.getByText('Next turn modal: clear')).toBeInTheDocument();
   });
 
-  test('returns a resolved village Loot Chest assignment to healing', () => {
+  test('returns a resolved village Loot Chest assignment to village choices', () => {
     renderRewardPage([], (setup) => {
       setup.activeBattle = {
         environment: 'fields',
@@ -501,7 +501,7 @@ describe('RewardPage choice flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(screen.getByText('Village')).toBeInTheDocument();
-    expect(screen.getByText('Village phase: heal')).toBeInTheDocument();
+    expect(screen.getByText('Village phase: choice')).toBeInTheDocument();
     expect(screen.getByText('Selected choice: none')).toBeInTheDocument();
   });
 

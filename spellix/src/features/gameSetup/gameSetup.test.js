@@ -49,8 +49,17 @@ describe('game setup player piece selection foundation', () => {
       eliteTowerWoods: false,
     });
     expect(players[0].villageProgress).toEqual({
-      fieldVillage: { claimedEliteCounts: [] },
-      forestVillage: { claimedEliteCounts: [] },
+      fieldVillageLootClaimed: false,
+      firstEliteVillageRewardClaimed: false,
+      forestVillageLootClaimed: false,
+      secondEliteVillageRewardClaimed: false,
+    });
+    expect(players[0].villageActionState).toEqual({
+      currentVillageLockId: null,
+      usedActionsForCurrentVillage: {
+        rest: false,
+        wandsmith: false,
+      },
     });
   });
 
@@ -119,25 +128,53 @@ describe('game setup player piece selection foundation', () => {
 
   test('preserves independent village progress when recreating players', () => {
     const existingPlayers = createPlayers(2);
-    existingPlayers[0].villageProgress.fieldVillage.claimedEliteCounts = [
-      0,
-      1,
-    ];
+    existingPlayers[0].villageProgress.fieldVillageLootClaimed = true;
+    existingPlayers[0].villageProgress.firstEliteVillageRewardClaimed = true;
 
     const recreatedPlayers = createPlayers(2, existingPlayers);
 
     expect(recreatedPlayers[0].villageProgress).toEqual({
-      fieldVillage: { claimedEliteCounts: [0, 1] },
-      forestVillage: { claimedEliteCounts: [] },
+      fieldVillageLootClaimed: true,
+      firstEliteVillageRewardClaimed: true,
+      forestVillageLootClaimed: false,
+      secondEliteVillageRewardClaimed: false,
     });
     expect(recreatedPlayers[1].villageProgress).toEqual({
-      fieldVillage: { claimedEliteCounts: [] },
-      forestVillage: { claimedEliteCounts: [] },
+      fieldVillageLootClaimed: false,
+      firstEliteVillageRewardClaimed: false,
+      forestVillageLootClaimed: false,
+      secondEliteVillageRewardClaimed: false,
     });
-    expect(
-      recreatedPlayers[0].villageProgress.fieldVillage.claimedEliteCounts
-    ).not.toBe(
-      existingPlayers[0].villageProgress.fieldVillage.claimedEliteCounts
+    expect(recreatedPlayers[0].villageProgress).not.toBe(
+      existingPlayers[0].villageProgress
     );
+  });
+
+  test('preserves independent village action locks when recreating players', () => {
+    const existingPlayers = createPlayers(2);
+
+    existingPlayers[0].villageActionState = {
+      currentVillageLockId: 'board-feature-village-field-1',
+      usedActionsForCurrentVillage: {
+        rest: true,
+        wandsmith: true,
+      },
+    };
+
+    const recreatedPlayers = createPlayers(2, existingPlayers);
+
+    expect(recreatedPlayers[0].villageActionState).toEqual(
+      existingPlayers[0].villageActionState
+    );
+    expect(recreatedPlayers[0].villageActionState).not.toBe(
+      existingPlayers[0].villageActionState
+    );
+    expect(recreatedPlayers[1].villageActionState).toEqual({
+      currentVillageLockId: null,
+      usedActionsForCurrentVillage: {
+        rest: false,
+        wandsmith: false,
+      },
+    });
   });
 });

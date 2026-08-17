@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Field from './components/environments/field/field';
 import Forest from './components/environments/forest/forest';
 import Gravel from './components/environments/gravel/gravel';
@@ -9,6 +10,10 @@ import Stream from './components/environments/stream/stream';
 import Woods from './components/environments/woods/woods';
 import { getPieceImageSource } from '../gameSetup/pieceImages';
 import { getMovementNodeIdFromSquare } from './movement';
+import {
+  getBoardHoverLabel,
+  getBoardHoverLabelPosition,
+} from './boardHoverLabels';
 import bossCastleImage from '../../images/features/boss-castle.png';
 import eliteTowerGravelImage from '../../images/features/elite-tower-gravel.png';
 import eliteTowerWoodsImage from '../../images/features/elite-tower-woods.png';
@@ -56,9 +61,12 @@ function BoardGrid({
   currentPlayerId = '',
   highlightedColour,
   highlightedNodeIds,
+  language = 'en',
   onSquareClick,
   players,
+  showHoverLabels = true,
 }) {
+  const [hoveredSquare, setHoveredSquare] = useState(null);
   const playerLookup = new Map();
 
   players
@@ -72,6 +80,16 @@ function BoardGrid({
     });
 
   const highlightedNodeIdSet = new Set(highlightedNodeIds);
+  const hoveredNodeId = hoveredSquare
+    ? getMovementNodeIdFromSquare(hoveredSquare)
+    : '';
+  const hoveredLabel =
+    showHoverLabels && highlightedNodeIdSet.has(hoveredNodeId)
+      ? getBoardHoverLabel({ board, language, square: hoveredSquare })
+      : '';
+  const hoveredLabelPosition = hoveredLabel
+    ? getBoardHoverLabelPosition(board, hoveredSquare)
+    : '';
 
   const renderEnvironment = (square) => {
     const EnvironmentComponent = ENVIRONMENT_COMPONENTS[square.environmentType];
@@ -154,6 +172,12 @@ function BoardGrid({
               role="button"
               tabIndex={isHighlighted ? 0 : -1}
               onClick={() => onSquareClick(square)}
+              onMouseEnter={() => {
+                if (showHoverLabels && isHighlighted) {
+                  setHoveredSquare(square);
+                }
+              }}
+              onMouseLeave={() => setHoveredSquare(null)}
               onKeyDown={(event) => {
                 if (isHighlighted && (event.key === 'Enter' || event.key === ' ')) {
                   event.preventDefault();
@@ -206,6 +230,15 @@ function BoardGrid({
             />
           ))}
         </div>
+        {hoveredLabel ? (
+          <div
+            className={`board-hover-label board-hover-label--${hoveredLabelPosition} larger-text language-${
+              language === 'jp' ? 'jp' : 'en'
+            }`}
+          >
+            {hoveredLabel}
+          </div>
+        ) : null}
       </div>
     </section>
   );

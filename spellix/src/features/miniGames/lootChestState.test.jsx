@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
+import { POTION_DEFINITIONS } from '../../data/potions';
 import { createPlayers } from '../gameSetup/gameSetup';
 import { GameSetupProvider, useGameSetup } from '../gameSetup/GameSetupContext';
 
@@ -40,9 +41,14 @@ const LOOT_POTION = {
   itemType: 'potion',
 };
 
-function createSetup({ fullPotions = false } = {}) {
+const metalDetector = POTION_DEFINITIONS.find(
+  ({ id }) => id === 'metal-detector'
+);
+
+function createSetup({ activePotion = null, fullPotions = false } = {}) {
   const players = createPlayers(2).map((player) => ({
     ...player,
+    activePotion: player.id === 'player-1' ? activePotion : null,
     hasUnseenTokenBagTokens: false,
     potions: fullPotions && player.id === 'player-1'
       ? [
@@ -90,6 +96,7 @@ function LootChestStateProbe() {
   return (
     <div>
       <p>{`Current: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Active: ${playerOne?.activePotion?.id ?? 'none'}`}</p>
       <p>{`Destination: ${destination}`}</p>
       <p>{`Reward source: ${activeBattle?.source ?? 'none'}`}</p>
       <p>{`Loot status: ${miniGameResult?.lootChestReward?.status ?? 'none'}`}</p>
@@ -219,7 +226,7 @@ test('adds an available loot potion and preserves River same-player return', () 
 });
 
 test('advances after a board Loot Chest sequence resolves directly', () => {
-  renderProbe();
+  renderProbe({ activePotion: metalDetector });
 
   fireEvent.click(
     screen.getByRole('button', { name: 'Start Board Loot Chest' })
@@ -228,10 +235,12 @@ test('advances after a board Loot Chest sequence resolves directly', () => {
 
   expect(screen.getByText('Destination: /gameplay')).toBeInTheDocument();
   expect(screen.getByText('Loot status: resolved')).toBeInTheDocument();
+  expect(screen.getByText('Active: metal-detector')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Return' }));
 
   expect(screen.getByText('Current: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Active: none')).toBeInTheDocument();
   expect(screen.getByText('Next turn: pending')).toBeInTheDocument();
 });
 

@@ -1,0 +1,874 @@
+Feature-001: Make gameplay layout scale to fit screen height
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open gameplay at 1920x1080.
+   Expected: The shell remains at its natural 1320x940 size, is horizontally centred, and requires no vertical page scrolling.
+2. Resize gameplay to a 1366x768 laptop viewport and several intermediate heights.
+   Expected: The board and complete sidebar shrink together, preserve their composition, and remain inside the viewport with a 12px inset.
+3. Roll the movement dice and click highlighted normal and multi-square feature destinations at a reduced scale.
+   Expected: Highlights, player pieces, square clicks, and feature footprints remain aligned with the board.
+4. Open Spells at a reduced gameplay scale and drag tokens between the bag and spell columns.
+   Expected: Drag previews and drops stay aligned, and saving/cancelling continues to work.
+5. Hover board squares, tokens, and potions at a reduced scale.
+   Expected: Existing hover targets and labels remain attached to their board or UI content.
+6. Open short and tall gameplay modals, including Spells and Rules/Settings, at a short viewport height.
+   Expected: The panel fits within the viewport; genuinely tall content scrolls vertically inside the panel without horizontal clipping being introduced globally.
+7. Enter Battle, Village, Cave, River, Loot Chest, Hazard, and Decision flows.
+   Expected: Existing route composition remains usable, starry backgrounds remain intact where used, and shared overlays respect the viewport bounds.
+8. Inspect the browser console while resizing and exercising the interactions above.
+   Expected: No resize-listener, rendering, drag-and-drop, or interaction errors occur.
+
+Automated Tests Completed
+
+* Pre-implementation responsive source checks failed because the gameplay shell had no scale wrapper and standard modals had no dynamic viewport constraint.
+* All 7 focused responsive tests pass, covering the exact 1320x940 base footprint, transformed shell, resize listener cleanup, modal placement outside the transform, dynamic viewport modal bounds, and scale calculations for large, short, width-limited, and invalid viewports.
+* All 9 `BoardGrid.test.jsx` tests pass, covering square-local player markers, shared-square placement, feature overlays, multi-square dimensions, and movement-highlight footprints.
+* All 21 `SpellTokenAssignment.test.jsx` tests pass, covering drag overlay behavior, drop-zone layouts, scrolling constraints, and assignment states.
+* All 7 `MagicalNightSky.test.jsx` tests pass, including stable decorative rendering, page background coverage, and interaction-safe background behavior.
+* `WinnerPage.test.jsx` passes all 6 tests after updating its source contract to the new outer gameplay sky shell.
+* `VillagePage.test.jsx` passes all 5 tests, and `RulesPage.test.jsx` passes within its combined run.
+* The full `GameplayPage.test.jsx` run remains at its existing baseline of 54 passing and 8 failing tests; the failures are stale assertions for prior token text, spell warning text, potion rewards, dice timing, and image styles, not responsive-layout behavior.
+* `Modal.test.jsx` remains at its existing baseline of 5 passing and 2 failing tests because its source-count assertions expect fewer current gameplay modals and `larger-text` uses; rendering and CSS contract tests pass.
+* Battle and Settings regression runs retain unrelated baseline failures for prior CSS, health/reward, timing, and enemy-health expectations; Rules passes and no failure concerns the responsive gameplay shell or shared modal viewport constraints.
+* Scoped ESLint passes for every modified/new JavaScript file. A full direct ESLint run reports only 3 existing conditional-expect errors and 1 existing loop warning in `board.test.js` and `lootChest.test.js`; this project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Final `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for scale calculation, shell structure, resize cleanup, board geometry, drag/drop component behavior, shared modal viewport constraints, lint of changed JavaScript, or production compilation.
+
+Manual Execution
+
+* Interactive browser resizing, visual alignment checks, real pointer drag/drop, hover placement, route-by-route viewport inspection, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-002: Add 5 health to level 1, 2, and 3 enemies only
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a battle with each level 1 enemy through Debug controls.
+   Expected: Vilewhisker Rat, Emberhorn Imp, Boneveil Acolyte, Nightplume Raven, and Flaskwick Goblin each begin at `25 / 25` health.
+2. Start a battle with each level 2 enemy.
+   Expected: Hexmaw Hag, Runefang Wolf, Frostwisp Spirit, Harvestrot Scarecrow, and Wartback Brute each begin at `35 / 35` health.
+3. Start a battle with each level 3 enemy.
+   Expected: Gravechant Necromancer, Dreadsteel Knight, Skullclub Warlord, Venomglyph Serpent, and Cinderveil Demon each begin at `50 / 50` health.
+4. Start both level 4 Elite Tower battles.
+   Expected: The selected level 4 enemy begins at `85 / 85`, with its existing spell slots and merged columns unchanged.
+5. Complete the Elite Tower requirements and start the final boss battle.
+   Expected: The final boss begins at `100 / 100`; starting it does not change that enemy's normal level 4 base health from `85 / 85`.
+6. Damage enemies from each affected level and inspect the health bar.
+   Expected: Damage reduces current health from the new maximum while the displayed maximum remains `25`, `35`, or `50` for the selected level.
+7. Inspect the browser console during these battles.
+   Expected: No enemy-data or battle-state errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation enemy test failed for levels 1, 2, and 3 with the previous `20`, `30`, and `45` values while level 4 and all spell-slot checks passed.
+* All 18 `enemies.test.js` tests pass after the change, proving all five enemies in each level band initialize with `25`, `35`, `50`, and unchanged `85` current/maximum health values.
+* The same enemy suite confirms all 20 enemy records remain valid, each level still contains exactly five enemies, and every existing level 3 and level 4 spell-slot/merged-column contract is unchanged.
+* Four isolated Elite Tower/final-boss tests pass, proving Elite enemies remain `85 / 85`, ready players start a `100 / 100` boss, and the local boss override leaves the base enemy at `85 / 85`.
+* Five focused `BattlePage.test.jsx` cases pass for rendering selected level 1, 2, 3, and level 4 enemies with their effective spell columns.
+* The broader Elite/Boss run had 14 passing tests and one unrelated existing stale CSS assertion expecting `100px` where the current progress display is `115px`; the isolated health tests are green.
+* Scoped ESLint passes for `enemies.js` and `enemies.test.js`.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for base health values, battle-instance initialization, level 4 preservation, final-boss override isolation, or unchanged level 3/4 spell-slot data.
+
+Manual Execution
+
+* Interactive Debug battles and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-003: Elite Tower wins should reward 3 distinct rare tokens only
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Win the north-west Gravel Elite Tower battle.
+   Expected: The existing reward modal shows exactly three token choices, with no potion choices and no common-token choices.
+2. Compare the three offered token names and hover each token.
+   Expected: All three token types are different, each token is currently Rare, and each displays its existing localized name and description.
+3. Choose one Gravel Elite reward and drag it into a valid spell slot.
+   Expected: The existing token assignment flow accepts and commits the selected token, then allows the normal reward completion flow.
+4. Win the south-east Woods Elite Tower battle.
+   Expected: It independently offers exactly three distinct Rare tokens and marks only the Woods Elite progress tick for that player.
+5. Choose one Woods Elite reward and drag it to Trash.
+   Expected: The selected reward is discarded through the existing flow without adding a token, and reward completion remains available.
+6. Repeat with a full token bag.
+   Expected: The existing bag replacement, spell-slot assignment, and Trash destinations remain available for the chosen Elite token.
+7. Repeat Elite wins enough times to inspect the available pool.
+   Expected: Shiny Health can appear. Buff can appear while it remains Rare and stops appearing after Feature-004 changes its centralized rarity to Common.
+8. Win a normal non-Elite level 4 battle.
+   Expected: It continues using the normal weighted level 4 reward table, which may contain common tokens or potions.
+9. Win the final boss battle and inspect the browser console throughout these flows.
+   Expected: The boss uses its existing no-reward victory flow and no reward-generation or resolution errors occur.
+
+Automated Tests Completed
+
+* Before implementation, both Elite encounter integration tests failed because they received the normal level 4 table; the normal level 4 control and all existing boss/loss tests passed.
+* All 39 focused reward-generator and Elite/Boss context tests pass after implementation.
+* Generator tests prove the Elite flow creates exactly three choices with stable IDs, all choices are Rare tokens, and all three stable token types are distinct.
+* Generator tests prove Shiny Health can be selected from the live rare pool and temporarily changing Buff's centralized rarity to Common excludes it without Elite-specific token lists.
+* Integration tests cover both Gravel and Woods Elite encounters, independent progress updates, rare-only distinct rewards, shared spell-slot assignment, shared Trash resolution, and unchanged normal level 4 reward categories.
+* All 8 shared reward-state tests pass for stored choices, selection locking, token-bag placement/replacement, spell-slot assignment, Trash-compatible resolution, and potion behavior outside Elite rewards.
+* Six focused Reward page tests pass for component-based token choices, Japanese names/tooltips, token-bag and Trash drop zones, spell-slot drop zones, and the exact awarded-token result.
+* All 4 centralized token-data tests pass, including current rarity and Shiny Health data.
+* Scoped ESLint passes for all four modified JavaScript/JSX implementation and test files.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for Elite encounter routing, choice count, rarity, type uniqueness, live-pool sourcing, Shiny Health eligibility, progress, shared assignment/Trash resolution, normal reward preservation, or boss reward preservation.
+
+Manual Execution
+
+* Interactive Elite victories, visual hover inspection, real drag/drop, repeated random-pool sampling, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-004: Make Buff common and update its description
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open a common-token reward flow repeatedly and inspect the available choices.
+   Expected: Purple Buff can appear as a Common token.
+2. Win either Elite Tower and inspect all three rare-only choices.
+   Expected: Buff never appears, while three distinct currently Rare token types are still offered.
+3. Hover a Buff token while playing in English.
+   Expected: The tooltip title is `Buff` and the body reads `Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.`
+4. Switch the player language to Japanese and hover Buff again.
+   Expected: The title remains the existing Japanese Buff name and the body shows the required full Japanese adjacent-column description.
+5. Place one Buff token in a middle spell column, roll that column, and continue to the caster's next turn.
+   Expected: Only both effective adjacent columns receive +5 when they contain Damage or Guard; the source column is not buffed.
+6. Place Buff in physical column 1 and then physical column 6.
+   Expected: Only the single existing adjacent effective column is buffed at each board edge.
+7. Repeat with merged columns beside and containing Buff.
+   Expected: Merged physical columns are treated as one effective column, with no duplicate bonus.
+8. Use the affected Damage or Guard column, then finish the caster's turn.
+   Expected: The +5 applies only during that next turn and then expires.
+9. Inspect the browser console throughout reward and battle flows.
+   Expected: No token-data, reward-pool, tooltip, or Buff-resolution errors occur.
+
+Automated Tests Completed
+
+* Before implementation, the focused data/reward run failed only the three intended contracts: Common rarity, updated localized descriptions, and Common/Elite reward membership; the other 33 tests passed.
+* All 36 centralized token-data and reward-item tests pass after implementation.
+* Reward tests prove Buff appears in the complete Common token pool, does not appear in the complete Rare pool, and is excluded from generated Elite Tower choices.
+* The focused Token component test passes for the exact updated English and Japanese Buff names/descriptions in rendered tooltip titles.
+* The full Token component run has 14 passing tests and one unrelated existing stale CSS assertion expecting a 1.6-second glow where the current stylesheet uses 2.5 seconds; localized tooltip behavior passes.
+* All 51 `battleTurn.test.js` tests pass, including Buff generation for middle and edge columns, merged/effective adjacency, +5-per-token stacking, Red/Blue-only application, and next-turn-only behavior.
+* Nine focused GameSetupContext Purple integrations pass for stacked pending buffs, merged source/target columns, next-turn activation, expiry, and frozen-turn handling.
+* All 8 Elite/Boss context tests pass after the rarity change, including both Elite rare-only reward flows and unchanged normal/boss behavior.
+* Scoped ESLint passes for every Feature-004 data/test file.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for centralized rarity/descriptions, common/rare/Elite pool membership, rendered localized tooltip text, adjacent/edge/merged mechanics, next-turn lifecycle, or production compilation.
+
+Manual Execution
+
+* Interactive random reward sampling, browser tooltip inspection, full battle playthroughs, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-005: Show final hit, death icon, and complete animations before battle ends
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Deal lethal spell damage to a normal enemy.
+   Expected: The final attack and any guard/deflect effects finish, the enemy health bar visibly reaches `0`, and a centred grey skull grows and shakes over the enemy before rewards appear.
+2. Take lethal spell damage from an enemy.
+   Expected: The final attack finishes, player health visibly reaches `0`, and the player skull completes before the loss modal and death-token penalty appear.
+3. Trigger an attack that deals lethal enemy damage and also receives lethal Orange counter damage.
+   Expected: The attack lands first, the counter animation and damage complete, both health bars reach `0`, both skulls appear, and the existing loss-first outcome begins only after both animations finish.
+4. Trigger lethal damage where Green deflect, Blue guard, Light Blue freeze, or an existing guard shield also participates.
+   Expected: Each queued visual completes in its normal order before the death icon and outcome flow; no effect or health update is skipped.
+5. Defeat the final boss with lethal spell damage.
+   Expected: The enemy skull completes before the existing winner flow begins, with no reward modal introduced.
+6. Inspect the battle controls during each death animation.
+   Expected: The battle UI remains visible, the dice and potion controls cannot be used, no new turn modal appears, and no route change occurs early.
+7. Inspect the browser console throughout all cases.
+   Expected: No battle-resolution, animation, navigation, or simultaneous-death errors occur.
+
+Automated Tests Completed
+
+* Pre-implementation tests failed because battle effects transitioned directly to `reward` or `lost` and no death icon CSS or markup existed.
+* All 7 focused Feature-005 BattlePage cases pass for enemy death, player death, hidden dice during death resolution, simultaneous lethal counter damage, waiting for both skulls, final-boss victory, and deferred loss penalties.
+* Focused assertions prove health reaches `0` before a skull appears, queued Red/Green/Orange animations disappear first, reward/loss/winner UI remains absent during `deathAnimation`, and the existing outcome begins only after animation completion.
+* The simultaneous-death test proves both skulls render without crashing, completion of only one skull does not end the battle, and the existing loss-first winner rule is preserved after both complete.
+* The complete BattlePage run has 60 passing tests, including every Feature-005 case. Its 5 failures are unrelated stale assertions for existing panel background sizing, battle margin, randomized death-token text, freeze-check random-call count, and enemy-guard timing.
+* All 51 `battleTurn.test.js` tests pass for effect order, guard, deflect, freeze-triggered counters, merged columns, counter damage, health clamping, and unchanged battle calculations.
+* The battle-focused GameSetupContext run has 18 passing tests; its only failure is an unrelated stale Feature-002 level-2 health expectation of `30 / 30` where the implemented value is `35 / 35`.
+* All 8 Elite/Boss GameSetupContext tests pass.
+* Strict ESLint passes for `BattlePage.jsx` and `GameSetupContext.jsx`; `BattlePage.test.jsx` passes with only its 104 pre-existing `testing-library/no-node-access` violations excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for normal lethal attacks, lethal enemy attacks, queued counter completion, simultaneous deaths, death icon styling, delayed rewards/loss penalties, or final-boss winner routing.
+
+Manual Execution
+
+* Interactive browser animation timing, visual centring across all actor images, real guard/deflect/freeze combinations, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-006: Standardise health bar text colour and font
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the main gameplay screen and inspect the current player's health value.
+   Expected: The health text is black and uses Unkempt.
+2. Start a battle and inspect both the player and enemy health values.
+   Expected: Both health values are black and use Unkempt while damage and healing continue updating normally.
+3. Visit a village and trigger healing.
+   Expected: The healing health value remains black and uses Unkempt before, during, and after the update.
+4. Trigger health-loss outcomes on Decision and Hazard pages and the boss-not-ready punishment.
+   Expected: Every animated health value remains black and uses Unkempt while the existing timing and clamping behavior is unchanged.
+5. Lose a mini game and inspect the failure and respawn health value.
+   Expected: The value is black rather than the previous yellow override and uses Unkempt.
+6. Repeat the gameplay, battle, village, damage, punishment, and respawn checks with a Japanese player.
+   Expected: Health values remain Unkempt and black instead of inheriting the Japanese UI font.
+7. Inspect the browser console throughout these flows.
+   Expected: No health component or stylesheet errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation shared-style test failed because `.health-bar-text` had no explicit font family; source inspection also found one mini-game yellow colour override.
+* All 5 shared `HealthBar.test.jsx` tests pass after implementation, proving black/Unkempt styling, no remaining page colour override, unchanged variable maximums, fill updates, health clamping, and colour thresholds.
+* Six focused page integrations pass for gameplay healing, English/Japanese battle rendering, village healing, Decision damage, Hazard damage, and boss-entry punishment.
+* Two focused mini-game tests pass for the shared nonlethal failure health flow and unchanged failure-page layout CSS.
+* The Japanese lethal mini-game test reaches and renders the shared health flow but has an unrelated stale respawn mock expecting only `currentHealth`; production now also supplies the existing `diedLastTurn: false` field.
+* Source checks confirm every required page imports and renders the shared `HealthBar`, and no page stylesheet retains a `.health-bar-text` colour override.
+* Strict ESLint passes for `HealthBar.jsx`; `HealthBar.test.jsx` passes with only its 22 pre-existing `testing-library/no-container` and `testing-library/no-node-access` violations excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for the shared colour/font contract, page reuse, health calculations, fill updates, thresholds, or production compilation.
+
+Manual Execution
+
+* Interactive browser font rendering, computed-style inspection in every English/Japanese page context, healing/damage animations, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-007: Implement SOS potion
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current player SOS, select Use, then select No in the confirmation.
+   Expected: The confirmation closes; SOS remains, the player does not move, and Board potion use remains available.
+2. Use SOS from positions nearest to each generated village and select Yes.
+   Expected: SOS is discarded and the player immediately appears on the nearest village with that village as the logical board feature.
+3. Put another player on the destination village and use SOS.
+   Expected: The current multi-square placement rules choose an unoccupied village cell when one is available.
+4. Place the player equally far from two villages and repeat with fresh turns.
+   Expected: Either tied village can be selected randomly; no farther village is selected.
+5. Use SOS while already on a village.
+   Expected: The current village may be selected and its normal visit begins.
+6. Complete the resulting village reward and healing flow.
+   Expected: The same sequence and turn completion used by a normal village landing runs; future Feature-010 rewards and Feature-011 actions inherit this entry path.
+7. Inspect Potions and Active Potion after confirmation.
+   Expected: SOS is absent from both; it never becomes Active Potion and no board roll occurs before the village sequence.
+8. In a debug board with no generated villages, confirm SOS use.
+   Expected: A developer warning is logged; SOS remains, the player does not move, Board potion use remains available, and the game does not crash.
+9. Repeat confirmation with a Japanese current player and inspect the browser console through all flows.
+   Expected: The standard `SOSを使用してもよろしいですか？` copy appears and normal successful flows produce no console errors.
+
+Automated Tests Completed
+
+* Pre-implementation tests failed because the nearest-village selector and SOS activation branch did not exist and centralized potion data still described only the Field Village.
+* All 11 focused village-selector and potion-data tests pass, including Manhattan footprint distance, logical current-village distance, dynamic four-village support, deterministic random ties, no-village handling, and exact English/Japanese descriptions.
+* All 3 focused GameplayPage SOS integrations pass for English No/Yes confirmation, discard and Board-use locking, logical and visual movement, Start/Anywhere movement-state cleanup, eligible reward visit creation, `/village` navigation, no Active Potion assignment, safe missing-village refusal, and Japanese confirmation copy.
+* The shared multi-square placement, village context, and VillagePage verification has 25 passing tests. Its only failure is an unrelated stale GameplayEliteBoss CSS assertion expecting the existing `115px` maximum height to be `100px`.
+* Strict ESLint passes for all changed production files. Changed tests also pass ESLint with the large GameplayPage test file's 13 pre-existing `testing-library/no-node-access` violations excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for SOS destination selection, confirmation, movement, consumption, visit entry, missing-village safety, localization, or production compilation.
+
+Manual Execution
+
+* Interactive browser teleport placement, repeated random tie outcomes, full village completion, future Feature-010/Feature-011 integration, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-008: Implement Metal Detector potion
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current player Metal Detector, select Use, then select No.
+   Expected: Confirmation closes; the potion remains in its slot, Active Potion stays empty, and Board potion use remains available.
+2. Confirm Metal Detector use with Yes.
+   Expected: It leaves the potion slot, appears in Active Potion, counts as the turn's Board potion, and Roll Dice remains available.
+3. Roll and land on each normal non-feature environment, including Field, Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains.
+   Expected: The Loot Chest found modal always opens without random environment event selection.
+4. Repeat a non-feature landing while debug event-choice mode is enabled.
+   Expected: Metal Detector still opens Loot Chest directly and the Choose Event modal does not appear.
+5. Open the chest and complete Nothing, token, and potion reward paths.
+   Expected: Existing rewards and assignment dialogs are unchanged; Metal Detector remains active until the sequence resolves, then the next-player turn modal appears and Active Potion clears.
+6. Use Metal Detector and land on a Village.
+   Expected: The normal Village sequence runs instead of Loot Chest; Metal Detector remains active during the visit and clears when the Village turn ends.
+7. Use Metal Detector and land on an Elite Tower, Boss Battle, and another multi-square feature.
+   Expected: Each feature's normal sequence runs instead of Loot Chest; Metal Detector clears through the shared end-of-turn transition.
+8. Repeat confirmation and Loot Chest launch with a Japanese current player.
+   Expected: Existing Japanese potion, Active Potion, found-modal, and open-chest text is used.
+9. Inspect the browser console throughout successful non-feature and feature flows.
+   Expected: No Metal Detector or Loot Chest errors occur.
+
+Automated Tests Completed
+
+* Pre-implementation tests failed because Metal Detector was consumed without becoming active, normal landing selection was not overridden, and shared Loot Chest/Village turn completion did not clear a pre-seeded Metal Detector.
+* All 6 focused Feature-008 tests pass for No/Yes confirmation, slot removal, Active Potion assignment, one-Board-potion locking, guaranteed Field loot before debug/random selection, feature exclusion, active visibility through resolution, and next-turn cleanup after Loot Chest and Village flows.
+* All 26 full shared potion-turn, Loot Chest state, Village context, Loot Chest modal, and Loot Chest page tests pass.
+* The focused app-level localized board Loot Chest test passes, proving the existing Japanese found prompt opens a `nextPlayerTurn` Loot Chest mini game with the landed environment.
+* Village and Elite Tower route integrations prove Metal Detector does not replace feature destinations and remains active while those feature sequences are unresolved.
+* Strict ESLint passes for both changed production files. All changed Feature-008 tests pass ESLint with only the large test files' pre-existing `testing-library/no-node-access` rule excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes.
+
+Automated Tests Still Needed
+
+* None for activation, guaranteed non-feature loot, feature exclusion, shared Loot Chest behavior, turn expiration, localization, or production compilation.
+
+Manual Execution
+
+* Interactive browser checks across every environment, full token/potion replacement UI, real Village/Elite/Boss completion, future Smokescreen coexistence, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-009: Implement Smokescreen potion
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Give the current player Smokescreen, select Use, then select No.
+   Expected: The confirmation closes; Smokescreen remains in its slot, Active Potion stays empty, and Board potion use remains available.
+2. Confirm Smokescreen use with Yes.
+   Expected: It leaves the potion slot, appears in Active Potion, counts as the turn's Board potion, and Roll Dice remains available.
+3. Land repeatedly on Field, Woods, and Forest with normal random event selection.
+   Expected: Level 1, Level 2, and Level 3 random battles are never selected; remaining positive-chance events continue to appear with proportional weighting.
+4. Repeat those landings with debug event-choice mode enabled.
+   Expected: Battle choices are absent while the existing non-battle choices remain available.
+5. Select Roll Again while Smokescreen is active, continue, roll, and land again.
+   Expected: Smokescreen remains in Active Potion throughout the continued turn and still prevents a random battle on the eventual landing.
+6. Resolve a non-Roll-Again event and continue to the next player's turn.
+   Expected: Smokescreen remains visible while the landing event is unresolved, then is discarded by the shared turn transition.
+7. Land on an Elite Tower and a ready Boss Battle while Smokescreen is active.
+   Expected: Each feature battle starts normally and Smokescreen remains active until that feature sequence resolves.
+8. Repeat confirmation and a protected landing with a Japanese current player, then inspect the browser console.
+   Expected: Existing Japanese potion and Active Potion text is used and no Smokescreen or event-selection errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation tests failed because Smokescreen was consumed without becoming active and battle exclusions were ignored by both weighted selection and debug event choice; existing Elite and Boss routing already remained intact.
+* All 11 focused Feature-009 tests pass for confirmation and activation, one-Board-potion locking, positive-weight battle exclusion and proportional reweighting, debug-choice filtering, Roll Again persistence, turn expiry, and unchanged Elite/Boss battles.
+* All 29 full shared environment-event, Choose Event modal, and potion-turn tests pass.
+* Seven surrounding GameplayPage landing and Roll Again integrations pass, and nine Elite/Boss routing integrations pass.
+* Strict ESLint passes for all changed production files and changed tests with only the large test files' pre-existing `testing-library/no-node-access` rule excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with only existing line-ending warnings from the cumulative worktree.
+
+Automated Tests Still Needed
+
+* None for activation, weighted random battle exclusion, debug selection, Roll Again persistence, shared turn expiry, feature-battle exclusion, regression coverage, or production compilation.
+
+Manual Execution
+
+* Interactive browser checks across repeated random outcomes, full event completion, Japanese rendering, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-010: Expand to 4 villages and update village reward rules
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start several new games and inspect each generated board.
+   Expected: Every board has exactly two 2x2 Field Villages in the easy zone and two 2x2 Forest Villages in the hard zone.
+2. Measure from every village footprint cell to all other villages, both Elite Towers, the Start area, and Boss Battle using horizontal-plus-vertical distance.
+   Expected: The nearest cells are always at least 12 squares apart, and every village footprint cell is at least 3 squares from every board edge.
+3. Have Player 1 visit both Field Villages.
+   Expected: The first visit gives one Loot Chest; the second physical Field Village does not give another Field first-visit chest.
+4. Have Player 2 visit either Field Village, then repeat Steps 3 and 4 for Forest Villages.
+   Expected: Player 2 receives an independent Field reward, and each player independently receives exactly one Forest first-visit Loot Chest.
+5. Defeat one Elite Tower, visit any village, and complete the reward assignment.
+   Expected: The existing village reward display and assignment flow gives one random Common token and never gives the old potion reward.
+6. Visit another village before and after death, respawn, or village healing.
+   Expected: The first-Elite reward does not repeat and all village claim progress remains unchanged.
+7. Defeat the second Elite Tower and visit any village.
+   Expected: The existing reward display and assignment flow gives one guaranteed Rare token and never repeats it on later visits.
+8. On a visit where village-type Loot, first-Elite, and second-Elite rewards are all unclaimed, complete every step.
+   Expected: Loot Chest resolves first, followed by the Common token and Rare token; each assignment returns to the village and healing begins only after the queue is empty.
+9. Use SOS from positions near each of the four generated villages.
+   Expected: The nearest physical village footprint is selected while Field/Forest reward eligibility remains shared by village type for that player.
+10. Inspect the browser console throughout generation and reward completion.
+   Expected: Valid boards and reward flows produce no errors or placement warnings.
+
+Automated Tests Completed
+
+* The pre-implementation Feature-010 run produced 12 expected failures because only two villages were generated, distance used the old rule, progress used per-village Elite-count arrays, the first Elite reward was a potion, and no sequential reward queue existed.
+* All 26 full board-generator and BoardGrid tests pass, including four 2x2 villages, two per zone, full-footprint three-square edge clearance, 12-square Manhattan clearance from every fixed/generated feature, repeated seeded generation, and duplicate Field/Forest image rendering.
+* All 31 full village utility, player setup, village context, and VillagePage tests pass for legacy progress migration, independent per-player lifetime flags, Field/Forest first visits, Common/Rare token guarantees, stable queued resolution, healing persistence, and existing localized display/assignment flows.
+* Three focused Loot Chest and Reward page return-routing tests pass, proving direct and assigned rewards return to the active village sequence.
+* Four focused App and GameplayPage integrations pass for generated four-village geometry and unchanged SOS behavior.
+* Strict ESLint passes for all changed production files. Changed tests pass with only pre-existing large-suite naming, conditional-expect, loop-function, and node-access rules excluded.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with only existing line-ending warnings from the cumulative worktree.
+
+Automated Tests Still Needed
+
+* None for four-village generation, placement constraints, per-player claim persistence, reward rarity/order, existing reward routing, SOS compatibility, or production compilation.
+* The village action choice page after rewards remains intentionally deferred to Feature-011, where that page is explicitly implemented and tested.
+
+Manual Execution
+
+* Interactive board inspection, physical distance measurement, repeated random reward observation, full drag/drop assignment in a browser, death/respawn playthroughs, SOS movement, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-011: Add village action choice page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Visit a village with no pending reward, then complete visits with one or several pending rewards.
+   Expected: The centred action prompt appears only after every eligible reward has resolved, with Rest, Wandsmith, and Leave enabled on the first visit.
+2. Choose Wandsmith, revisit the same physical village without entering another feature, then choose Rest and revisit again.
+   Expected: Wandsmith is disabled after its first use; after Rest, both non-Leave actions remain disabled while Leave stays enabled on every later same-village visit.
+3. Choose Leave in English and Japanese.
+   Expected: The localized departure message appears before Continue ends the turn; no action lock is changed by Leave.
+4. Visit another generated village, then return to the first village.
+   Expected: All actions are enabled at the other village and are enabled again when returning because the physical village context changed.
+5. Use SOS to visit the nearest village, and repeat visits to both Field Villages and both Forest Villages.
+   Expected: Locking follows the specific generated village, while reward eligibility continues to follow Field/Forest reward type.
+6. Use a non-village feature, win or lose an Elite Tower/Boss encounter, then return to a previously locked village.
+   Expected: The affected player's Rest and Wandsmith options are re-enabled; normal environment events do not reset them.
+7. Die and complete both start-of-turn and battle respawn flows before revisiting a village.
+   Expected: Both respawn paths clear only that player's village action lock.
+8. Complete Rest, Wandsmith, and Leave with two players while observing the board transition.
+   Expected: The visit ends for the acting player, the turn advances, the next-turn modal is queued first, and the other player's village history remains unchanged.
+9. Inspect the browser console throughout the sequence.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run produced 21 expected failures because village action state, the choice phase, physical village identity, action controls, localization, and reset behavior did not exist.
+* All 60 full village utility, player setup, village context, Elite/Boss context, Loot Chest return, and VillagePage tests pass for reward-to-choice ordering, physical village identity, per-player locks, repeated Leave behavior, different-village/feature/Elite resets, both respawn paths, localized copy, Rest healing, and turn advancement.
+* Four focused GameplayPage and GameplayEliteBoss tests pass for normal generated-village landing and SOS preserving the physical feature ID as the action lock identity.
+* Two focused RewardPage tests pass for token and Loot Chest assignment returning to the village choice phase.
+* Production and changed-test ESLint pass with only the repository's known large-suite testing rules excluded.
+* `npm run build` compiles the optimized production bundle successfully.
+* `git diff --check` passes with only cumulative line-ending warnings.
+
+Automated Test Notes
+
+* `GameSetupContext.test.jsx` could not collect because the existing Jest source-map parser throws while reading that suite; the focused village context suite covers the Feature-011 turn and respawn mutations directly.
+* The focused BattlePage respawn run passed its protected-token case; its other respawn case stops at an unrelated stale token-removal copy assertion before clicking Respawn.
+* The full RewardPage suite retains an unrelated pre-existing CSS-grid expectation failure; both village return cases pass in isolation.
+
+Automated Tests Still Needed
+
+* None for the Feature-011 state transitions, board entry paths, localization, same-village locks, reset rules, turn advancement, lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser playthroughs, visual confirmation of the exact modal spacing, repeated multi-turn lock scenarios, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-012: Implement Wandsmith village option
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Visit a village and choose Wandsmith in English and Japanese.
+   Expected: Gameplay opens the existing Spells modal in Wandsmith mode with the exact localized Wandsmith warning and every saved spell token movable.
+2. Rearrange tokens between spell columns and the token bag, including attempts to exceed a column, Grey-adjusted capacity, the five-token bag limit, and existing merged-column restrictions.
+   Expected: Valid moves succeed and every illegal destination remains blocked.
+3. Create eligible White-token merges and confirm each merge.
+   Expected: Existing merge restrictions and the two-merge lifetime limit remain active, then the shared save confirmation appears before anything is committed.
+4. Save a changed arrangement and confirm the exact updated global warning.
+   Expected: The arrangement is committed, non-battle Health/Grey/White effects are recalculated, the village visit ends, the next player becomes current, and the next-turn modal appears first.
+5. Open Wandsmith and select Cancel after moving tokens, then select No.
+   Expected: The exact localized leave warning closes and the same editable Wandsmith session remains open without ending the turn.
+6. Select Cancel again and confirm Yes.
+   Expected: All draft changes are discarded, the exact previously saved arrangement remains committed, the visit ends, and the turn advances through the next-turn modal.
+7. Open Wandsmith and select Save without moving any token.
+   Expected: Save remains enabled, the shared confirmation appears, and confirming still ends the visit and turn without changing token placement.
+8. Repeat an initial assignment and a Redo save.
+   Expected: Both use the updated shared Wandsmith-or-potions commit warning and retain their existing movement behavior.
+9. Inspect the browser console throughout the sequence.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run produced the expected failures for the Wandsmith phase, editable committed tokens, localized warnings, bag capacity, modal entry, cancel behavior, and no-change save.
+* All 9 focused Feature-012 tests pass across `spellSetup`, `SpellsModal`, village context, VillagePage, and GameplayPage suites.
+* All 20 `spellSetup.test.js` tests pass, covering existing initial-assignment and Redo movement plus temporary Wandsmith drafts and Wandsmith-only five-token bag enforcement.
+* The full affected regression run passed 108 tests before the capacity guard was narrowed; its three Feature-012 regressions were corrected and the complete spell helper suite then passed. The remaining failures are existing stale copy, token-title, and Testing Library assertions unrelated to Wandsmith.
+* All changed Feature-012 production files pass direct ESLint. The source-wide run retains only the existing three conditional-expect errors and one loop-function warning in unrelated board and Loot Chest tests; the project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with only cumulative line-ending warnings.
+
+Automated Tests Still Needed
+
+* None for Wandsmith entry, temporary draft state, committed-token movement, bag capacity, localized warnings, confirmed cancel, no-change save, turn advancement, production lint, or compilation.
+
+Manual Execution
+
+* Interactive pointer drag/drop, complete Grey/White/Health effect playthroughs, visual localization checks, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-013: Add village actions section to rules page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Rules from the homepage and scroll below Features.
+   Expected: Village Actions appears immediately after Features using the existing section heading and body presentation.
+2. Read the English Village Actions section.
+   Expected: The six supplied paragraphs explain Rest, Wandsmith, Leave, disabled options, and reset conditions exactly, without outlining village rewards.
+3. Switch the Rules page to Japanese and scroll to the same section.
+   Expected: 村でできること and all six supplied Japanese paragraphs replace the English content and use the existing Japanese rules font behavior.
+4. Switch between English and Japanese, use both Back buttons, and scroll through the complete page.
+   Expected: Existing language switching, Back to Start navigation, layout, and vertical scrolling continue to work.
+5. After Feature-014 is implemented, open Rules from Settings.
+   Expected: The same shared rules content includes Village Actions; Feature-013 does not add the settings entry point itself.
+6. Inspect the browser console while switching and scrolling.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run failed in the four expected English/Japanese heading and exact content/order checks because Village Actions was absent.
+* All 7 `RulesPage.test.jsx` tests pass, covering English and Japanese rendering, exact supplied content, placement immediately after Features, reward-detail exclusion, language switching, both Back buttons, and the existing scrollable page contract.
+* Reused the existing bilingual `RULES_CONTENT` structure and RulesPage section renderer; no component, route, style, hook, utility, or dependency was added.
+* Scoped ESLint passes for the changed rules content and RulesPage test files.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with only cumulative line-ending warnings.
+
+Automated Tests Still Needed
+
+* None for shared content, exact bilingual copy, section ordering, homepage rendering, existing interaction behavior, lint, or production compilation.
+* Settings-modal reuse will be tested with Feature-014 because that entry point does not exist yet and is outside Feature-013 scope.
+
+Manual Execution
+
+* Interactive browser scrolling, visual font confirmation, future Settings modal reuse, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-014: Add rules modal inside settings menu
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start or load a game, reach gameplay before rolling, and open Settings.
+   Expected: The existing Settings modal contains Rules in English or ルール for a Japanese current player, alongside the unchanged Settings actions.
+2. Select Rules.
+   Expected: The Settings main actions are replaced by the shared game rules inside the normal scrollable modal over the unchanged gameplay background, including Village Actions.
+3. Inspect the top and bottom buttons in English, then use the Rules language toggle.
+   Expected: Both buttons say Back to Settings in English and 設定に戻る in Japanese; Back to Start / スタートに戻る never appears in the Settings version.
+4. Scroll from the rules title through Village Actions to the bottom button.
+   Expected: The normal modal remains vertically scrollable and all shared rules content is readable.
+5. Select either Back to Settings button.
+   Expected: The Rules view closes and the original Settings modal reappears with Save Game, Rules, End Game, Close, and Debug when applicable; Settings is not closed entirely.
+6. Open the homepage Rules route and use both Back buttons.
+   Expected: Homepage rules still use Back to Start / スタートに戻る and navigate to Start as before.
+7. Inspect the browser console throughout the flow.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run produced the expected two failures because Settings had no Rules action; existing homepage Rules checks passed.
+* Both focused `App.test.jsx` Settings Rules integrations pass for English and Japanese buttons, normal modal rendering, shared Village Actions content, two localized Back to Settings buttons, absence of Back to Start, and restoration of Settings.
+* All 7 `RulesPage.test.jsx` tests pass after sharing the renderer, covering homepage bilingual content, both Back to Start buttons, navigation, section ordering, and the existing scrollable page contract.
+* Reused the existing Modal, Button, `RULES_CONTENT`, language classes, and RulesPage typography values. Added one shared `RulesBody.jsx` renderer because the same content is now used immediately by both homepage and Settings; no route, dependency, or new style value was added.
+* Scoped ESLint passes for all changed production files and `RulesPage.test.jsx`. `App.test.jsx` retains 14 existing naming, direct-node, and conditional-expect errors outside the new Feature-014 tests.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with only cumulative line-ending warnings.
+
+Automated Tests Still Needed
+
+* None for Settings entry, bilingual shared rules rendering, Back to Settings behavior, homepage regression coverage, production lint, or compilation.
+
+Manual Execution
+
+* Interactive browser scrolling, visual gameplay-background confirmation, repeated Settings transitions, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-015: Prevent horizontal scrollbar in spells modal during token drag
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the normal Spells modal and drag a token to the left and right edges of the spell-slot list.
+   Expected: No horizontal scrollbar appears, the drag preview remains visible, and the token can still be dropped normally.
+2. Open the Wandsmith Spells modal and repeat the left/right edge drag checks with saved tokens.
+   Expected: No horizontal scrollbar appears and Wandsmith token movement remains unchanged.
+3. Use a viewport or content size that requires vertical scrolling in the Spells modal.
+   Expected: The modal still scrolls vertically and all spell controls remain reachable.
+4. Open Rules and another large modal, then scroll their content.
+   Expected: Their existing horizontal and vertical scroll behavior is unchanged.
+5. Inspect the browser console while dragging and dropping tokens.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The two pre-implementation normal and Wandsmith regression cases failed as expected because the spells panel had no horizontal-overflow rule.
+* Both focused `SpellsModal.test.jsx` cases pass, confirming the normal and Wandsmith dialogs use `.modal-panel--spells`, that this class hides horizontal overflow while retaining vertical auto-scroll, and that the shared default modal rule remains unchanged.
+* All 21 `SpellTokenAssignment.test.jsx` tests pass, covering the existing unclipped dnd-kit `DragOverlay`, visible spell-slot wrapper, disabled drag auto-scroll, token movement, capacities, Redo behavior, and reward assignment behavior.
+* Scoped ESLint passes for the changed test with its unrelated existing direct-node rule excluded; the project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+
+Automated Test Notes
+
+* The complete `SpellsModal.test.jsx` file retains two unrelated stale copy and font-size expectations; the two new Feature-015 cases pass in isolation.
+
+Automated Tests Still Needed
+
+* None for the scoped overflow rules, shared-modal isolation, existing drag-overlay contract, token-assignment regressions, lint, or production compilation.
+
+Manual Execution
+
+* Interactive pointer dragging at both modal edges, visual scrollbar and drag-preview confirmation, vertical browser scrolling, other-modal checks, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-016: Show environment or feature name when hovering highlighted movement squares
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Before rolling movement dice, hover normal, feature, and fixed-area board squares.
+   Expected: No destination label appears.
+2. Roll movement dice in English and hover each highlighted Field, Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains destination.
+   Expected: The matching English environment name appears; non-highlighted squares show nothing and moving the cursor away removes the label.
+3. Repeat the highlighted environment checks with a Japanese current player.
+   Expected: Each supplied Japanese environment name appears with the Japanese language font class.
+4. Hover every highlighted cell of generated Village, fixed Elite Tower, and Boss Battle footprints in both languages.
+   Expected: One Village, Elite Tower, or Boss Battle label appears instead of underlying terrain regardless of the footprint cell hovered.
+5. Hover a highlighted top-half square and then a bottom-half square.
+   Expected: The label is centered 50px from the board bottom for the top-half square and 50px from the board top for the bottom-half square.
+6. Complete movement, clear highlights, and open dice, potion, event, result, next-turn, respawn, and spells modals where available.
+   Expected: No destination label remains visible during any non-selection state.
+7. Resize the browser to trigger gameplay scaling and repeat top/bottom hover checks.
+   Expected: The label remains centered and positioned relative to the scaled board.
+8. Inspect the browser console throughout the sequence.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation run failed as expected because the label resolver and hover UI did not exist; it also identified and corrected a test fixture that used a canonical Elite Tower coordinate for a normal Field case.
+* All 20 focused Feature-016 utility and BoardGrid checks pass for every required bilingual label, feature precedence, fixed and generated features, multi-cell hover, top/bottom placement, dismissal, disabled gating, font classes, and specified CSS.
+* All 51 board-label, BoardGrid, movement, and multi-square feature tests pass, confirming existing logical node IDs, path highlighting, feature footprints, clicks, keyboard handling, and visual cell selection remain unchanged.
+* The focused GameplayPage lifecycle test passes, confirming Japanese language propagation and labels disabled before rolling, during the dice modal, and after movement, with labels enabled only during active destination selection.
+* Scoped ESLint passes for all changed production and test files with only the older suites' existing direct-DOM and conditional-expect rules excluded; the project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+
+Automated Tests Still Needed
+
+* None for label resolution, language propagation, highlighted-cell gating, feature precedence, modal/result gating, positioning classes, affected board regressions, lint, or production compilation.
+
+Manual Execution
+
+* Interactive browser hover checks across generated boards, visual 50px placement and responsive scaling, every gameplay modal/event state, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Feature-017: Change Japanese font to M PLUS Rounded 1c
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the start page and game setup, then switch the game to Japanese and continue through story, rules, and gameplay.
+   Expected: Japanese text uses M PLUS Rounded 1c while English text retains its existing fonts.
+2. In Japanese, inspect shared buttons, Settings, board hover labels, villages, battle, potions, tokens, rewards, hazards, decisions, cave/river mini games, and visible debug controls.
+   Expected: Japanese UI text consistently uses M PLUS Rounded 1c with a readable sans-serif fallback and no changed text, layout, or behavior.
+3. Inspect health bars in gameplay, battle, villages, damage flows, respawn, and boss flows in both languages.
+   Expected: Health bar text remains black and uses Unkempt rather than M PLUS Rounded 1c.
+4. Run the app locally with browser network tools open and inspect the computed font on Japanese text.
+   Expected: M PLUS Rounded 1c weights 400, 500, and 700 load once from the global Google Fonts request and are used by Japanese text.
+5. Repeat the network and computed-font inspection against the production build or deployed app.
+   Expected: The same global font request succeeds and Japanese text renders with M PLUS Rounded 1c.
+6. Inspect the browser console across the listed screens and language changes.
+   Expected: No font-loading or application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation `JapaneseFont.test.js` run failed all 3 focused checks for the expected old Noto Serif JP import, missing shared-button Japanese override, and stale local font stacks.
+* All 3 focused font contract tests pass, covering the single global M PLUS Rounded 1c import, existing `.language-jp` and `.language-en` behavior, shared-button and local fallbacks, removal of Noto Serif JP from affected styles, and the HealthBar Unkempt exception.
+* The affected StartPage, shared Button, and HealthBar regression suites pass in the combined run; together with the focused font suite, 29 checks passed.
+* Both existing AppMiniGames and GameplayPage Japanese language-style checks pass; 95 unrelated tests were skipped by the focused name filter.
+* The broader combined regression run retains 6 unrelated baseline failures in DiceRoll timing and ButtonAdoption inventory assertions; none assert font behavior or fail in changed production code.
+* Scoped ESLint passes for `JapaneseFont.test.js`; this project has no `npm run lint` script and the production changes are CSS-only.
+* `npm run build` compiles the optimized production build successfully and includes the updated global stylesheet.
+* A CSS audit finds no remaining Noto Serif JP declarations and confirms HealthBar remains explicitly Unkempt.
+
+Automated Tests Still Needed
+
+* None for the global font contract, existing language classes, local font overrides, HealthBar exception, English-font preservation, scoped lint, or production compilation.
+
+Manual Execution
+
+* Interactive visual coverage across every listed app area, computed-font inspection, local and production Google Fonts network loading, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Bug-001: Wandsmith should keep village background and show tokens as uncommitted
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Land on a Field Village and choose Wandsmith.
+   Expected: The Spells modal opens over the Field Village background; the generic gameplay sky, normal modal background, blank background, and Forest Village background are not shown.
+2. Land on a Forest Village and choose Wandsmith.
+   Expected: The Spells modal opens over the Forest Village background rather than any other background.
+3. Move an existing spell token to another column, within the same column, into the token bag, back to a column, and then move it again.
+   Expected: The token remains movable and uses uncommitted styling after every drop while Wandsmith remains open.
+4. Save the Wandsmith arrangement and accept the commit confirmation.
+   Expected: The arrangement is committed, Wandsmith closes, normal committed styling returns outside Wandsmith, the village visit ends, and the turn advances normally.
+5. Reopen Wandsmith, rearrange tokens, cancel, and confirm leaving.
+   Expected: The previous saved arrangement is restored, Wandsmith closes, and normal committed styling returns.
+6. Use Redo and open the ordinary Spells modal outside a village.
+   Expected: Existing Redo commit behavior is unchanged and ordinary gameplay continues to show the magical-night-sky background.
+7. Inspect the browser console throughout both village flows.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-fix focused reproduction failed all 3 cases as expected: Field and Forest Wandsmith sessions had no village background, and the first Wandsmith draft move changed the token to `committed: true`.
+* All 3 focused Bug-001 regressions pass for Field and Forest background preservation, suppression of the gameplay sky during Wandsmith, modal presence, repeated slot/bag moves, uncommitted draft state, and unchanged saved state.
+* The broader regression run passes 30 relevant tests across the complete spell helper suite, existing Redo semantics, Wandsmith modal localization, save/cancel flows, and ordinary gameplay sky rendering; 77 unrelated tests were skipped by the focused name filter.
+* Scoped ESLint passes for the changed production files and focused spell helper test; the project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+
+Automated Tests Still Needed
+
+* None for background selection, Wandsmith draft token state, saved-state isolation, Redo behavior, save/cancel regressions, scoped lint, or production compilation.
+
+Manual Execution
+
+* Interactive drag/drop, visual background and token-style inspection, complete save/cancel playthroughs, and browser-console inspection were not run during this automated pass and remain the manual checks above.
+
+---
+
+Bug-002: Wandsmith should stay in village route and not briefly show reward text or gameplay background
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Land on a village with an eligible reward, complete the reward flow, reach the village choice, and choose Wandsmith.
+   Expected: No previous rare-token or other reward text flashes, the route remains the village flow, and the turn does not end.
+2. Choose Wandsmith from a Field Village.
+   Expected: The existing Spells modal opens over the Field Village background without the board, gameplay sidebar, or magical-night-sky content underneath it.
+3. Repeat from a Forest Village.
+   Expected: The existing Spells modal opens over the Forest Village background and remains in the village flow.
+4. Save the Wandsmith arrangement and accept the confirmation.
+   Expected: Only then does Wandsmith close, the village visit complete, gameplay return, the next player become current, and the next-turn modal appear first.
+5. Reopen Wandsmith, select Cancel, and choose No.
+   Expected: The confirmation closes and the same Wandsmith session remains open on the village background without ending the turn.
+6. Select Cancel again and confirm Yes.
+   Expected: The saved arrangement is restored, the village visit completes, gameplay returns, and the next-turn modal is pending for the next player.
+7. Open ordinary gameplay and use Redo or the normal Spells modal.
+   Expected: Existing gameplay backgrounds, spell behavior, and Redo semantics remain unchanged.
+8. Inspect the browser console throughout the reward, choice, Wandsmith, and return flows.
+   Expected: No errors occur.
+
+Automated Tests Completed
+
+* The pre-fix Field and Forest reproductions both failed as expected because clicking Wandsmith immediately rendered the `/gameplay` destination with an active village visit and no Spells modal.
+* Both focused route-to-commit regressions pass for Field and Forest villages, including stable village backgrounds, no stale rare-token copy, no gameplay panel, modal presence, no premature navigation, post-confirmation turn advancement, cleared visit state, and pending next-turn modal.
+* The complete 12-test `VillagePage.test.jsx` suite passes, covering all village rewards, Japanese loot copy, action locks, Wandsmith commit and cancel routes, Rest, Leave, and turn progression.
+* The broader regression run passes 30 relevant spell helper, Wandsmith localization, saved-state, Redo, and ordinary gameplay-background tests; 77 unrelated tests were skipped by the focused name filter.
+* Scoped ESLint passes for `VillagePage.jsx`, `VillagePage.test.jsx`, and `GameplayPage.jsx`; the project has no `npm run lint` script.
+* `npm run build` compiles the optimized production build successfully.
+
+Automated Tests Still Needed
+
+* None for village-route ownership, Field/Forest background selection, stale reward-copy absence, hidden gameplay viewport, commit/cancel transitions, next-turn state, village regressions, scoped lint, or production compilation.
+
+Manual Execution
+
+* Frame-by-frame browser flash inspection, visual background/board confirmation, interactive drag/drop and save/cancel playthroughs, and browser-console inspection were not run during this automated pass and remain the manual checks above.

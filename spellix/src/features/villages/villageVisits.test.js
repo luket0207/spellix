@@ -1,9 +1,12 @@
 import {
+  advanceVillageVisitReward,
+  createVillageActionState,
   createVillageProgress,
   createVillageVisit,
   FIELD_VILLAGE,
   FOREST_VILLAGE,
   getDefeatedEliteTowerCount,
+  getNearestVillageDestination,
   getVillageIdFromDestination,
 } from './villageVisits';
 
@@ -41,6 +44,72 @@ test('identifies each generated village from its feature image', () => {
   expect(getVillageIdFromDestination(board, 'square-1-1')).toBeNull();
 });
 
+test('finds the nearest generated village by orthogonal distance to its footprint', () => {
+  const board = {
+    featureImages: [
+      { id: 'feature-1', imageName: 'village-field.png' },
+      { id: 'feature-2', imageName: 'village-forest.png' },
+    ],
+    squares: [
+      { featureId: 'feature-1', x: 2, y: 2 },
+      { featureId: 'feature-1', x: 3, y: 2 },
+      { featureId: 'feature-2', x: 9, y: 9 },
+      { featureId: 'feature-2', x: 10, y: 9 },
+    ],
+  };
+
+  expect(
+    getNearestVillageDestination(board, { x: 7, y: 9 })
+  ).toMatchObject({
+    destinationNodeId: 'board-feature-feature-2',
+    destinationSquare: { featureId: 'feature-2', x: 9, y: 9 },
+    villageId: FOREST_VILLAGE,
+  });
+});
+
+test('uses logical village identity and randomly resolves ties across all generated villages', () => {
+  const board = {
+    featureImages: [
+      { id: 'feature-1', imageName: 'village-field.png' },
+      { id: 'feature-2', imageName: 'village-forest.png' },
+      { id: 'feature-3', imageName: 'village-field.png' },
+      { id: 'feature-4', imageName: 'village-forest.png' },
+    ],
+    squares: [
+      { featureId: 'feature-1', x: 0, y: 2 },
+      { featureId: 'feature-2', x: 2, y: 0 },
+      { featureId: 'feature-3', x: 20, y: 20 },
+      { featureId: 'feature-4', x: 25, y: 25 },
+    ],
+  };
+
+  expect(
+    getNearestVillageDestination(board, { x: 0, y: 0 }, () => 0)
+      .destinationNodeId
+  ).toBe('board-feature-feature-1');
+  expect(
+    getNearestVillageDestination(board, { x: 0, y: 0 }, () => 0.999999)
+      .destinationNodeId
+  ).toBe('board-feature-feature-2');
+  expect(
+    getNearestVillageDestination(board, {
+      featureId: 'board-feature-feature-4',
+      type: 'feature',
+      x: 0,
+      y: 0,
+    }).destinationNodeId
+  ).toBe('board-feature-feature-4');
+});
+
+test('returns no SOS destination when the board has no generated villages', () => {
+  expect(
+    getNearestVillageDestination(
+      { featureImages: [], squares: [] },
+      { x: 0, y: 0 }
+    )
+  ).toBeNull();
+});
+
 test('counts only the current player elite tower victories', () => {
   expect(getDefeatedEliteTowerCount(createPlayer())).toBe(0);
   expect(
@@ -65,7 +134,7 @@ test('counts only the current player elite tower victories', () => {
   ).toBe(2);
 });
 
-test('offers only the current village tier and skips a claimed tier', () => {
+test('offers each village-type Loot Chest once for the current player', () => {
   const firstVisit = createVillageVisit({
     assignments,
     player: createPlayer(),
@@ -75,7 +144,7 @@ test('offers only the current village tier and skips a claimed tier', () => {
     assignments,
     player: createPlayer({
       villageProgress: createVillageProgress({
-        [FIELD_VILLAGE]: { claimedEliteCounts: [0] },
+        fieldVillageLootClaimed: true,
       }),
     }),
     villageId: FIELD_VILLAGE,
@@ -84,61 +153,96 @@ test('offers only the current village tier and skips a claimed tier', () => {
   expect(firstVisit).toMatchObject({
     defeatedEliteCount: 0,
     phase: 'reward',
+    rewardClaimKey: 'fieldVillageLootClaimed',
     rewardType: 'lootChest',
   });
   expect(repeatedVisit).toMatchObject({
     defeatedEliteCount: 0,
-    phase: 'heal',
+    phase: 'choice',
     rewardType: null,
   });
 });
 
-test('does not backfill missed rewards and tracks villages independently', () => {
+test('queues village Loot, first-Elite common, and second-Elite rare rewards in order', () => {
   const player = createPlayer({
     eliteProgress: {
       eliteTowerGravel: true,
       eliteTowerWoods: true,
     },
-    villageProgress: createVillageProgress({
-      [FIELD_VILLAGE]: { claimedEliteCounts: [2] },
-    }),
+  });
+  const visit = createVillageVisit({
+    assignments,
+    player,
+    randomFn: () => 0,
+    villageId: FOREST_VILLAGE,
   });
 
-  expect(
-    createVillageVisit({
-      assignments,
-      player,
-      randomFn: () => 0,
-      villageId: FIELD_VILLAGE,
-    })
-  ).toMatchObject({ phase: 'heal', rewardType: null });
-  expect(
-    createVillageVisit({
-      assignments,
-      player,
-      randomFn: () => 0,
-      villageId: FOREST_VILLAGE,
-    })
-  ).toMatchObject({
+  expect(visit).toMatchObject({
     defeatedEliteCount: 2,
     phase: 'reward',
+    rewardClaimKey: 'forestVillageLootClaimed',
+    rewardType: 'lootChest',
+  });
+  expect(visit.pendingRewards).toHaveLength(2);
+  expect(visit.pendingRewards[0]).toMatchObject({
+    rewardClaimKey: 'firstEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Common' },
+    rewardType: 'token',
+  });
+  expect(visit.pendingRewards[1]).toMatchObject({
+    rewardClaimKey: 'secondEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Rare' },
     rewardType: 'token',
   });
 });
 
-test('locks the defeated enemy and generates potion and token rewards', () => {
-  const potionVisit = createVillageVisit({
+test('offers each Elite reward once regardless of village type', () => {
+  const commonVisit = createVillageVisit({
     assignments,
     player: createPlayer({
       eliteProgress: {
         eliteTowerGravel: true,
         eliteTowerWoods: false,
       },
+      villageProgress: createVillageProgress({
+        fieldVillageLootClaimed: true,
+      }),
     }),
     randomFn: () => 0,
     villageId: FIELD_VILLAGE,
   });
-  const tokenVisit = createVillageVisit({
+  const rareVisit = createVillageVisit({
+    assignments,
+    player: createPlayer({
+      eliteProgress: {
+        eliteTowerGravel: true,
+        eliteTowerWoods: true,
+      },
+      villageProgress: createVillageProgress({
+        firstEliteVillageRewardClaimed: true,
+        forestVillageLootClaimed: true,
+      }),
+    }),
+    randomFn: () => 0,
+    villageId: FOREST_VILLAGE,
+  });
+
+  expect(commonVisit).toMatchObject({
+    defeatedEnemyId: 'crowned-lichlord',
+    rewardClaimKey: 'firstEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Common' },
+    rewardType: 'token',
+  });
+  expect(rareVisit).toMatchObject({
+    defeatedEnemyId: null,
+    rewardClaimKey: 'secondEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Rare' },
+    rewardType: 'token',
+  });
+});
+
+test('advances queued rewards before the village action choice', () => {
+  const visit = createVillageVisit({
     assignments,
     player: createPlayer({
       eliteProgress: {
@@ -147,17 +251,71 @@ test('locks the defeated enemy and generates potion and token rewards', () => {
       },
     }),
     randomFn: () => 0,
-    villageId: FOREST_VILLAGE,
+    villageId: FIELD_VILLAGE,
+  });
+  const commonRewardVisit = advanceVillageVisitReward(visit);
+  const rareRewardVisit = advanceVillageVisitReward(commonRewardVisit);
+  const choiceVisit = advanceVillageVisitReward(rareRewardVisit);
+
+  expect(commonRewardVisit).toMatchObject({
+    phase: 'reward',
+    rewardClaimKey: 'firstEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Common' },
+  });
+  expect(rareRewardVisit).toMatchObject({
+    phase: 'reward',
+    rewardClaimKey: 'secondEliteVillageRewardClaimed',
+    rewardItem: { rarity: 'Rare' },
+  });
+  expect(choiceVisit).toMatchObject({
+    phase: 'choice',
+    rewardClaimKey: null,
+    rewardItem: null,
+    rewardType: null,
+  });
+});
+
+test('keeps the physical village identity separate from its reward type', () => {
+  const visit = createVillageVisit({
+    assignments,
+    player: createPlayer(),
+    villageFeatureId: 'board-feature-village-field-2',
+    villageId: FIELD_VILLAGE,
   });
 
-  expect(potionVisit).toMatchObject({
-    defeatedEnemyId: 'crowned-lichlord',
-    rewardType: 'potion',
+  expect(visit).toMatchObject({
+    villageFeatureId: 'board-feature-village-field-2',
+    villageId: FIELD_VILLAGE,
   });
-  expect(potionVisit.rewardItem).toBeTruthy();
-  expect(tokenVisit).toMatchObject({
-    defeatedEnemyId: null,
-    rewardType: 'token',
+});
+
+test('normalizes village action locks without sharing mutable state', () => {
+  const existingState = {
+    currentVillageLockId: 'board-feature-village-field-1',
+    usedActionsForCurrentVillage: {
+      rest: true,
+      wandsmith: false,
+    },
+  };
+  const actionState = createVillageActionState(existingState);
+
+  expect(actionState).toEqual(existingState);
+  expect(actionState).not.toBe(existingState);
+  expect(actionState.usedActionsForCurrentVillage).not.toBe(
+    existingState.usedActionsForCurrentVillage
+  );
+});
+
+test('migrates legacy claims into lifetime per-player reward flags', () => {
+  expect(
+    createVillageProgress({
+      [FIELD_VILLAGE]: { claimedEliteCounts: [0, 1] },
+      [FOREST_VILLAGE]: { claimedEliteCounts: [0, 2] },
+    })
+  ).toEqual({
+    fieldVillageLootClaimed: true,
+    firstEliteVillageRewardClaimed: true,
+    forestVillageLootClaimed: true,
+    secondEliteVillageRewardClaimed: true,
   });
-  expect(tokenVisit.rewardItem).toBeTruthy();
 });

@@ -37,6 +37,8 @@
 .modal-panel--spells {
   width: max-content;
   max-width: calc(100vw - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .spell-modal-actions {

@@ -1,7 +1,27 @@
+import { readFileSync } from 'fs';
 import { render, screen } from '@testing-library/react';
 import HealthBar from './HealthBar';
 
 describe('HealthBar', () => {
+  test('enforces black Unkempt text without page-level colour overrides', () => {
+    const sharedStylesheet = readFileSync(`${__dirname}/HealthBar.css`, 'utf8');
+    const healthTextRule = sharedStylesheet.match(
+      /\.health-bar-text\s*\{([^}]*)\}/
+    )?.[1];
+    const miniGameStylesheet = readFileSync(
+      `${__dirname}/../../pages/MiniGames/MiniGameResultPage.css`,
+      'utf8'
+    );
+
+    expect(healthTextRule).toMatch(/color:\s*(?:black|#000)/i);
+    expect(healthTextRule).toMatch(
+      /font-family:\s*['"]Unkempt['"],\s*cursive/i
+    );
+    expect(miniGameStylesheet).not.toMatch(
+      /\.health-bar-text\s*\{[^}]*color\s*:/s
+    );
+  });
+
   test('renders the current and max health with a clamped percentage for variable max health', () => {
     const { container, rerender } = render(<HealthBar currentHealth={75} maxHealth={150} />);
     const meter = screen.getByRole('meter', { name: /health bar/i });

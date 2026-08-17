@@ -278,7 +278,7 @@ describe('StartPage', () => {
       /\.start-page-button--secondary\s*{[^}]*background:\s*#D8C79A;[^}]*font-size:\s*18px;[^}]*min-height:\s*52px;[^}]*width:\s*min\(270px,\s*calc\(100vw - 32px\)\);/s
     );
     expect(stylesheet).toMatch(
-      /\.start-page-button \.language-jp\s*{[^}]*font-family:\s*'Noto Serif JP',\s*serif;/s
+      /\.start-page-button \.language-jp\s*{[^}]*font-family:\s*'M PLUS Rounded 1c',\s*sans-serif;/s
     );
     expect(stylesheet).toMatch(
       /@media \(max-width:\s*480px\)\s*{[\s\S]*\.start-page-button--primary\s*{[^}]*font-size:\s*clamp\(14px,\s*6vw,\s*24px\);[\s\S]*\.start-page-button--secondary\s*{[^}]*font-size:\s*clamp\(14px,\s*5vw,\s*18px\);/s

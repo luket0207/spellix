@@ -1,11 +1,10 @@
 import { StrictMode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import {
   MemoryRouter,
   Route,
   Routes,
 } from 'react-router-dom';
-import { POTION_DEFINITIONS } from '../data/potions';
 import { TOKEN_DEFINITIONS } from '../data/tokens';
 import {
   GameSetupProvider,
@@ -34,8 +33,10 @@ function DestinationProbe({ label }) {
 }
 
 function createVillageSetup({
+  actionState = null,
   language = 'en',
   phase = 'reward',
+  rewardClaimKey = null,
   rewardItem = null,
   rewardType = 'lootChest',
   villageId = FIELD_VILLAGE,
@@ -47,6 +48,9 @@ function createVillageSetup({
   setup.players[0].position = { x: 4, y: 4 };
   setup.players[1].position = { x: 5, y: 5 };
   setup.turnOrder = ['player-1', 'player-2'];
+  if (actionState) {
+    setup.players[0].villageActionState = actionState;
+  }
   setup.villageVisit = {
     defeatedEliteCount:
       rewardType === 'potion' ? 1 : rewardType === 'token' ? 2 : 0,
@@ -55,7 +59,9 @@ function createVillageSetup({
     phase,
     playerId: 'player-1',
     rewardItem,
+    rewardClaimKey,
     rewardType,
+    villageFeatureId: 'board-feature-village-field-1',
     villageId,
   };
 
@@ -110,13 +116,16 @@ test('opens the existing Loot Chest flow over the Field Village background', () 
   expect(screen.getByText('Mini game: villageLootChest')).toBeInTheDocument();
 });
 
-test('shows the defeated enemy and starts the existing potion reward flow', () => {
-  renderVillage(
-    createVillageSetup({
-      rewardItem: POTION_DEFINITIONS[0],
-      rewardType: 'potion',
-    })
-  );
+test('shows the defeated enemy and starts the common token reward flow', () => {
+  const setup = createVillageSetup({
+    rewardClaimKey: 'firstEliteVillageRewardClaimed',
+    rewardItem: { type: 'red', ...TOKEN_DEFINITIONS.red },
+    rewardType: 'token',
+  });
+
+  setup.villageVisit.defeatedEliteCount = 1;
+  setup.villageVisit.defeatedEnemyId = 'crowned-lichlord';
+  renderVillage(setup);
 
   expect(
     screen.getByText(
@@ -134,6 +143,7 @@ test('shows the random token with its name over the Forest Village background', 
   renderVillage(
     createVillageSetup({
       rewardItem: { type: 'red', ...TOKEN_DEFINITIONS.red },
+      rewardClaimKey: 'secondEliteVillageRewardClaimed',
       rewardType: 'token',
       villageId: FOREST_VILLAGE,
     })
@@ -168,16 +178,205 @@ test('uses the required Japanese village loot copy', () => {
   ).toHaveClass('language-jp');
 });
 
+test('shows all village actions after rewards with Leave as the secondary action', () => {
+  renderVillage(
+    createVillageSetup({
+      phase: 'choice',
+      rewardType: null,
+    })
+  );
+
+  expect(
+    screen.getByText('What would you like to do on your visit to the village?')
+  ).toHaveClass('larger-text', 'language-en');
+  expect(screen.getByRole('button', { name: 'Rest' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Wandsmith' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Leave' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Leave' })).toHaveClass(
+    'fantasy-button--secondary'
+  );
+  expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+});
+
+test('disables used same-village actions but never disables Leave', () => {
+  renderVillage(
+    createVillageSetup({
+      actionState: {
+        currentVillageLockId: 'board-feature-village-field-1',
+        usedActionsForCurrentVillage: {
+          rest: true,
+          wandsmith: true,
+        },
+      },
+      phase: 'choice',
+      rewardType: null,
+    })
+  );
+
+  expect(screen.getByRole('button', { name: 'Rest' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Wandsmith' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Leave' })).toBeEnabled();
+});
+
+test.each([
+  [FIELD_VILLAGE, 'field-village.png'],
+  [FOREST_VILLAGE, 'forest-village.png'],
+])(
+  'keeps the %s Wandsmith flow on the village route until commit',
+  (villageId, backgroundImageName) => {
+    const setup = createVillageSetup({
+      phase: 'choice',
+      rewardType: null,
+      villageId,
+    });
+
+    setup.players[0].hasCommittedInitialSpells = true;
+    renderVillage(setup);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wandsmith' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Spells' });
+
+    expect(screen.queryByText('Gameplay destination')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Gameplay panel')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'Wow, you really are powerful. Now you have defeated both of the towers, take this to help you defeat the main boss in his castle, north east of here.'
+      )
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('main').style.backgroundImage).toContain(
+      backgroundImageName
+    );
+    expect(
+      within(dialog).getByText(
+        'The Wandsmith helps you arrange your tokens however you wish.'
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /save spells confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(screen.getByText('Gameplay destination')).toBeInTheDocument();
+    expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+    expect(screen.getByText('Next turn modal: true')).toBeInTheDocument();
+    expect(screen.getByText('Visit active: no')).toBeInTheDocument();
+  }
+);
+
+test('keeps Wandsmith on the village route until cancel is confirmed', () => {
+  const setup = createVillageSetup({
+    phase: 'choice',
+    rewardType: null,
+  });
+
+  setup.players[0].hasCommittedInitialSpells = true;
+  renderVillage(setup);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Wandsmith' }));
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: 'Spells' })).getByRole('button', {
+      name: 'Cancel',
+    })
+  );
+
+  let confirmation = screen.getByRole('dialog', {
+    name: /cancel spells confirmation/i,
+  });
+
+  fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
+
+  expect(screen.queryByText('Gameplay destination')).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Spells' })).toBeInTheDocument();
+
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: 'Spells' })).getByRole('button', {
+      name: 'Cancel',
+    })
+  );
+  confirmation = screen.getByRole('dialog', {
+    name: /cancel spells confirmation/i,
+  });
+  fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+  expect(screen.getByText('Gameplay destination')).toBeInTheDocument();
+  expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Next turn modal: true')).toBeInTheDocument();
+  expect(screen.getByText('Visit active: no')).toBeInTheDocument();
+});
+
+test.each([
+  {
+    choice: 'What would you like to do on your visit to the village?',
+    language: 'en',
+    leave: 'Leave',
+    message: 'You left the village',
+    rest: 'Rest',
+    wandsmith: 'Wandsmith',
+  },
+  {
+    choice:
+      '\u6751\u3092\u8a2a\u308c\u3066\u3044\u308b\u9593\u3001\u4f55\u3092\u3057\u307e\u3059\u304b\uff1f',
+    language: 'jp',
+    leave: '\u51fa\u767a\u3059\u308b',
+    message: '\u6751\u3092\u51fa\u307e\u3057\u305f\u3002',
+    rest: '\u4f11\u3080',
+    wandsmith: '\u6756\u8077\u4eba',
+  },
+])('shows the localized Leave result before ending the turn in $language', ({
+  choice,
+  language,
+  leave,
+  message,
+  rest,
+  wandsmith,
+}) => {
+  renderVillage(
+    createVillageSetup({
+      language,
+      phase: 'choice',
+      rewardType: null,
+    })
+  );
+
+  expect(screen.getByText(choice)).toHaveClass(`language-${language}`);
+  expect(screen.getByRole('button', { name: rest })).toBeEnabled();
+  expect(screen.getByRole('button', { name: wandsmith })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: leave }));
+
+  expect(screen.getByText(message)).toHaveClass(
+    'larger-text',
+    `language-${language}`
+  );
+  expect(screen.queryByText('Gameplay destination')).not.toBeInTheDocument();
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: language === 'jp' ? '\u7d9a\u3051\u308b' : 'Continue',
+    })
+  );
+
+  expect(screen.getByText('Gameplay destination')).toBeInTheDocument();
+  expect(screen.getByText('Current player: player-2')).toBeInTheDocument();
+  expect(screen.getByText('Next turn modal: true')).toBeInTheDocument();
+});
+
 test('heals the locked player after one second before advancing the turn', () => {
   jest.useFakeTimers();
   const setup = createVillageSetup({
-    phase: 'heal',
+    phase: 'choice',
     rewardType: null,
   });
 
   setup.players[0].currentHealth = 0;
   setup.players[0].diedLastTurn = true;
   renderVillage(setup, true);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rest' }));
 
   const continueButton = screen.getByRole('button', { name: 'Continue' });
 

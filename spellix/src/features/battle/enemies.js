@@ -45,7 +45,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'VR.png',
     japaneseName: '毒ヒゲネズミ',
     level: 1,
-    maxHealth: 20,
+    maxHealth: 25,
     spellSlots: [
       createMissSlot(),
       createTokenSlot(createSpellEntry('orange', 1)),
@@ -61,7 +61,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'EI.png',
     japaneseName: '火角インプ',
     level: 1,
-    maxHealth: 20,
+    maxHealth: 25,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 2)),
       createMissSlot(),
@@ -77,7 +77,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'BA.png',
     japaneseName: '骨衣の使徒',
     level: 1,
-    maxHealth: 20,
+    maxHealth: 25,
     spellSlots: [
       createTokenSlot(createSpellEntry('green', 1)),
       createTokenSlot(createSpellEntry('blue', 1)),
@@ -93,7 +93,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'NR.png',
     japaneseName: '夜羽ガラス',
     level: 1,
-    maxHealth: 20,
+    maxHealth: 25,
     spellSlots: [
       createTokenSlot(createSpellEntry('blue', 1)),
       createTokenSlot(createSpellEntry('red', 1)),
@@ -109,7 +109,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'FG.png',
     japaneseName: '薬瓶ゴブリン',
     level: 1,
-    maxHealth: 20,
+    maxHealth: 25,
     spellSlots: [
       createMissSlot(),
       createTokenSlot(createSpellEntry('red', 1)),
@@ -125,7 +125,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'HH.png',
     japaneseName: '呪牙の魔女',
     level: 2,
-    maxHealth: 30,
+    maxHealth: 35,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 1)),
       createTokenSlot(createSpellEntry('purple', 2)),
@@ -141,7 +141,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'RW.png',
     japaneseName: '魔紋狼',
     level: 2,
-    maxHealth: 30,
+    maxHealth: 35,
     spellSlots: [
       createTokenSlot(createSpellEntry('orange', 2)),
       createTokenSlot(createSpellEntry('blue', 1), createSpellEntry('orange', 2)),
@@ -157,7 +157,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'FS.png',
     japaneseName: '氷霊ウィスプ',
     level: 2,
-    maxHealth: 30,
+    maxHealth: 35,
     spellSlots: [
       createMissSlot(),
       createTokenSlot(createSpellEntry('blue', 1), createSpellEntry('orange', 1)),
@@ -173,7 +173,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'HS.png',
     japaneseName: '腐れ案山子',
     level: 2,
-    maxHealth: 30,
+    maxHealth: 35,
     spellSlots: [
       createTokenSlot(createSpellEntry('blue', 1), createSpellEntry('green', 1)),
       createTokenSlot(createSpellEntry('red', 1)),
@@ -189,7 +189,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'WB.png',
     japaneseName: 'イボ背の巨漢',
     level: 2,
-    maxHealth: 30,
+    maxHealth: 35,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 3)),
       createTokenSlot(createSpellEntry('green', 1)),
@@ -205,7 +205,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'GN.png',
     japaneseName: '墓歌の屍術師',
     level: 3,
-    maxHealth: 45,
+    maxHealth: 50,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 1)),
       createTokenSlot(createSpellEntry('purple', 3), createSpellEntry('green', 1)),
@@ -221,7 +221,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'DK.png',
     japaneseName: '恐鋼の騎士',
     level: 3,
-    maxHealth: 45,
+    maxHealth: 50,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 4)),
       createMissSlot(),
@@ -237,7 +237,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'SW.png',
     japaneseName: '髑髏棍の戦王',
     level: 3,
-    maxHealth: 45,
+    maxHealth: 50,
     spellSlots: [
       createTokenSlot(createSpellEntry('blue', 2), createSpellEntry('orange', 1)),
       createTokenSlot(createSpellEntry('green', 1), createSpellEntry('orange', 2)),
@@ -253,7 +253,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'VS.png',
     japaneseName: '毒紋の大蛇',
     level: 3,
-    maxHealth: 45,
+    maxHealth: 50,
     spellSlots: [
       createTokenSlot(createSpellEntry('light-blue', 2)),
       createTokenSlot(createSpellEntry('orange', 1), createSpellEntry('green', 1)),
@@ -269,7 +269,7 @@ const ENEMY_DEFINITIONS = [
     imageFileName: 'CD.png',
     japaneseName: '炎灰の悪魔',
     level: 3,
-    maxHealth: 45,
+    maxHealth: 50,
     spellSlots: [
       createTokenSlot(createSpellEntry('red', 2), createSpellEntry('orange', 1)),
       createTokenSlot(createSpellEntry('yellow', 1)),

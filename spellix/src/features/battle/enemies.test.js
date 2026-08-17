@@ -113,9 +113,9 @@ describe('battle enemy data', () => {
   });
 
   test.each([
-    [1, 20],
-    [2, 30],
-    [3, 45],
+    [1, 25],
+    [2, 35],
+    [3, 50],
     [4, 85],
   ])('gives every level %i enemy %i starting health', (level, health) => {
     getEnemiesForLevel(level).forEach((enemy) => {

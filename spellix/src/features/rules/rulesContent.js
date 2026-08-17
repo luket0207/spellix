@@ -49,6 +49,17 @@ export const RULES_CONTENT = {
           'The boss castle is in the north east. If you enter before defeating both Elite Towers, you are struck down. If you have defeated both Elite Towers, you may fight the final boss. Defeat the boss to win the game.',
         ],
       },
+      {
+        heading: 'Village Actions',
+        paragraphs: [
+          'When you visit a village, you can choose what to do there.',
+          'Rest lets you recover your health before continuing your journey.',
+          'Wandsmith lets you rearrange your spell tokens. Once your tokens are committed, they normally cannot be moved unless you use a Wandsmith or certain potions.',
+          'Leave lets you leave the village without resting or using the Wandsmith.',
+          'If you visit the same village again without visiting another feature first, the option you chose last time may be disabled. Rest and Wandsmith can become disabled this way. Leave is always available.',
+          'These options reset when you visit another feature, visit a different village, or die and respawn.',
+        ],
+      },
     ],
   },
   jp: {
@@ -99,6 +110,17 @@ export const RULES_CONTENT = {
           '村はプレイヤーを助けてくれる場所です。村を訪れるとHPが全回復します。また、エリートタワーの攻略状況に応じて報酬をもらえることがあります。',
           'エリートタワーは特別なバトル地点です。それぞれの塔には強力な敵がいます。最後のボスに挑むには、両方のエリートタワーを攻略する必要があります。',
           'ボスの城は北東にあります。両方のエリートタワーを攻略する前に入ると、強大な力に打ち倒されます。両方のエリートタワーを攻略していれば、最後のボスに挑戦できます。ボスを倒すとゲームに勝利します。',
+        ],
+      },
+      {
+        heading: '村でできること',
+        paragraphs: [
+          '村を訪れると、そこで何をするかを選べます。',
+          '休むを選ぶと、冒険を続ける前にHPを回復できます。',
+          '杖職人を選ぶと、スペルトークンを並べ替えることができます。一度トークンを確定すると、通常は杖職人や一部のポーションを使わない限り動かせません。',
+          '出発するを選ぶと、休んだり杖職人を使ったりせずに村を出ます。',
+          '別の特徴マスを訪れずに同じ村を再び訪れた場合、前回選んだ選択肢が無効になることがあります。休むと杖職人はこの条件で無効になることがあります。出発するは常に選べます。',
+          'これらの選択肢は、別の特徴マスを訪れる、別の村を訪れる、または死亡してリスポーンすると再び選べるようになります。',
         ],
       },
     ],

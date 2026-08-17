@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'fs';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { getPlayerPieceImageName } from '../gameSetup/pieceImages';
 import BoardGrid from './BoardGrid';
 
@@ -61,6 +62,22 @@ function createBoardWithFeatureImages() {
         width: 2,
         height: 2,
       },
+      {
+        id: 'feature-3',
+        imageName: 'village-field.png',
+        x: 4,
+        y: 16,
+        width: 2,
+        height: 2,
+      },
+      {
+        id: 'feature-4',
+        imageName: 'village-forest.png',
+        x: 24,
+        y: 12,
+        width: 2,
+        height: 2,
+      },
     ],
     height: 31,
     squares: Array.from({ length: 31 * 31 }, (_, index) => {
@@ -76,7 +93,11 @@ function createBoardWithFeatureImages() {
             ? 'feature-1'
             : x >= 20 && x <= 21 && y >= 8 && y <= 9
               ? 'feature-2'
-              : null,
+              : x >= 4 && x <= 5 && y >= 16 && y <= 17
+                ? 'feature-3'
+                : x >= 24 && x <= 25 && y >= 12 && y <= 13
+                  ? 'feature-4'
+                  : null,
         id: `square-${x}-${y}`,
         isFixedArea: false,
         section: y >= x ? 'easy' : 'hard',
@@ -293,18 +314,21 @@ describe('BoardGrid feature images', () => {
 
     const featureImages = screen.getAllByRole('img', { name: /board feature/i });
 
-    expect(featureImages).toHaveLength(6);
+    expect(featureImages).toHaveLength(8);
     [
       'home.png',
       'elite-tower-gravel.png',
       'elite-tower-woods.png',
       'boss-castle.png',
-      'village-field.png',
-      'village-forest.png',
     ].forEach((imageName) => {
       expect(
         featureImages.filter((image) => image.getAttribute('src').includes(imageName))
       ).toHaveLength(1);
+    });
+    ['village-field.png', 'village-forest.png'].forEach((imageName) => {
+      expect(
+        featureImages.filter((image) => image.getAttribute('src').includes(imageName))
+      ).toHaveLength(2);
     });
   });
 
@@ -403,4 +427,113 @@ describe('BoardGrid feature images', () => {
     });
   });
 
+});
+
+describe('BoardGrid movement destination hover labels', () => {
+  test('shows a highlighted environment label opposite the hovered board half', () => {
+    const board = {
+      ...createBoard(),
+      height: 10,
+      squares: [
+        {
+          ...createBoard().squares[0],
+          environmentType: 'field',
+          id: 'square-4-4',
+          x: 4,
+          y: 4,
+        },
+        {
+          ...createBoard().squares[0],
+          environmentType: 'hills',
+          id: 'square-4-5',
+          x: 4,
+          y: 5,
+        },
+      ],
+    };
+
+    render(
+      <BoardGrid
+        board={board}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={['square-4-4']}
+        language="en"
+        onSquareClick={() => {}}
+        players={[]}
+        showHoverLabels
+      />
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 4, 5' }));
+    expect(screen.queryByText('Hills')).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 4, 4' }));
+    expect(screen.getByText('Field')).toHaveClass(
+      'board-hover-label',
+      'board-hover-label--bottom',
+      'larger-text',
+      'language-en'
+    );
+
+    fireEvent.mouseLeave(screen.getByRole('button', { name: 'Square 4, 4' }));
+    expect(screen.queryByText('Field')).not.toBeInTheDocument();
+  });
+
+  test('shows one localized feature label from any highlighted footprint cell', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={['board-feature-feature-1']}
+        language="jp"
+        onSquareClick={() => {}}
+        players={[]}
+        showHoverLabels
+      />
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 8, 20' }));
+    expect(screen.getByText('\u6751')).toHaveClass(
+      'board-hover-label--top',
+      'larger-text',
+      'language-jp'
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 9, 21' }));
+    expect(screen.getAllByText('\u6751')).toHaveLength(1);
+  });
+
+  test('hides the label when movement hover labels are disabled', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={['boss-battle']}
+        language="en"
+        onSquareClick={() => {}}
+        players={[]}
+        showHoverLabels={false}
+      />
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 29, 0' }));
+    expect(screen.queryByText('Boss Battle')).not.toBeInTheDocument();
+  });
+
+  test('positions the non-interactive label in the existing board color style', () => {
+    const stylesheet = readFileSync(`${__dirname}/BoardGrid.css`, 'utf8');
+
+    expect(stylesheet).toMatch(
+      /\.board-hover-label\s*{[^}]*position:\s*absolute;[^}]*left:\s*50%;[^}]*transform:\s*translateX\(-50%\);[^}]*background:\s*#3a2013;[^}]*color:\s*#F5FA00;[^}]*padding:\s*12px 24px;[^}]*border-radius:\s*10px;[^}]*z-index:\s*20;[^}]*pointer-events:\s*none;[^}]*text-align:\s*center;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.board-hover-label--top\s*{[^}]*top:\s*50px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.board-hover-label--bottom\s*{[^}]*bottom:\s*50px;/s
+    );
+  });
 });

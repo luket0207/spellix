@@ -94,14 +94,14 @@ export const WATER_ENVIRONMENT_CONFIGS = [
 ];
 
 const FEATURE_AREA_CONFIGS = [
-  { section: 'easy', count: 1 },
-  { section: 'hard', count: 1 },
+  { section: 'easy', count: 2 },
+  { section: 'hard', count: 2 },
 ];
 const FEATURE_AREA_WIDTH = 2;
 const FEATURE_AREA_HEIGHT = 2;
-const FEATURE_AREA_EDGE_INSET = 7;
-const FEATURE_AREA_MINIMUM_SQUARE_DISTANCE = 7;
-const FEATURE_AREA_MAXIMUM_RANDOM_ATTEMPTS = 50;
+const FEATURE_AREA_EDGE_INSET = 3;
+const FEATURE_AREA_MINIMUM_SQUARE_DISTANCE = 12;
+const FEATURE_AREA_MAXIMUM_PLACEMENT_ATTEMPTS = 50000;
 const EASY_SECTION_MINIMUM_WOODS_SQUARES = 150;
 const HARD_SECTION_MINIMUM_FOREST_SQUARES = 150;
 
@@ -375,8 +375,8 @@ export function selectPreferredWaterCandidate(candidates, squareLookup, config, 
 }
 
 function getSquareDistance(firstSquare, secondSquare) {
-  return Math.max(
-    Math.abs(firstSquare.x - secondSquare.x),
+  return (
+    Math.abs(firstSquare.x - secondSquare.x) +
     Math.abs(firstSquare.y - secondSquare.y)
   );
 }
@@ -430,9 +430,12 @@ function canPlaceFeatureArea(candidateSquares, section, fixedSquares, placedFeat
 function createFeatureAreas(squares, randomFn) {
   const squareLookup = new Map(squares.map((square) => [getSquareKey(square.x, square.y), square]));
   const fixedSquares = squares.filter((square) => square.isFixedArea);
-  const placedFeatures = [];
+  const placementConfigs = FEATURE_AREA_CONFIGS.flatMap((config) =>
+    Array.from({ length: config.count }, () => ({ section: config.section }))
+  );
+  const candidateOriginsBySection = new Map();
 
-  FEATURE_AREA_CONFIGS.forEach((config) => {
+  FEATURE_AREA_CONFIGS.forEach(({ section }) => {
     const candidateOrigins = [];
 
     for (let y = FEATURE_AREA_EDGE_INSET; y <= BOARD_HEIGHT - FEATURE_AREA_HEIGHT - FEATURE_AREA_EDGE_INSET; y += 1) {
@@ -441,75 +444,108 @@ function createFeatureAreas(squares, randomFn) {
 
         if (
           candidateSquares.every(Boolean) &&
-          candidateSquares.every((square) => square.section === config.section)
+          candidateSquares.every((square) => square.section === section)
         ) {
           candidateOrigins.push({ x, y });
         }
       }
     }
 
-    for (let featureIndex = 0; featureIndex < config.count && candidateOrigins.length > 0; featureIndex += 1) {
-      let selectedOrigin = null;
-      let attemptCount = 0;
+    for (let index = candidateOrigins.length - 1; index > 0; index -= 1) {
+      const swapIndex = getRandomInteger(0, index, randomFn);
+      [candidateOrigins[index], candidateOrigins[swapIndex]] = [
+        candidateOrigins[swapIndex],
+        candidateOrigins[index],
+      ];
+    }
 
-      while (
-        candidateOrigins.length > 0 &&
-        !selectedOrigin &&
-        attemptCount < FEATURE_AREA_MAXIMUM_RANDOM_ATTEMPTS
+    candidateOriginsBySection.set(section, candidateOrigins);
+  });
+
+  let placementAttempts = 0;
+
+  function findFeaturePlacements(configIndex, placedFeatures) {
+    if (configIndex >= placementConfigs.length) {
+      return placedFeatures;
+    }
+
+    const config = placementConfigs[configIndex];
+    const candidateOrigins = candidateOriginsBySection.get(config.section) ?? [];
+
+    for (const candidateOrigin of candidateOrigins) {
+      placementAttempts += 1;
+
+      if (placementAttempts > FEATURE_AREA_MAXIMUM_PLACEMENT_ATTEMPTS) {
+        return null;
+      }
+
+      const candidateSquares = getFeatureSquares(
+        candidateOrigin.x,
+        candidateOrigin.y,
+        squareLookup
+      );
+
+      if (
+        !canPlaceFeatureArea(
+          candidateSquares,
+          config.section,
+          fixedSquares,
+          placedFeatures
+        )
       ) {
-        attemptCount += 1;
-        const candidateIndex = getRandomInteger(0, candidateOrigins.length - 1, randomFn);
-        const candidateOrigin = candidateOrigins.splice(candidateIndex, 1)[0];
-        const candidateSquares = getFeatureSquares(candidateOrigin.x, candidateOrigin.y, squareLookup);
-
-        if (canPlaceFeatureArea(candidateSquares, config.section, fixedSquares, placedFeatures)) {
-          selectedOrigin = candidateOrigin;
-        }
-      }
-
-      if (!selectedOrigin) {
-        const fallbackIndex = candidateOrigins.findIndex((candidateOrigin) =>
-          canPlaceFeatureArea(
-            getFeatureSquares(candidateOrigin.x, candidateOrigin.y, squareLookup),
-            config.section,
-            fixedSquares,
-            placedFeatures
-          )
-        );
-
-        if (fallbackIndex >= 0) {
-          selectedOrigin = candidateOrigins.splice(fallbackIndex, 1)[0];
-        }
-      }
-
-      if (!selectedOrigin) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`Unable to place a valid ${config.section} board feature.`);
-        }
-
         continue;
       }
 
-      const candidateSquares = getFeatureSquares(selectedOrigin.x, selectedOrigin.y, squareLookup);
-      const feature = {
-        id: `feature-${placedFeatures.length + 1}`,
-        x: selectedOrigin.x,
-        y: selectedOrigin.y,
-        width: FEATURE_AREA_WIDTH,
-        height: FEATURE_AREA_HEIGHT,
+      const nextFeature = {
+        x: candidateOrigin.x,
+        y: candidateOrigin.y,
         section: config.section,
-        areaType: 'feature',
         squares: candidateSquares,
       };
+      const result = findFeaturePlacements(configIndex + 1, [
+        ...placedFeatures,
+        nextFeature,
+      ]);
 
-      candidateSquares.forEach((square) => {
-        square.areaType = 'feature';
-        square.environmentType = null;
-        square.featureId = feature.id;
-      });
-
-      placedFeatures.push(feature);
+      if (result) {
+        return result;
+      }
     }
+
+    return null;
+  }
+
+  const placements = findFeaturePlacements(0, []);
+
+  if (!placements) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        `Unable to place four valid villages after ${placementAttempts} attempts.`
+      );
+    }
+
+    return [];
+  }
+
+  const placedFeatures = placements.map((placement, index) => {
+    const feature = {
+      id: `feature-${index + 1}`,
+      x: placement.x,
+      y: placement.y,
+      width: FEATURE_AREA_WIDTH,
+      height: FEATURE_AREA_HEIGHT,
+      section: placement.section,
+      areaType: 'feature',
+      squares: placement.squares,
+    };
+
+    placement.squares.forEach((square) => {
+      square.areaType = 'feature';
+      square.environmentType = null;
+      square.featureId = feature.id;
+    });
+
+    return feature;
   });
 
   return placedFeatures.map(({ squares: _squares, ...feature }) => feature);

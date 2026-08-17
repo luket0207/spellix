@@ -10,9 +10,13 @@ const mockGetAnywhereModeHighlightedNodeIds = jest.fn();
 const mockGetHighlightedNodeIds = jest.fn();
 const mockChooseVisualPositionForFeature = jest.fn();
 
-jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareClick }) => (
-  <div aria-label="game board">
-    <p>{`Current board player: ${currentPlayerId}`}</p>
+jest.mock(
+  '../features/gameBoard/BoardGrid',
+  () => ({ currentPlayerId, language, onSquareClick, showHoverLabels }) => (
+    <div aria-label="game board">
+      <p>{`Current board player: ${currentPlayerId}`}</p>
+      <p>{`Board hover language: ${language}`}</p>
+      <p>{`Board hover labels enabled: ${showHoverLabels}`}</p>
     <button type="button" onClick={() => onSquareClick({ x: 1, y: 28 })}>
       Move to square 1, 28
     </button>
@@ -30,8 +34,9 @@ jest.mock('../features/gameBoard/BoardGrid', () => ({ currentPlayerId, onSquareC
     >
       Move to Field event square
     </button>
-  </div>
-));
+    </div>
+  )
+);
 
 jest.mock('../features/gameBoard/movement', () => ({
   getAnywhereModeHighlightedNodeIds: (...args) => mockGetAnywhereModeHighlightedNodeIds(...args),
@@ -106,6 +111,90 @@ function GameplayPositionProbe() {
       },${position?.x ?? 'none'},${position?.y ?? 'none'}`}
     </p>
   );
+}
+
+function VillageVisitProbe() {
+  const { currentPlayer, gameSetup } = useGameSetup();
+  const visit = gameSetup.villageVisit;
+
+  return (
+    <>
+      <p>{`Village visit: ${visit?.villageId ?? 'none'},${visit?.phase ?? 'none'}`}</p>
+      <p>{`Village feature: ${visit?.villageFeatureId ?? 'none'}`}</p>
+      <p>{`Village lock: ${currentPlayer?.villageActionState?.currentVillageLockId ?? 'none'}`}</p>
+    </>
+  );
+}
+
+function createWandsmithGameplaySetup(language = 'en', villageId = 'fieldVillage') {
+  const setup = createCommittedGameplaySetup();
+
+  setup.players[0].language = language;
+  setup.players[0].villageActionState = {
+    currentVillageLockId: 'board-feature-field-a',
+    usedActionsForCurrentVillage: {
+      rest: false,
+      wandsmith: true,
+    },
+  };
+  setup.villageVisit = {
+    pendingRewards: [],
+    phase: 'wandsmith',
+    playerId: 'player-1',
+    rewardClaimKeys: [],
+    villageFeatureId: 'board-feature-field-a',
+    villageId,
+  };
+
+  return setup;
+}
+
+function WandsmithStateProbe() {
+  const { currentPlayer, gameSetup, pendingNextTurnModal } = useGameSetup();
+  const playerOne = gameSetup.players[0];
+
+  return (
+    <div>
+      <p>{`Wandsmith visit: ${gameSetup.villageVisit?.phase ?? 'none'}`}</p>
+      <p>{`Wandsmith current player: ${currentPlayer?.id ?? 'none'}`}</p>
+      <p>{`Wandsmith next turn modal: ${pendingNextTurnModal}`}</p>
+      <p>{`Wandsmith player one slots: ${playerOne.spellSlots
+        .flatMap(({ tokens }) => tokens.map(({ id }) => id))
+        .join(',')}`}</p>
+      <p>{`Wandsmith player one committed: ${playerOne.spellSlots
+        .flatMap(({ tokens }) => tokens)
+        .every(({ committed }) => committed)}`}</p>
+    </div>
+  );
+}
+
+function createSosGameplaySetup({ includeVillages = true } = {}) {
+  const setup = createCommittedGameplaySetup();
+
+  setup.players[0].position = { x: 1, y: 1 };
+  setup.players[0].anywhereMode = true;
+  setup.players[0].potions = [
+    POTION_DEFINITIONS.find(({ id }) => id === 'sos'),
+  ];
+  setup.board = {
+    featureImages: includeVillages
+      ? [
+          { id: 'feature-1', imageName: 'village-field.png' },
+          { id: 'feature-2', imageName: 'village-forest.png' },
+        ]
+      : [],
+    height: 30,
+    squares: includeVillages
+      ? [
+          { areaType: 'feature', featureId: 'feature-1', x: 3, y: 1 },
+          { areaType: 'feature', featureId: 'feature-1', x: 4, y: 1 },
+          { areaType: 'feature', featureId: 'feature-2', x: 20, y: 20 },
+        ]
+      : [],
+    width: 30,
+  };
+
+  return setup;
 }
 
 function createForcedGameplaySetup(placedTokenCount) {
@@ -184,6 +273,130 @@ test('selects and delegates an event for a normal environment landing', () => {
     playerId: 'player-1',
     source: 'boardLanding',
   });
+});
+
+test('guarantees Loot Chest on a Metal Detector non-feature landing before event selection', () => {
+  const initialGameSetup = createCommittedGameplaySetup();
+  const onTriggerBoardEvent = jest.fn();
+
+  initialGameSetup.players[0].potions = [
+    POTION_DEFINITIONS.find(({ id }) => id === 'metal-detector'),
+  ];
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <GameplayPage
+        isChooseEventModeEnabled
+        onTriggerBoardEvent={onTriggerBoardEvent}
+      />
+      <PlayerPotionStateProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  expect(
+    screen.getByText('Are you sure you want to use Metal Detector?')
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'No' }));
+
+  expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+  expect(screen.getByText('1/3')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
+
+  expect(screen.getByText('Test active potion: metal-detector')).toBeInTheDocument();
+  expect(screen.getByText('0/3')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  expect(screen.queryByRole('dialog', { name: 'Choose Event' })).not.toBeInTheDocument();
+  expect(onTriggerBoardEvent).toHaveBeenCalledTimes(1);
+  expect(onTriggerBoardEvent).toHaveBeenCalledWith({
+    environment: 'field',
+    eventType: 'lootChest',
+    playerId: 'player-1',
+    source: 'boardLanding',
+  });
+  expect(screen.getByText('Test active potion: metal-detector')).toBeInTheDocument();
+});
+
+test('activates Smokescreen and excludes random battles from a normal landing', () => {
+  const initialGameSetup = createCommittedGameplaySetup();
+  const onTriggerBoardEvent = jest.fn();
+
+  initialGameSetup.players[0].potions = [
+    POTION_DEFINITIONS.find(({ id }) => id === 'smokescreen'),
+  ];
+  jest.spyOn(Math, 'random').mockReturnValue(0.3);
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <GameplayPage onTriggerBoardEvent={onTriggerBoardEvent} />
+      <PlayerPotionStateProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  expect(
+    screen.getByText('Are you sure you want to use Smokescreen?')
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'No' }));
+
+  expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+  expect(screen.getByText('1/3')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
+
+  expect(screen.getByText('Test active potion: smokescreen')).toBeInTheDocument();
+  expect(screen.getByText('0/3')).toBeInTheDocument();
+  expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  expect(onTriggerBoardEvent).toHaveBeenCalledWith({
+    environment: 'field',
+    eventType: 'nothing',
+    playerId: 'player-1',
+    source: 'boardLanding',
+  });
+  expect(screen.getByText('Test active potion: smokescreen')).toBeInTheDocument();
+});
+
+test('hides random battles from debug event choice while Smokescreen is active', () => {
+  const initialGameSetup = createCommittedGameplaySetup();
+
+  initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'smokescreen'
+  );
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <GameplayPage isChooseEventModeEnabled />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+
+  const dialog = screen.getByRole('dialog', { name: 'Choose Event' });
+
+  expect(within(dialog).queryByRole('button', { name: /battle/i })).not.toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Nothing' })).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Roll Again' })).toBeInTheDocument();
 });
 
 test('pauses a normal landing for manual event selection when choose mode is enabled', () => {
@@ -276,6 +489,40 @@ test('shows choose event mode again after a manually selected Roll Again', () =>
   expect(
     screen.getByRole('dialog', { name: 'Choose Event' })
   ).toBeInTheDocument();
+});
+
+test('keeps Smokescreen active after Roll Again continues the same turn', () => {
+  const initialGameSetup = createCommittedGameplaySetup();
+
+  initialGameSetup.players[0].activePotion = POTION_DEFINITIONS.find(
+    ({ id }) => id === 'smokescreen'
+  );
+
+  render(
+    <GameSetupProvider initialGameSetup={initialGameSetup}>
+      <ChooseEventRollAgainHarness />
+      <PlayerPotionStateProbe />
+    </GameSetupProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /roll dice/i }));
+  finishDiceSequence();
+  fireEvent.click(
+    screen.getByRole('button', { name: /move to field event square/i })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Roll Again' }));
+
+  expect(screen.getByText('Test active potion: smokescreen')).toBeInTheDocument();
+
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: 'Roll Again Event' })).getByRole(
+      'button',
+      { name: 'Continue' }
+    )
+  );
+
+  expect(screen.getByText('Test active potion: smokescreen')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /roll dice/i })).toBeEnabled();
 });
 
 function RollAgainGameplayHarness() {
@@ -691,6 +938,7 @@ function PlayerPotionStateProbe() {
       <p>{`Test active potion: ${currentPlayer.activePotion?.id ?? 'none'}`}</p>
       <p>{`Test next board dice: ${currentPlayer.nextBoardDiceCount ?? 1}`}</p>
       <p>{`Test forced roll: ${currentPlayer.nextForcedRoll?.value ?? 'none'}`}</p>
+      <p>{`Test board movement state: left=${currentPlayer.hasLeftStartArea}; anywhere=${currentPlayer.anywhereMode}`}</p>
     </div>
   );
 }
@@ -971,7 +1219,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       /\.language-en\s*{[^}]*font-family:\s*'Unkempt',\s*cursive;/s
     );
     expect(globalStylesheet).toMatch(
-      /\.language-jp\s*{[^}]*font-family:\s*'Noto Serif JP',\s*serif;/s
+      /\.language-jp\s*{[^}]*font-family:\s*'M PLUS Rounded 1c',\s*sans-serif;/s
     );
     expect(stylesheet).toMatch(/\.spells-button-wrapper\s*{[^}]*position:\s*relative;/s);
     expect(stylesheet).toMatch(/\.spells-button-notification\s*{[^}]*position:\s*absolute;/s);
@@ -1291,6 +1539,137 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       within(potionSection).getByRole('button', { name: 'Use' })
     ).toBeDisabled();
     expect(initialGameSetup.players[0].currentHealth).toBe(100);
+  });
+
+  test('cancels SOS without consuming it, then teleports to the nearest village and starts its normal visit', () => {
+    const initialGameSetup = createSosGameplaySetup();
+    const onNavigate = jest.fn();
+
+    mockChooseVisualPositionForFeature.mockReturnValue({
+      featureId: 'board-feature-feature-1',
+      type: 'feature',
+      x: 4,
+      y: 1,
+    });
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage onNavigate={onNavigate} />
+        <GameplayPositionProbe />
+        <PlayerPotionStateProbe />
+        <VillageVisitProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+
+    const confirmation = screen.getByRole('dialog', {
+      name: /use potion confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText('Are you sure you want to use SOS?')
+    ).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'No' }));
+
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+    expect(
+      screen.getByText('Player one board position: square,none,1,1')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Village visit: none,none')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(mockChooseVisualPositionForFeature).toHaveBeenCalledWith({
+      board: initialGameSetup.board,
+      destinationSquare: {
+        areaType: 'feature',
+        featureId: 'feature-1',
+        x: 3,
+        y: 1,
+      },
+      players: expect.any(Array),
+    });
+    expect(
+      screen.getByText(
+        'Player one board position: feature,board-feature-feature-1,4,1'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Village visit: fieldVillage,reward')).toBeInTheDocument();
+    expect(
+      screen.getByText('Village feature: board-feature-feature-1')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Village lock: board-feature-feature-1')
+    ).toBeInTheDocument();
+    expect(screen.getByText('0/3')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
+    expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
+    expect(
+      screen.getByText('Test board movement state: left=true; anywhere=false')
+    ).toBeInTheDocument();
+    expect(onNavigate).toHaveBeenCalledWith('/village');
+  });
+
+  test('keeps SOS when no generated village destination exists', () => {
+    const initialGameSetup = createSosGameplaySetup({ includeVillages: false });
+    const onNavigate = jest.fn();
+    const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage onNavigate={onNavigate} />
+        <GameplayPositionProbe />
+        <PlayerPotionStateProbe />
+        <VillageVisitProbe />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByRole('button', { name: 'Yes' })
+    );
+
+    expect(warning).toHaveBeenCalledWith(
+      'SOS potion could not find a generated village destination.'
+    );
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+    expect(screen.getByText('Test board potion used: false')).toBeInTheDocument();
+    expect(
+      screen.getByText('Player one board position: square,none,1,1')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Village visit: none,none')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use' })).toBeEnabled();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  test('uses the standard Japanese confirmation copy for SOS', () => {
+    const initialGameSetup = createSosGameplaySetup();
+
+    initialGameSetup.players[0].language = 'jp';
+
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '使用する' }));
+
+    expect(
+      within(
+        screen.getByRole('dialog', { name: /use potion confirmation/i })
+      ).getByText('SOSを使用してもよろしいですか？')
+    ).toBeInTheDocument();
   });
 
   test('returns Copy and Paste to its slot when the token bag is empty', () => {
@@ -1673,6 +2052,133 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
         'Rearrange your tokens as much as you like, but when you commit them, they become fixed again.'
       )
     ).not.toBeInTheDocument();
+  });
+
+  test.each([
+    {
+      cancel: 'Cancel',
+      language: 'en',
+      no: 'No',
+      warning:
+        'Are you sure you want to leave without making any changes? The Wandsmith will close after you leave.',
+      yes: 'Yes',
+    },
+    {
+      cancel: '\u30ad\u30e3\u30f3\u30bb\u30eb',
+      language: 'jp',
+      no: '\u3044\u3044\u3048',
+      warning:
+        '\u5909\u66f4\u305b\u305a\u306b\u9000\u51fa\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f\u9000\u51fa\u3059\u308b\u3068\u3001\u6756\u8077\u4eba\u306e\u753b\u9762\u306f\u9589\u3058\u307e\u3059\u3002',
+      yes: '\u306f\u3044',
+    },
+  ])('confirms a Wandsmith cancel and preserves saved spells in $language', ({
+    cancel,
+    language,
+    no,
+    warning,
+    yes,
+  }) => {
+    const setup = createWandsmithGameplaySetup(language);
+    const savedTokenIds = setup.players[0].spellSlots
+      .flatMap(({ tokens }) => tokens.map(({ id }) => id))
+      .join(',');
+
+    render(
+      <GameSetupProvider initialGameSetup={setup}>
+        <GameplayPage />
+        <WandsmithStateProbe />
+      </GameSetupProvider>
+    );
+
+    let spellsDialog = screen.getByRole('dialog');
+
+    within(spellsDialog)
+      .getAllByRole('button', { name: /moveable/i })
+      .forEach((button) => expect(button).toBeEnabled());
+    fireEvent.click(within(spellsDialog).getByRole('button', { name: cancel }));
+
+    let confirmation = screen.getByRole('dialog', {
+      name: /cancel spells confirmation/i,
+    });
+
+    expect(within(confirmation).getByText(warning)).toHaveClass(
+      'larger-text',
+      `language-${language}`
+    );
+    fireEvent.click(within(confirmation).getByRole('button', { name: no }));
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByText('Wandsmith current player: player-1')).toBeInTheDocument();
+
+    spellsDialog = screen.getByRole('dialog');
+    fireEvent.click(within(spellsDialog).getByRole('button', { name: cancel }));
+    confirmation = screen.getByRole('dialog', {
+      name: /cancel spells confirmation/i,
+    });
+    fireEvent.click(within(confirmation).getByRole('button', { name: yes }));
+
+    expect(screen.queryByRole('button', { name: cancel })).not.toBeInTheDocument();
+    expect(screen.getByText('Wandsmith visit: none')).toBeInTheDocument();
+    expect(screen.getByText('Wandsmith current player: player-2')).toBeInTheDocument();
+    expect(screen.getByText('Wandsmith next turn modal: true')).toBeInTheDocument();
+    expect(
+      screen.getByText(`Wandsmith player one slots: ${savedTokenIds}`)
+    ).toBeInTheDocument();
+  });
+
+  test('allows a no-change Wandsmith commit and ends the turn after confirmation', () => {
+    const setup = createWandsmithGameplaySetup();
+
+    render(
+      <GameSetupProvider initialGameSetup={setup}>
+        <GameplayPage />
+        <WandsmithStateProbe />
+      </GameSetupProvider>
+    );
+
+    const spellsDialog = screen.getByRole('dialog', { name: 'Spells' });
+    const saveButton = within(spellsDialog).getByRole('button', { name: 'Save' });
+
+    expect(
+      within(spellsDialog).getByText(
+        'The Wandsmith helps you arrange your tokens however you wish.'
+      )
+    ).toHaveClass('spells-starting-warning');
+    expect(saveButton).toBeEnabled();
+    fireEvent.click(saveButton);
+
+    const confirmation = screen.getByRole('dialog', {
+      name: /save spells confirmation/i,
+    });
+
+    expect(
+      within(confirmation).getByText(
+        'Are you sure you want to commit your tokens to these spell slots? This cannot be changed without using a Wandsmith or potions once they are saved.'
+      )
+    ).toHaveClass('larger-text', 'language-en');
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Yes' }));
+
+    expect(screen.getByText('Wandsmith visit: none')).toBeInTheDocument();
+    expect(screen.getByText('Wandsmith current player: player-2')).toBeInTheDocument();
+    expect(screen.getByText('Wandsmith next turn modal: true')).toBeInTheDocument();
+    expect(screen.getByText('Wandsmith player one committed: true')).toBeInTheDocument();
+  });
+
+  test.each([
+    ['fieldVillage', 'field-village.png'],
+    ['forestVillage', 'forest-village.png'],
+  ])('keeps the %s background behind its Wandsmith modal', (villageId, imageName) => {
+    const setup = createWandsmithGameplaySetup('en', villageId);
+
+    render(
+      <GameSetupProvider initialGameSetup={setup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(screen.getByRole('main').style.backgroundImage).toContain(imageName);
+    expect(screen.queryByTestId('magical-night-sky')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Spells' })).toBeInTheDocument();
   });
 
   test('targets another player with Spellbound and blocks Board potions only for that next turn', () => {
@@ -2640,6 +3146,49 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /dice result/i })).not.toBeInTheDocument();
+  });
+
+  test('enables localized board hover labels only for active movement selection', () => {
+    const initialGameSetup = createCommittedGameplaySetup();
+
+    initialGameSetup.players[0].language = 'jp';
+    render(
+      <GameSetupProvider initialGameSetup={initialGameSetup}>
+        <GameplayPage />
+      </GameSetupProvider>
+    );
+
+    expect(screen.getByText('Board hover language: jp')).toBeInTheDocument();
+    expect(
+      screen.getByText('Board hover labels enabled: false')
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: '\u30b5\u30a4\u30b3\u30ed\u3092\u632f\u308b',
+      })
+    );
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
+    expect(
+      screen.getByText('Board hover labels enabled: false')
+    ).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    expect(
+      screen.getByText('Board hover labels enabled: true')
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move to square 1, 28' }));
+    expect(
+      screen.getByText('Board hover labels enabled: false')
+    ).toBeInTheDocument();
   });
 
   test('shows the current player piece in the sidebar and the next player piece in the turn-change modal', async () => {

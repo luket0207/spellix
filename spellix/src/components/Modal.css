@@ -25,8 +25,10 @@
   font-weight: 700;
   padding: 50px;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   max-width: calc(100vw - 32px);
   min-height: min(400px, calc(100vh - 32px));
+  min-height: min(400px, calc(100dvh - 32px));
   min-width: min(600px, calc(100vw - 32px));
   overflow: auto;
 }
@@ -37,6 +39,7 @@
 
 .modal-body {
   flex: 1;
+  min-height: 0;
 }
 
 .modal-actions {

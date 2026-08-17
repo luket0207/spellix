@@ -4,6 +4,7 @@ import {
   faBolt,
   faGavel,
   faShield,
+  faSkullCrossbones,
   faSnowflake,
 } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useRef, useState } from 'react';
@@ -41,7 +42,7 @@ import './BattlePage.css';
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
 const BATTLE_DICE_FADE_MS = 350;
 
-function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, showDeflect, side }) {
+function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, onDeathAnimationEnd, showDeathIcon, showDeflect, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
   const [freezeAnimation, setFreezeAnimation] = useState(frozen ? 'enter' : null);
 
@@ -67,6 +68,14 @@ function BattleActorImage({ children, frozen, frozenLabel, guard, guardAmountLab
   return (
     <div className={`battle-actor-image battle-actor-image--${side}`}>
       {children}
+      {showDeathIcon ? (
+        <FontAwesomeIcon
+          aria-label={defeatedLabel}
+          className="battle-death-icon"
+          icon={faSkullCrossbones}
+          onAnimationEnd={() => onDeathAnimationEnd(side)}
+        />
+      ) : null}
       {showDeflect ? (
         <FontAwesomeIcon
           aria-label="Deflect ban animation"
@@ -111,6 +120,7 @@ function BattlePage() {
     battlePlayer,
     clearActiveBattle,
     clearPlayerForcedRoll,
+    completeBattleDeathAnimation,
     finalizeBattleEffects,
     gameSetup,
     resolveCosmicIntervention,
@@ -122,6 +132,7 @@ function BattlePage() {
     consumePlayerPotion,
   } = useGameSetup();
   const freezeCheckFadeTimeoutRef = useRef(null);
+  const completedDeathAnimationsRef = useRef(new Set());
   const lastDiceRollRef = useRef(null);
   const turnTransitionTimeoutRef = useRef(null);
   const advanceBattleTurnRef = useRef(advanceBattleTurn);
@@ -181,6 +192,10 @@ function BattlePage() {
 
     return () => window.clearTimeout(timeoutId);
   }, [activeBattle?.currentBattleActor, isActiveBattle]);
+
+  useEffect(() => {
+    completedDeathAnimationsRef.current.clear();
+  }, [activeBattle?.phase]);
 
   useEffect(() => {
     window.clearTimeout(turnTransitionTimeoutRef.current);
@@ -318,10 +333,33 @@ function BattlePage() {
       ? isPlayerTurn
       : !isPlayerTurn
     : false;
+  const isDeathAnimation = activeBattle.phase === 'deathAnimation';
+  const isPlayerDefeated = isDeathAnimation && battlePlayer.currentHealth <= 0;
+  const isEnemyDefeated = isDeathAnimation && battleEnemy.currentHealth <= 0;
+  const defeatedBattleSides = [
+    ...(isPlayerDefeated ? ['player'] : []),
+    ...(isEnemyDefeated ? ['enemy'] : []),
+  ];
 
   const handleCloseTurnModal = () => {
     setClosedTurnModalActor(activeBattle.currentBattleActor);
     setShowTurnModal(false);
+  };
+
+  const handleDeathAnimationEnd = (side) => {
+    if (!isDeathAnimation || completedDeathAnimationsRef.current.has(side)) {
+      return;
+    }
+
+    completedDeathAnimationsRef.current.add(side);
+
+    if (
+      defeatedBattleSides.every((defeatedSide) =>
+        completedDeathAnimationsRef.current.has(defeatedSide)
+      )
+    ) {
+      completeBattleDeathAnimation();
+    }
   };
 
   const handleRemoveHealth = () => {
@@ -495,11 +533,14 @@ function BattlePage() {
             />
           ) : null}
           <BattleActorImage
+            defeatedLabel="Player defeated"
             frozen={activeBattle.playerFrozen}
             frozenLabel="Player frozen"
             guard={activeBattle.playerGuard}
             guardAmountLabel="Player guard amount"
             guardLabel="Player guard shield"
+            onDeathAnimationEnd={handleDeathAnimationEnd}
+            showDeathIcon={isPlayerDefeated}
             showDeflect={
               activeBattleEffect?.type === 'greenReduction' &&
               isEffectTargetPlayer
@@ -575,11 +616,14 @@ function BattlePage() {
             />
           ) : null}
           <BattleActorImage
+            defeatedLabel="Enemy defeated"
             frozen={activeBattle.enemyFrozen}
             frozenLabel="Enemy frozen"
             guard={activeBattle.enemyGuard}
             guardAmountLabel="Enemy guard amount"
             guardLabel="Enemy guard shield"
+            onDeathAnimationEnd={handleDeathAnimationEnd}
+            showDeathIcon={isEnemyDefeated}
             showDeflect={
               activeBattleEffect?.type === 'greenReduction' &&
               !isEffectTargetPlayer
