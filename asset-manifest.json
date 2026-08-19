@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/spellix/static/css/main.fed7f707.css",
-    "main.js": "/spellix/static/js/main.679b21ea.js",
+    "main.css": "/spellix/static/css/main.bc5f37ec.css",
+    "main.js": "/spellix/static/js/main.79fa681d.js",
     "static/js/453.9a032747.chunk.js": "/spellix/static/js/453.9a032747.chunk.js",
     "static/media/alex-morgan-fantasy-adventure-quest-537478.mp3": "/spellix/static/media/alex-morgan-fantasy-adventure-quest-537478.2f492d507bbc80018a5f.mp3",
     "static/media/rubyzephyr-fantasy-rpg-exploration-v2-461303.mp3": "/spellix/static/media/rubyzephyr-fantasy-rpg-exploration-v2-461303.c2c786ac07083055640a.mp3",
@@ -118,12 +118,12 @@
     "static/media/rock-6.png": "/spellix/static/media/rock-6.ae0b6aa9fee275aab33a.png",
     "static/media/rock-8.png": "/spellix/static/media/rock-8.eb0c586ff66627c4279b.png",
     "index.html": "/spellix/index.html",
-    "main.fed7f707.css.map": "/spellix/static/css/main.fed7f707.css.map",
-    "main.679b21ea.js.map": "/spellix/static/js/main.679b21ea.js.map",
+    "main.bc5f37ec.css.map": "/spellix/static/css/main.bc5f37ec.css.map",
+    "main.79fa681d.js.map": "/spellix/static/js/main.79fa681d.js.map",
     "453.9a032747.chunk.js.map": "/spellix/static/js/453.9a032747.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.fed7f707.css",
-    "static/js/main.679b21ea.js"
+    "static/css/main.bc5f37ec.css",
+    "static/js/main.79fa681d.js"
   ]
 }
