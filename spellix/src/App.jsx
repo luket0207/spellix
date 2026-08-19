@@ -44,6 +44,36 @@ import WinnerPage from './pages/WinnerPage';
 import VillagePage from './pages/VillagePage';
 import NothingEventPage from './pages/NothingEventPage';
 
+const SETTINGS_TRANSLATIONS = {
+  en: {
+    actionsLabel: 'Settings actions',
+    close: 'Close',
+    confirmEndGame: 'Are you sure you want to end the game?',
+    confirmEndGameLabel: 'End Game confirmation',
+    debug: 'Debug',
+    endGame: 'End Game',
+    no: 'No',
+    rules: 'Rules',
+    saveGame: 'Save Game',
+    title: 'Settings',
+    yes: 'Yes',
+  },
+  jp: {
+    actionsLabel: '\u8a2d\u5b9a\u30a2\u30af\u30b7\u30e7\u30f3',
+    close: '\u9589\u3058\u308b',
+    confirmEndGame:
+      '\u30b2\u30fc\u30e0\u3092\u7d42\u4e86\u3057\u3066\u3082\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f',
+    confirmEndGameLabel: '\u30b2\u30fc\u30e0\u7d42\u4e86\u306e\u78ba\u8a8d',
+    debug: '\u30c7\u30d0\u30c3\u30b0',
+    endGame: '\u30b2\u30fc\u30e0\u3092\u7d42\u4e86',
+    no: '\u3044\u3044\u3048',
+    rules: '\u30eb\u30fc\u30eb',
+    saveGame: '\u30b2\u30fc\u30e0\u3092\u4fdd\u5b58',
+    title: '\u8a2d\u5b9a',
+    yes: '\u306f\u3044',
+  },
+};
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -89,6 +119,9 @@ function App() {
     currentPlayer?.language ??
     gameSetup.players[gameSetup.currentTurnIndex]?.language ??
     'en';
+  const settingsLanguage = settingsPlayerLanguage === 'jp' ? 'jp' : 'en';
+  const settingsLanguageClassName = `language-${settingsLanguage}`;
+  const settingsTranslations = SETTINGS_TRANSLATIONS[settingsLanguage];
 
   const resetDebugState = () => {
     setPendingDebugTokenType('');
@@ -648,25 +681,69 @@ function App() {
       <Modal
         actions={
           settingsModalView === 'main' ? (
-            <>
+            <div
+              aria-label={settingsTranslations.actionsLabel}
+              className="settings-button-stack"
+              role="group"
+            >
               {gameSetup.debugMode ? (
-                <Button type="button" onClick={handleOpenDebug}>
-                  Debug
+                <Button
+                  className={settingsLanguageClassName}
+                  type="button"
+                  onClick={handleOpenDebug}
+                >
+                  {settingsTranslations.debug}
                 </Button>
               ) : null}
               {location.pathname === '/gameplay' ? (
-                <Button type="button" onClick={handleSaveGame}>
-                  {currentPlayer?.language === 'jp' ? 'ゲームを保存' : 'Save Game'}
+                <Button
+                  className={settingsLanguageClassName}
+                  type="button"
+                  onClick={handleSaveGame}
+                >
+                  {settingsTranslations.saveGame}
                 </Button>
               ) : null}
-              <Button type="button" onClick={handleOpenSettingsRules}>
-                {settingsPlayerLanguage === 'jp' ? 'ルール' : 'Rules'}
+              <Button
+                className={settingsLanguageClassName}
+                type="button"
+                onClick={handleOpenSettingsRules}
+              >
+                {settingsTranslations.rules}
               </Button>
-              <Button type="button" onClick={handleEndGame}>
-                End Game
+              <Button
+                className={settingsLanguageClassName}
+                type="button"
+                onClick={() => setSettingsModalView('confirmEndGame')}
+              >
+                {settingsTranslations.endGame}
               </Button>
-              <Button type="button" onClick={() => setIsSettingsOpen(false)}>
-                Close
+              <Button
+                className={settingsLanguageClassName}
+                type="button"
+                variant="secondary"
+                onClick={() => setIsSettingsOpen(false)}
+              >
+                {settingsTranslations.close}
+              </Button>
+            </div>
+          ) : settingsModalView === 'confirmEndGame' ? (
+            <>
+              <Button
+                className={settingsLanguageClassName}
+                type="button"
+                variant="secondary"
+                onClick={handleEndGame}
+              >
+                {settingsTranslations.yes}
+              </Button>
+              <Button
+                className={settingsLanguageClassName}
+                type="button"
+                variant="secondary"
+                onClick={() => setSettingsModalView('main')}
+              >
+                {settingsTranslations.no}
               </Button>
             </>
           ) : null
@@ -674,9 +751,16 @@ function App() {
         ariaLabel={
           settingsModalView === 'rules'
             ? RULES_CONTENT[settingsRulesLanguage].title
-            : 'Settings'
+            : settingsModalView === 'confirmEndGame'
+              ? settingsTranslations.confirmEndGameLabel
+              : settingsTranslations.title
         }
         isOpen={isSettingsOpen}
+        panelClassName={
+          settingsModalView === 'rules'
+            ? `language-${settingsRulesLanguage}`
+            : settingsLanguageClassName
+        }
       >
         {settingsModalView === 'rules' ? (
           <RulesBody
@@ -685,8 +769,14 @@ function App() {
             onBack={() => setSettingsModalView('main')}
             onLanguageChange={setSettingsRulesLanguage}
           />
+        ) : settingsModalView === 'confirmEndGame' ? (
+          <p className={`settings-confirmation-text larger-text ${settingsLanguageClassName}`}>
+            {settingsTranslations.confirmEndGame}
+          </p>
         ) : (
-          <p>Settings</p>
+          <h2 className={`settings-title larger-text ${settingsLanguageClassName}`}>
+            {settingsTranslations.title}
+          </h2>
         )}
       </Modal>
 

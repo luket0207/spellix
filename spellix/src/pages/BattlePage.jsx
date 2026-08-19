@@ -41,6 +41,17 @@ import './BattlePage.css';
 
 const FREEZE_OVERLAY_ANIMATION_MS = 200;
 const BATTLE_DICE_FADE_MS = 350;
+const BATTLE_EFFECT_ANIMATION_MS = 1000;
+const BATTLE_BOLT_ANIMATION_MS = 1500;
+const BATTLE_ANIMATION_PRIORITY = {
+  charge: 10,
+  buff: 20,
+  blueGuard: 30,
+  redDamage: 40,
+  greenReduction: 50,
+  orangeCounter: 60,
+  freeze: 70,
+};
 
 function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard, guardAmountLabel, guardLabel, onDeathAnimationEnd, showDeathIcon, showDeflect, side }) {
   const [isFreezeOverlayMounted, setIsFreezeOverlayMounted] = useState(frozen);
@@ -71,7 +82,7 @@ function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard,
       {showDeathIcon ? (
         <FontAwesomeIcon
           aria-label={defeatedLabel}
-          className="battle-death-icon"
+          className="battle-character-overlay-icon battle-death-icon"
           icon={faSkullCrossbones}
           onAnimationEnd={() => onDeathAnimationEnd(side)}
         />
@@ -79,7 +90,7 @@ function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard,
       {showDeflect ? (
         <FontAwesomeIcon
           aria-label="Deflect ban animation"
-          className="battle-deflect-ban"
+          className="battle-character-overlay-icon battle-deflect-ban"
           icon={faBan}
         />
       ) : null}
@@ -87,7 +98,7 @@ function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard,
         <span className="battle-guard-indicator">
           <FontAwesomeIcon
             aria-label={guardLabel}
-            className="battle-guard-shield"
+            className="battle-character-overlay-icon battle-guard-shield"
             icon={faShield}
             style={{ opacity: 0.6 }}
           />
@@ -99,7 +110,7 @@ function BattleActorImage({ children, defeatedLabel, frozen, frozenLabel, guard,
       {isFreezeOverlayMounted ? (
         <FontAwesomeIcon
           aria-label={frozenLabel}
-          className={`battle-freeze-indicator battle-freeze-indicator--${freezeAnimation}`}
+          className={`battle-character-overlay-icon battle-freeze-indicator battle-freeze-indicator--${freezeAnimation}`}
           icon={faSnowflake}
           style={{ opacity: 0.6 }}
         />
@@ -150,6 +161,7 @@ function BattlePage() {
   const [pendingPotionUse, setPendingPotionUse] = useState(null);
   const [pendingRollChoiceUse, setPendingRollChoiceUse] = useState(null);
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
+  const [revealedFreezeSide, setRevealedFreezeSide] = useState(null);
   const hasBattleContext = Boolean(activeBattle && battleEnemy && battlePlayer);
   const isActiveBattle = Boolean(activeBattle?.phase === 'active' && battlePlayer);
   const [showTurnModal, setShowTurnModal] = useState(isActiveBattle);
@@ -202,15 +214,16 @@ function BattlePage() {
 
     if (!activeBattle?.isResolvingTurn) {
       setActiveBattleEffect(null);
+      setRevealedFreezeSide(null);
       return undefined;
     }
 
     const supportedEffects = (activeBattle.pendingEffects ?? []).filter(
-      ({ type }) =>
-        type === 'redDamage' ||
-        type === 'greenReduction' ||
-        type === 'blueGuard' ||
-        type === 'orangeCounter'
+      ({ type }) => BATTLE_ANIMATION_PRIORITY[type] !== undefined
+    ).sort(
+      (firstEffect, secondEffect) =>
+        BATTLE_ANIMATION_PRIORITY[firstEffect.type] -
+        BATTLE_ANIMATION_PRIORITY[secondEffect.type]
     );
     let effectIndex = 0;
     let previousEffect = null;
@@ -224,8 +237,26 @@ function BattlePage() {
       if (effectIndex < supportedEffects.length) {
         previousEffect = supportedEffects[effectIndex];
         setActiveBattleEffect(previousEffect);
+        if (previousEffect.type === 'freeze') {
+          const currentActorSide =
+            activeBattle.currentBattleActor === 'enemy' ? 'enemy' : 'player';
+          setRevealedFreezeSide(
+            previousEffect.target === 'currentActor'
+              ? currentActorSide
+              : currentActorSide === 'player'
+                ? 'enemy'
+                : 'player'
+          );
+        }
         effectIndex += 1;
-        turnTransitionTimeoutRef.current = window.setTimeout(runNextEffect, 1000);
+        const animationDuration =
+          previousEffect.type === 'charge' || previousEffect.type === 'buff'
+            ? BATTLE_BOLT_ANIMATION_MS
+            : BATTLE_EFFECT_ANIMATION_MS;
+        turnTransitionTimeoutRef.current = window.setTimeout(
+          runNextEffect,
+          animationDuration
+        );
         return;
       }
 
@@ -242,7 +273,11 @@ function BattlePage() {
     return () => {
       window.clearTimeout(turnTransitionTimeoutRef.current);
     };
-  }, [activeBattle?.isResolvingTurn, activeBattle?.pendingEffects]);
+  }, [
+    activeBattle?.currentBattleActor,
+    activeBattle?.isResolvingTurn,
+    activeBattle?.pendingEffects,
+  ]);
 
   useEffect(() => {
     if (activeBattle?.phase === 'reward') {
@@ -333,6 +368,24 @@ function BattlePage() {
       ? isPlayerTurn
       : !isPlayerTurn
     : false;
+  const queuedFreezeEffect = (activeBattle.pendingEffects ?? []).find(
+    ({ type }) => type === 'freeze'
+  );
+  const isQueuedFreezeTargetPlayer = queuedFreezeEffect
+    ? queuedFreezeEffect.target === 'currentActor'
+      ? isPlayerTurn
+      : !isPlayerTurn
+    : false;
+  const isPlayerFreezeQueued = Boolean(
+    activeBattle.isResolvingTurn &&
+      queuedFreezeEffect &&
+      isQueuedFreezeTargetPlayer
+  );
+  const isEnemyFreezeQueued = Boolean(
+    activeBattle.isResolvingTurn &&
+      queuedFreezeEffect &&
+      !isQueuedFreezeTargetPlayer
+  );
   const isDeathAnimation = activeBattle.phase === 'deathAnimation';
   const isPlayerDefeated = isDeathAnimation && battlePlayer.currentHealth <= 0;
   const isEnemyDefeated = isDeathAnimation && battleEnemy.currentHealth <= 0;
@@ -534,7 +587,10 @@ function BattlePage() {
           ) : null}
           <BattleActorImage
             defeatedLabel="Player defeated"
-            frozen={activeBattle.playerFrozen}
+            frozen={
+              activeBattle.playerFrozen &&
+              (!isPlayerFreezeQueued || revealedFreezeSide === 'player')
+            }
             frozenLabel="Player frozen"
             guard={activeBattle.playerGuard}
             guardAmountLabel="Player guard amount"
@@ -558,8 +614,23 @@ function BattlePage() {
             ) : (
               <p aria-label="Battle player piece">{battlePlayer.colour}</p>
             )}
+            {activeBattleEffect?.type === 'charge' && isEffectSourcePlayer ? (
+              <FontAwesomeIcon
+                aria-label="Charge animation"
+                className="battle-character-overlay-icon cosmic-intervention-bolt battle-charge-bolt"
+                icon={faBolt}
+              />
+            ) : null}
+            {activeBattleEffect?.type === 'buff' && isEffectSourcePlayer ? (
+              <FontAwesomeIcon
+                aria-label="Buff animation"
+                className="battle-character-overlay-icon cosmic-intervention-bolt battle-buff-bolt"
+                icon={faBolt}
+              />
+            ) : null}
             {showHealingPotionAnimation ? (
               <HealingPotionAnimation
+                className="battle-character-overlay-icon"
                 onAnimationEnd={() => setShowHealingPotionAnimation(false)}
               />
             ) : null}
@@ -617,7 +688,10 @@ function BattlePage() {
           ) : null}
           <BattleActorImage
             defeatedLabel="Enemy defeated"
-            frozen={activeBattle.enemyFrozen}
+            frozen={
+              activeBattle.enemyFrozen &&
+              (!isEnemyFreezeQueued || revealedFreezeSide === 'enemy')
+            }
             frozenLabel="Enemy frozen"
             guard={activeBattle.enemyGuard}
             guardAmountLabel="Enemy guard amount"
@@ -640,10 +714,24 @@ function BattlePage() {
             ) : (
               <p aria-label="Battle enemy fallback">{enemyDisplayName}</p>
             )}
+            {activeBattleEffect?.type === 'charge' && !isEffectSourcePlayer ? (
+              <FontAwesomeIcon
+                aria-label="Charge animation"
+                className="battle-character-overlay-icon cosmic-intervention-bolt battle-charge-bolt"
+                icon={faBolt}
+              />
+            ) : null}
+            {activeBattleEffect?.type === 'buff' && !isEffectSourcePlayer ? (
+              <FontAwesomeIcon
+                aria-label="Buff animation"
+                className="battle-character-overlay-icon cosmic-intervention-bolt battle-buff-bolt"
+                icon={faBolt}
+              />
+            ) : null}
             {isCosmicInterventionPending ? (
               <FontAwesomeIcon
                 aria-label="Cosmic Intervention animation"
-                className="cosmic-intervention-bolt"
+                className="battle-character-overlay-icon cosmic-intervention-bolt"
                 icon={faBolt}
                 onAnimationEnd={resolveCosmicIntervention}
               />
@@ -651,7 +739,7 @@ function BattlePage() {
             {isShieldsDownPending ? (
               <FontAwesomeIcon
                 aria-label="Shields Down animation"
-                className="shields-down-gavel"
+                className="battle-character-overlay-icon shields-down-gavel"
                 icon={faGavel}
                 onAnimationEnd={resolveShieldsDown}
               />
@@ -688,21 +776,33 @@ function BattlePage() {
         <div className="battle-debug-controls">
           <button
             type="button"
-            disabled={!isActiveBattle || isPotionAnimationPending}
+            disabled={
+              !isActiveBattle ||
+              activeBattle.isResolvingTurn ||
+              isPotionAnimationPending
+            }
             onClick={handleRemoveHealth}
           >
             Remove 5 health
           </button>
           <button
             type="button"
-            disabled={!isActiveBattle || isPotionAnimationPending}
+            disabled={
+              !isActiveBattle ||
+              activeBattle.isResolvingTurn ||
+              isPotionAnimationPending
+            }
             onClick={handleWin}
           >
             Win
           </button>
           <button
             type="button"
-            disabled={!isActiveBattle || isPotionAnimationPending}
+            disabled={
+              !isActiveBattle ||
+              activeBattle.isResolvingTurn ||
+              isPotionAnimationPending
+            }
             onClick={handleLose}
           >
             Lose

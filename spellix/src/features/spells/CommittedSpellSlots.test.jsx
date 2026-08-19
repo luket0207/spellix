@@ -103,7 +103,7 @@ describe('CommittedSpellSlots', () => {
 
     expect(screen.getByLabelText('red token in slot 1')).toHaveAttribute(
       'title',
-      'ダメージ\nダメージ＋10'
+      'ダメージ＋10'
     );
     expect(screen.queryByText('ダメージ')).not.toBeInTheDocument();
     expect(screen.queryByText('ガード')).not.toBeInTheDocument();

@@ -59,6 +59,48 @@ describe('RulesPage', () => {
     expect(screen.getByRole('button', { name: '日本語' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test.each([
+    [
+      'English',
+      'en',
+      'Browser Compatibility',
+      "If the board or menus do not fit onto your screen naturally, please use the browser's zoom feature to adjust this. Either hold Ctrl and scroll with your mouse, or hold Ctrl and then press + or - to zoom in and out.",
+    ],
+    [
+      'Japanese',
+      'jp',
+      'ブラウザの互換性',
+      'ボードやメニューが画面に自然に収まらない場合は、ブラウザのズーム機能で調整してください。Ctrlキーを押しながらマウスホイールをスクロールするか、Ctrlキーを押しながら＋または－を押すと、拡大・縮小できます。',
+    ],
+  ])('shows Browser Compatibility once as the first %s rules section', (
+    _languageName,
+    language,
+    heading,
+    paragraph
+  ) => {
+    const compatibilitySections = RULES_CONTENT[language].sections.filter(
+      (section) => section.heading === heading
+    );
+
+    expect(RULES_CONTENT[language].sections[0]).toEqual({
+      heading,
+      paragraphs: [paragraph],
+    });
+    expect(compatibilitySections).toHaveLength(1);
+
+    renderRulesPage();
+
+    if (language === 'jp') {
+      fireEvent.click(screen.getByRole('button', { name: '日本語' }));
+    }
+
+    const rules = screen.getByRole('article', { name: RULES_CONTENT[language].title });
+    const sectionHeadings = within(rules).getAllByRole('heading', { level: 2 });
+
+    expect(sectionHeadings[0]).toHaveTextContent(heading);
+    expect(within(rules).getByText(paragraph)).toBeInTheDocument();
+  });
+
   test.each(['top', 'bottom'])('returns to Start from the %s Back button', (position) => {
     jest.useFakeTimers();
     renderRulesPage();

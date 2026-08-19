@@ -24,7 +24,6 @@ function Token({
   const description = getTokenDescription(tokenType, normalizedLanguage);
   const tooltipDescription = showTooltip ? description : '';
   const name = getTokenName(tokenType, normalizedLanguage);
-  const tooltipText = showTooltip ? [name, description].filter(Boolean).join('\n') : '';
   const hasCount = typeof count === 'number' && count > 1;
   const tokenDefinition = TOKEN_DEFINITIONS[tokenType];
   const displayColour = tokenDefinition?.baseColour ?? tokenType;
@@ -45,7 +44,7 @@ function Token({
         role="img"
         style={faded ? { opacity: 0.5 } : undefined}
         tabIndex={tooltipDescription && focusable ? 0 : undefined}
-        title={tooltipText || undefined}
+        title={tooltipDescription || undefined}
       >
         {hasCount ? <span className="token-display-count">{count}</span> : null}
       </span>

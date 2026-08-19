@@ -73,8 +73,8 @@ export const TOKEN_DEFINITIONS = {
   },
   yellow: {
     description: {
-      en: 'Charge all your slots next turn',
-      jp: '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u3059\u3079\u3066\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30c1\u30e3\u30fc\u30b8\u3059\u308b\u3002',
+      en: 'Charge all your slots next turn, increasing their damage or guard by 10',
+      jp: '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u3059\u3079\u3066\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30c1\u30e3\u30fc\u30b8\u3057\u3001\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u309210\u5897\u52a0\u3055\u305b\u308b\u3002',
     },
     label: 'Yellow',
     name: { en: 'Charge', jp: '\u30c1\u30e3\u30fc\u30b8' },

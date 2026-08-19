@@ -362,7 +362,7 @@ describe('DebugModal', () => {
     expect(redToken).toHaveClass('token-display--glow', 'token-display--red');
     expect(redToken).toHaveAttribute(
       'title',
-      `${TOKEN_DEFINITIONS.red.name.en}\n${TOKEN_DEFINITIONS.red.description.en}`
+      TOKEN_DEFINITIONS.red.description.en
     );
     expect(redToken).toHaveAccessibleDescription(TOKEN_DEFINITIONS.red.description.en);
     expect(screen.getAllByText('Damage')).toHaveLength(2);
@@ -392,7 +392,7 @@ describe('DebugModal', () => {
     expect(screen.getAllByText('ガード')).toHaveLength(2);
     expect(screen.getByRole('img', { name: /ダメージ token/i })).toHaveAttribute(
       'title',
-      'ダメージ\nダメージ＋10'
+      TOKEN_DEFINITIONS.red.description.jp
     );
   });
 

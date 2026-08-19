@@ -2875,7 +2875,36 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
             : {}),
           isResolvingTurn: true,
           outcome: null,
-          pendingEffects: result.effects,
+          pendingEffects: [
+            ...(result.chargeApplied
+              ? [
+                  {
+                    source: 'currentActor',
+                    target: 'currentActor',
+                    type: 'charge',
+                  },
+                ]
+              : []),
+            ...(result.purpleBuffGranted > 0
+              ? [
+                  {
+                    source: 'currentActor',
+                    target: 'currentActor',
+                    type: 'buff',
+                  },
+                ]
+              : []),
+            ...result.effects,
+            ...(result.freezeApplied
+              ? [
+                  {
+                    source: 'currentActor',
+                    target: 'opponent',
+                    type: 'freeze',
+                  },
+                ]
+              : []),
+          ],
           playerGuard: isPlayerActor
             ? currentActorGuardBeforeCounter
             : activeBattle.playerGuard ?? 0,

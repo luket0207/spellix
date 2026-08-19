@@ -410,3 +410,342 @@ Automated Tests Still Needed
 Manual Execution
 
 * Visual inspection in a real browser, favicon cache clearing, production preview in a browser, and post-deployment GitHub Pages verification were not run. Bug-001 remains blocked on that separate deployment step.
+
+---
+
+Feature-009: Standardise battle overlay icon width
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger Guard for both the player and enemy in battle.
+   Expected: Each shield is `80px` wide with automatic height, remains centred, and its guard amount stays centred over it.
+2. Trigger Deflect and Freeze on both battle actors.
+   Expected: The ban and snowflake icons remain centred at `80px` width while their existing enter, shake, fade, and exit animations remain unchanged.
+3. Use a healing potion during battle.
+   Expected: The bottle is `80px` wide, grows by its existing scale animation, shakes three times, fades, and remains centred over the player.
+4. Use Cosmic Intervention and Shields Down.
+   Expected: The bolt and gavel are `80px` wide with automatic height and retain their existing movement, flicker, timing, centring, and resolution behavior.
+5. Trigger lethal damage against the player and enemy.
+   Expected: Each skull is `80px` wide, remains centred while growing and shaking, and battle completion still waits for the animation.
+6. Use a healing potion on the normal gameplay board.
+   Expected: The existing non-battle healing animation remains unchanged.
+7. Inspect the browser console throughout these flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 61 of 75 checks and produced 10 expected Feature-009 failures for the missing shared size rule/classes and old actor-sized healing behavior, plus 4 unrelated stale battle assertions.
+* The completed focused battle and healing run passes 70 of 75 checks, including every Feature-009 class, fixed-size, centring, animation, and effect-resolution assertion.
+* The 5 remaining battle failures are unrelated stale assertions for panel background sizing, battle spacing, death-result copy, random-call count, and an existing guard-flow state expectation.
+* The complete GameplayPage run passes 70 of 75 checks, including the non-battle Small Heal animation regression. Its 5 remaining failures are unrelated stale tooltip, random reward, dice copy, and player-image sizing assertions.
+* Production-only scoped ESLint passes for `BattlePage.jsx`, `HealingPotionAnimation.jsx`, and the focused healing unit test.
+* The existing `BattlePage.test.jsx` retains 104 pre-existing `testing-library/no-node-access` violations; Feature-009 added no direct DOM-access pattern.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms all seven current battle overlay types use the shared class and none retain actor-sized width or height declarations.
+* Scoped `git diff --check` passes for every Feature-009 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for shared class coverage, fixed width/automatic height, existing keyframe preservation, effect resolution, non-battle healing isolation, scoped production lint, or production compilation.
+
+Manual Execution
+
+* Real-browser visual size, natural aspect ratio, centring, animation playback, and browser-console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-010: Change battle death icon colour to light grey
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger lethal damage against an enemy.
+   Expected: The `faSkullCrossbones` icon appears after health reaches 0, is `#BABABA`, remains centred at `80px` width with automatic height, and completes its grow-and-shake animation before battle resolution.
+2. Trigger lethal damage against the player.
+   Expected: The same light-grey, centred death icon and unchanged animation complete before the loss flow continues.
+3. Trigger or inspect any separate respawn skull and other grey icons.
+   Expected: Their colours and behavior remain unchanged.
+4. Inspect the browser console throughout both lethal-damage flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation BattlePage run passed 60 of 66 checks and failed the new Feature-010 regression on the old `#555` colour, alongside 5 unrelated stale battle assertions.
+* The completed BattlePage run passes 61 of 66 checks, including the Feature-010 colour regression and existing player/enemy death-flow checks that wait for the animation before resolving battle.
+* The same 5 unrelated stale failures remain for panel background sizing, battle spacing, death-result copy, enemy-freeze random-call count, and an existing guard-flow state expectation.
+* Scoped production ESLint passes for `BattlePage.jsx`.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms only `.battle-death-icon` uses `#BABABA`; `faSkullCrossbones`, the shared `80px`/automatic-height class, centred placement, grow-and-shake keyframes, and `1.5s` timing remain unchanged.
+* The existing `BattlePage.test.jsx` retains 104 pre-existing `testing-library/no-node-access` violations; Feature-010 changed only a static CSS expectation in that file.
+* Scoped `git diff --check` passes for every Feature-010 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for the death icon colour, shared size contract, animation source contract, existing death-flow timing, scoped production lint, or production compilation.
+
+Manual Execution
+
+* Real-browser enemy/player lethal-damage playback, visual colour and centring inspection, respawn-icon comparison, and browser-console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-011: Token tooltips should only show description
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Hover Damage, Guard, Buff, and Shiny Health tokens in the token bag and spell assignment modal.
+   Expected: Each cursor tooltip contains only the token description, such as `Plus 10 Damage`, with no repeated token name.
+2. Check token tooltips in Wandsmith, Redo spell editing, reward assignment, battle reward choices, committed spells, battle spell columns, and debug token displays.
+   Expected: Every token tooltip uses the same description-only content and existing cursor placement.
+3. Switch between English and Japanese and hover several tokens.
+   Expected: The tooltip contains only the description in the selected language.
+4. Inspect reward cards, rules token lists, selected reward summaries, and any token display that intentionally shows a resting name.
+   Expected: Token names remain visible outside the tooltip where the existing UI intentionally renders them.
+5. Hover potion icons in normal and editing flows.
+   Expected: Potion tooltip content and behavior remain unchanged.
+6. Inspect the browser console throughout these flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 150 of 174 checks and produced 18 expected Feature-011 failures for name-plus-description token titles, alongside 6 unrelated stale assertions.
+* The identical completed run passes 168 of 174 checks, including every updated English/Japanese token tooltip assertion across the shared component, token bag and spell assignment, committed spells, rewards, debug displays, and the existing Gameplay death-token regression.
+* The same 6 unrelated stale failures remain for token glow timing, reward potion-grid styling, random Buy and Sell rewards, dice-result copy, current-player image alignment, and spell-player image height.
+* All 27 Wandsmith/Buy and Sell, Redo/Copy-Paste, Tokensmith, and `PotionIcon` isolation checks pass.
+* Scoped production ESLint passes for `Token.jsx`.
+* The changed test files retain 56 pre-existing Testing Library direct-node/container lint violations in `CommittedSpellSlots.test.jsx`, `SpellTokenAssignment.test.jsx`, and `RewardPage.test.jsx`; Feature-011 only changed title expectations and added no direct-node access.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms all current token consumers reuse `Token`, its native title uses only `tooltipDescription`, no name-description concatenation remains, and no potion source file changed.
+* Scoped `git diff --check` passes for every Feature-011 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* None for shared token-tooltip content, English/Japanese localization, intentional visible names, Wandsmith and Redo consumers, reward and committed-spell consumers, potion isolation, scoped production lint, or production compilation.
+
+Manual Execution
+
+* Real-browser cursor tooltip rendering and placement, every listed gameplay surface, visible-name review, potion comparison, and browser-console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-012: Add Browser Compatibility section to top of rules text
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Rules from the start page in English.
+   Expected: `Browser Compatibility` appears once as the first rules section before `Tokens`, with the supplied browser-zoom paragraph.
+2. Switch the Rules page to Japanese.
+   Expected: `ブラウザの互換性` appears once as the first section before `トークン`, with the supplied Japanese paragraph.
+3. Open Rules from gameplay Settings in English and Japanese.
+   Expected: The same compatibility section and selected-language text appear once at the top of the shared rules sections.
+4. Scroll through both Rules views and use their existing Back controls.
+   Expected: Existing scrolling, section styling, language fonts, navigation, and modal behavior remain unchanged.
+5. Inspect browser zoom controls and the browser console.
+   Expected: The text provides guidance only, no custom zoom control was added, and no application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation Rules page run passed 7 of 9 checks and failed exactly the 2 new English/Japanese first-section regressions because `Tokens` and `トークン` were still first.
+* The completed Rules page suite passes all 9 checks for exact bilingual copy, first-section ordering, one occurrence per language, rendered content, language switching, existing navigation, existing sections, and scrollable modal styling.
+* Two existing App settings-modal tests now assert the exact English/Japanese compatibility heading and paragraph, but the App suite cannot execute them: it emits unrelated JSDOM `HTMLMediaElement.play` errors and crashes in `source-map-support` before reporting any tests, even when a test-name filter is requested.
+* Scoped production ESLint passes for `rulesContent.js`, and scoped test ESLint passes for `RulesPage.test.jsx`.
+* `App.test.jsx` retains 14 pre-existing Testing Library/Jest lint violations outside the Feature-012 assertions; the new assertions add none.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms each language has exactly one compatibility section at `sections[0]`, `RulesBody` renders the arrays in order, and both `RulesPage` and the settings modal render that same shared component.
+* Scoped `git diff --check` passes for every Feature-012 code, test, and vibe file.
+
+Automated Tests Still Needed
+
+* Rerun the two settings-modal integration tests after the unrelated App test harness audio/source-map crash is fixed.
+
+Manual Execution
+
+* Real-browser start-page and settings Rules flows, visual first-section placement, scrolling, language fonts, browser zoom guidance, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-013: Add Charge and Buff battle animations
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Roll a player column containing Charge, Buff, Guard, Damage, and Freeze.
+   Expected: Yellow Charge and purple Buff bolts play over the player for 1.5 seconds each, followed by Guard, Damage, and Freeze without overlap.
+2. Trigger Charge and Buff during an enemy turn.
+   Expected: Both bolts play over the enemy caster, with Charge before Buff.
+3. Inspect both bolts over each battle actor.
+   Expected: They reuse the Cosmic Intervention jitter, flash, fade, timing, and centred `80px` width with automatic height; Buff uses `#69419e`.
+4. Use Cosmic Intervention.
+   Expected: Its existing yellow bolt still plays over the opponent and resolves the potion normally.
+5. Try dice, potion, and debug battle controls while Charge or Buff is playing.
+   Expected: All controls remain disabled until the animation queue resolves.
+6. Trigger lethal damage in a queue that also contains Charge, Buff, and Freeze.
+   Expected: The death icon and battle result wait until every queued animation completes.
+7. Inspect the browser console throughout these flows.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation BattlePage run passed 61 of 68 checks and produced exactly 2 expected Feature-013 failures for missing Charge/Buff overlays, alongside 5 unrelated stale battle assertions.
+* The completed BattlePage run passes 63 of 68 checks, including player and enemy caster targeting, explicit priority sorting, 1.5-second Charge/Buff timing, shared bolt classes, Buff colour, control locking, Guard/Damage/Freeze ordering, and lethal completion after the full queue.
+* The same 5 unrelated stale failures remain for panel background sizing, battle spacing, death-result copy, enemy-freeze random-call count, and an existing guard-flow state expectation.
+* Scoped production ESLint passes for `GameSetupContext.jsx` and `BattlePage.jsx`.
+* `npm run build` compiles the optimized production build successfully.
+* `git diff --check` passes with line-ending warnings only.
+* The source audit confirms Charge and Buff calculations remain in `calculateBattleTurn`, while only visual queue events, priority scheduling, overlay rendering, and control locking changed.
+
+Automated Tests Still Needed
+
+* Rerun `GameSetupContext.test.jsx` after its unrelated `source-map-support` mapping crash is fixed; the suite currently fails before discovering any tests even after clearing Jest's cache.
+
+Manual Execution
+
+* Real-browser animation playback, visual colour/centring inspection, controls, Cosmic Intervention comparison, lethal flow, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-014: Update Charge token description
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. View a Charge token in an English token bag, spell assignment, reward, battle, or debug display.
+   Expected: Its description-only tooltip says `Charge all your slots next turn, increasing their damage or guard by 5`.
+2. Switch to Japanese and view a Charge token.
+   Expected: Its description-only tooltip says `次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。`.
+3. Inspect the Charge token name, colour, and reward category.
+   Expected: The names remain `Charge` and `チャージ`, the token remains Yellow, and rarity remains Rare.
+4. Trigger Charge in battle and resolve the following charged turn.
+   Expected: Charge still affects all slots, adds 5 to applicable damage or guard, and uses the existing Charge bolt animation.
+5. Inspect the browser console during these checks.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation token run passed 17 of 20 checks and produced exactly 2 expected Feature-014 failures for the old English/Japanese Charge wording, alongside 1 unrelated stale glow-duration assertion.
+* The completed token run passes 19 of 20 checks, including exact bilingual data, unchanged name/rarity metadata, shared tooltip propagation, and description-only tooltip content; only the same unrelated glow assertion remains.
+* All 51 `battleTurn` checks pass, including existing Charge activation, next-turn damage/guard increase, use consumption, and unchanged non-Charge behavior.
+* The BattlePage suite passes 63 of 68 checks, including the existing Charge animation and queue regression; the same 5 unrelated stale battle assertions remain.
+* Scoped ESLint passes for `tokens.js`, `tokens.test.js`, and `Token.test.jsx`.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms existing token surfaces reuse shared token data/helpers, and the old runtime Charge wording no longer remains in current source data.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* None for the shared bilingual data, description-only tooltip propagation, unchanged metadata, Charge mechanics, animation regression, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real-browser checks across every listed token surface, visual Yellow/rare confirmation, battle playback, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Bug-003: Correct Charge token description value from 5 to 10
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. View a Charge token in an English token bag, spell assignment, reward, battle, or debug display.
+   Expected: Its description-only tooltip says `Charge all your slots next turn, increasing their damage or guard by 10` and does not contain the old `5` wording.
+2. Switch to Japanese and view a Charge token.
+   Expected: Its description-only tooltip says `次のターン、すべてのスロットをチャージし、ダメージまたはガードを10増加させる。`.
+3. Inspect the Charge token metadata.
+   Expected: The names remain `Charge` and `チャージ`, colour remains Yellow, and rarity remains Rare.
+4. Trigger Charge in battle and resolve the following charged turn.
+   Expected: Existing Charge mechanics and the Charge bolt animation remain unchanged.
+5. Inspect Buff and the Charger potion.
+   Expected: Their existing copy and behavior are unchanged.
+6. Inspect the browser console throughout these checks.
+   Expected: No application errors occur.
+
+Automated Tests Completed
+
+* The reproduction run passed 17 of 20 token checks and failed exactly 2 new Bug-003 assertions on the old English/Japanese `5` wording, alongside 1 unrelated stale glow-duration assertion.
+* The completed token run passes 19 of 20 checks, including exact bilingual `10` data, shared description-only tooltip propagation, and unchanged name/rarity metadata; only the same unrelated glow assertion remains.
+* All 51 `battleTurn` checks pass, confirming Charge calculations and activation remain unchanged and independent of description data.
+* The BattlePage suite passes 63 of 68 checks, including the existing Charge animation regression; the same 5 unrelated stale battle assertions remain.
+* Scoped ESLint passes for `tokens.js`, `tokens.test.js`, and `Token.test.jsx`.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms no Charge runtime description or focused assertion retains the incorrect `5` wording; remaining Buff `5` wording is intentionally unchanged.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* None for the corrected bilingual data, shared tooltip propagation, unchanged metadata/mechanics/animation, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real-browser checks across all listed token surfaces, metadata, battle animation/mechanics, Buff/Charger isolation, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-015: Clean up settings menu layout and add End Game confirmation
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open gameplay Settings in English with Debug Mode enabled.
+   Expected: The centred `Settings` title uses `larger-text` and the English font; Debug, Save Game, Rules, End Game, and Close appear as equal-width, centred, vertically stacked buttons in that order.
+2. Turn Debug Mode off and reopen Settings.
+   Expected: Debug is hidden while Save Game, Rules, End Game, and Close retain their relative order.
+3. Select Close.
+   Expected: Close uses the existing secondary button style and closes Settings without changing game state.
+4. Open Rules from Settings and use Back to Settings.
+   Expected: The shared Rules view works unchanged and returns to the main settings menu.
+5. Select End Game, then select No.
+   Expected: The centred confirmation asks `Are you sure you want to end the game?`; No closes the confirmation, restores Settings, and does not reset or navigate.
+6. Select End Game again, then select Yes.
+   Expected: The existing End Game reset runs once, all settings views close, and navigation returns to the start page.
+7. Repeat the menu and both confirmation branches for a Japanese current player.
+   Expected: The title, all action labels, confirmation text, Yes/No labels, accessible dialog labels, and fonts are Japanese.
+8. Inspect the modal at common viewport sizes and inspect the browser console.
+   Expected: Actions stay below the content without overlap, the existing modal background is unchanged, and no application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused settings run passed 16 of 20 checks and produced exactly 4 expected Feature-015 failures for the missing structured title/menu, confirmation flow, confirmed End Game flow, and Japanese localization.
+* The completed focused settings run passed all then-current 20 checks, including English/Japanese labels and fonts, exact five-button order, secondary Close, No returning without navigation, Yes using the existing reset/navigation flow, and gameplay-only settings visibility across all routes.
+* All 5 Save/Load integration checks pass, including unchanged English/Japanese Save Game access from Settings and existing save behavior.
+* The broader settings-button suite passes 8 of 10 checks. Its 2 failures are unrelated stale debug-battle expectations for enemy data and were not changed for Feature-015.
+* The monolithic App suite still crashes in `source-map-support` before reporting any tests, even when a Settings Rules name filter is supplied; its relevant Japanese dialog assertions were updated to the new localized accessible label.
+* Scoped ESLint passes for `App.jsx` and the focused settings test as it stood for the successful 20-check run.
+* `npm run lint` is unavailable because this project has no `lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* Rerun the focused settings suite and scoped test lint for the final two supplemental assertions covering hidden-Debug ordering and Rules-to-Settings return. Their attempted run was blocked by the execution approval service usage limit after the core 20-check run and production build had passed.
+* Rerun the two existing Settings Rules integration checks if the unrelated App test harness `source-map-support` crash is fixed.
+
+Manual Execution
+
+* Real-browser layout, font, button-overlap, confirmation interaction, reset/navigation, and browser-console checks were not run and remain covered by the manual steps above.

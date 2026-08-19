@@ -47,7 +47,7 @@ describe('Token', () => {
       expect(token).toHaveClass(`token-display--${tokenType}`);
       expect(token).toHaveAttribute(
         'title',
-        `${TOKEN_DEFINITIONS[tokenType].name.en}\n${TOKEN_DEFINITIONS[tokenType].description.en}`
+        TOKEN_DEFINITIONS[tokenType].description.en
       );
       expect(token).toHaveAccessibleDescription(TOKEN_DEFINITIONS[tokenType].description.en);
       expect(token).toHaveAttribute('tabindex', '0');
@@ -79,7 +79,7 @@ describe('Token', () => {
       );
       expect(token).toHaveAttribute(
         'title',
-        `${TOKEN_DEFINITIONS[tokenType].name.en}\n${description}`
+        description
       );
       expect(token).toHaveAccessibleDescription(description);
     }
@@ -138,7 +138,7 @@ describe('Token', () => {
     );
     expect(screen.getByLabelText('outlined token')).toHaveAttribute(
       'title',
-      '\u8f1d\u304f\u30c0\u30e1\u30fc\u30b8\n\u30c0\u30e1\u30fc\u30b8\uff0b20'
+      '\u30c0\u30e1\u30fc\u30b8\uff0b20'
     );
   });
 
@@ -170,7 +170,7 @@ describe('Token', () => {
     expect(token).not.toHaveAttribute('tabindex');
   });
 
-  test('conditionally shows a localized name and tooltip with an English fallback', () => {
+  test('conditionally shows a localized name and description-only tooltip with an English fallback', () => {
     const { rerender } = render(
       <Token ariaLabel="red token" language="jp" showName tokenType="red" />
     );
@@ -181,7 +181,7 @@ describe('Token', () => {
     );
     expect(screen.getByLabelText('red token')).toHaveAttribute(
       'title',
-      '\u30c0\u30e1\u30fc\u30b8\n\u30c0\u30e1\u30fc\u30b8\uff0b10'
+      '\u30c0\u30e1\u30fc\u30b8\uff0b10'
     );
     expect(screen.getByLabelText('red token')).toHaveAccessibleDescription(
       '\u30c0\u30e1\u30fc\u30b8\uff0b10'
@@ -193,7 +193,31 @@ describe('Token', () => {
     expect(screen.queryByText('Damage')).not.toBeInTheDocument();
     expect(screen.getByLabelText('red token')).toHaveAttribute(
       'title',
-      'Damage\nPlus 10 Damage'
+      'Plus 10 Damage'
+    );
+  });
+
+  test('shows the updated Charge description-only tooltip in English and Japanese', () => {
+    const { rerender } = render(
+      <Token ariaLabel="Charge token" language="en" tokenType="yellow" />
+    );
+
+    expect(screen.getByLabelText('Charge token')).toHaveAttribute(
+      'title',
+      'Charge all your slots next turn, increasing their damage or guard by 10'
+    );
+    expect(screen.getByLabelText('Charge token')).toHaveAccessibleDescription(
+      'Charge all your slots next turn, increasing their damage or guard by 10'
+    );
+
+    rerender(<Token ariaLabel="Charge token" language="jp" tokenType="yellow" />);
+
+    expect(screen.getByLabelText('Charge token')).toHaveAttribute(
+      'title',
+      '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u3059\u3079\u3066\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30c1\u30e3\u30fc\u30b8\u3057\u3001\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u309210\u5897\u52a0\u3055\u305b\u308b\u3002'
+    );
+    expect(screen.getByLabelText('Charge token')).toHaveAccessibleDescription(
+      '\u6b21\u306e\u30bf\u30fc\u30f3\u3001\u3059\u3079\u3066\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30c1\u30e3\u30fc\u30b8\u3057\u3001\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u309210\u5897\u52a0\u3055\u305b\u308b\u3002'
     );
   });
 
@@ -205,7 +229,7 @@ describe('Token', () => {
     expect(screen.getByText('Buff')).toHaveClass('language-en');
     expect(screen.getByLabelText('Buff token')).toHaveAttribute(
       'title',
-      'Buff\nBuff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.'
+      'Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 5 next turn only.'
     );
 
     rerender(
@@ -215,7 +239,7 @@ describe('Token', () => {
     expect(screen.getByText('\u5f37\u5316')).toHaveClass('language-jp');
     expect(screen.getByLabelText('Buff token')).toHaveAttribute(
       'title',
-      '\u5f37\u5316\n\u30d0\u30d5\u304c\u914d\u7f6e\u3055\u308c\u3066\u3044\u308b\u5217\u306e\u4e21\u96a3\u306e2\u5217\u3092\u5f37\u5316\u3057\u3001\u6b21\u306e\u30bf\u30fc\u30f3\u306e\u307f\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u30925\u5897\u52a0\u3055\u305b\u308b\u3002'
+      '\u30d0\u30d5\u304c\u914d\u7f6e\u3055\u308c\u3066\u3044\u308b\u5217\u306e\u4e21\u96a3\u306e2\u5217\u3092\u5f37\u5316\u3057\u3001\u6b21\u306e\u30bf\u30fc\u30f3\u306e\u307f\u30c0\u30e1\u30fc\u30b8\u307e\u305f\u306f\u30ac\u30fc\u30c9\u30925\u5897\u52a0\u3055\u305b\u308b\u3002'
     );
   });
 

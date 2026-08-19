@@ -284,16 +284,19 @@
   transform: scaleX(-1);
 }
 
+.battle-character-overlay-icon {
+  height: auto;
+  width: 80px !important;
+}
+
 .battle-death-icon {
   animation: battle-death-icon 1.5s ease-out forwards;
-  color: #555;
-  height: 100%;
+  color: #BABABA;
   left: 50%;
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
-  width: 100%;
   z-index: 4;
 }
 
@@ -329,13 +332,11 @@
 .battle-deflect-ban {
   animation: battle-deflect-ban 1s linear forwards;
   color: green;
-  height: auto;
   left: 50%;
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
-  width: 100%;
   z-index: 2;
 }
 
@@ -393,8 +394,6 @@
 
 .battle-guard-shield {
   color: blue;
-  height: 100%;
-  width: 100%;
 }
 
 .battle-guard-amount {
@@ -421,13 +420,11 @@
   animation-fill-mode: forwards;
   animation-timing-function: linear;
   color: lightblue;
-  height: 100%;
   left: 50%;
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(1);
-  width: 100%;
   z-index: 2;
 }
 
@@ -450,9 +447,8 @@
   z-index: 3;
 }
 
-.battle-actor-image svg.cosmic-intervention-bolt {
-  height: 100%;
-  width: auto;
+.battle-buff-bolt {
+  color: #69419e;
 }
 
 @keyframes cosmic-intervention-bolt {
@@ -505,11 +501,6 @@
   top: 0;
   transform: translate(-50%, -100%);
   z-index: 3;
-}
-
-.battle-actor-image svg.shields-down-gavel {
-  height: 100px;
-  width: auto;
 }
 
 @keyframes shields-down-gavel {

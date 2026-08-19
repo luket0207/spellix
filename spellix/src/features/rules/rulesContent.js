@@ -8,6 +8,12 @@ export const RULES_CONTENT = {
     ],
     sections: [
       {
+        heading: 'Browser Compatibility',
+        paragraphs: [
+          "If the board or menus do not fit onto your screen naturally, please use the browser's zoom feature to adjust this. Either hold Ctrl and scroll with your mouse, or hold Ctrl and then press + or - to zoom in and out.",
+        ],
+      },
+      {
         heading: 'Tokens',
         paragraphs: [
           'Tokens are the main way players become stronger. Tokens can be placed into spell columns. When you roll a number in battle, the tokens in that matching column activate.',
@@ -70,6 +76,12 @@ export const RULES_CONTENT = {
       'ゲームに勝つには、まず2つのエリートタワーを両方攻略する必要があります。1つは北西にあり、もう1つは南東にあります。両方のエリートタワーを攻略すると、そのプレイヤーは北東にあるボスの城に入り、最後のボスに挑戦できます。最初に最後のボスを倒したプレイヤーが勝者です。',
     ],
     sections: [
+      {
+        heading: 'ブラウザの互換性',
+        paragraphs: [
+          'ボードやメニューが画面に自然に収まらない場合は、ブラウザのズーム機能で調整してください。Ctrlキーを押しながらマウスホイールをスクロールするか、Ctrlキーを押しながら＋または－を押すと、拡大・縮小できます。',
+        ],
+      },
       {
         heading: 'トークン',
         paragraphs: [

@@ -371,4 +371,145 @@ Final Fix
 * The PNG manifest metadata, Apple touch icon, and supplied image files are unchanged.
 * The separate Bug-001 live-deployment blocker remains until the updated build is explicitly deployed.
 
+---
 
+Bug-003: Correct Charge token description value from 5 to 10
+
+Status
+
+* fixed
+
+Related Feature(s)
+
+* Feature-014: Update Charge token description
+* Feature-013: Add Charge and Buff battle animations
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+
+Bug Summary
+
+* There was a typo in Feature-014.
+* The Charge token description incorrectly says it increases damage or guard by `5`.
+* It should say it increases damage or guard by `10`.
+* This applies to both English and Japanese descriptions.
+
+Incorrect Description
+
+English:
+
+```txt id="qcfq1h"
+Charge all your slots next turn, increasing their damage or guard by 5
+```
+
+Japanese:
+
+```txt id="sswtwy"
+次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。
+```
+
+Correct Charge Token Entry
+
+```txt id="g21b96"
+Colour: Yellow
+Name: Charge
+Japanese Name: チャージ
+Description: Charge all your slots next turn, increasing their damage or guard by 10
+Japanese Description: 次のターン、すべてのスロットをチャージし、ダメージまたはガードを10増加させる。
+Rarity: Rare
+```
+
+Required Fix
+
+* Replace the English Charge token description with:
+
+```txt id="gdm6uu"
+Charge all your slots next turn, increasing their damage or guard by 10
+```
+
+* Replace the Japanese Charge token description with:
+
+```txt id="xbj3zh"
+次のターン、すべてのスロットをチャージし、ダメージまたはガードを10増加させる。
+```
+
+* Remove the incorrect `5` wording anywhere it was added by Feature-014.
+
+Display Requirement
+
+* The corrected Charge description should appear everywhere token descriptions are shown:
+
+  * token tooltip.
+  * token bag.
+  * spell assignment modal.
+  * Wandsmith.
+  * Redo spell modification.
+  * token reward modals.
+  * battle reward token choices.
+  * rules page token section, if token descriptions are listed there.
+  * debug token displays.
+
+Tooltip Requirement
+
+* If Feature-011 has been implemented, the Charge token tooltip should only show the corrected description.
+
+Correct English tooltip:
+
+```txt id="lx62k7"
+Charge all your slots next turn, increasing their damage or guard by 10
+```
+
+Correct Japanese tooltip:
+
+```txt id="hqbs3v"
+次のターン、すべてのスロットをチャージし、ダメージまたはガードを10増加させる。
+```
+
+Functionality Requirement
+
+* This bug fixes text/data wording.
+* Do not change Charge mechanics unless the implementation is incorrectly using the description value as the calculation source.
+* Charge should still function according to the existing battle rules.
+* Charge should still be:
+
+  * Yellow.
+  * Rare.
+  * named `Charge` / `チャージ`.
+
+Out Of Scope
+
+* No change to Charge animation.
+* No change to Buff.
+* No change to potion Charger.
+* No change to token rarity.
+* No change to token colour.
+* No battle rebalance beyond correcting this description.
+
+Testing Checkpoints
+
+* View Charge token in English.
+* Confirm description says `increasing their damage or guard by 10`.
+* View Charge token in Japanese.
+* Confirm description says `ダメージまたはガードを10増加させる`.
+* Confirm no Charge description still says `5`.
+* Confirm Charge is still Yellow.
+* Confirm Charge is still Rare.
+* Confirm Charge tooltip only shows the corrected description if Feature-011 is complete.
+* Confirm Charge still works in battle.
+* Confirm Charge animation from Feature-013 still works if implemented.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+Investigation Result
+
+* Reproduced the bug in the shared Yellow token definition and both bilingual Charge tooltip assertions: all used `5` instead of `10`.
+* Confirmed Charge calculations are independent of description data, so no gameplay rebalance or mechanic edit was required.
+
+Attempted Fixes
+
+* Updated the focused token data and shared tooltip regressions to require the supplied English/Japanese `10` wording.
+* Confirmed both new regressions failed only on the existing `5` descriptions before changing runtime data.
+
+Final Fix
+
+* Updated `TOKEN_DEFINITIONS.yellow.description` to use `10` in English and Japanese.
+* Existing token surfaces continue to receive the corrected copy through shared token data and `Token` tooltip rendering.
+* Charge remains Yellow, Rare, named `Charge` / `チャージ`, mechanically unchanged, and connected to its existing battle animation.

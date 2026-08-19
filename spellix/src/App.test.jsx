@@ -847,6 +847,14 @@ describe('App routing flow', () => {
 
     expect(rulesDialog).toHaveClass('modal-panel--default');
     expect(
+      within(rulesDialog).getByRole('heading', { name: 'Browser Compatibility' })
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        "If the board or menus do not fit onto your screen naturally, please use the browser's zoom feature to adjust this. Either hold Ctrl and scroll with your mouse, or hold Ctrl and then press + or - to zoom in and out."
+      )
+    ).toBeInTheDocument();
+    expect(
       within(rulesDialog).getByRole('heading', { name: 'Village Actions' })
     ).toBeInTheDocument();
     expect(
@@ -882,7 +890,7 @@ describe('App routing flow', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
-    const settingsDialog = screen.getByRole('dialog', { name: 'Settings' });
+    const settingsDialog = screen.getByRole('dialog', { name: '設定' });
 
     await userEvent.click(
       within(settingsDialog).getByRole('button', { name: 'ルール' })
@@ -890,6 +898,14 @@ describe('App routing flow', () => {
 
     const rulesDialog = screen.getByRole('dialog', { name: 'ゲームのルール' });
 
+    expect(
+      within(rulesDialog).getByRole('heading', { name: 'ブラウザの互換性' })
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        'ボードやメニューが画面に自然に収まらない場合は、ブラウザのズーム機能で調整してください。Ctrlキーを押しながらマウスホイールをスクロールするか、Ctrlキーを押しながら＋または－を押すと、拡大・縮小できます。'
+      )
+    ).toBeInTheDocument();
     expect(
       within(rulesDialog).getByRole('heading', { name: '村でできること' })
     ).toBeInTheDocument();
@@ -904,7 +920,7 @@ describe('App routing flow', () => {
       within(rulesDialog).getAllByRole('button', { name: '設定に戻る' })[1]
     );
 
-    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '設定' })).toBeInTheDocument();
   });
 
   test('ends the game and resets setup state', () => {

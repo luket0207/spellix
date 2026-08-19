@@ -205,7 +205,20 @@ describe('BattlePage flows', () => {
     expect(debugControlsRule).not.toMatch(/right\s*:/);
   });
 
-  test('defines the centred grey growing and shaking battle death icon animation', () => {
+  test('uses one fixed-size class for battle character overlay icons', () => {
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+    const overlayIconRule = stylesheet.match(
+      /\.battle-character-overlay-icon\s*\{([^}]*)\}/
+    )?.[1];
+
+    expect(overlayIconRule).toMatch(/height:\s*auto/);
+    expect(overlayIconRule).toMatch(/width:\s*80px\s*!important/);
+    expect(stylesheet).not.toMatch(
+      /\.battle-actor-image\s+svg\.(?:cosmic-intervention-bolt|shields-down-gavel)\s*\{/
+    );
+  });
+
+  test('defines the centred light-grey growing and shaking battle death icon animation', () => {
     const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
     const deathIconRule = stylesheet.match(
       /\.battle-death-icon\s*\{([^}]*)\}/
@@ -215,7 +228,7 @@ describe('BattlePage flows', () => {
     )?.[1];
 
     expect(deathIconRule).toMatch(/animation:\s*battle-death-icon 1\.5s ease-out forwards/);
-    expect(deathIconRule).toMatch(/color:\s*#555/i);
+    expect(deathIconRule).toMatch(/color:\s*#BABABA/i);
     expect(deathIconRule).toMatch(/left:\s*50%/);
     expect(deathIconRule).toMatch(/top:\s*50%/);
     expect(deathAnimation).toMatch(/scale\(0\)/);
@@ -740,7 +753,10 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText('Battle player health: 60')).toBeInTheDocument();
     expect(healingAnimation).toHaveAttribute('data-icon', 'flask');
-    expect(healingAnimation).toHaveClass('healing-potion-animation');
+    expect(healingAnimation).toHaveClass(
+      'battle-character-overlay-icon',
+      'healing-potion-animation'
+    );
     expect(healingAnimation.parentElement).toContainElement(battlePlayerImage);
     expect(screen.getByText('Player 1 potions: roll-choice,copy-and-paste,bridge-builder')).toBeInTheDocument();
     expect(within(potionSection).queryByText('First Aid')).not.toBeInTheDocument();
@@ -999,9 +1015,6 @@ describe('BattlePage flows', () => {
     const boltRule = stylesheet.match(
       /\.cosmic-intervention-bolt\s*\{([^}]*)\}/
     )?.[1];
-    const boltIconRule = stylesheet.match(
-      /\.battle-actor-image\s+svg\.cosmic-intervention-bolt\s*\{([^}]*)\}/
-    )?.[1];
 
     expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
     expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
@@ -1009,14 +1022,13 @@ describe('BattlePage flows', () => {
     expect(screen.getByText('Battle enemy health: 120')).toBeInTheDocument();
     expect(bolt.tagName).toBe('svg');
     expect(bolt).toHaveAttribute('data-icon', 'bolt');
+    expect(bolt).toHaveClass('battle-character-overlay-icon');
     expect(bolt.parentElement).toContainElement(enemyImage);
     expect(boltRule).toMatch(/animation:\s*cosmic-intervention-bolt 1\.5s linear forwards/);
     expect(boltRule).toMatch(/color:\s*#F5FA00/i);
     expect(boltRule).toMatch(/left:\s*50%/);
     expect(boltRule).toMatch(/top:\s*50%/);
     expect(boltRule).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
-    expect(boltIconRule).toMatch(/height:\s*100%/);
-    expect(boltIconRule).toMatch(/width:\s*auto/);
     expect(stylesheet).toMatch(
       /\.battle-actor-image\s*{[^}]*height:\s*150px;/s
     );
@@ -1208,9 +1220,6 @@ describe('BattlePage flows', () => {
     const gavelRule = stylesheet.match(
       /\.shields-down-gavel\s*\{([^}]*)\}/
     )?.[1];
-    const gavelIconRule = stylesheet.match(
-      /\.battle-actor-image\s+svg\.shields-down-gavel\s*\{([^}]*)\}/
-    )?.[1];
 
     expect(screen.getByText('Player 1 potions: first-aid')).toBeInTheDocument();
     expect(screen.getByText('Battle potion used: true')).toBeInTheDocument();
@@ -1218,6 +1227,7 @@ describe('BattlePage flows', () => {
     expect(screen.getByText('Battle enemy health: 10')).toBeInTheDocument();
     expect(screen.getByLabelText('Enemy guard shield')).toBeInTheDocument();
     expect(gavel).toHaveAttribute('data-icon', 'gavel');
+    expect(gavel).toHaveClass('battle-character-overlay-icon');
     expect(gavel.parentElement).toContainElement(enemyImage);
     expect(gavelRule).toMatch(
       /animation:\s*shields-down-gavel 1\.5s ease-in-out forwards/
@@ -1225,8 +1235,6 @@ describe('BattlePage flows', () => {
     expect(gavelRule).toMatch(/color:\s*#F5FA00/i);
     expect(gavelRule).toMatch(/left:\s*50%/);
     expect(gavelRule).toMatch(/top:\s*0/);
-    expect(gavelIconRule).toMatch(/height:\s*100px/);
-    expect(gavelIconRule).toMatch(/width:\s*auto/);
     expect(stylesheet).toMatch(
       /@keyframes shields-down-gavel\s*\{[\s\S]*66%\s*\{[^}]*opacity:\s*1;[^}]*top:\s*50%;[^}]*\}[\s\S]*76%\s*\{[^}]*opacity:\s*0\.15;[^}]*\}[\s\S]*86%\s*\{[^}]*opacity:\s*1;[^}]*\}[\s\S]*94%\s*\{[^}]*opacity:\s*0\.15;[^}]*\}[\s\S]*100%\s*\{[^}]*opacity:\s*0;/s
     );
@@ -1319,6 +1327,7 @@ describe('BattlePage flows', () => {
     expect(thawUseButton).toBeEnabled();
     expect(screen.getByText(/roll even to unfreeze/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Player frozen')).toHaveClass(
+      'battle-character-overlay-icon',
       'battle-freeze-indicator--enter'
     );
 
@@ -2377,7 +2386,10 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText(/enemy guard: 20/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveAttribute('data-icon', 'shield');
-    expect(screen.getByLabelText(/enemy guard shield/i)).toHaveClass('battle-guard-shield');
+    expect(screen.getByLabelText(/enemy guard shield/i)).toHaveClass(
+      'battle-character-overlay-icon',
+      'battle-guard-shield'
+    );
     expect(screen.getByLabelText(/enemy guard shield/i)).toHaveStyle({ opacity: '0.6' });
     expect(screen.getByLabelText(/enemy guard amount/i)).toHaveTextContent('20');
     expect(screen.getByLabelText(/enemy guard amount/i)).toHaveClass('battle-guard-amount');
@@ -2458,6 +2470,137 @@ describe('BattlePage flows', () => {
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
   });
 
+  test('queues player Charge and Buff before Guard and lethal Damage', () => {
+    const setup = createBattleSetup();
+    const stylesheet = readFileSync(`${__dirname}/BattlePage.css`, 'utf8');
+
+    setup.activeBattle.enemyCurrentHealth = 10;
+    setup.activeBattle.playerChargeUses = [1, 0, 0, 0, 0, 0];
+    setup.activeBattle.playerFreezeUses = [1, 0, 0, 0, 0, 0];
+    setup.players[0].spellSlots[0] = {
+      ...setup.players[0].spellSlots[0],
+      tokens: [
+        { committed: true, id: 'player-1-yellow-1', type: 'yellow' },
+        { committed: true, id: 'player-1-purple-1', type: 'purple' },
+        { committed: true, id: 'player-1-blue-1', type: 'blue' },
+        { committed: true, id: 'player-1-red-1', type: 'red' },
+        { committed: true, id: 'player-1-light-blue-1', type: 'light-blue' },
+      ],
+    };
+
+    renderBattleFlow(['/battle'], setup);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Force 1' }));
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    const chargeBolt = screen.getByLabelText(/charge animation/i);
+    expect(chargeBolt).toHaveAttribute('data-icon', 'bolt');
+    expect(chargeBolt).toHaveClass(
+      'battle-character-overlay-icon',
+      'cosmic-intervention-bolt',
+      'battle-charge-bolt'
+    );
+    expect(chargeBolt.parentElement).toHaveClass('battle-actor-image--player');
+    expect(screen.queryByLabelText(/buff animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/blue guard animation/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle phase: active/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
+    document
+      .querySelectorAll('.battle-debug-controls button')
+      .forEach((button) => expect(button).toBeDisabled());
+
+    act(() => {
+      jest.advanceTimersByTime(1499);
+    });
+    expect(screen.getByLabelText(/charge animation/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    const buffBolt = screen.getByLabelText(/buff animation/i);
+    expect(screen.queryByLabelText(/charge animation/i)).not.toBeInTheDocument();
+    expect(buffBolt).toHaveAttribute('data-icon', 'bolt');
+    expect(buffBolt).toHaveClass(
+      'battle-character-overlay-icon',
+      'cosmic-intervention-bolt',
+      'battle-buff-bolt'
+    );
+    expect(buffBolt.parentElement).toHaveClass('battle-actor-image--player');
+    expect(stylesheet).toMatch(
+      /\.battle-character-overlay-icon\s*\{[^}]*height:\s*auto;[^}]*width:\s*80px\s*!important;/s
+    );
+    expect(stylesheet).toMatch(/\.battle-buff-bolt\s*\{[^}]*color:\s*#69419e;/i);
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    expect(screen.queryByLabelText(/buff animation/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/blue guard animation/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/red damage animation/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/battle enemy health: 10/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByLabelText(/blue guard animation/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/red damage animation/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: active/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy frozen/i)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(screen.getByText(/battle enemy health: 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/battle phase: active/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy frozen/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/enemy defeated/i)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(999);
+    });
+    expect(screen.getByText(/battle phase: active/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/enemy defeated/i)).toBeInTheDocument();
+  });
+
+  test('targets enemy Charge and Buff animations at the enemy caster', () => {
+    const setup = createBattleSetup();
+
+    setup.activeBattle = {
+      ...setup.activeBattle,
+      currentBattleActor: 'enemy',
+      isResolvingTurn: true,
+      pendingEffects: [
+        { source: 'currentActor', target: 'currentActor', type: 'buff' },
+        { source: 'currentActor', target: 'currentActor', type: 'charge' },
+      ],
+    };
+
+    renderBattleFlow(['/battle'], setup);
+
+    const chargeBolt = screen.getByLabelText(/charge animation/i);
+    expect(chargeBolt.parentElement).toHaveClass('battle-actor-image--enemy');
+    expect(screen.queryByLabelText(/buff animation/i)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    const buffBolt = screen.getByLabelText(/buff animation/i);
+    expect(buffBolt.parentElement).toHaveClass('battle-actor-image--enemy');
+    expect(screen.queryByLabelText(/charge animation/i)).not.toBeInTheDocument();
+  });
+
   test('plays Green reduction after Red damage without overlapping effects', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
     const greenBattleSetup = createBattleSetup();
@@ -2502,12 +2645,15 @@ describe('BattlePage flows', () => {
       'Battle enemy panel'
     );
     expect(enemyDeflectIcon).toHaveAttribute('data-icon', 'ban');
-    expect(enemyDeflectIcon).toHaveClass('battle-deflect-ban');
+    expect(enemyDeflectIcon).toHaveClass(
+      'battle-character-overlay-icon',
+      'battle-deflect-ban'
+    );
     expect(enemyDeflectIcon.parentElement).toHaveClass(
       'battle-actor-image--enemy'
     );
     expect(stylesheet).toMatch(
-      /\.battle-deflect-ban\s*{[^}]*animation:\s*battle-deflect-ban 1s linear forwards;[^}]*color:\s*green;[^}]*position:\s*absolute;[^}]*width:\s*100%;/s
+      /\.battle-deflect-ban\s*{[^}]*animation:\s*battle-deflect-ban 1s linear forwards;[^}]*color:\s*green;[^}]*position:\s*absolute;/s
     );
     expect(stylesheet).toMatch(
       /@keyframes battle-deflect-ban\s*{[\s\S]*?transform:\s*translate\(-50%, -50%\) scale\(0\);[\s\S]*?translateX\(-5px\)[\s\S]*?translateX\(5px\)[\s\S]*?opacity:\s*0;/
@@ -2888,7 +3034,10 @@ describe('BattlePage flows', () => {
 
     expect(screen.getByText(/battle enemy health: 0/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/enemy defeated/i)).toHaveClass('battle-death-icon');
+    expect(screen.getByLabelText(/enemy defeated/i)).toHaveClass(
+      'battle-character-overlay-icon',
+      'battle-death-icon'
+    );
     expect(screen.queryByRole('button', { name: /^choose$/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/green reduction animation/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll dice/i })).toBeDisabled();
@@ -2963,7 +3112,10 @@ describe('BattlePage flows', () => {
     expect(screen.getByText(/player 1 died last turn: yes/i)).toBeInTheDocument();
     expect(screen.getByText(/battle phase: deathAnimation/i)).toBeInTheDocument();
     expect(screen.getByText(/battle actor: player/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/player defeated/i)).toHaveClass('battle-death-icon');
+    expect(screen.getByLabelText(/player defeated/i)).toHaveClass(
+      'battle-character-overlay-icon',
+      'battle-death-icon'
+    );
     expect(screen.queryByRole('dialog', { name: /battle lost/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/orange counter animation/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /battle turn/i })).not.toBeInTheDocument();

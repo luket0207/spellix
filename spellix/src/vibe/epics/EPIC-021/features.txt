@@ -1817,3 +1817,1581 @@ Implementation Notes
 * Existing player token bags are cloned without migration, preserving Blue Guard tokens already present in older saves.
 * The English and Japanese first-assignment warnings now require all 5 starting tokens.
 * Earned Guard behaviour, reward pools, token bag capacity, and spell capacity are unchanged.
+
+---
+
+Feature-009: Standardise battle overlay icon width
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-014 Feature-004: Cosmic Intervention battle potion
+* EPIC-014 Feature-005: Shields Down battle potion
+* EPIC-014 Feature-006: Thaw battle potion
+* EPIC-017 Feature-005: Improve Deflect animation
+* EPIC-020 Feature-005: Show final hit, death icon, and complete animations before battle ends
+* EPIC-021 Feature-010: Change battle death icon colour
+
+Goal
+
+* Standardise the size of all icons that appear over character images in battle.
+* Battle overlay icons should no longer scale to the full width of the character image.
+* Every battle overlay icon should use a fixed width of `80px`.
+* Icon height should be automatic so the icon keeps its natural aspect ratio.
+* Existing animation behaviour should not change.
+
+Problem Summary
+
+* Battle overlay icons currently become the same width as the character image they appear over.
+* This makes some icons look too large.
+* Different battle effects can feel visually inconsistent.
+* The desired behaviour is for all battle overlay icons to have the same width.
+
+Required Behaviour
+
+* Any icon that appears over a character image in battle should have:
+
+```txt id="n8e9fh"
+width: 80px
+height: auto
+```
+
+* The icon should remain horizontally centred over the character image.
+* The icon should remain vertically centred over the character image.
+* The icon should keep its natural ratio.
+* Existing animations should continue to work exactly as they do now.
+
+Affected Battle Overlay Icons
+
+* This applies to every icon that appears over a battle character image, including:
+
+  * Guard shield icons.
+  * Deflect icon.
+  * potion effect icons.
+  * death skull icon.
+  * snowflake/freeze icon.
+  * Cosmic Intervention bolt icon.
+  * Shields Down gavel icon.
+  * healing potion bottle icon.
+  * Thaw icon if displayed over a character.
+  * any future battle overlay icon.
+
+Icon Size Requirement
+
+```css id="hc9v13"
+.battle-character-overlay-icon {
+  width: 80px;
+  height: auto;
+}
+```
+
+* Use the project’s actual class names.
+* Prefer one shared battle overlay icon class if possible.
+* Do not set height to `80px`.
+* Do not stretch icons.
+* Do not use character image width for icon width.
+
+Positioning Requirement
+
+* Icons should remain centred over the relevant character image.
+* The centre point should not change because of the new width.
+* The icon should be centred both:
+
+  * horizontally.
+  * vertically.
+
+Suggested positioning direction:
+
+```css id="hxpc2a"
+.battle-character-overlay-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 80px;
+  height: auto;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+```
+
+Animation Compatibility Requirement
+
+* Existing animations should not be affected by this change.
+* If animations currently use `transform`, do not overwrite them accidentally.
+* If centring also uses `transform`, combine transforms carefully.
+
+Example safe direction:
+
+```css id="u3l94a"
+.battle-character-overlay-icon {
+  --overlay-base-transform: translate(-50%, -50%);
+}
+```
+
+* Animation keyframes should preserve centring while applying scale/shake/rotation.
+* Do not remove:
+
+  * grow animation.
+  * shake animation.
+  * fade animation.
+  * jitter animation.
+  * travel animation.
+  * flash animation.
+
+Important Transform Note
+
+* If an existing animation uses:
+
+```css id="s4pze0"
+transform: scale(1.2);
+```
+
+* And centring uses:
+
+```css id="erxyqw"
+transform: translate(-50%, -50%);
+```
+
+* The animation may break centring unless both are combined.
+
+Correct direction:
+
+```css id="me20pv"
+transform: translate(-50%, -50%) scale(1.2);
+```
+
+* Check every battle icon animation after changing the shared icon width.
+
+Specific Icon Notes
+
+* Guard shield should use `80px` width while remaining centred.
+* Deflect `faBan` should use `80px` width while keeping its green animation.
+* Freeze/snowflake should use `80px` width while keeping freeze animation.
+* Potion bottle icon should use `80px` width while keeping potion application animation.
+* Death skull should use `80px` width and the colour from Feature-010.
+* Cosmic Intervention bolt should no longer force itself to character image height.
+* Shields Down gavel should no longer force itself to character image height.
+
+Superseded Behaviour
+
+* Previous battle icon sizing that made icons match character image width is superseded by this feature.
+* Previous Cosmic Intervention sizing bugs that requested the bolt match character image height are superseded for general battle overlay sizing.
+* The new shared rule is:
+
+```txt id="qf6fj6"
+Battle overlay icons are always 80px wide.
+Height is automatic.
+```
+
+Out Of Scope
+
+* No changes to battle damage values.
+* No changes to icon choice.
+* No changes to battle effect timing.
+* No changes to battle animation sequence.
+* No changes to character image size.
+* No changes to non-battle icons.
+* No changes to token or potion component icons outside battle overlays.
+
+Testing Checkpoints
+
+* Trigger Guard in battle.
+* Confirm shield icon is 80px wide.
+* Confirm shield remains centred over the character.
+* Trigger Deflect.
+* Confirm Deflect icon is 80px wide.
+* Confirm Deflect animation still works.
+* Trigger Freeze.
+* Confirm snowflake/freeze icon is 80px wide.
+* Confirm freeze animation still works.
+* Trigger a healing potion in battle.
+* Confirm potion icon is 80px wide.
+* Confirm potion animation still works.
+* Trigger Cosmic Intervention.
+* Confirm bolt icon is 80px wide.
+* Confirm bolt remains centred and animated.
+* Trigger Shields Down.
+* Confirm gavel icon is 80px wide.
+* Confirm animation still works.
+* Trigger a battle death.
+* Confirm skull icon is 80px wide.
+* Confirm skull grows/shakes without losing centring.
+* Confirm icons keep natural height ratio.
+* Confirm no icon stretches or squashes.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added one shared `battle-character-overlay-icon` class with `80px` width and automatic height.
+* Applied the shared class to battle death, Deflect, Guard, Freeze, healing potion, Cosmic Intervention, and Shields Down icons.
+* Removed only the old actor-sized icon declarations; existing positions, colours, timing, and transform keyframes are unchanged.
+* Battle healing passes the class through the existing shared healing component, while non-battle healing keeps its existing width animation.
+* The battle-only width uses a narrow important override so the shared healing keyframes remain unchanged outside battle.
+
+---
+
+Feature-010: Change battle death icon colour to light grey
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-020 Feature-005: Show final hit, death icon, and complete animations before battle ends
+* EPIC-021 Feature-009: Standardise battle overlay icon width
+
+Goal
+
+* Update the battle death icon colour.
+* The death icon should use a lighter grey colour.
+* The new colour should be:
+
+```txt id="cb7qq9"
+#BABABA
+```
+
+Required Behaviour
+
+* When a character reaches 0 HP in battle and the death icon appears:
+
+  * use Font Awesome `faSkullCrossbones`.
+  * set the icon colour to `#BABABA`.
+  * keep the same death animation.
+  * keep the same placement over the defeated character.
+  * keep the same battle-end timing.
+
+Colour Requirement
+
+```css id="zjdcd4"
+.battle-death-icon {
+  color: #BABABA;
+}
+```
+
+* Use the actual project class name if different.
+* This colour should apply only to the battle death icon unless the same class is intentionally shared.
+
+Animation Requirement
+
+* Do not change the death icon animation.
+* It should still:
+
+  * appear after health reaches 0.
+  * grow from the centre.
+  * shake.
+  * complete before the battle ends.
+
+Interaction With Feature-009
+
+* The death icon should also follow Feature-009.
+* It should be:
+
+```txt id="tztm47"
+width: 80px
+height: auto
+colour: #BABABA
+```
+
+Out Of Scope
+
+* No changes to death timing.
+* No changes to death icon type.
+* No changes to respawn skull icon unless it uses the same battle death class intentionally.
+* No changes to battle rewards.
+* No changes to battle loss penalties.
+* No changes to other grey icons.
+
+Testing Checkpoints
+
+* Trigger lethal damage against an enemy.
+* Confirm the skull icon appears after health reaches 0.
+* Confirm the skull icon colour is `#BABABA`.
+* Confirm the skull icon remains centred over the enemy.
+* Trigger lethal damage against the player.
+* Confirm the player death skull icon colour is `#BABABA`.
+* Confirm the death animation still works.
+* Confirm battle ends only after the death animation.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Changed only the battle death icon colour from `#555` to `#BABABA`.
+* Kept `faSkullCrossbones`, the shared `80px` width and automatic height, centred placement, grow-and-shake keyframes, and `1.5s` battle timing unchanged.
+* Respawn icons and other grey icons were not changed.
+
+---
+
+Feature-011: Token tooltips should only show description
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-017 Feature-006: Correct token names and separate descriptions
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-020 Feature-004: Make Buff common and update its description
+* EPIC-014 Feature-007: Make potion tooltips behave like token tooltips
+
+Goal
+
+* Update token tooltip content.
+* Token tooltips currently show both the token name and token description.
+* Token tooltips should now show only the description.
+* Token names should still appear elsewhere where the UI intentionally displays token names.
+
+Problem Summary
+
+* The token tooltip now contains:
+
+  * token name.
+  * token description.
+* This is too much repeated text.
+* The tooltip should only explain what the token does.
+
+Required Behaviour
+
+* Token tooltip content should only show the token description.
+* Do not show the token name inside the tooltip.
+* This applies in both English and Japanese.
+* The tooltip should still use the correct language.
+* The tooltip should still appear next to the cursor using existing tooltip behaviour.
+
+Correct Tooltip Example
+
+For Damage token in English:
+
+```txt id="ps1a9v"
+Plus 10 Damage
+```
+
+Incorrect Tooltip Example
+
+```txt id="s0xkeo"
+Damage
+Plus 10 Damage
+```
+
+Correct Japanese Tooltip Example
+
+```txt id="gp924k"
+ダメージ＋10
+```
+
+Incorrect Japanese Tooltip Example
+
+```txt id="ajxtlf"
+ダメージ
+ダメージ＋10
+```
+
+Scope
+
+* Apply to token tooltips in:
+
+  * token bag.
+  * spell assignment modal.
+  * Wandsmith.
+  * Redo potion spell editing.
+  * reward token assignment.
+  * battle reward choice modal.
+  * committed spell display.
+  * battle spell columns.
+  * debug token displays if they use token tooltips.
+
+Name Display Requirement
+
+* Token names should still appear where they are part of the main UI, for example:
+
+  * reward cards that intentionally show token names.
+  * token data tables if any exist.
+  * rules page token list.
+  * selected reward summaries.
+* Only the tooltip content should remove the name.
+
+Potion Tooltip Requirement
+
+* This feature is only about token tooltips.
+* Potion tooltips can keep their current content unless a later feature changes them.
+* Do not accidentally remove potion names from potion tooltip UI if that is not intended.
+
+Suggested Implementation Direction
+
+* Find the shared token tooltip component or helper.
+* Remove title/name rendering from the tooltip body.
+* Keep description rendering.
+
+Suggested JSX direction:
+
+```jsx id="i16lsi"
+<div className="token-tooltip">
+  <p>{token.description[language]}</p>
+</div>
+```
+
+Instead of:
+
+```jsx id="l14ctl"
+<div className="token-tooltip">
+  <h3>{token.name[language]}</h3>
+  <p>{token.description[language]}</p>
+</div>
+```
+
+* Use the actual token data structure.
+
+Out Of Scope
+
+* No changes to token descriptions.
+* No changes to token names.
+* No changes to token behaviour.
+* No changes to potion tooltips.
+* No changes to tooltip positioning.
+* No changes to tooltip styling except removing name spacing if needed.
+
+Testing Checkpoints
+
+* Hover Damage token.
+* Confirm tooltip only shows `Plus 10 Damage`.
+* Hover Guard token.
+* Confirm tooltip only shows its description.
+* Hover Buff token.
+* Confirm tooltip only shows updated Buff description.
+* Hover Shiny Health token.
+* Confirm tooltip only shows its description.
+* Switch to Japanese.
+* Hover several tokens.
+* Confirm tooltips only show Japanese descriptions.
+* Confirm token names still appear in reward cards/rules where intended.
+* Confirm potion tooltips are unaffected.
+* Confirm tooltip positioning still works.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Reused the shared `Token` component used by token bags, spell assignment, Wandsmith, Redo editing, rewards, committed spells, battle displays, and debug displays; no new component or abstraction was needed.
+* Native token tooltips now use only the localized token description already provided through `aria-describedby`.
+* Intentional visible token names controlled by `showName`, token data, token behavior, accessibility linkage, focus behavior, and tooltip positioning are unchanged.
+* The separate `PotionIcon` tooltip implementation and all potion consumers are unchanged.
+
+---
+
+Feature-012: Add Browser Compatibility section to top of rules text
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-009: Add start-page Rules button and bilingual Rules page
+* EPIC-020 Feature-013: Add village actions section to rules page
+* EPIC-020 Feature-014: Add rules modal inside settings menu
+* EPIC-020 Feature-001: Make gameplay layout scale to fit screen height
+
+Goal
+
+* Add a Browser Compatibility section to the top of the rules text.
+* The section should appear in both English and Japanese.
+* It should explain how players can use browser zoom if the board or menus do not fit naturally on their screen.
+
+Placement Requirement
+
+* Add this section to the top of the rules content.
+* It should appear before the existing first rules section.
+* It should appear in both:
+
+  * the main Rules page.
+  * the settings Rules modal, if it reuses the same rules content.
+
+Section Title
+
+English:
+
+```txt id="itln3q"
+Browser Compatibility
+```
+
+Japanese:
+
+```txt id="u3825z"
+ブラウザの互換性
+```
+
+English Rules Text
+
+```txt id="t6z7jb"
+If the board or menus do not fit onto your screen naturally, please use the browser's zoom feature to adjust this. Either hold Ctrl and scroll with your mouse, or hold Ctrl and then press + or - to zoom in and out.
+```
+
+Japanese Rules Text
+
+```txt id="w284zb"
+ボードやメニューが画面に自然に収まらない場合は、ブラウザのズーム機能で調整してください。Ctrlキーを押しながらマウスホイールをスクロールするか、Ctrlキーを押しながら＋または－を押すと、拡大・縮小できます。
+```
+
+Style Requirement
+
+* Match the existing rules page section style.
+* The title should use the same style as other rules section titles.
+* Body text should use the same style as other rules body text.
+* Use correct English/Japanese fonts.
+* Do not make this section look like an error warning.
+* It should be normal rules/help text.
+
+Content Requirement
+
+* Include the exact meaning of:
+
+  * board or menus may not fit naturally.
+  * use browser zoom to adjust.
+  * Ctrl + mouse scroll.
+  * Ctrl + plus/minus.
+* Japanese should be natural and clear.
+* Do not mention mobile support.
+* Do not promise full responsiveness on every device.
+
+Rules Modal Requirement
+
+* If rules content is shared, this should automatically appear in:
+
+  * start page rules.
+  * settings rules modal.
+* If they are separate components, update both.
+
+Out Of Scope
+
+* No changes to browser zoom handling.
+* No custom in-game zoom controls.
+* No layout redesign.
+* No change to responsive scaling.
+* No change to rules sections except adding this new top section.
+* No change to settings modal behaviour.
+
+Testing Checkpoints
+
+* Open the Rules page from the start/home screen.
+* Confirm Browser Compatibility appears at the top.
+* Confirm it appears before all other rules sections.
+* Confirm English title and text are correct.
+* Switch to Japanese.
+* Confirm Japanese title and text are correct.
+* Open Rules from settings.
+* Confirm Browser Compatibility appears at the top there too.
+* Confirm rules content still scrolls correctly.
+* Confirm there are no duplicate Browser Compatibility sections.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Implementation Notes
+
+* Added one Browser Compatibility object at index `0` of both existing `RULES_CONTENT` section arrays using the supplied English and Japanese copy.
+* Reused the existing shared `RulesBody`, so the section appears on the main Rules page and in the settings Rules modal with the existing section markup, fonts, and scroll behavior.
+* No new component, style, route, zoom control, layout behavior, or responsive behavior was created or changed.
+* `implementation.txt` was not updated because the main project rules require the three-file vibe workflow and take priority over the legacy checkpoint in this feature text.
+
+---
+
+Feature-013: Add Charge and Buff battle animations
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-014 Feature-004: Cosmic Intervention battle potion
+* EPIC-017 Bug-002: Guard animations should always be first in battle animation queue
+* EPIC-021 Feature-009: Standardise battle overlay icon width
+* EPIC-020 Feature-005: Show final hit, death icon, and complete animations before battle ends
+* EPIC-020 Feature-004: Make Buff common and update its description
+
+Goal
+
+* Add visible battle animations for Charge and Buff effects.
+* Reuse the existing Cosmic Intervention lightning bolt animation.
+* Charge and Buff animations should play over the character who triggered the effect.
+* Charge should always be first in the battle animation queue.
+* Buff should always play immediately after Charge.
+* Both should resolve before all other battle animations.
+
+Required Behaviour
+
+* When a battle roll triggers Charge, show a lightning bolt animation over the character who triggered Charge.
+* When a battle roll triggers Buff, show a lightning bolt animation over the character who triggered Buff.
+* The animation should play over the caster/triggering character, not the opponent.
+* Charge animation should use the existing Cosmic Intervention bolt colour.
+* Buff animation should use purple:
+
+```txt id="xq5gyn"
+#69419e
+```
+
+Animation Priority Requirement
+
+* Charge should always be the first animation in the queue.
+* Buff should always be second, directly after Charge.
+* All other animations should happen after Charge and Buff.
+
+Required queue priority:
+
+```txt id="qwe7s4"
+1. Charge
+2. Buff
+3. Guard
+4. Damage
+5. Deflect
+6. Counter
+7. Freeze
+8. Potion effects
+9. Death icon
+```
+
+* If Guard is currently forced to the front of the animation queue from an earlier bug fix, update the queue rule so Charge and Buff now take priority over Guard.
+* Guard should still happen before damage and other ordinary effects.
+* Charge has priority over Buff.
+
+Example: Charge Only
+
+```txt id="wv7fo8"
+1. Player rolls a column containing Charge.
+2. Charge lightning animation plays over the player character.
+3. Any other effects then animate.
+```
+
+Example: Buff Only
+
+```txt id="du70az"
+1. Player rolls a column containing Buff.
+2. Buff purple lightning animation plays over the player character.
+3. Any other effects then animate.
+```
+
+Example: Charge And Buff Together
+
+```txt id="ml3xzt"
+1. Player rolls a column containing both Charge and Buff.
+2. Charge lightning animation plays over the player character.
+3. Buff purple lightning animation plays over the player character.
+4. Guard, damage, deflect, counter, freeze, or other effects then animate.
+```
+
+Animation Source Requirement
+
+* Reuse the existing Cosmic Intervention lightning bolt animation.
+* Do not create a totally new animation if the existing one can be shared.
+* The animation should keep the same behaviour:
+
+  * lightning bolt appears.
+  * jitter/flash behaviour remains.
+  * fade timing remains.
+  * animation duration remains.
+  * battle controls remain disabled during animation resolution.
+
+Target Requirement
+
+* Cosmic Intervention currently plays the bolt over the enemy being struck.
+* Charge and Buff should instead play the bolt over the character who triggered the effect.
+* If the player triggers Charge or Buff:
+
+  * play the animation over the player character.
+* If the enemy triggers Charge or Buff:
+
+  * play the animation over the enemy character.
+
+Correct Target Examples
+
+```txt id="zm8ycz"
+Player rolls Charge: animation over player.
+Player rolls Buff: animation over player.
+Enemy rolls Charge: animation over enemy.
+Enemy rolls Buff: animation over enemy.
+```
+
+Incorrect Target Examples
+
+```txt id="ayz8eq"
+Player rolls Charge: animation over enemy.
+Player rolls Buff: animation over enemy.
+Enemy rolls Charge: animation over player.
+Enemy rolls Buff: animation over player.
+```
+
+Charge Animation Requirement
+
+* Use the existing Cosmic Intervention lightning bolt animation.
+* Keep the current lightning bolt colour.
+* Keep the current animation timing.
+* Keep the current animation movement/shake/flash.
+* Only change the target position so it appears over the triggering character.
+
+Buff Animation Requirement
+
+* Use the same lightning bolt animation as Charge/Cosmic Intervention.
+* The bolt colour should be:
+
+```txt id="vdgsxm"
+#69419e
+```
+
+* This is the same purple as the Buff token.
+* The animation should appear over the triggering character.
+* Keep the same timing and movement style as the existing bolt animation.
+
+Battle Overlay Icon Size Requirement
+
+* Charge and Buff battle overlay icons must follow EPIC-021 Feature-009.
+* The lightning bolt icon should be:
+
+```txt id="fycmzq"
+width: 80px
+height: auto
+```
+
+* It should remain horizontally and vertically centred over the triggering character image.
+* Do not stretch the icon.
+* Do not make the icon the same width as the character image.
+
+Queue Implementation Direction
+
+* Battle animations should be queued by effect priority before playback.
+* Charge and Buff should be added to the queue before ordinary battle effects.
+
+Suggested priority map:
+
+```js id="qolj29"
+const battleAnimationPriority = {
+  charge: 10,
+  buff: 20,
+  guard: 30,
+  damage: 40,
+  deflect: 50,
+  counter: 60,
+  freeze: 70,
+  potion: 80,
+  death: 90
+};
+```
+
+* Lower numbers mean earlier animation.
+* Use the project’s actual animation queue system if one already exists.
+* Do not break existing animation sequencing.
+
+Suggested Animation Event Shape
+
+```js id="i8woza"
+{
+  type: "charge",
+  target: "self",
+  icon: faBolt,
+  colour: "current-cosmic-intervention-yellow",
+  sourceCharacterId: currentBattleActor.id
+}
+```
+
+```js id="oi7uss"
+{
+  type: "buff",
+  target: "self",
+  icon: faBolt,
+  colour: "#69419e",
+  sourceCharacterId: currentBattleActor.id
+}
+```
+
+* Use actual state names from the battle system.
+* The important rule is that the target is the triggering character.
+
+Interaction With Existing Charge Behaviour
+
+* This feature adds animation only.
+* Existing Charge functionality should remain unchanged.
+* Charge should still charge the relevant slots according to existing rules.
+* The animation should not change:
+
+  * how long Charge lasts.
+  * which columns become charged.
+  * how charged columns are displayed.
+  * how charged effects resolve.
+
+Interaction With Existing Buff Behaviour
+
+* This feature adds animation only.
+* Existing Buff functionality should remain unchanged.
+* Buff should still apply to adjacent columns according to existing rules.
+* The animation should not change:
+
+  * which columns are buffed.
+  * how much damage/guard is increased.
+  * how long the Buff lasts.
+  * merged/effective column adjacency logic.
+
+Timing Requirement
+
+* Charge and Buff animations should happen before the visual effects they enable.
+* If Charge causes later attacks/guards to become stronger, the player should see the Charge animation first.
+* If Buff causes adjacent damage/guard to increase, the player should see the Buff animation before the affected damage/guard animation.
+* Battle result logic should remain correct even though the animation queue now includes extra steps.
+
+Controls Requirement
+
+* Battle controls should stay disabled while Charge or Buff animation is playing.
+* The player should not be able to roll, use another potion, or advance battle while these animations are resolving.
+* Existing battle control disable logic should include these new animation phases.
+
+Out Of Scope
+
+* No change to Charge token mechanics.
+* No change to Buff token mechanics.
+* No new token descriptions.
+* No change to Cosmic Intervention behaviour.
+* No change to Cosmic Intervention colour.
+* No change to battle damage numbers.
+* No change to battle reward flow.
+* No sound effect required.
+* No new icon required beyond reusing `faBolt`.
+
+Testing Checkpoints
+
+* Give the player a Charge token in a battle spell column.
+* Roll that column.
+* Confirm the lightning bolt animation plays over the player character.
+* Confirm Charge animation plays before all other battle animations.
+* Confirm Charge still affects the battle exactly as before.
+* Give the enemy a Charge token.
+* Make the enemy roll that column.
+* Confirm the lightning bolt animation plays over the enemy character.
+* Give the player a Buff token.
+* Roll that column.
+* Confirm a purple `#69419e` lightning bolt animation plays over the player character.
+* Confirm Buff animation plays after Charge if both exist.
+* Confirm Buff animation plays before Guard, Damage, Deflect, Counter, Freeze, and other effects.
+* Give the enemy a Buff token.
+* Make the enemy roll that column.
+* Confirm the purple lightning bolt appears over the enemy character.
+* Roll a column containing both Charge and Buff.
+* Confirm Charge animation plays first.
+* Confirm Buff animation plays second.
+* Confirm all other animations play after both.
+* Confirm battle overlay icon width is 80px and height is automatic.
+* Confirm icons remain centred over the character image.
+* Confirm animations do not lose their centring.
+* Confirm Cosmic Intervention still works normally over the opponent.
+* Confirm battle controls are disabled during Charge and Buff animations.
+* Confirm lethal hits still wait for the full animation queue before ending battle.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-014: Update Charge token description
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-021 Feature-013: Add Charge and Buff battle animations
+* EPIC-011 Feature-004: Add non-battle token effects
+
+Goal
+
+* Update the Charge token description in English and Japanese.
+* The description should now clearly explain that Charge increases damage or guard by 5.
+* The Charge token remains a rare Yellow token.
+* This is a data/text update only.
+
+Updated Charge Token Entry
+
+```txt id="c7yt4v"
+Colour: Yellow
+Name: Charge
+Japanese Name: チャージ
+Description: Charge all your slots next turn, increasing their damage or guard by 5
+Japanese Description: 次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。
+Rarity: Rare
+```
+
+Required Behaviour
+
+* Replace the current Charge token English description with:
+
+```txt id="kkx8sw"
+Charge all your slots next turn, increasing their damage or guard by 5
+```
+
+* Replace the current Charge token Japanese description with:
+
+```txt id="eqld3f"
+次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。
+```
+
+* Keep the Charge token name unchanged.
+
+English name:
+
+```txt id="ryitr7"
+Charge
+```
+
+Japanese name:
+
+```txt id="r9x5vq"
+チャージ
+```
+
+* Keep the Charge token colour unchanged:
+
+```txt id="qp7x2j"
+Yellow
+```
+
+* Keep the Charge token rarity unchanged:
+
+```txt id="lowxeb"
+Rare
+```
+
+Display Requirement
+
+* The updated Charge description should appear everywhere token descriptions are shown:
+
+  * token tooltip.
+  * token bag.
+  * spell assignment modal.
+  * Wandsmith.
+  * Redo spell modification.
+  * token reward modals.
+  * battle reward token choices.
+  * rules page token section, if token descriptions are listed there.
+  * debug token displays.
+
+Tooltip Requirement
+
+* If EPIC-021 Feature-011 has been implemented, the Charge token tooltip should only show the description.
+* It should not show the token name inside the tooltip.
+
+Correct English tooltip after Feature-011:
+
+```txt id="xdrgla"
+Charge all your slots next turn, increasing their damage or guard by 5
+```
+
+Correct Japanese tooltip after Feature-011:
+
+```txt id="hifqbz"
+次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。
+```
+
+Functionality Requirement
+
+* This feature does not change Charge behaviour.
+* Charge should still charge all slots next turn.
+* Charge should still increase damage or guard by 5.
+* Charge should still be a rare token.
+* Charge should still use the battle animation from Feature-013 once that feature is implemented.
+
+Out Of Scope
+
+* No change to Charge mechanics.
+* No change to Charge rarity.
+* No change to Charge colour.
+* No change to Charge animation timing.
+* No change to Buff.
+* No change to potion Charger.
+* No change to battle damage calculations.
+
+Testing Checkpoints
+
+* View Charge token in English.
+* Confirm description says `Charge all your slots next turn, increasing their damage or guard by 5`.
+* View Charge token in Japanese.
+* Confirm description says `次のターン、すべてのスロットをチャージし、ダメージまたはガードを5増加させる。`.
+* Confirm Charge is still Yellow.
+* Confirm Charge is still Rare.
+* Confirm Charge tooltip only shows the description if Feature-011 is complete.
+* Confirm old Charge wording no longer appears.
+* Confirm Charge still works in battle.
+* Confirm Charge animation from Feature-013 still works if implemented.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Updated the shared Yellow token definition with the supplied English and Japanese Charge descriptions.
+* Reused `TOKEN_DEFINITIONS`, `getTokenDescription`, and the shared `Token` component so existing token surfaces receive the new copy without component changes.
+* Added focused data and bilingual description-only tooltip coverage; no new runtime component, mechanic, style, or animation was created.
+
+---
+
+Feature-015: Clean up settings menu layout and add End Game confirmation
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-018 Feature-012: Only show settings button on gameplay page
+* EPIC-020 Feature-014: Add rules modal inside settings menu
+* EPIC-021 Feature-004: Fix overflowing modal action button positioning
+* EPIC-021 Feature-001: Add persistent random background music with global floating toggle button
+
+Goal
+
+* Improve the visual layout of the settings menu.
+* Make the settings title use the correct language and font.
+* Stack settings buttons vertically in a consistent order.
+* Give the Close button secondary styling.
+* Add an End Game confirmation modal before the game actually ends.
+
+Settings Title Requirement
+
+* The settings modal should have a title at the top.
+* The title should be horizontally centred.
+* The title should use `larger-text`.
+* The title should use the correct language.
+* The title should use the correct font for the current language.
+
+English title:
+
+```txt id="h3y7vf"
+Settings
+```
+
+Japanese title:
+
+```txt id="r1le1t"
+設定
+```
+
+Suggested JSX direction:
+
+```jsx id="k2bdnv"
+<h2 className={`settings-title larger-text ${languageClass}`}>
+  {language === "jp" ? "設定" : "Settings"}
+</h2>
+```
+
+Suggested CSS direction:
+
+```css id="puwv0m"
+.settings-title {
+  text-align: center;
+  margin-bottom: 40px;
+}
+```
+
+Button Order Requirement
+
+* Settings menu buttons should be vertically stacked in this exact order:
+
+```txt id="phcvui"
+Debug
+Save Game
+Rules
+End Game
+Close
+```
+
+Japanese order:
+
+```txt id="gt7j9a"
+デバッグ
+ゲームを保存
+ルール
+ゲームを終了
+閉じる
+```
+
+* If Debug Mode is turned off or debug controls are hidden, the Debug button should be hidden while preserving the order of the remaining buttons.
+* If Save Game is unavailable for any reason, hide or disable it according to existing rules, while preserving the order of remaining buttons.
+* Do not reorder Rules, End Game, or Close.
+
+Button Layout Requirement
+
+* Buttons should be vertically stacked.
+* Buttons should be horizontally centred.
+* Buttons should use consistent width.
+* Buttons should have consistent spacing.
+* Use `div` layout, not `ul` or `li`.
+
+Suggested JSX direction:
+
+```jsx id="vwj6ez"
+<div className="settings-button-stack">
+  {debugEnabled && (
+    <button>Debug</button>
+  )}
+
+  <button>Save Game</button>
+  <button>Rules</button>
+  <button>End Game</button>
+  <button className="secondary-button">Close</button>
+</div>
+```
+
+Suggested CSS direction:
+
+```css id="s7rwve"
+.settings-button-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+```
+
+Close Button Requirement
+
+* The Close button should use secondary colouring.
+* It should visually look different from the main action buttons.
+* It should still be clearly clickable.
+* It should close the settings modal as it currently does.
+
+Suggested class:
+
+```jsx id="wvhyzt"
+<button className="secondary-button">
+  {language === "jp" ? "閉じる" : "Close"}
+</button>
+```
+
+End Game Confirmation Requirement
+
+* Clicking End Game should not immediately end the game.
+* It should open an “Are you sure?” confirmation modal.
+* The game should only end if the player selects Yes.
+* If the player selects No, the confirmation modal closes and the settings modal opens again.
+
+Confirmation Text
+
+English:
+
+```txt id="egoe1d"
+Are you sure you want to end the game?
+```
+
+Japanese:
+
+```txt id="lae5j1"
+ゲームを終了してもよろしいですか？
+```
+
+* The confirmation text should:
+
+  * use the correct language.
+  * use the correct font.
+  * use `larger-text`.
+  * be horizontally centred.
+
+Confirmation Buttons
+
+English:
+
+```txt id="xl1y6d"
+Yes
+No
+```
+
+Japanese:
+
+```txt id="t3h170"
+はい
+いいえ
+```
+
+Required Confirmation Behaviour
+
+```txt id="h7gosf"
+1. Player opens settings.
+2. Player clicks End Game.
+3. End Game confirmation modal opens.
+4. Player clicks No.
+5. Confirmation modal closes.
+6. Settings modal is shown again.
+7. Player clicks End Game again.
+8. Confirmation modal opens.
+9. Player clicks Yes.
+10. Game ends using the existing End Game behaviour.
+```
+
+No Button Requirement
+
+* Selecting No should:
+
+  * close the confirmation modal.
+  * return to the settings modal.
+  * not end the game.
+  * not reset game state.
+  * not navigate away.
+
+Yes Button Requirement
+
+* Selecting Yes should:
+
+  * run the existing End Game logic.
+  * close settings/confirmation as needed.
+  * navigate to the correct start/home page according to existing End Game behaviour.
+  * not require any further confirmation.
+
+Suggested State Direction
+
+```js id="tqc1zl"
+const [settingsStep, setSettingsStep] = useState("main");
+
+// possible values:
+// "main"
+// "rules"
+// "confirmEndGame"
+```
+
+Suggested Render Direction
+
+```jsx id="pqggh6"
+{settingsStep === "main" && (
+  <SettingsMainMenu />
+)}
+
+{settingsStep === "rules" && (
+  <SettingsRulesModal />
+)}
+
+{settingsStep === "confirmEndGame" && (
+  <ConfirmEndGameModal />
+)}
+```
+
+Modal Layout Requirement
+
+* The confirmation modal should use the standard modal background.
+* The confirmation modal should follow existing modal button styling.
+* Buttons should be bottom-centred.
+* Do not use full-width buttons unless the settings modal already uses full-width buttons consistently.
+* Do not use `ul` or `li`.
+
+Interaction With Rules Modal
+
+* The Rules button should still open the settings rules modal.
+* Back to Settings from the rules modal should still return to the main settings menu.
+* The End Game confirmation should not interfere with this flow.
+
+Interaction With Modal Overflow Fix
+
+* EPIC-021 Feature-004 requires modal action buttons to sit at the bottom of content.
+* Apply the same rule here.
+* Buttons should not overlay the confirmation text.
+
+Out Of Scope
+
+* No change to settings button visibility rules.
+* No change to Save Game behaviour.
+* No change to Debug behaviour.
+* No change to Rules content.
+* No change to End Game destination except adding confirmation.
+* No redesign of the whole settings background.
+* No new sound effect.
+
+Testing Checkpoints
+
+* Open the settings modal in English.
+* Confirm title says `Settings`.
+* Confirm title is centred.
+* Confirm title uses `larger-text`.
+* Confirm title uses the correct English font.
+* Switch to Japanese.
+* Confirm title says `設定`.
+* Confirm title uses the correct Japanese font.
+* Confirm buttons are vertically stacked.
+* Confirm button order is Debug, Save Game, Rules, End Game, Close.
+* Confirm Close uses secondary colouring.
+* Click Close and confirm settings closes.
+* Open settings again.
+* Click End Game.
+* Confirm confirmation modal appears.
+* Confirm text says `Are you sure you want to end the game?`.
+* Confirm text uses `larger-text`.
+* Click No.
+* Confirm settings modal returns.
+* Confirm game is not ended.
+* Click End Game again.
+* Click Yes.
+* Confirm existing End Game behaviour runs.
+* Repeat End Game confirmation in Japanese.
+* Confirm Japanese text says `ゲームを終了してもよろしいですか？`.
+* Confirm no buttons overlap content.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Reused the existing `Modal`, `Button`, settings view state, current-player language, Rules view, Save Game handler, Debug handler, and End Game reset/navigation handler; no new component, route, dependency, or game-state flow was created.
+* Added the requested bilingual centred title, language classes, vertical fixed-width action stack, exact action order, and secondary Close action in the existing settings modal.
+* End Game now opens a bilingual confirmation view; No returns to the unchanged settings menu without ending the game, while Yes calls the existing End Game behavior.
+* Existing Debug visibility, gameplay-only Save Game visibility, Rules return flow, settings background, End Game destination, and unrelated UI remain unchanged.
+
+---
+
+Feature-016: Add Shiny Buff rare token
+
+Status
+
+* not started
+
+Related Feature(s)
+
+* EPIC-018 Feature-001: Update token data, rename Deflect tokens, and add Shiny Health
+* EPIC-020 Feature-004: Make Buff common and update its description
+* EPIC-021 Feature-003: Elite Tower wins should reward 3 distinct rare tokens only
+* EPIC-021 Feature-013: Add Charge and Buff battle animations
+* EPIC-021 Feature-011: Token tooltips should only show description
+
+Goal
+
+* Add a new rare token: Shiny Buff.
+* Shiny Buff is the rare version of the common Buff token.
+* It should work exactly like common Buff, but with a buff value of `10` instead of `5`.
+* Common Buff and Shiny Buff should stack together.
+
+New Token Entry
+
+```txt id="g2sxcm"
+Colour: Purple/Yellow Outline
+Name: Shiny Buff
+Japanese Name: 輝強化
+Description: Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 10 next turn only.
+Japanese Description: バフが配置されている列の両隣の2列を強化し、次のターンのみダメージまたはガードを10増加させる。
+Rarity: Rare
+```
+
+Visual Requirement
+
+* Shiny Buff should use:
+
+  * Purple fill.
+  * Yellow outline.
+* It should follow the same visual pattern as the other shiny tokens.
+* The yellow outline should be consistent with:
+
+  * Shiny Damage.
+  * Shiny Guard.
+  * Shiny Counter.
+  * Shiny Deflect.
+  * Shiny Health.
+
+Suggested visual direction:
+
+```txt id="g7f0xy"
+Base colour: Buff purple
+Outline: yellow
+Rarity: Rare
+```
+
+Token Data Requirement
+
+* Add a new token ID for Shiny Buff.
+* Do not reuse the common Buff token ID.
+* Suggested ID:
+
+```txt id="cruj6w"
+shinyBuff
+```
+
+* Shiny Buff should be distinct from common Buff in:
+
+  * reward generation.
+  * tooltip data.
+  * token bag.
+  * spell slots.
+  * battle resolution.
+  * rare token pools.
+  * save/load data.
+
+Required English Data
+
+```txt id="tz0wd9"
+Name: Shiny Buff
+Description: Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 10 next turn only.
+Rarity: Rare
+```
+
+Required Japanese Data
+
+```txt id="o0rygi"
+Japanese Name: 輝強化
+Japanese Description: バフが配置されている列の両隣の2列を強化し、次のターンのみダメージまたはガードを10増加させる。
+```
+
+Rarity Requirement
+
+* Shiny Buff should be rare.
+* It should appear in rare token reward pools.
+* It should not appear in common token reward pools.
+* It should be eligible for Elite Tower rare-only rewards from EPIC-021 Feature-003.
+* It should be eligible for second-Elite village rare token rewards from EPIC-020 Feature-010.
+
+Functionality Requirement
+
+* Shiny Buff works exactly like common Buff, but with a value of `10`.
+* It buffs the two adjacent columns.
+* The buff affects damage or guard next turn only.
+* It should use the same adjacent-column logic as common Buff.
+* It should use the same merged/effective column adjacency logic as common Buff.
+* It should not buff itself.
+* Edge columns only buff one adjacent column.
+
+Buff Value Requirement
+
+```txt id="hq88lj"
+Common Buff value: 5
+Shiny Buff value: 10
+```
+
+Stacking Requirement
+
+* Common Buff and Shiny Buff should stack.
+* Multiple Buff-type tokens in the same rolled column should add together.
+* If a player rolls a column containing:
+
+  * 1 common Buff.
+  * 1 Shiny Buff.
+* the adjacent columns should be buffed by:
+
+```txt id="r9a44e"
+5 + 10 = 15
+```
+
+* This means the next-turn damage or guard increase for adjacent columns should be `15`.
+
+Stacking Example
+
+```txt id="pbq4eb"
+Column 3 contains:
+1 Common Buff
+1 Shiny Buff
+
+Player rolls 3.
+
+Columns 2 and 4 receive:
++15 buff for next turn only.
+```
+
+Merged Column Requirement
+
+* Shiny Buff should respect merged/effective columns.
+* If the rolled column is a merged column:
+
+  * use effective adjacency.
+  * buff adjacent effective columns.
+* If an adjacent effective column is itself merged:
+
+  * the buff applies to that effective merged column.
+  * rolling either number in that merged column next turn should receive the buff.
+
+Battle Animation Requirement
+
+* Shiny Buff should use the Buff battle animation from EPIC-021 Feature-013.
+* The animation should play over the triggering character.
+* The animation colour should remain Buff purple:
+
+```txt id="oq88sy"
+#69419e
+```
+
+* If common Buff and Shiny Buff are triggered together, do not play the same animation twice unless existing animation design expects one animation per token.
+* Preferred behaviour:
+
+  * one Buff animation plays for the combined Buff effect.
+  * combined buff value is applied.
+
+Tooltip Requirement
+
+* Shiny Buff tooltip should use the current tooltip rules.
+* If EPIC-021 Feature-011 is implemented, tooltip should show description only.
+
+Correct English tooltip:
+
+```txt id="u0edq4"
+Buff the two columns adjacent to the column buff is in, increasing their damage or guard by 10 next turn only.
+```
+
+Correct Japanese tooltip:
+
+```txt id="qtdlko"
+バフが配置されている列の両隣の2列を強化し、次のターンのみダメージまたはガードを10増加させる。
+```
+
+* The tooltip should not show the token name if Feature-011 is complete.
+
+Reward Pool Requirement
+
+* Add Shiny Buff to:
+
+  * rare token pool.
+  * rare reward generation.
+  * Elite Tower rare reward pool.
+  * village rare token reward pool.
+  * debug token grant tools if they exist.
+* Do not add Shiny Buff to:
+
+  * common token pool.
+  * starting tokens.
+  * common village reward pool.
+
+Save / Load Requirement
+
+* If save/load stores token IDs, add Shiny Buff to recognised token data.
+* Saved games containing Shiny Buff should load correctly.
+* Older saves without Shiny Buff should still load normally.
+
+Rules Requirement
+
+* If the Rules page token section lists all tokens, add Shiny Buff.
+* Use the same formatting as other shiny tokens.
+* If rules only summarise token categories, update only if needed.
+
+Out Of Scope
+
+* No change to common Buff value.
+* No change to common Buff rarity.
+* No change to Charge.
+* No new potion.
+* No change to token capacity.
+* No change to starting tokens.
+* No new Shiny Buff-specific animation colour.
+* No change to Buff animation timing.
+
+Testing Checkpoints
+
+* Confirm Shiny Buff appears in token data.
+* Confirm Shiny Buff is Purple with Yellow outline.
+* Confirm Shiny Buff rarity is Rare.
+* Confirm Shiny Buff does not appear in common reward pools.
+* Confirm Shiny Buff can appear in rare reward pools.
+* Confirm Shiny Buff can appear in Elite Tower rare rewards.
+* Confirm Shiny Buff can appear in second-Elite village rare rewards.
+* Put Shiny Buff in a spell column.
+* Roll that column in battle.
+* Confirm adjacent columns are buffed by 10.
+* Put common Buff and Shiny Buff in the same column.
+* Roll that column.
+* Confirm adjacent columns are buffed by 15.
+* Confirm Shiny Buff does not buff its own column.
+* Confirm edge-column behaviour is correct.
+* Confirm merged/effective column adjacency works.
+* Confirm Buff animation plays over the triggering character.
+* Confirm tooltip shows correct English description.
+* Confirm tooltip shows correct Japanese description.
+* Confirm save/load recognises Shiny Buff if save/load is implemented.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

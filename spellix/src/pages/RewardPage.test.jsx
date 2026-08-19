@@ -208,7 +208,7 @@ describe('RewardPage choice flow', () => {
     expect(tokenRewardIcon).toHaveClass('token-display--glow', 'token-display--red');
     expect(tokenRewardIcon).toHaveAttribute(
       'title',
-      `${TOKEN_DEFINITIONS.red.name.en}\n${TOKEN_DEFINITIONS.red.description.en}`
+      TOKEN_DEFINITIONS.red.description.en
     );
     expect(tokenRewardIcon).toHaveAccessibleDescription(
       TOKEN_DEFINITIONS.red.description.en
@@ -263,7 +263,7 @@ describe('RewardPage choice flow', () => {
     expect(screen.getByText('ダメージ')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /red reward token/i })).toHaveAttribute(
       'title',
-      'ダメージ\nダメージ＋10'
+      TOKEN_DEFINITIONS.red.description.jp
     );
     expect(screen.getByRole('group', { name: '出目選択 potion' })).toHaveAccessibleDescription(
       '次に振るサイコロの出目を選ぶ。'
