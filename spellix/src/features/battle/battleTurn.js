@@ -13,6 +13,7 @@ const OUTLINED_BLUE_GUARD_PER_TOKEN = 10;
 const OUTLINED_ORANGE_COUNTER_DAMAGE_PER_TOKEN = 10;
 const OUTLINED_GREEN_REDUCTION_PER_TOKEN = 10;
 const PURPLE_BUFF_PER_TOKEN = 5;
+const OUTLINED_PURPLE_BUFF_PER_TOKEN = 10;
 const YELLOW_CHARGE_BUFF = 10;
 
 function getBattleSlotTokens(actor, diceResult) {
@@ -76,6 +77,10 @@ export function calculateBattleTurn({
     opponentOrange: countTokens(opponentTokens, 'orange'),
   };
   const actorOutlinedBlue = countTokens(actorTokens, 'blue-yellow-outline');
+  const actorOutlinedPurple = countTokens(
+    actorTokens,
+    'purple-yellow-outline'
+  );
   const actorOutlinedRed = countTokens(actorTokens, 'red-yellow-outline');
   const opponentOutlinedGreen = countTokens(
     opponentTokens,
@@ -90,7 +95,9 @@ export function calculateBattleTurn({
     tokenCounts.actorRed + actorOutlinedRed > 0 ? purpleBuff + yellowBuff : 0;
   const blueBuff =
     tokenCounts.actorBlue + actorOutlinedBlue > 0 ? purpleBuff + yellowBuff : 0;
-  const purpleBuffGranted = tokenCounts.actorPurple * PURPLE_BUFF_PER_TOKEN;
+  const purpleBuffGranted =
+    tokenCounts.actorPurple * PURPLE_BUFF_PER_TOKEN +
+    actorOutlinedPurple * OUTLINED_PURPLE_BUFF_PER_TOKEN;
   const chargeApplied = chargeAvailable && tokenCounts.actorYellow > 0;
   const rawRedDamage =
     tokenCounts.actorRed * RED_DAMAGE_PER_TOKEN +

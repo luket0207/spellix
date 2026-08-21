@@ -11,6 +11,22 @@ jest.mock('../../features/gameSetup/GameSetupContext', () => ({
 const claimLootChestReward = jest.fn(() => '/reward');
 const returnFromMiniGame = jest.fn();
 
+function LootChestTestApp({ randomFn }) {
+  return (
+    <MemoryRouter initialEntries={['/mini-game/loot-chest']}>
+      <Routes>
+        <Route
+          path="/mini-game/loot-chest"
+          element={<LootChestPage randomFn={randomFn} />}
+        />
+        <Route path="/reward" element={<p>Reward assignment destination</p>} />
+        <Route path="/gameplay" element={<p>Gameplay destination</p>} />
+        <Route path="/village" element={<p>Village destination</p>} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
 function renderPage({ language = 'en', randomFn = () => 0 } = {}) {
   useGameSetup.mockReturnValue({
     claimLootChestReward,
@@ -24,19 +40,7 @@ function renderPage({ language = 'en', randomFn = () => 0 } = {}) {
     returnFromMiniGame,
   });
 
-  return render(
-    <MemoryRouter initialEntries={['/mini-game/loot-chest']}>
-      <Routes>
-        <Route
-          path="/mini-game/loot-chest"
-          element={<LootChestPage randomFn={randomFn} />}
-        />
-        <Route path="/reward" element={<p>Reward assignment destination</p>} />
-        <Route path="/gameplay" element={<p>Gameplay destination</p>} />
-        <Route path="/village" element={<p>Village destination</p>} />
-      </Routes>
-    </MemoryRouter>
-  );
+  return render(<LootChestTestApp randomFn={randomFn} />);
 }
 
 beforeEach(() => {
@@ -117,6 +121,85 @@ test('reveals three rewards, hides them in identical chests, shuffles, then allo
 
   fireEvent.click(chooseButtons[1]);
   expect(screen.getAllByTestId('loot-reward-reveal')).toHaveLength(1);
+});
+
+test('keeps visual chest identities separate from the post-animation reward mapping', () => {
+  const randomFn = jest.fn(() => 0);
+
+  renderPage({ randomFn });
+
+  const generationCallCount = randomFn.mock.calls.length;
+  const chestPositionsBeforeShuffle = screen.getAllByLabelText(
+    /loot chest choice \d/i
+  );
+
+  expect(
+    within(screen.getAllByTestId('loot-reward-preview')[0]).getByLabelText(
+      'Damage token reward'
+    )
+  ).toBeInTheDocument();
+
+  act(() => {
+    jest.advanceTimersByTime(4899);
+  });
+
+  expect(randomFn).toHaveBeenCalledTimes(generationCallCount);
+
+  act(() => {
+    jest.advanceTimersByTime(1);
+  });
+
+  const chestPositionsAfterShuffle = screen.getAllByLabelText(
+    /loot chest choice \d/i
+  );
+
+  expect(randomFn).toHaveBeenCalledTimes(generationCallCount + 2);
+  chestPositionsAfterShuffle.forEach((chest, index) => {
+    expect(chest).toBe(chestPositionsBeforeShuffle[index]);
+  });
+
+  fireEvent.click(
+    within(chestPositionsAfterShuffle[0]).getByRole('button', { name: 'Choose' })
+  );
+
+  expect(
+    within(chestPositionsAfterShuffle[0]).getByLabelText(
+      'Merge token reward'
+    )
+  ).toBeInTheDocument();
+  expect(claimLootChestReward).not.toHaveBeenCalled();
+});
+
+test('keeps the final reward mapping stable when language changes', () => {
+  const randomFn = jest.fn(() => 0);
+  const { rerender } = renderPage({ randomFn });
+
+  act(() => {
+    jest.advanceTimersByTime(4900);
+  });
+
+  const assignedCallCount = randomFn.mock.calls.length;
+
+  useGameSetup.mockReturnValue({
+    claimLootChestReward,
+    currentPlayer: { id: 'player-1', language: 'jp' },
+    returnFromMiniGame,
+  });
+  rerender(<LootChestTestApp randomFn={randomFn} />);
+
+  expect(randomFn).toHaveBeenCalledTimes(assignedCallCount);
+
+  const firstChest = screen.getAllByLabelText(/loot chest choice \d/i)[0];
+
+  fireEvent.click(within(firstChest).getByRole('button'));
+  fireEvent.click(
+    within(screen.getByTestId('loot-chest-result-area')).getByRole('button')
+  );
+
+  expect(claimLootChestReward).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'loot-reward-2' })
+  );
+  expect(randomFn).toHaveBeenCalledTimes(assignedCallCount);
 });
 
 test('uses Japanese copy and routes the selected reward through the shared reward flow', () => {

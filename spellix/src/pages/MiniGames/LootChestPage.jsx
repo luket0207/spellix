@@ -95,14 +95,18 @@ function LootChestPage({ randomFn = Math.random }) {
     currentPlayer,
     returnFromMiniGame,
   } = useGameSetup();
-  const [chestRewards, setChestRewards] = useState(() =>
+  const [generatedRewards] = useState(() =>
     generateLootChestRewards(randomFn)
   );
+  const [finalChestRewards, setFinalChestRewards] = useState(null);
   const [phase, setPhase] = useState('showingRewards');
   const [selectedRewardId, setSelectedRewardId] = useState('');
   const language = getGameplayLanguage(currentPlayer?.language);
   const translations = getLootChestTranslations(language);
-  const selectedReward = chestRewards.find(({ id }) => id === selectedRewardId);
+  const chestRewards = finalChestRewards ?? generatedRewards;
+  const selectedReward = finalChestRewards?.find(
+    ({ id }) => id === selectedRewardId
+  );
 
   useEffect(() => {
     const entryTimer = setTimeout(
@@ -114,9 +118,7 @@ function LootChestPage({ randomFn = Math.random }) {
       REWARD_REVEAL_DURATION + REWARD_ENTRY_DURATION
     );
     const readyTimer = setTimeout(() => {
-      setChestRewards((currentRewards) =>
-        shuffleLootChestRewards(currentRewards, randomFn)
-      );
+      setFinalChestRewards(shuffleLootChestRewards(generatedRewards, randomFn));
       setPhase('readyToChoose');
     }, REWARD_REVEAL_DURATION + REWARD_ENTRY_DURATION + CHEST_SHUFFLE_DURATION);
 
@@ -125,7 +127,7 @@ function LootChestPage({ randomFn = Math.random }) {
       clearTimeout(shuffleTimer);
       clearTimeout(readyTimer);
     };
-  }, [randomFn]);
+  }, [generatedRewards, randomFn]);
 
   const handleChoose = (rewardId) => {
     if (phase !== 'readyToChoose') {
@@ -178,7 +180,7 @@ function LootChestPage({ randomFn = Math.random }) {
               <div
                 aria-label={`Loot chest choice ${index + 1}`}
                 className="loot-chest-choice"
-                key={reward.id}
+                key={`loot-chest-position-${index + 1}`}
               >
                 {showPreviewRewards ? (
                   <div className="loot-reward-preview">

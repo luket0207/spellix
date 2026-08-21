@@ -1,0 +1,363 @@
+---
+
+Bug-001: Remove-player X button should overlap the player pod corner
+
+Status
+
+* fixed
+
+Repro Result
+
+* Confirmed in `GameSetupPage.css`: the remove button was positioned fully inside each pod at `top: 8px` and `right: 8px`, with no explicit 24px button dimensions or overflow allowance.
+
+Suspected Cause
+
+* Feature-002 initially placed the remove control inside the pod padding and did not add the overlap geometry requested by this follow-up.
+
+Attempted Fixes
+
+* Added explicit visible overflow to the player grid and player pods.
+* Changed the button to a centred 24px by 24px flex control positioned at `top: -12px` and `right: -12px`.
+* Added a focused CSS regression test for the overlap geometry, overflow, and existing hover effect.
+
+Final Fix
+
+* The yellow Font Awesome X button now overlaps the top-right pod corner by half its size, remains clickable and keyboard focusable, and keeps its existing hover transform without changing player removal logic.
+
+Related Feature(s)
+
+* Feature-002: Redesign game setup page with horizontal player pods and add/remove player controls
+
+Bug Summary
+
+* The remove-player X icon should not sit fully inside the brown player pod.
+* It should overlap the top-right corner of the player pod.
+* The button should overflow outside the player pod by half of its own size.
+* The remove-player button should be `24px` wide and `24px` high.
+* It should be positioned at:
+
+```txt id="x68sbd"
+top: -12px
+right: -12px
+```
+
+Required Behaviour
+
+* The remove-player X button should overlap the top-right corner of the player pod.
+* The button should be visible even though part of it sits outside the player pod.
+* The button should remain clickable.
+* The icon should remain yellow.
+* The icon should keep its hover effect.
+* The remove-player behaviour should not change.
+
+Required Button Size
+
+```txt id="qj9d5s"
+width: 24px
+height: 24px
+```
+
+Required Position
+
+```txt id="uuqs46"
+top: -12px
+right: -12px
+```
+
+Required CSS Direction
+
+```css id="d0t7sv"
+.game-setup-remove-player-button {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+}
+```
+
+Overflow Requirement
+
+* The player pod or its parent wrapper must not clip the remove button.
+* Ensure the relevant wrapper allows overflow to remain visible.
+
+Suggested CSS direction:
+
+```css id="cqdhpk"
+.game-setup-player-pod {
+  position: relative;
+  overflow: visible;
+}
+
+.game-setup-player-grid {
+  overflow: visible;
+}
+```
+
+* Only apply `overflow: visible` where needed.
+* Do not create page-level horizontal scrolling.
+* Do not allow the overlapping button to be clipped by the grid cell.
+
+Icon Requirement
+
+* The remove icon should still use Font Awesome:
+
+```txt id="jihna8"
+faCircleXmark
+```
+
+* The icon should fit inside the `24px` by `24px` button.
+* The clickable button area should also be `24px` by `24px`.
+* Do not make only the icon `24px` while the button remains larger.
+
+Hover Requirement
+
+* The remove-player button should keep its hover effect.
+* The hover effect should still work even though the button overlaps outside the pod.
+* Hover should not move the button enough to cause layout shift.
+
+Behaviour Requirement
+
+* Clicking the X button should still remove the player.
+* Removing a player should still shift later players up.
+* Player 1 and Player 2 should still not show remove buttons.
+* Only added players should show remove buttons.
+
+Out Of Scope
+
+* No change to Add Player pod.
+* No change to player pod layout.
+* No change to player input styling.
+* No change to player removal logic except preserving it with the new button position.
+* No change to the maximum or minimum number of players.
+
+Testing Checkpoints
+
+* Add Player 3.
+* Confirm Player 3 has an X remove button.
+* Confirm the X button overlaps the top-right corner of the player pod.
+* Confirm the button is `24px` by `24px`.
+* Confirm the button is positioned `top: -12px` and `right: -12px`.
+* Confirm the overlapping part is not clipped.
+* Confirm the button remains yellow.
+* Confirm the hover effect still works.
+* Click the X button.
+* Confirm the player is removed.
+* Add 4 players.
+* Remove Player 3.
+* Confirm Player 4 settings shift into Player 3.
+* Confirm no horizontal scrollbar is created by the overlapping button.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.
+
+---
+
+Bug-002: Newly added players can reuse colours that are already taken
+
+Status
+
+* fixed
+
+Repro Result
+
+* Confirmed in `createPlayers`: a new player without existing state received `PLAYER_COLOURS[index]`, even when a shifted active player already held that index-based colour.
+
+Suspected Cause
+
+* Add Player reused the general player factory, but the factory selected new colours by player index instead of comparing against colours held by active players.
+
+Attempted Fixes
+
+* Updated `createPlayers` to track colours assigned to active players in order.
+* Preserved each existing unique colour and assigned new or duplicate players the first unused entry from `PLAYER_COLOURS`.
+* Added a Start Game uniqueness guard so duplicate-colour setup state cannot navigate to Story.
+* Added pure factory tests and setup-page regressions for shifting a Purple Player 5 to Player 3, adding players again, releasing/reusing colours, and blocking duplicate-colour submission.
+
+Final Fix
+
+* Newly added players now always receive the first unused active-player colour. Shifted players keep their settings and colours, removed colours return to the available pool, dropdown filtering still compares only active players, and Start Game is disabled if duplicate colours somehow enter setup state.
+
+Related Feature(s)
+
+* Feature-002: Redesign game setup page with horizontal player pods and add/remove player controls
+* Bug-001: Remove-player X button should overlap the player pod corner
+
+Bug Summary
+
+* Player colour selection can become invalid after players are removed and then added again.
+* If a later player shifts upward after removals, their colour is preserved correctly.
+* However, when new players are added again, the setup page can assign a colour that is already taken by an existing player.
+* This allows duplicate player colours, which should never happen.
+
+Example Bug Scenario
+
+```txt id="m7fk6i"
+1. Player 5 is Purple.
+2. The user removes two earlier/later players.
+3. Original Player 5 shifts up and becomes Player 3.
+4. Player 3 correctly remains Purple.
+5. The user adds players again.
+6. New Player 5 is automatically assigned Purple.
+7. Player 3 and Player 5 are now both Purple.
+```
+
+Required Behaviour
+
+* A newly added player must never be assigned a colour that is already selected by another active player.
+* When adding a new player, choose the first available unused colour.
+* Existing shifted player settings should remain preserved.
+* Existing active players should keep their selected colours.
+* Removed players should release their colours back into the available colour pool.
+* Duplicate colours should not be possible through adding/removing players.
+
+Colour Assignment Requirement
+
+* When a new player is added:
+
+  * inspect all currently active players.
+  * collect their selected colours.
+  * find an unused colour from the available colour list.
+  * assign the new player that unused colour.
+* Do not assign colour based only on player index.
+* Do not restore stale colour values from previously removed player slots.
+* Do not use hidden/empty placeholder slots when checking selected colours.
+
+Suggested Implementation Direction
+
+```js id="ebhxaz"
+const activeColours = players
+  .map((player) => player.colour)
+  .filter(Boolean);
+
+const nextAvailableColour = PLAYER_COLOURS.find(
+  (colour) => !activeColours.includes(colour)
+);
+```
+
+* Use the project’s actual colour data names.
+* Only active players should count as taking a colour.
+* Empty slots and the Add Player pod should not count.
+
+Add Player Logic Requirement
+
+* The Add Player action should create a new player object with:
+
+  * the next player number.
+  * default input state.
+  * an unused colour.
+* If no unused colour exists, the Add Player pod should not be visible because the game already has 6 players.
+
+Suggested direction:
+
+```js id="g9qgij"
+function addPlayer() {
+  const usedColours = new Set(players.map((player) => player.colour));
+  const colour = PLAYER_COLOURS.find((option) => !usedColours.has(option));
+
+  if (!colour) return;
+
+  setPlayers([
+    ...players,
+    createDefaultPlayer({
+      colour
+    })
+  ]);
+}
+```
+
+Remove Player Logic Requirement
+
+* Removing a player should continue to shift later players up.
+* The shifted player should keep their settings.
+* The shifted player should keep their colour.
+* The removed player’s colour should become available for future new players.
+* After removal, there should still be no duplicate colours.
+
+Colour Dropdown Requirement
+
+* Existing colour dropdown/input rules should continue to prevent duplicate colours.
+* If a colour is already selected by another active player, it should not be selectable by a different player.
+* The currently selected colour for the current player should remain selectable for that same player.
+* Disabled colour logic should only compare against other active players.
+
+Correct colour disabling logic:
+
+```txt id="r29ai1"
+Disable colour if another active player is using it.
+Do not disable the current player's own selected colour.
+Do not consider removed players.
+Do not consider empty placeholder slots.
+```
+
+Suggested dropdown direction:
+
+```js id="rfn6s8"
+function isColourTakenByAnotherPlayer(colour, currentPlayerIndex) {
+  return players.some((player, index) => {
+    return index !== currentPlayerIndex && player.colour === colour;
+  });
+}
+```
+
+State Cleanup Requirement
+
+* If the setup page still stores six player slots internally, clear or ignore inactive slot colours.
+* Hidden player slots must not keep stale colours that affect future colour selection.
+* Preferred approach:
+
+  * store only active players in the `players` array.
+  * render placeholders separately.
+* If keeping six slots is easier, each inactive slot should have no selected colour.
+
+Expected Behaviour Example
+
+```txt id="t72fjl"
+Before removal:
+Player 1 = Red
+Player 2 = Blue
+Player 3 = Green
+Player 4 = Yellow
+Player 5 = Purple
+
+Remove Player 3 and Player 4.
+
+After removal:
+Player 1 = Red
+Player 2 = Blue
+Player 3 = Purple
+
+Add Player.
+
+Expected:
+Player 4 gets the next unused colour.
+Player 4 must not get Red, Blue, or Purple.
+```
+
+Out Of Scope
+
+* No change to the list of available player colours.
+* No change to colour names.
+* No change to player pod visual design.
+* No change to Add Player pod visual design.
+* No change to remove button position from Bug-001.
+* No change to minimum or maximum player count.
+* No change to gameplay player order beyond preserving the current shift-up behaviour.
+
+Testing Checkpoints
+
+* Add players up to 5.
+* Set Player 5 to Purple.
+* Remove two players so the original Player 5 becomes Player 3.
+* Confirm Player 3 remains Purple.
+* Add players again.
+* Confirm no new player is assigned Purple while Player 3 is Purple.
+* Confirm no two active players can have the same colour.
+* Remove a player with a unique colour.
+* Add a new player.
+* Confirm the removed colour can be reused only after it is no longer active.
+* Confirm colour dropdowns disable colours already used by other active players.
+* Confirm each player can still keep their own selected colour.
+* Confirm hidden/empty slots do not reserve colours.
+* Confirm Start Game cannot begin with duplicate colours.
+* Confirm there are no console errors.
+* Update `testing.txt` before marking this bug fixed.

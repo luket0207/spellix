@@ -863,6 +863,16 @@ describe('App routing flow', () => {
       )
     ).toBeInTheDocument();
     expect(
+      within(rulesDialog).getByText(
+        'To see a description of what each Token does, hover over the Token icon to make a tooltip appear.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        'To see a description of what each Potion does, hover over the Potion icon to make a tooltip appear.'
+      )
+    ).toBeInTheDocument();
+    expect(
       within(rulesDialog).getAllByRole('button', { name: 'Back to Settings' })
     ).toHaveLength(2);
     expect(
@@ -908,6 +918,16 @@ describe('App routing flow', () => {
     ).toBeInTheDocument();
     expect(
       within(rulesDialog).getByRole('heading', { name: '村でできること' })
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        '各トークンの効果を確認するには、トークンアイコンにカーソルを合わせてツールチップを表示してください。'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(rulesDialog).getByText(
+        '各ポーションの効果を確認するには、ポーションアイコンにカーソルを合わせてツールチップを表示してください。'
+      )
     ).toBeInTheDocument();
     expect(
       within(rulesDialog).getAllByRole('button', { name: '設定に戻る' })

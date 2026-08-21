@@ -749,3 +749,184 @@ Automated Tests Still Needed
 Manual Execution
 
 * Real-browser layout, font, button-overlap, confirmation interaction, reset/navigation, and browser-console checks were not run and remain covered by the manual steps above.
+
+---
+
+Feature-016: Add Shiny Buff rare token
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Inspect Shiny Buff in English and Japanese on a token surface.
+   Expected: It is a rare Purple token with a Yellow outline, the name is `Shiny Buff` or the required Japanese name, and the description-only tooltip uses the required localized 10-point Buff description.
+2. Generate common, rare, Elite Tower, second-Elite village, cave, decision, and debug token rewards.
+   Expected: Shiny Buff can appear in every applicable rare pool and never appears in common or starting-token pools.
+3. Put one Shiny Buff in a middle spell column and roll it in battle.
+   Expected: The two adjacent effective columns receive 10 Buff for the next turn only; the triggering column is not buffed.
+4. Put common Buff and Shiny Buff in the same column and roll it.
+   Expected: Adjacent effective columns receive 15 total Buff and one existing purple Buff animation plays over the triggering character.
+5. Repeat with an edge column and merged columns.
+   Expected: Edge columns buff only their one neighbour, and merged columns use existing effective-column adjacency for either merged roll number.
+6. Save and load a game containing Shiny Buff, then inspect the browser console throughout the above flows.
+   Expected: The token round-trips unchanged, older saves remain valid, and no application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 116 of 127 checks and produced exactly 10 expected Feature-016 failures for missing token data, visuals/localization, battle value, rare-pool availability, village availability, and debug labels, alongside 1 unrelated stale glow-duration assertion.
+* The completed focused run passes 134 of 135 checks across token data/UI, battle calculations, rewards, villages, cave rewards, debug tools, and save/load; only the same unrelated stale glow-duration assertion remains.
+* All 54 `battleTurn` checks pass, including 10-point Shiny Buff, 15-point common-plus-Shiny stacking, and both roll numbers of a merged effective column.
+* The BattlePage suite passes 63 of 68 checks, including combined 15-point pending Buff state and one existing Buff animation; the same 5 unrelated stale battle assertions remain for panel sizing, battle spacing, death-result copy, enemy-freeze random calls, and an existing guard-flow state expectation.
+* All 33 DecisionPage checks pass, including Shiny Buff selection from rare and unrestricted token rewards.
+* Scoped production and focused-test ESLint passes. The broader BattlePage test file retains 109 pre-existing `testing-library/no-node-access` violations outside this feature's assertions.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms all rare reward surfaces consume shared token rarity data, save/load preserves token objects generically, and Rules only summarizes token categories, so no additional runtime changes are needed.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* None for token metadata, shared visuals/tooltips, reward eligibility, debug access, save/load, Buff calculations, merged adjacency, animation reuse, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real-browser visual, reward-generation, battle playback, save/load interaction, and console checks were not run and remain covered by the manual steps above.
+
+---
+
+Feature-017: Make Loot Chest final reward positions truly random after shuffle animation
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger a Loot Chest and note the three preview rewards.
+   Expected: The existing preview shows two generated rewards and one Nothing before all rewards enter identical chests.
+2. Follow one visual chest through the existing shuffle animation, then choose it.
+   Expected: The revealed reward comes from a mapping assigned after the animation; following the animated chest gives no reliable information about its reward.
+3. Repeat the sequence and choose each of the left, middle, and right chests.
+   Expected: Every generated reward can appear in every chest position, while the reward set and odds remain unchanged.
+4. Wait until Choose is available, change the current language, and choose a chest.
+   Expected: Localized text updates without rerandomizing the final chest mapping.
+5. Choose a chest, inspect the revealed reward, and select Continue.
+   Expected: The already-assigned reward is claimed once and the Loot Chest returns through the existing river, cave, board, or village flow.
+6. Inspect the browser console throughout the sequence.
+   Expected: No application errors or reward-mapping debug output appears.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 13 of 14 checks and failed exactly the new Feature-017 chest-identity assertion because reward-keyed wrappers moved between visual positions after the animation.
+* The completed Loot Chest helper, page, and downstream state suites pass all 23 checks.
+* Timing coverage confirms final shuffle randomness is not called during preview, reward entry, or visual shuffle, then is called exactly twice for the three-reward Fisher-Yates mapping when the animation completes.
+* Position coverage exercises all six three-reward permutations and confirms every reward can occupy every chest.
+* Page coverage confirms fixed visual chest DOM identities, changed hidden reward placement, one chosen reveal, and stable reward identity across a language rerender and Continue.
+* State coverage confirms unchanged token, potion, Nothing, board, river, cave, village, reward-assignment, and turn-return behavior.
+* Scoped production ESLint and LootChestPage test ESLint pass. `lootChest.test.js` also passes scoped lint with only its pre-existing line 42 `jest/no-conditional-expect` rule suppressed; normal lint reports that unchanged existing violation.
+* `npm run lint` is unavailable because this project has no `lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* None for assignment timing, reward/chest decoupling, complete position reachability, mapping stability, reveal behavior, existing reward generation, or downstream state flows.
+
+Manual Execution
+
+* Real-browser animation tracking, repeated statistical observation, route interaction, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-018: Prevent same enemy appearing twice in a row for the same battle level
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Trigger two random Level 1 battles for different players and record both enemies.
+   Expected: The second Level 1 enemy differs from the first, proving the history is shared globally rather than stored per player.
+2. Trigger a Level 1 battle, then a Level 2 battle, then another Level 1 battle.
+   Expected: The second Level 1 battle excludes the prior Level 1 enemy, while the Level 2 selection does not overwrite Level 1 history.
+3. Repeat consecutive random battles for Levels 2 and 3.
+   Expected: No enemy repeats directly within its own level; selection remains random among the other enemies.
+4. Use Debug to start random level battles.
+   Expected: Debug level selection follows the same per-level no-repeat history as board-event battles.
+5. Use Debug to choose a specific enemy, then enter both Elite Towers and the Boss battle.
+   Expected: Explicit and assigned enemies are used unchanged and do not update or reroll random-level history.
+6. Save after a random battle, load the save, and trigger another battle of that level. Also load an older save without enemy history if available.
+   Expected: Current saves preserve the previous enemy; legacy saves initialize all history levels safely to empty values.
+7. Inspect enemy health, spells, images, rewards, event frequency, and the browser console.
+   Expected: Existing enemy/battle data is unchanged and no application errors occur.
+
+Automated Tests Completed
+
+* The pre-implementation focused run passed 40 of 44 checks and produced exactly 4 Feature-018 failures for missing initial history, previous-enemy exclusion, shared random battle tracking, and legacy-state normalization; generic save round-trip already passed.
+* The completed selector, initial-state, shared-context, and save suites pass all 46 checks.
+* Selector coverage confirms Levels 1, 2, and 3 exclude their own previous IDs while unsupported levels still return null and existing level pools/data remain unchanged.
+* Shared-context coverage confirms cross-player history, an intervening level preserving prior history, deterministic no-repeat selection, update-at-selection timing, and explicit Level 4 bypass without consuming randomness.
+* Save coverage confirms `lastEnemyByLevel` round-trips with the existing format, while context restore coverage confirms missing legacy history is normalized to null for Levels 1-4.
+* The expanded debug and Elite/Boss run passes 79 of 80 checks, including every Feature-018 and fixed-assignment assertion. Its sole failure is an unrelated stale CSS expectation for `100px` maximum height while the existing stylesheet uses `115px`.
+* Scoped ESLint passes for all changed production and test files.
+* `npm run lint` is unavailable because this project has no `lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* The source audit confirms only random board/debug level calls pass no enemy ID; explicit debug and fixed Elite/Boss calls retain explicit IDs.
+* Scoped `git diff --check` passes with line-ending warnings only.
+
+Automated Tests Still Needed
+
+* None for selector exclusion, per-level/global state, update timing, random entry-point wiring, fixed encounter bypass, save persistence, legacy normalization, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real-browser repeated enemy observation, Debug interaction, full fixed-encounter playthrough, save-file interaction, and console inspection were not run and remain covered by the manual steps above.
+
+---
+
+Feature-019: Add global fullscreen toggle button under music button
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the start page and inspect the two top-left controls.
+   Expected: The fullscreen button is directly below music at 70px from the top and 10px from the left, with the same brown/yellow 50px button styling and 30px icon.
+2. Select the expand icon while not fullscreen.
+   Expected: The browser enters fullscreen; after the browser reports the state change, the icon becomes minimize and the accessible label becomes `Exit fullscreen` or its Japanese equivalent.
+3. Select the minimize icon while fullscreen.
+   Expected: The browser exits fullscreen; after the browser reports the state change, the icon and label return to Enter fullscreen.
+4. Enter or exit fullscreen through browser/system controls where supported.
+   Expected: The button updates from the actual browser state without requiring its own click.
+5. Deny or block a fullscreen request.
+   Expected: The page remains usable, the button continues showing the real non-fullscreen state, and a warning is logged without an application crash.
+6. Navigate through start, setup, story, rules, gameplay, battle, village, cave, river, decision, loot chest, winner, and other app routes; open Settings in English and Japanese.
+   Expected: The enabled fullscreen control remains globally visible above page/modal content with the correctly localized label.
+7. Toggle music and inspect gameplay at common viewport sizes before and after fullscreen.
+   Expected: Music, settings visibility, gameplay scaling, and responsive behavior remain unchanged with no console errors.
+
+Automated Tests Completed
+
+* Before implementation, the existing settings assertions passed 20 checks while all 19 new route/modal visibility assertions failed, and the focused fullscreen suite could not load because the component did not exist.
+* The completed fullscreen, global visibility, existing music, and app-shell suites pass all 51 checks.
+* API coverage confirms standard request/exit calls, no optimistic icon change before browser events, external fullscreen-change synchronization, exact expand/minimize icons, English/Japanese labels, and rejected-request warning behavior.
+* Compatibility coverage confirms safe WebKit-prefixed element, request, exit, and change-event fallbacks when standard APIs are unavailable.
+* App-shell coverage confirms one global control on every configured route and above open English/Japanese Settings modals while existing gameplay-only settings rules remain unchanged.
+* Styling coverage confirms the shared floating button class retains the required 50px brown/yellow styling, 30px icon, hover/focus behavior, and `z-index: 9999`, with only the fullscreen-specific 70px/10px position added.
+* Existing MusicPlayer and AppMusic regressions pass, confirming autoplay, playback queue, pause/resume, failure handling, labels, and music placement are unchanged.
+* Scoped ESLint passes for all changed production and test files.
+* `npm run lint` is unavailable because this project has no `lint` script.
+* `npm run build` compiles the optimized production build successfully.
+* Scoped `git diff --check` passes for tracked files with line-ending warnings only; the new fullscreen files pass scoped ESLint.
+
+Automated Tests Still Needed
+
+* None for API selection, event-driven state, localization, fallback/rejection behavior, global mounting, shared styling, modal presence, existing music regression, scoped lint, or production compilation.
+
+Manual Execution
+
+* Real-browser fullscreen entry/exit, browser-control/F11 behavior, blocked-permission UX, visual positioning, responsive gameplay scaling, modal pointer interaction, and console inspection were not run and remain covered by the manual steps above.

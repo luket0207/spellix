@@ -53,4 +53,34 @@ describe('lootChest', () => {
     expect(shuffled.map(({ id }) => id)).not.toEqual(originalOrder);
     expect(shuffled).toEqual(expect.arrayContaining(rewards));
   });
+
+  test('allows every generated reward to finish in every chest position', () => {
+    const rewards = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const randomSequences = [
+      [0, 0],
+      [0, 0.999],
+      [0.34, 0],
+      [0.34, 0.999],
+      [0.999, 0],
+      [0.999, 0.999],
+    ];
+    const arrangements = randomSequences.map((sequence) => {
+      const rolls = [...sequence];
+
+      return shuffleLootChestRewards(rewards, () => rolls.shift()).map(
+        ({ id }) => id
+      );
+    });
+
+    expect(
+      new Set(arrangements.map((arrangement) => arrangement.join(''))).size
+    ).toBe(6);
+    rewards.forEach(({ id }) => {
+      [0, 1, 2].forEach((position) => {
+        expect(arrangements.some((arrangement) => arrangement[position] === id)).toBe(
+          true
+        );
+      });
+    });
+  });
 });

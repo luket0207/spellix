@@ -55,15 +55,15 @@ describe('rewardItems', () => {
     ).toBe(true);
   });
 
-  test('uses the live rare pool and can select Shiny Health for Elite Towers', () => {
+  test('uses the live rare pool and can select Shiny Buff for Elite Towers', () => {
     const choices = generateEliteTowerRewardChoices(() => 0.9999);
 
-    expect(choices[0].item.type).toBe('light-green-yellow-outline');
+    expect(choices[0].item.type).toBe('purple-yellow-outline');
     expect(choices.map(({ item }) => item.type)).toEqual(
       expect.arrayContaining([
+        'purple-yellow-outline',
         'light-green-yellow-outline',
         'green-yellow-outline',
-        'orange-yellow-outline',
       ])
     );
   });
@@ -85,7 +85,7 @@ describe('rewardItems', () => {
     }
   });
 
-  test('includes Buff only in common token rewards and excludes it from Elite rewards', () => {
+  test('keeps common Buff common while including Shiny Buff in rare and Elite rewards', () => {
     const commonTypes = selectEveryItem(
       REWARD_CATEGORIES.COMMON_TOKEN,
       getExpectedTokenTypes('Common').length
@@ -99,8 +99,16 @@ describe('rewardItems', () => {
     );
 
     expect(commonTypes).toContain('purple');
+    expect(commonTypes).not.toContain('purple-yellow-outline');
     expect(rareTypes).not.toContain('purple');
+    expect(rareTypes).toContain('purple-yellow-outline');
     expect(eliteTypes).not.toContain('purple');
+
+    const shinyBuffEliteTypes = generateEliteTowerRewardChoices(() => 0.9999).map(
+      ({ item }) => item.type
+    );
+
+    expect(shinyBuffEliteTypes).toContain('purple-yellow-outline');
   });
 
   test.each([
@@ -155,7 +163,7 @@ describe('rewardItems', () => {
   });
 
   test('allows common and shiny versions of one colour as distinct token choices', () => {
-    const rolls = [0, 0.65, 0, 0.45];
+    const rolls = [0, 0.65, 0, 0.4];
     const choices = generateBattleRewardChoices(2, () => rolls.shift());
 
     expect(choices.map(({ item }) => item.type)).toEqual([
@@ -260,6 +268,7 @@ describe('rewardItems', () => {
       'orange-yellow-outline',
       'green-yellow-outline',
       'light-green-yellow-outline',
+      'purple-yellow-outline',
     ];
 
     expect(getExpectedTokenTypes('Rare')).toEqual(

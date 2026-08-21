@@ -20,6 +20,7 @@ export const RULES_CONTENT = {
           'You can gain tokens from rewards such as battles, loot chests, villages, decisions, and other events. Some tokens are common, and some are rare. Some rare tokens are shiny versions of common tokens and have stronger effects.',
           'If you lose a battle or respawn, you may lose tokens. Starting tokens cannot be removed. Sacrifice tokens are removed first, then a random eligible token is removed.',
           'Damage tokens deal damage. Guard tokens protect you. Counter tokens damage an enemy if they attack you through that number. Deflect tokens reduce damage if you are attacked through that number. Freeze tokens can freeze your opponent. Health tokens increase your maximum and current HP. Merge tokens can combine adjacent spell columns. Buff tokens increase nearby spell power. Charge tokens charge your slots. Capacity tokens increase the number of tokens that adjacent columns can hold.',
+          'To see a description of what each Token does, hover over the Token icon to make a tooltip appear.',
         ],
       },
       {
@@ -37,6 +38,7 @@ export const RULES_CONTENT = {
           'Potions are special items that can help on the board, in battle, or during mini games. Some potions are used manually with a Use button. Others, such as Cave Runner, can activate automatically when their condition happens.',
           'Usually, you can only use one board potion per board turn and one battle potion per battle turn. Mini potions are separate and work only in their relevant mini game or event.',
           'Potions can heal you, help you roll, duplicate tokens, affect other players, protect you from danger, or change the outcome of an event.',
+          'To see a description of what each Potion does, hover over the Potion icon to make a tooltip appear.',
         ],
       },
       {
@@ -89,6 +91,7 @@ export const RULES_CONTENT = {
           'トークンは、バトル、戦利品の宝箱、村、決断、その他のイベントなどで手に入ります。トークンにはコモンとレアがあります。一部のレアトークンは、コモントークンの強化版である輝くトークンです。',
           'バトルに負けたり、リスポーンしたりすると、トークンを失うことがあります。初期トークンは取り除かれません。身代わりトークンが最初に取り除かれ、その後、取り除けるトークンからランダムに選ばれます。',
           'ダメージトークンはダメージを与えます。ガードトークンは自分を守ります。カウンタートークンは、その数字から攻撃された時に反撃ダメージを与えます。受け流しトークンは、その数字から攻撃された時にダメージを減らします。凍結トークンは相手を凍結させます。体力トークンは最大HPと現在HPを増やします。合成トークンは隣接する呪文列を統合できます。強化トークンは近くの呪文を強くします。チャージトークンはスロットをチャージします。容量トークンは隣接する列に入れられるトークン数を増やします。',
+          '各トークンの効果を確認するには、トークンアイコンにカーソルを合わせてツールチップを表示してください。',
         ],
       },
       {
@@ -106,6 +109,7 @@ export const RULES_CONTENT = {
           'ポーションは、ボード上、バトル中、ミニゲーム中に役立つ特別なアイテムです。Useボタンで手動で使うポーションもあります。洞窟ランナーのように、条件を満たした時に自動で発動するポーションもあります。',
           '通常、ボード用ポーションは1回のボードターンに1つ、バトル用ポーションは1回のバトルターンに1つだけ使用できます。ミニ用ポーションは別扱いで、対応するミニゲームやイベントでのみ使えます。',
           'ポーションはHPを回復したり、サイコロを助けたり、トークンを複製したり、他のプレイヤーに影響を与えたり、危険から守ったり、イベントの結果を変えたりします。',
+          '各ポーションの効果を確認するには、ポーションアイコンにカーソルを合わせてツールチップを表示してください。',
         ],
       },
       {

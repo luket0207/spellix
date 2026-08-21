@@ -1,0 +1,259 @@
+---
+
+Feature-001: Add token and potion tooltip guidance to rules page
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open the main Rules page in English and find the Tokens section.
+   Expected: `To see a description of what each Token does, hover over the Token icon to make a tooltip appear.` is the final paragraph in the section and appears once.
+2. Find the Potions section.
+   Expected: `To see a description of what each Potion does, hover over the Potion icon to make a tooltip appear.` is the final paragraph in the section and appears once.
+3. Switch the Rules page to Japanese and inspect the Token and Potion sections.
+   Expected: Each section ends with its specified Japanese tooltip guidance, with no English guidance or duplicate guidance visible.
+4. During gameplay, open Settings and then open Rules for an English player.
+   Expected: Both English guidance sentences appear in the shared Rules content.
+5. Repeat the Settings Rules flow for a Japanese player.
+   Expected: Both Japanese guidance sentences appear in the shared Rules content.
+6. Scroll through the Rules content and return using either Back button.
+   Expected: Scrolling, language controls, and navigation behave as before with no console errors caused by this feature.
+
+Automated Tests Completed
+
+* `src/pages/RulesPage.test.jsx`: 11 tests passed.
+* Verified the exact English and Japanese guidance strings are the final Token and Potion paragraphs.
+* Verified each guidance sentence renders once on the main Rules page in its selected language.
+* Added Settings modal integration assertions for both English and Japanese shared Rules content.
+* `npm run build`: passed with a successful production compilation.
+
+Automated Tests Still Needed
+
+* Rerun the two Settings Rules assertions in `src/App.test.jsx` after the existing jsdom audio/source-map test harness failure is resolved. The suite currently logs unimplemented `HTMLMediaElement.prototype.play` calls and then crashes in `source-map-support` before reporting tests.
+
+Notes
+
+* The main Rules page and Settings rules modal both render `RulesBody` from the same `RULES_CONTENT` source, so the passing content/rendering tests cover the shared implementation path.
+* No tooltip behaviour, descriptions, rules layout, styling, or language controls changed.
+
+---
+
+Feature-002: Redesign game setup page with horizontal player pods and add/remove player controls
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Open Game Setup.
+   Expected: Player 1 and Player 2 appear in the first row of a two-column grid; an Add Player pod appears in the Player 3 position; the old Number of Players controls are absent.
+2. Inspect the setup panel and player pods.
+   Expected: The title uses Unkempt with balanced top and bottom panel padding. Player pods are equal-size brown rounded rectangles with 10px internal padding, internal 16px titles, and 20px below each title. Existing input labels and selectors retain their prior appearance.
+3. Hover anywhere over the Add Player pod, then focus it with the keyboard and activate it.
+   Expected: The yellow plus icon responds to pod hover; the control has a visible keyboard focus; Player 3 is added and Add Player moves to the Player 4 position.
+4. Continue adding players until there are six.
+   Expected: Players fill row-major positions as 1/2, 3/4, and 5/6. Players 3 to 6 have yellow remove controls; Players 1 and 2 do not. Add Player is absent at six players.
+5. With four players, set Player 4 to Japanese, Girl, and a unique colour, then remove Player 3.
+   Expected: The former Player 4 becomes Player 3 with all settings preserved. The removed player's colour becomes available and Add Player appears in the next slot.
+6. Compare the panel with 2, 3, 4, 5, and 6 active players.
+   Expected: The panel retains the same height because all six grid positions remain reserved; unused positions are inert and invisible.
+7. Toggle Debug Mode and start a game after adding players.
+   Expected: Debug Mode behaves as before. Start Game uses only active players and navigates to the existing Story destination.
+8. Repeat the setup flow at a narrow viewport.
+   Expected: The two-column player order remains intact, inputs remain usable, and the panel can scroll without changing the six-slot structure.
+
+Automated Tests Completed
+
+* `src/pages/GameSetupPage.test.jsx` and `src/features/gameSetup/gameSetup.test.js`: 30 tests passed across 2 suites.
+* Verified the count controls are removed and the initial setup contains two players, one Add Player button, and three inert empty slots.
+* Verified sequential addition to six players, the six-player cap, and remove controls only for Players 3 to 6.
+* Verified middle-player removal shifts language, gender, colour, piece image, and labels up while releasing the removed colour.
+* Verified existing language, gender, colour uniqueness, Debug Mode, background, and player factory behaviour remains intact.
+* Verified the specified six-slot grid, pod/title styling, Unkempt title, balanced padding, Font Awesome icons, and whole-pod hover selector.
+* `npm run build`: passed with a successful production compilation.
+* `git diff --check`: passed for all implementation and test files changed by Feature-002.
+
+Automated Tests Still Needed
+
+* Rerun `src/features/gameSetup/GameSetupContext.test.jsx` after the existing Jest `source-map-support` crash is resolved. The suite currently crashes before reporting tests; the focused page suite exercises the new context removal action successfully.
+
+Notes
+
+* No dedicated `npm run lint` script exists in this project. The React production build completed successfully.
+* Manual steps are documented for visual and browser-console confirmation; they were not executed in a real browser during this automated pass.
+* No changes were made to colour options, input labels, Start Game destination, Story, token setup, Debug Mode rules, or player count limits.
+
+---
+
+Bug-001: Remove-player X button should overlap the player pod corner
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Open Game Setup and add Player 3.
+   Expected: Player 3 has a yellow X button overlapping the top-right corner of the brown pod.
+2. Inspect the overlapping button and hover over it.
+   Expected: The clickable area is 24px by 24px, positioned 12px beyond the top and right edges, remains fully visible, and keeps its brightness/scale hover effect without moving surrounding layout.
+3. Click the overlapping X button.
+   Expected: Player 3 is removed and the Add Player pod returns to the next position.
+4. Add Players 3 and 4, change Player 4's settings, then remove Player 3.
+   Expected: The former Player 4 shifts into Player 3 with its settings preserved.
+5. Check the setup page at desktop and narrow widths.
+   Expected: The overlapping buttons are not clipped and do not create page-level horizontal scrolling.
+
+Automated Tests Completed
+
+* Added and passed the bug-specific remove-button overlap test in `src/pages/GameSetupPage.test.jsx`.
+* Confirmed `overflow: visible` on the player grid and player pod.
+* Confirmed the button is 24px high and wide at `top: -12px` and `right: -12px`.
+* Confirmed the existing hover brightness and scale rules remain present.
+* The other 10 setup rendering and behaviour tests in the same run passed, including add/remove controls and middle-player shift-up.
+* `npm run build`: passed with a successful production compilation.
+
+Automated Tests Still Needed
+
+* The complete `GameSetupPage.test.jsx` file currently reports one unrelated stale CSS assertion. It expects the earlier fixed panel height, 40px panel padding, 20px grid gap, and 10px pod padding, while the current user-authored stylesheet uses different setup design values. Bug-001's focused assertion and all runtime behaviour tests pass.
+
+Notes
+
+* Existing user-authored setup panel, grid-gap, border, padding, and input-gap changes were preserved.
+* No Add Player, player layout, input styling, player removal logic, or player count behavior changed.
+
+---
+
+Bug-002: Newly added players can reuse colours that are already taken
+
+Test Status
+
+* passed
+
+Manual Regression Steps
+
+1. Add players until Player 5 is present with Purple selected.
+   Expected: All five active players have different colours.
+2. Remove Player 3, then remove the new Player 3 again so the original Player 5 shifts into Player 3.
+   Expected: Shifted Player 3 keeps Purple and all other settings.
+3. Add Players 4 and 5 again.
+   Expected: They receive unused colours; neither receives Purple while Player 3 is Purple, and all active colours remain unique.
+4. Remove a player with a unique colour and add a replacement.
+   Expected: The released colour is available and can be assigned because no active player holds it.
+5. Inspect every active player's Colour dropdown.
+   Expected: The player's own colour remains selectable; colours used by other active players are absent; empty slots reserve no colours.
+6. Attempt to start a game from duplicate-colour setup state if one is loaded externally.
+   Expected: Start Game is disabled and Story is not opened.
+
+Automated Tests Completed
+
+* `src/features/gameSetup/gameSetup.test.js`: passed, including first-unused-colour assignment and duplicate-existing-colour repair.
+* The setup-page remove/shift/re-add regression passed with expected active colours `Red, Blue, Purple, Green, Yellow`.
+* Verified removing Green and adding a player makes Green available again.
+* Verified Start Game is disabled when duplicate colours are supplied in setup state.
+* Existing colour dropdown exclusivity, player shifting, Add Player, removal, language, gender, and Debug Mode tests passed.
+* Combined focused run: 33 tests passed; the two failures were unrelated stale/concurrently changed CSS assertions.
+* `npm run build`: passed with a successful production compilation.
+
+Automated Tests Still Needed
+
+* Reconcile the setup CSS assertions with the current user-authored panel and remove-button styling. During this bug pass, the stylesheet changed independently to alter panel dimensions and remove-button hover styling; those two CSS-only assertions fail while all Bug-002 logic and runtime tests pass.
+
+Notes
+
+* No colour options, colour names, player pod design, Add Player design, remove-button positioning, or player count limits were changed by Bug-002.
+* The active `players` array remains the only source used for colour availability; placeholders do not store or reserve colours.
+
+---
+
+Feature-003: Update environment landing event chances
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Land on normal Field, Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains squares repeatedly.
+   Expected: Only events with a non-zero chance for that environment occur, distributed according to the Feature-003 table.
+2. Enable Choose Event mode and land on each normal environment.
+   Expected: The modal lists exactly the non-zero events for that environment; Mountains does not list Decision.
+3. Activate Smokescreen and land on a normal environment that normally permits a battle.
+   Expected: Battle events are excluded while the remaining eligible events retain weighted selection.
+4. Hold Metal Detector and land on a non-feature environment square.
+   Expected: Loot Chest is selected before normal environment weighting is applied.
+5. Resolve Roll Again from a normal environment landing.
+   Expected: The existing continuation flow runs without consuming or changing the environment table.
+6. Land on a feature square.
+   Expected: Its existing feature event resolves instead of the normal environment chance table.
+
+Automated Tests Completed
+
+* `src/data/environmentEvents.test.js` and `src/features/boardEvents/ChooseEventModal.test.jsx`: 26 tests passed across 2 suites.
+* Verified the exact chance object for all nine environment rows and confirmed every row totals 100.
+* Added Gravel and Mountains weighted-boundary tests, including Mountains never selecting its zero-weight Decision event.
+* Verified Choose Event exposes only non-zero events using the updated central table.
+* `src/pages/GameplayPage.test.jsx`: all 75 tests passed, including normal landing, Metal Detector, Smokescreen, Choose Event, and Roll Again.
+* `npm run build`: passed with a successful production compilation.
+
+Automated Tests Still Needed
+
+* None for the automated Feature-003 scope.
+
+Notes
+
+* Manual statistical sampling and browser-console checks are documented above but were not run in a real browser during this automated pass.
+* No event resolution behaviour, feature-square handling, routes, styling, or UI was changed.
+* Stale integration expectations were aligned with the current token catalogue, numeric dice-result markup, centered sidebar piece, 200px turn-change piece, and class-based Spells piece sizing without changing application code.
+
+---
+
+Feature-004: Show board square hover labels at all times and include Elite/Boss enemy names
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start gameplay without rolling and hover normal squares for every environment.
+   Expected: Each square immediately shows its localized environment name even though it is not highlighted or selectable.
+2. Hover a bottom-half square and then a top-half square.
+   Expected: The label appears 50px from the board top for the bottom-half square and 50px from the board bottom for the top-half square.
+3. Roll the dice, then hover both highlighted and non-highlighted squares.
+   Expected: Both show hover labels, but only the highlighted destination remains keyboard/click selectable for movement.
+4. Hover every cell of Field Village and Forest Village footprints.
+   Expected: Every cell shows only `Village` / `\u6751`, not its underlying environment.
+5. Hover every cell of both Elite Tower footprints in English and Japanese.
+   Expected: The first line is the localized Elite Tower label and the second line is that specific tower's game-start assigned localized enemy.
+6. Hover every Boss Battle footprint cell in English and Japanese.
+   Expected: The first line is the localized Boss Battle label and the second line is the assigned boss's localized enemy name.
+7. Load or render a defensive state without Elite/Boss assignments and hover those footprints.
+   Expected: The feature name still appears without an enemy line or error.
+8. Click a highlighted destination and inspect board scaling and hover placement.
+   Expected: Existing movement completes normally, the label does not intercept clicks, and its board-relative top/bottom placement remains stable.
+
+Automated Tests Completed
+
+* `src/features/gameBoard/boardHoverLabels.test.js` and `src/features/gameBoard/BoardGrid.test.jsx`: 37 tests passed across 2 suites.
+* Verified all nine localized environment names, Village/Elite/Boss feature precedence, and unchanged top/bottom positioning.
+* Verified non-highlighted pre-roll squares show labels while retaining `data-highlighted="false"` and `tabindex="-1"`.
+* Verified both Elite Tower assignments and the Boss assignment resolve across every fixed footprint cell in English and Japanese.
+* Verified missing assignments omit only the enemy line and do not crash.
+* Verified the feature-name line uses the specified smaller size and the enemy-name line inherits the normal hover text size.
+* `src/pages/GameplayPage.test.jsx`: all 75 tests passed, including assignment forwarding and existing movement, dice, event, potion, and turn flows.
+* `npm run build`: passed with a successful production compilation.
+* `git diff --check`: passed for all tracked Feature-004 implementation and test files.
+
+Automated Tests Still Needed
+
+* None for the automated Feature-004 scope.
+
+Notes
+
+* No dedicated `npm run lint` script exists in this project. The React production build completed successfully.
+* Manual browser, scaling, and console checks are documented above but were not executed in a real browser during this automated pass.
+* No new component, route, dependency, assignment source, movement rule, board-generation rule, or mobile interaction was added.

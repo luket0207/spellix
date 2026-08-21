@@ -112,6 +112,20 @@ describe('battle enemy data', () => {
     expect(selectRandomEnemyForLevel(9, () => 0)).toBeNull();
   });
 
+  test.each([1, 2, 3])(
+    'excludes the previous enemy for random level %i battles',
+    (level) => {
+      const levelEnemies = getEnemiesForLevel(level);
+      const selectedEnemy = selectRandomEnemyForLevel(
+        level,
+        () => 0,
+        levelEnemies[0].id
+      );
+
+      expect(selectedEnemy.id).toBe(levelEnemies[1].id);
+    }
+  );
+
   test.each([
     [1, 25],
     [2, 35],

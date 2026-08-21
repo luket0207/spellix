@@ -287,36 +287,6 @@ function GameplayPage({
         POTION_DEFINITIONS.find(({ id }) => id === potionId)
       )
       .filter(Boolean) ?? [];
-  const isGameplayOverlayOpen = Boolean(
-    showDiceModal ||
-      showSpellsModal ||
-      showSpellCancelConfirmation ||
-      showSpellSaveConfirmation ||
-      mergeSaveDraft?.pendingMerge ||
-      isTurnStartBlocked ||
-      activeLootChestEvent ||
-      isChooseEventModalOpen ||
-      isRollAgainEventModalOpen ||
-      pendingPotionUse ||
-      pendingBuyAndSellUse ||
-      buyAndSellTransaction ||
-      cauldronChoiceState ||
-      pendingCopyPasteUse ||
-      pendingCopyPasteDuplicate ||
-      pendingRollChoiceUse ||
-      pendingTargetPlayerPotionUse ||
-      pendingTokensmithUse ||
-      troublemakerResult ||
-      devineChanceResult ||
-      stormMasterResult ||
-      miniGameReturnNotice
-  );
-  const showBoardHoverLabels = Boolean(
-    currentDiceRoll !== null &&
-      highlightedNodeIds.length > 0 &&
-      !isGameplayOverlayOpen
-  );
-
   const handleConfirmPotionUse = () => {
     if (pendingPotionUse) {
       if (pendingPotionUse.potion.id === 'cauldron') {
@@ -1172,12 +1142,12 @@ function GameplayPage({
               <BoardGrid
                 board={gameSetup.board}
                 currentPlayerId={currentPlayer?.id ?? ''}
+                eliteBossEnemyAssignments={gameSetup.eliteBossEnemyAssignments}
                 highlightedColour={currentPlayer?.colour ?? ''}
                 highlightedNodeIds={highlightedNodeIds}
                 language={currentLanguage}
                 onSquareClick={handleSquareClick}
                 players={gameSetup.players}
-                showHoverLabels={showBoardHoverLabels}
               />
             ) : null}
 

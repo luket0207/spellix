@@ -114,6 +114,48 @@ describe('RulesPage', () => {
   test.each([
     [
       'en',
+      'Tokens',
+      'To see a description of what each Token does, hover over the Token icon to make a tooltip appear.',
+      'Potions',
+      'To see a description of what each Potion does, hover over the Potion icon to make a tooltip appear.',
+    ],
+    [
+      'jp',
+      'トークン',
+      '各トークンの効果を確認するには、トークンアイコンにカーソルを合わせてツールチップを表示してください。',
+      'ポーション',
+      '各ポーションの効果を確認するには、ポーションアイコンにカーソルを合わせてツールチップを表示してください。',
+    ],
+  ])('shows tooltip guidance once as the final Token and Potion paragraphs in %s', (
+    language,
+    tokenHeading,
+    tokenGuidance,
+    potionHeading,
+    potionGuidance
+  ) => {
+    const tokenSection = RULES_CONTENT[language].sections.find(
+      ({ heading }) => heading === tokenHeading
+    );
+    const potionSection = RULES_CONTENT[language].sections.find(
+      ({ heading }) => heading === potionHeading
+    );
+
+    expect(tokenSection.paragraphs.at(-1)).toBe(tokenGuidance);
+    expect(potionSection.paragraphs.at(-1)).toBe(potionGuidance);
+
+    renderRulesPage();
+
+    if (language === 'jp') {
+      fireEvent.click(screen.getByRole('button', { name: '日本語' }));
+    }
+
+    expect(screen.getAllByText(tokenGuidance)).toHaveLength(1);
+    expect(screen.getAllByText(potionGuidance)).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      'en',
       'Features',
       'Village Actions',
       [

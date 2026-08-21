@@ -121,6 +121,7 @@ function GameStateSnapshot() {
       <p>{`Player freeze uses: ${activeBattle?.playerFreezeUses?.join(',') ?? 'none'}`}</p>
       <p>{`Enemy freeze uses: ${activeBattle?.enemyFreezeUses?.join(',') ?? 'none'}`}</p>
       <p>{`Player Purple buffs: ${activeBattle?.playerPurpleBuffs?.join(',') ?? 'none'}`}</p>
+      <p>{`Player next Purple buffs: ${activeBattle?.playerNextPurpleBuffs?.join(',') ?? 'none'}`}</p>
       <p>{`Enemy Purple buffs: ${activeBattle?.enemyPurpleBuffs?.join(',') ?? 'none'}`}</p>
       <p>{`Player charged: ${activeBattle?.playerCharged ?? 'none'}`}</p>
       <p>{`Enemy charged: ${activeBattle?.enemyCharged ?? 'none'}`}</p>
@@ -2482,6 +2483,11 @@ describe('BattlePage flows', () => {
       tokens: [
         { committed: true, id: 'player-1-yellow-1', type: 'yellow' },
         { committed: true, id: 'player-1-purple-1', type: 'purple' },
+        {
+          committed: true,
+          id: 'player-1-purple-yellow-outline-1',
+          type: 'purple-yellow-outline',
+        },
         { committed: true, id: 'player-1-blue-1', type: 'blue' },
         { committed: true, id: 'player-1-red-1', type: 'red' },
         { committed: true, id: 'player-1-light-blue-1', type: 'light-blue' },
@@ -2498,6 +2504,7 @@ describe('BattlePage flows', () => {
     });
 
     const chargeBolt = screen.getByLabelText(/charge animation/i);
+    expect(screen.getByText(/player next purple buffs: 0,15,0,0,0,0/i)).toBeInTheDocument();
     expect(chargeBolt).toHaveAttribute('data-icon', 'bolt');
     expect(chargeBolt).toHaveClass(
       'battle-character-overlay-icon',

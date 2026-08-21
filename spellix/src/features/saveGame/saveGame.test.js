@@ -56,8 +56,21 @@ describe('save game files', () => {
   test('round-trips complete UTF-8 state through versioned base64 instead of plain JSON', () => {
     const gameState = {
       ...createValidGameState(),
+      lastEnemyByLevel: {
+        1: 'vilewhisker-rat',
+        2: 'hexmaw-hag',
+        3: null,
+        4: null,
+      },
       miniGameResult: { message: '洞窟の報酬' },
     };
+    gameState.players[0].tokenBag = [
+      {
+        committed: false,
+        id: 'player-1-purple-yellow-outline-1',
+        type: 'purple-yellow-outline',
+      },
+    ];
     const appState = {
       activeRollAgainEvent: { playerId: 'player-1' },
       isChooseEventModeEnabled: true,

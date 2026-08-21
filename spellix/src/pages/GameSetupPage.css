@@ -17,98 +17,122 @@
   display: flex;
   flex-direction: column;
   font-family: 'Unkempt', 'M PLUS Rounded 1c', sans-serif;
-  gap: 4px;
-  height: min(670px, calc(100vh - 32px));
+  gap: 0;
   overflow: auto;
-  padding: 40px;
+  padding: 0 80px;
   position: relative;
-  width: min(800px, calc(100vw - 32px));
   z-index: 1;
 }
 
 .game-setup-title {
   color: #C6CC0C;
-  font-family: 'Fontdiner Swanky', 'M PLUS Rounded 1c', sans-serif;
+  font-family: 'Unkempt', cursive;
   font-size: 32px;
   line-height: 1;
-  margin: 0;
+  margin: 0 0 40px;
+  padding-top: 40px;
   text-align: center;
-}
-
-.game-setup-count-controls {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  justify-content: center;
-  line-height: 1;
-  margin-bottom: 20px;
-}
-
-.game-setup-count-buttons {
-  display: flex;
-  gap: 4px;
-}
-
-.game-setup-count-button {
-  min-width: 38px;
-  padding: 2px 10px;
-}
-
-.game-setup-count-button.is-active {
-  border-color: #F5FA00;
-  box-shadow: 0 0 10px #F5FA00;
 }
 
 .game-setup-player-grid {
   display: grid;
-  grid-auto-rows: 150px;
-  grid-template-columns: repeat(2, 350px);
-  justify-content: center;
-  column-gap: 16px;
+  gap: 30px;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  overflow: visible;
+}
+
+.game-setup-player-pod,
+.game-setup-add-player-pod {
+  background: #302419;
+  border: double 5px #C6CC0C;
+  border-radius: 12px;
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 0;
+  padding: 16px;
+  position: relative;
+}
+
+.game-setup-player-pod-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0 0 20px;
+  text-align: center;
 }
 
 .game-setup-player-pod {
-  box-sizing: border-box;
-  height: 150px;
-  margin: 0;
-  padding: 2px 8px 6px;
-  width: 350px;
+  overflow: visible;
 }
 
-.game-setup-player-pod:nth-child(-n+3) {
-  grid-column: 1;
+.game-setup-add-player-pod {
+  align-items: center;
+  color: #F5FA00;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Unkempt', 'M PLUS Rounded 1c', sans-serif;
+  justify-content: center;
 }
 
-.game-setup-player-pod:nth-child(n+4) {
-  grid-column: 2;
+.add-player-icon {
+  font-size: 32px;
+  transition: filter 150ms ease, transform 150ms ease;
 }
 
-.game-setup-player-pod:nth-child(1),
-.game-setup-player-pod:nth-child(4) {
-  grid-row: 1;
+.add-player-text {
+  font-size: 16px;
+  margin-top: 8px;
+  text-align: center;
 }
 
-.game-setup-player-pod:nth-child(2),
-.game-setup-player-pod:nth-child(5) {
-  grid-row: 2;
+.game-setup-add-player-pod:hover .add-player-icon {
+  filter: brightness(1.15);
+  transform: scale(1.12);
 }
 
-.game-setup-player-pod:nth-child(3),
-.game-setup-player-pod:nth-child(6) {
-  grid-row: 3;
+.game-setup-add-player-pod:focus-visible,
+.game-setup-remove-player-button:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 3px;
 }
 
-.game-setup-player-pod legend {
-  font-weight: 700;
-  line-height: 1;
-  padding: 0 4px;
+.game-setup-remove-player-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #F5FA00;
+  background-color: #302419;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  height: 24px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: -12px;
+  top: -12px;
+  transition: transform 150ms ease-in-out;
+  width: 24px;
+}
+
+.game-setup-remove-player-button .fa-circle-xmark {
+ font-size: 24px;
+}
+
+.game-setup-remove-player-button:hover {
+  transform: scale(1.12);
+}
+
+.game-setup-empty-player-slot {
+  min-height: 0;
 }
 
 .game-setup-input-row {
   align-items: center;
   display: grid;
-  gap: 4px;
+  gap: 50px;
   grid-template-columns: 1fr 150px;
   margin-top: 4px;
 }
@@ -124,8 +148,14 @@
 
 .game-setup-submit {
   align-self: center;
-  margin-top: auto;
-  padding: 4px 16px;
+  margin-top: 20px;
+  margin-bottom: 12px;
+  padding: 12px 30px;
+}
+
+.game-setup-debug-mode {
+  align-self: center;
+  padding-bottom: 40px;
 }
 
 @media (max-width: 760px) {
@@ -135,17 +165,21 @@
 
   .game-setup-panel {
     height: calc(100vh - 16px);
+    padding: 0 16px;
     width: calc(100vw - 16px);
   }
 
   .game-setup-player-grid {
-    align-items: center;
+    gap: 8px;
+  }
+
+  .game-setup-input-row {
+    align-items: stretch;
     display: flex;
     flex-direction: column;
   }
 
-  .game-setup-player-pod {
-    flex: 0 0 150px;
-    max-width: 100%;
+  .game-setup-panel select {
+    width: 100%;
   }
 }

@@ -18,6 +18,12 @@ describe('tokenBagAdmin', () => {
     expect(getDebugTokenTypeLabel('light-green-yellow-outline', 'en')).toBe(
       'Shiny Health'
     );
+    expect(getDebugTokenTypeLabel('purple-yellow-outline', 'en')).toBe(
+      'Shiny Buff'
+    );
+    expect(getDebugTokenTypeLabel('purple-yellow-outline', 'jp')).toBe(
+      '\u8f1d\u5f37\u5316'
+    );
   });
 
   test('creates a unique debug token id based on the player token history', () => {

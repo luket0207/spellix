@@ -41,7 +41,6 @@ test.each([
       'Level 2 Battle',
       'Level 3 Battle',
       'Cave Mini Game',
-      'Decision',
       'Hazard',
       'Loot Chest',
     ],

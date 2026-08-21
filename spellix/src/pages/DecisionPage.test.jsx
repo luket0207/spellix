@@ -557,8 +557,8 @@ test.each([
   ['commonToken', 'red', 'Gain a common token', 0],
   ['rareToken', 'white', 'Gain a rare token', 0],
   ['token', 'red', 'Gain a token', 0],
-  ['rareToken', 'light-green-yellow-outline', 'Gain a rare token', 0.9999],
-  ['token', 'light-green-yellow-outline', 'Gain a token', 0.9999],
+  ['rareToken', 'purple-yellow-outline', 'Gain a rare token', 0.9999],
+  ['token', 'purple-yellow-outline', 'Gain a token', 0.9999],
 ])(
   'shows the %s reward before opening assignment on Continue',
   (resultId, tokenType, resultLabel, rewardRoll) => {

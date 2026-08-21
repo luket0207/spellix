@@ -5,15 +5,17 @@ import {
   clampPlayerCount,
   cloneSpellSlots,
   cloneTokenBag,
+  createLastEnemyByLevel,
   createInitialGameSetup,
   createPlayers,
   createTurnOrder,
   DEFAULT_PLAYER_LANGUAGE,
   getCurrentPlayer,
+  MIN_PLAYER_COUNT,
 } from './gameSetup';
 import { calculateBattleTurn, createAdjacentPurpleBuffs } from '../battle/battleTurn';
 import { normalizeBattleEnvironment } from '../battle/battleEnvironments';
-import { getEnemyById } from '../battle/enemies';
+import { getEnemyById, selectRandomEnemyForLevel } from '../battle/enemies';
 import { applyDeathTokenPenalty, getDeathTokenPenalty } from '../death/deathPenalty';
 import {
   addTokenToBag,
@@ -527,6 +529,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
       ...setup,
       debugMode: Boolean(setup.debugMode),
       hasRolledMovementDice: Boolean(setup.hasRolledMovementDice),
+      lastEnemyByLevel: createLastEnemyByLevel(setup.lastEnemyByLevel),
       eliteBossEnemyAssignments: {
         ...(setup.eliteBossEnemyAssignments ??
           selectEliteBossEnemyAssignments()),
@@ -683,6 +686,44 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         turnOrder: [],
         currentTurnIndex: 0,
         board: null,
+      };
+    });
+  };
+
+  const removePlayer = (playerId) => {
+    setGameSetup((currentSetup) => {
+      const playerIndex = currentSetup.players.findIndex(
+        (player) => player.id === playerId
+      );
+
+      if (
+        playerIndex < MIN_PLAYER_COUNT ||
+        currentSetup.playerCount <= MIN_PLAYER_COUNT
+      ) {
+        return currentSetup;
+      }
+
+      const remainingPlayers = currentSetup.players.filter(
+        (player) => player.id !== playerId
+      );
+      const nextPlayerCount = remainingPlayers.length;
+
+      return {
+        ...currentSetup,
+        activeBattle: null,
+        board: null,
+        buyAndSellTransaction: null,
+        cauldronChoiceState: null,
+        currentTurnIndex: 0,
+        devineChanceResult: null,
+        pendingPotionGrant: null,
+        playerCount: nextPlayerCount,
+        players: createPlayers(nextPlayerCount, remainingPlayers),
+        stormMasterEffect: null,
+        stormMasterPendingPlayerId: null,
+        stormMasterResult: null,
+        troublemakerResult: null,
+        turnOrder: [],
       };
     });
   };
@@ -2396,13 +2437,23 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
     environment = 'fields',
     options = {}
   ) => {
-    const enemy = getEnemyById(enemyId);
-
-    if (!enemy) {
-      return;
-    }
-
     setGameSetup((currentSetup) => {
+      const lastEnemyByLevel = createLastEnemyByLevel(
+        currentSetup.lastEnemyByLevel
+      );
+      const isRandomBattle = enemyId == null;
+      const enemy = isRandomBattle
+        ? selectRandomEnemyForLevel(
+            level,
+            options.randomFn ?? Math.random,
+            lastEnemyByLevel[level]
+          )
+        : getEnemyById(enemyId);
+
+      if (!enemy) {
+        return currentSetup;
+      }
+
       const player = currentSetup.players.find(({ id }) => id === playerId);
       const hasStartingCharge =
         player?.activePotion?.id === 'starting-charge';
@@ -2422,7 +2473,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           enemyFrozen: false,
           freezeAppliedByIceBeamThisTurn: false,
           enemyGuard: 0,
-          enemyId,
+          enemyId: enemy.id,
           enemyNextCharged: null,
           enemyNextPurpleBuffs: null,
           enemyPurpleBuffs: [0, 0, 0, 0, 0, 0],
@@ -2445,6 +2496,9 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
           playerPurpleBuffs: [0, 0, 0, 0, 0, 0],
           shieldsDownPending: false,
         },
+        lastEnemyByLevel: isRandomBattle
+          ? { ...lastEnemyByLevel, [level]: enemy.id }
+          : lastEnemyByLevel,
         players: hasStartingCharge || shouldResetVillageActionLock
           ? currentSetup.players.map((currentPlayer) =>
               currentPlayer.id === playerId
@@ -3450,7 +3504,12 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
   };
 
   const restoreGame = (savedGameSetup) => {
-    setGameSetupState(savedGameSetup);
+    setGameSetupState({
+      ...savedGameSetup,
+      lastEnemyByLevel: createLastEnemyByLevel(
+        savedGameSetup?.lastEnemyByLevel
+      ),
+    });
   };
 
   return (
@@ -3532,6 +3591,7 @@ export function GameSetupProvider({ children, initialGameSetup = null }) {
         finishVillageWandsmith,
         finishVillageVisit,
         resetGame,
+        removePlayer,
         restoreGame,
         returnFromMiniGame,
         resolveBattleFreezeCheck,

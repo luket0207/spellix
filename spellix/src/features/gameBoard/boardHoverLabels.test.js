@@ -1,4 +1,5 @@
 import {
+  getBoardHoverEnemyName,
   getBoardHoverLabel,
   getBoardHoverLabelPosition,
 } from './boardHoverLabels';
@@ -83,6 +84,71 @@ describe('board hover labels', () => {
         square: createSquare({ x: 30, y: 0 }),
       })
     ).toBe('\u30dc\u30b9\u30d0\u30c8\u30eb');
+  });
+
+  test.each([
+    [0, 0, 'en', 'Crowned Lichlord'],
+    [1, 1, 'jp', '\u51a0\u306e\u30ea\u30c3\u30c1\u738b'],
+    [29, 29, 'en', 'Amethyst Ogre'],
+    [30, 30, 'jp', '\u7d2b\u6676\u306e\u30aa\u30fc\u30ac'],
+    [29, 0, 'en', 'Hellcrown Reaper'],
+    [30, 1, 'jp', '\u5730\u7344\u51a0\u306e\u6b7b\u795e'],
+  ])(
+    'uses the assigned enemy for fixed square %s,%s in %s',
+    (x, y, language, expectedName) => {
+      const board = {
+        featureImages: [
+          {
+            id: 'elite-top-left',
+            imageName: 'elite-tower-gravel.png',
+          },
+          {
+            id: 'elite-bottom-right',
+            imageName: 'elite-tower-woods.png',
+          },
+          { id: 'boss', imageName: 'boss-castle.png' },
+        ],
+      };
+      const assignments = {
+        bossBattle: 'hellcrown-reaper',
+        eliteTowerGravel: 'crowned-lichlord',
+        eliteTowerWoods: 'amethyst-ogre',
+      };
+
+      expect(
+        getBoardHoverEnemyName({
+          assignments,
+          board,
+          language,
+          square: createSquare({ x, y }),
+        })
+      ).toBe(expectedName);
+    }
+  );
+
+  test('omits an enemy line when assignments are missing or the square is not an encounter', () => {
+    const board = {
+      featureImages: [
+        { id: 'elite-top-left', imageName: 'elite-tower-gravel.png' },
+      ],
+    };
+
+    expect(
+      getBoardHoverEnemyName({
+        assignments: null,
+        board,
+        language: 'en',
+        square: createSquare({ x: 0, y: 0 }),
+      })
+    ).toBe('');
+    expect(
+      getBoardHoverEnemyName({
+        assignments: { eliteTowerGravel: 'crowned-lichlord' },
+        board,
+        language: 'en',
+        square: createSquare({ x: 4, y: 4 }),
+      })
+    ).toBe('');
   });
 
   test('positions labels opposite the hovered board half', () => {

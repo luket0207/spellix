@@ -1,0 +1,1428 @@
+---
+
+Epic-022: Rules text additions and setup page redesign
+
+Status
+
+* not started
+
+Epic Goal
+
+* Add small rules-page guidance for token and potion tooltips.
+* Redesign the game setup page so player setup is cleaner, more visual, and easier to expand from 2 players up to 6 players.
+* Replace the old number-of-players selection with an add/remove player pod system.
+* Preserve existing player input behaviour where the user already likes the current controls.
+
+Global Implementation Notes
+
+* Preserve the existing no `ul` / `li` UI rule.
+* Use `div` with flex/grid for new UI lists and layouts.
+* Keep existing language switching behaviour.
+* Use the correct English/Japanese fonts unless a feature explicitly says otherwise.
+* Do not change player setup logic beyond what Feature-002 requires.
+* Do not change gameplay setup validation beyond what is needed for the new add/remove player flow.
+
+---
+
+Feature-001: Add token and potion tooltip guidance to rules page
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the specified English and Japanese tooltip guidance as the final paragraph of the existing Token and Potion sections.
+* Updated the shared rules content used by both the main Rules page and the Settings rules modal.
+* Preserved the existing rules layout, paragraph styling, language switching, and tooltip behaviour.
+* Added focused Rules page and Settings modal assertions for both languages.
+
+Related Feature(s)
+
+* EPIC-018 Feature-009: Rules button/page
+* EPIC-020 Feature-013: Add village actions section to rules page
+* EPIC-021 Feature-011: Token tooltips should only show description
+* EPIC-014 Feature-007: Make potion tooltips behave like token tooltips
+
+Goal
+
+* Add two new guidance sentences to the Rules page.
+* One sentence should be added to the Token section.
+* One sentence should be added to the Potion section.
+* These sentences should explain that players can hover over icons to see tooltips.
+
+Token Section Addition
+
+* Under the Token section, add this as the last sentence.
+
+English:
+
+```txt id="bdch1e"
+To see a description of what each Token does, hover over the Token icon to make a tooltip appear.
+```
+
+Japanese:
+
+```txt id="a7rbr3"
+各トークンの効果を確認するには、トークンアイコンにカーソルを合わせてツールチップを表示してください。
+```
+
+Potion Section Addition
+
+* Under the Potion section, add this as the last sentence.
+
+English:
+
+```txt id="zdvfsv"
+To see a description of what each Potion does, hover over the Potion icon to make a tooltip appear.
+```
+
+Japanese:
+
+```txt id="y64lr2"
+各ポーションの効果を確認するには、ポーションアイコンにカーソルを合わせてツールチップを表示してください。
+```
+
+Placement Requirement
+
+* The Token sentence should appear at the end of the existing Token section.
+* The Potion sentence should appear at the end of the existing Potion section.
+* Do not create a new section for these sentences.
+* Do not place them at the top of the rules page.
+* Do not place them in the Browser Compatibility section.
+* Do not place them in the Village Actions section.
+
+Rules Content Requirement
+
+* The new sentences should appear in:
+
+  * the main Rules page.
+  * the Settings rules modal, if it reuses or duplicates rules content.
+* If the rules content is shared, update the shared content source.
+* If the rules page and settings rules modal use separate content, update both.
+
+Language Requirement
+
+* English rules should use the English sentence.
+* Japanese rules should use the Japanese sentence.
+* The sentence should switch correctly when the language changes.
+* The text should use the same font and styling as the rest of the rules body text.
+
+Style Requirement
+
+* Match existing rules paragraph spacing.
+* Do not make the sentences look like warnings.
+* Do not use icon components inside these sentences unless the rules page already uses inline icons in normal text.
+* Keep the wording as plain text.
+
+Out Of Scope
+
+* No changes to tooltip behaviour.
+* No changes to token descriptions.
+* No changes to potion descriptions.
+* No changes to rules page layout.
+* No changes to rules language toggle.
+* No changes to token or potion UI.
+
+Testing Checkpoints
+
+* Open the Rules page in English.
+* Find the Token section.
+* Confirm the new Token tooltip sentence appears as the last sentence in that section.
+* Find the Potion section.
+* Confirm the new Potion tooltip sentence appears as the last sentence in that section.
+* Switch to Japanese.
+* Confirm the Token sentence appears in Japanese.
+* Confirm the Potion sentence appears in Japanese.
+* Open Rules from the Settings modal.
+* Confirm both sentences appear there too.
+* Confirm the sentences are not duplicated.
+* Confirm the rules page still scrolls correctly.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-002: Redesign game setup page with horizontal player pods and add/remove player controls
+
+Status
+
+* done
+
+Completion Notes
+
+* Removed the number-of-players controls and replaced them with a keyboard-accessible Add Player pod that advances through the six reserved grid positions.
+* Replaced fieldset player pods with equal-size brown rounded pods in a row-major two-column, three-row grid.
+* Added remove controls only for Players 3 to 6. Removing an added player shifts and renumbers later players while preserving their language, gender, colour, piece image, and other stored settings.
+* Kept the existing player input labels, selectors, colour uniqueness, Start Game destination, Debug Mode behaviour, minimum of 2 players, and maximum of 6 players.
+* Added the specified Unkempt title, balanced top and bottom padding, Font Awesome icons, hover states, inert empty slots, and responsive input layout.
+
+Related Feature(s)
+
+* EPIC-001 / initial setup page implementation
+* EPIC-003 Feature-002: Player setup and starting spell/token setup
+* EPIC-018 Feature-008: Debug Mode toggle on Game Setup
+* EPIC-021 Feature-008: Remove starting Guard tokens
+
+Goal
+
+* Redesign the game setup page.
+* Keep the existing player input fields and input labels because their current design is good.
+* Remove the old number-of-players selection section.
+* Add a new visual way to add and remove players.
+* Change player setup pods from white bordered fieldsets to brown rounded rectangles.
+* Stack player pods horizontally in two-column rows.
+* Keep the setup modal height stable whether the game has 2 players or 6 players.
+
+High-Level Layout Requirement
+
+* The setup page should show player pods in this layout:
+
+```txt id="jgvgif"
+Row 1: Player 1, Player 2
+Row 2: Player 3, Player 4
+Row 3: Player 5, Player 6
+```
+
+* The layout should be a 2-column grid.
+* The modal should reserve enough vertical space for all 3 rows.
+* The modal should be the same height whether there are 2, 3, 4, 5, or 6 players.
+* Empty future player positions should be used for the Add Player pod when relevant.
+
+Modal Title Requirement
+
+* The setup modal title should use the `Unkempt` font.
+* It should remain visually prominent.
+* It should be centred if the current design already centres it.
+* Add bigger padding above the title.
+* Add equal padding underneath the Debug Mode selection at the bottom.
+
+Suggested title CSS direction:
+
+```css id="nmsw7m"
+.game-setup-title {
+  font-family: "Unkempt", cursive;
+  padding-top: 40px;
+  margin-bottom: 40px;
+  text-align: center;
+}
+```
+
+* Use the actual existing title class if different.
+* Do not switch the title to the Japanese font when the UI is Japanese; this feature specifically asks for `Unkempt`.
+
+Modal Padding Requirement
+
+* There should be larger padding above the title.
+* There should be equal padding below the Debug Mode selection.
+* Example:
+
+```txt id="ma47iz"
+Top padding above title: 40px
+Bottom padding under Debug Mode: 40px
+```
+
+* Exact values can be adjusted to match the current modal scale.
+* The important rule is that the top and bottom feel balanced.
+
+Remove Number Of Players Selection
+
+* Remove the old number-of-players selection section entirely.
+* The player count should now be controlled by:
+
+  * Add Player pod.
+  * remove icon on added players.
+
+Old behaviour to remove:
+
+```txt id="ers4xl"
+Separate number of players selector
+Dropdown/buttons/radio controls for choosing player count directly
+```
+
+* Do not keep both systems.
+* There should not be a number-of-players selector and an Add Player pod at the same time.
+
+Player Count Rules
+
+* The game should still support 2 to 6 players.
+* The setup page should start with 2 players by default.
+* Player 1 and Player 2 should always exist.
+* Players 3 to 6 are added using the Add Player pod.
+* Players 3 to 6 can be removed using the remove icon.
+* Player 1 and Player 2 should not have remove icons unless a later feature changes the minimum player count.
+
+Player Pod Design Requirement
+
+* Redesign `.game-setup-player-pod` elements.
+* They should no longer look like white bordered boxes with inset titles.
+* They should become brown rounded rectangles.
+* Player titles should be inside the brown rectangles.
+* Pods should have internal padding.
+
+Required pod style:
+
+```txt id="f77iu9"
+Brown background
+Rounded corners
+10px internal padding
+No white fieldset-style border
+No inset legend-style title
+Natural height
+Equal size across all pods
+```
+
+Suggested CSS direction:
+
+```css id="ihbacz"
+.game-setup-player-pod {
+  background: var(--modal-brown);
+  border-radius: 12px;
+  padding: 10px;
+  box-sizing: border-box;
+  position: relative;
+}
+```
+
+* Use the game’s actual brown colour variable if available.
+* If no variable exists, use the same brown already used by modal/buttons.
+* Keep the player pod visually consistent with the game’s existing wood/brown style.
+
+Player Pod Title Requirement
+
+* The player number/title should appear inside the brown pod.
+* Title font size should be:
+
+```txt id="ox1fdz"
+16px
+```
+
+* There should be:
+
+```txt id="rsakjm"
+20px margin below the title
+```
+
+Suggested CSS:
+
+```css id="zfecc5"
+.game-setup-player-pod-title {
+  font-size: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+```
+
+* The title should use the correct language if it is localised.
+* Example English:
+
+  * `Player 1`
+  * `Player 2`
+* Example Japanese:
+
+  * `プレイヤー1`
+  * `プレイヤー2`
+
+Input Requirement
+
+* The existing player inputs should remain as they are now.
+* The existing input labels should remain as they are now.
+* Do not redesign:
+
+  * player name input.
+  * colour selector.
+  * input label style.
+  * validation messages, unless required by the new layout.
+
+Pod Height Requirement
+
+* Remove the fixed height from player pod elements.
+* Pods should size naturally based on their content.
+* However, all visible player pods and the Add Player pod should appear the same size.
+* Use grid/flex alignment to equalise pod heights within the layout.
+
+Suggested grid direction:
+
+```css id="evwh8u"
+.game-setup-player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.game-setup-player-pod,
+.game-setup-add-player-pod,
+.game-setup-empty-player-slot {
+  min-height: 0;
+}
+```
+
+* If equal heights need a minimum height, use a shared `min-height`, but do not use the old fixed height that caused the previous visual issue.
+* The intent is that all pods in the grid look consistent.
+
+Stable Modal Height Requirement
+
+* The setup modal should reserve space for 3 rows.
+* The modal should not shrink or grow when players are added/removed.
+* With only 2 players:
+
+  * Row 1 contains Player 1 and Player 2.
+  * Row 2 contains the Add Player pod in the Player 3 position.
+  * Remaining reserved positions should preserve modal height.
+* With 6 players:
+
+  * all 6 slots contain player pods.
+  * no Add Player pod is shown.
+
+Suggested empty slot direction:
+
+```jsx id="qt8vv4"
+<div className="game-setup-empty-player-slot" aria-hidden="true" />
+```
+
+* Empty slots should preserve grid spacing/height but not look like clickable player pods unless they are the Add Player pod.
+
+Add Player Pod Requirement
+
+* Replace the old number-of-players selection with a new Add Player pod.
+* The Add Player pod should appear where the next player’s pod would appear.
+* It should use the same sizing and brown background as normal player pods.
+* The entire brown area should be clickable.
+* Clicking anywhere inside the Add Player pod should add the next player.
+
+Example:
+
+```txt id="e9b9sj"
+Current players: 2
+Add Player pod appears in Player 3 slot.
+
+Current players: 3
+Add Player pod appears in Player 4 slot.
+
+Current players: 5
+Add Player pod appears in Player 6 slot.
+
+Current players: 6
+No Add Player pod appears.
+```
+
+Add Player Pod Visual Requirement
+
+* In the centre of the Add Player pod, show Font Awesome:
+
+```txt id="ebglxk"
+faCirclePlus
+```
+
+* The icon should be yellow.
+
+* The icon should be centred:
+
+  * vertically.
+  * horizontally.
+
+* Under the icon, show:
+
+```txt id="nixsnd"
+Add Player - プレイヤーを追加
+```
+
+* Text should be:
+
+  * yellow.
+  * 16px.
+  * centred.
+  * underneath the icon.
+
+Suggested Add Player JSX direction:
+
+```jsx id="hg8sb4"
+<button className="game-setup-add-player-pod" type="button">
+  <FontAwesomeIcon icon={faCirclePlus} className="add-player-icon" />
+  <div className="add-player-text">
+    Add Player - プレイヤーを追加
+  </div>
+</button>
+```
+
+* If using a button element, reset default button styling.
+* If using a div, ensure keyboard accessibility is handled.
+* Prefer a button for accessibility.
+
+Add Player Hover Requirement
+
+* When the player hovers anywhere in the brown Add Player pod:
+
+  * the plus icon should have a hover effect.
+* The hover effect should apply when hovering the entire pod, not only the icon.
+
+Suggested CSS direction:
+
+```css id="uxtfv0"
+.game-setup-add-player-pod:hover .add-player-icon {
+  transform: scale(1.12);
+  filter: brightness(1.15);
+}
+```
+
+* The icon should transition smoothly.
+* The text can also brighten slightly if desired.
+
+Add Player Behaviour
+
+* Clicking the Add Player pod should:
+
+  * add the next player.
+  * render a new normal player pod in that position.
+  * create a new Add Player pod in the next available slot, unless player count is now 6.
+  * require the new player’s inputs to be selected/completed like other players.
+
+* The new player should follow the same validation rules as existing players.
+
+* Start Game should not allow invalid/incomplete required player setup.
+
+Remove Player Icon Requirement
+
+* Any player added through the Add Player pod should have a remove icon.
+* Use Font Awesome:
+
+```txt id="h71mu0"
+faCircleXmark
+```
+
+* The user wrote `aCircleXmark`; treat this as `faCircleXmark`.
+* The icon should appear in the top-right corner of that player’s brown pod.
+* The icon should be yellow.
+* The icon should have a hover effect.
+
+Suggested JSX direction:
+
+```jsx id="c6er7b"
+<button
+  type="button"
+  className="game-setup-remove-player-button"
+  aria-label="Remove player"
+>
+  <FontAwesomeIcon icon={faCircleXmark} />
+</button>
+```
+
+Suggested CSS direction:
+
+```css id="uf1zg6"
+.game-setup-remove-player-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--modal-yellow);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.game-setup-remove-player-button:hover {
+  transform: scale(1.12);
+  filter: brightness(1.15);
+}
+```
+
+Remove Player Behaviour
+
+* Remove icons should only appear for players added beyond the minimum required players.
+* Player 1 and Player 2 should not be removable.
+* Clicking the remove icon should remove that player.
+* After removing a player, later player settings should shift up.
+
+Shift-Up Requirement
+
+* If a middle added player is removed, all later players should move up one slot.
+* Their settings should move with them.
+
+Example:
+
+```txt id="sj3fd4"
+Before removal:
+Player 3 = Green
+Player 4 = Purple
+
+Player 3 is removed.
+
+After removal:
+Player 3 = Purple
+```
+
+* In this example, the original Player 4 becomes the new Player 3.
+* The original Player 4’s selected colour and input settings should be preserved.
+* The removed player’s settings should be discarded.
+* Player labels should update to match their new position.
+
+Additional Example
+
+```txt id="l0h0ig"
+Before:
+Player 1 = Red
+Player 2 = Blue
+Player 3 = Green
+Player 4 = Purple
+Player 5 = Yellow
+
+Remove Player 4.
+
+After:
+Player 1 = Red
+Player 2 = Blue
+Player 3 = Green
+Player 4 = Yellow
+```
+
+* Player 5 becomes Player 4.
+* Add Player pod appears in Player 5 slot.
+
+Colour Selection Requirement
+
+* Existing colour uniqueness rules should continue to work.
+* If removing a player frees a colour, that colour should become available again.
+* If players shift up, their selected colours should remain with their settings.
+* Do not reset all player colours when one player is removed.
+
+Player Grid Slot Requirement
+
+* The setup grid should always represent 6 possible player positions.
+* Active player pods fill the first positions.
+* If player count is less than 6, the Add Player pod appears in the next position.
+* Remaining positions are empty placeholders used only to preserve layout height.
+
+Example with 2 players:
+
+```txt id="veqsxz"
+Row 1: Player 1, Player 2
+Row 2: Add Player, Empty
+Row 3: Empty, Empty
+```
+
+Example with 4 players:
+
+```txt id="lf6vlt"
+Row 1: Player 1, Player 2
+Row 2: Player 3, Player 4
+Row 3: Add Player, Empty
+```
+
+Example with 6 players:
+
+```txt id="t3fp09"
+Row 1: Player 1, Player 2
+Row 2: Player 3, Player 4
+Row 3: Player 5, Player 6
+```
+
+Debug Mode Placement Requirement
+
+* Debug Mode selection remains below the player grid.
+* Add equal padding below the Debug Mode selection to match the top padding above the title.
+* Do not remove Debug Mode.
+* Do not change Debug Mode functionality.
+
+Start Game Requirement
+
+* Start Game button should still work as before.
+* It should use the current player count from the number of active player pods.
+* It should validate all active players.
+* It should ignore empty placeholder slots.
+* It should ignore the Add Player pod.
+* It should not create players for empty slots.
+
+Accessibility Requirement
+
+* Add Player should be keyboard accessible.
+* Remove Player should be keyboard accessible.
+* Add Player should have an accessible label.
+
+Suggested Add Player aria-label:
+
+```txt id="yzzysb"
+Add Player
+```
+
+Suggested Remove Player aria-label:
+
+```txt id="pgit7e"
+Remove Player 3
+```
+
+* Use translated aria labels if the project already localises aria text.
+
+Out Of Scope
+
+* No change to player colour options.
+* No change to existing input labels.
+* No change to existing input styling.
+* No change to Start Game destination.
+* No change to story page.
+* No change to token setup.
+* No change to debug mode behaviour.
+* No change to player maximum above 6.
+* No change to player minimum below 2.
+
+Testing Checkpoints
+
+* Open setup page.
+* Confirm title uses Unkempt.
+* Confirm larger padding appears above the title.
+* Confirm equal padding appears below Debug Mode.
+* Confirm old number-of-players selection is removed.
+* Confirm Player 1 and Player 2 appear in Row 1.
+* Confirm player pods are brown rounded rectangles.
+* Confirm player pod titles are inside the rectangles.
+* Confirm player pod title font size is 16px.
+* Confirm there is 20px margin below player titles.
+* Confirm existing inputs and labels look unchanged.
+* Confirm player pods do not use the old white bordered/inset-title style.
+* Confirm Add Player pod appears in Player 3 position when there are 2 players.
+* Confirm Add Player pod uses brown background.
+* Confirm Add Player icon is yellow and centred.
+* Confirm Add Player text says `Add Player - プレイヤーを追加`.
+* Hover over Add Player pod.
+* Confirm icon hover effect triggers when hovering anywhere in the pod.
+* Click Add Player.
+* Confirm Player 3 is added.
+* Confirm Add Player pod moves to Player 4 position.
+* Add players up to 6.
+* Confirm layout becomes 3 rows of 2.
+* Confirm Add Player pod disappears at 6 players.
+* Confirm players 3 to 6 have remove icons.
+* Confirm Player 1 and Player 2 do not have remove icons.
+* Remove Player 3 when 4 players exist.
+* Confirm Player 4’s settings move into Player 3.
+* Confirm colours/settings shift up correctly.
+* Confirm removed player colour becomes available again.
+* Confirm modal height remains the same with 2, 3, 4, 5, and 6 players.
+* Confirm Start Game uses the correct active player count.
+* Confirm Start Game ignores empty slots.
+* Confirm validation still works for newly added players.
+* Confirm Debug Mode still works.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-003: Update environment landing event chances
+
+Status
+
+* done
+
+Completion Notes
+
+* Updated the central environment event chance table to the exact Feature-003 percentages for all nine environments, superseding the previous EPIC-017 values.
+* Changed the Gravel, Mud, and Mountains weights that differed from the new table and verified the remaining environment rows already matched.
+* Preserved the existing normal-landing event resolution, zero-weight filtering, Choose Event, Smokescreen, Metal Detector, and Roll Again behaviour.
+* Added exact table, weighted-boundary, zero-weight, and Choose Event availability regression coverage.
+
+Related Feature(s)
+
+* EPIC-016 Feature-008: Trigger events based on landed environment
+* EPIC-016 Feature-009: Choose Event Mode
+* EPIC-017 Feature-001: Rebalance board landing event probabilities
+* EPIC-020 Feature-008: Implement Metal Detector
+* EPIC-020 Feature-009: Implement Smokescreen
+* EPIC-021 Feature-002: Nothing events heal random 5 or 10 HP
+
+Goal
+
+* Update the event chance table used when a player lands on a normal environment square.
+* This feature is now the newest source of truth for environment event chances.
+* The event selection system should use these new percentages instead of the previous EPIC-017 table.
+
+Source Of Truth Rule
+
+* This feature supersedes the event chance table from EPIC-017 Feature-001.
+* Any old hard-coded event chances should be replaced.
+* Event selection should use the exact values in this feature.
+* Each environment row totals 100.
+
+Updated Event Chance Table
+
+```txt id="f2vq2b"
+Environment | Nothing | Level 1 Battle | Level 2 Battle | Level 3 Battle | River Mini Game | Cave Mini Game | Decision | Hazard | Loot Chest | Roll Again
+Field       | 30      | 35             | 0              | 0              | 0               | 0              | 15       | 5      | 5          | 10
+Hills       | 25      | 35             | 0              | 0              | 0               | 15             | 10       | 5      | 5          | 5
+Gravel      | 20      | 45             | 5              | 0              | 0               | 0              | 10       | 10     | 5          | 5
+Mud         | 20      | 45             | 5              | 0              | 0               | 0              | 10       | 10     | 5          | 5
+Stream      | 15      | 10             | 0              | 0              | 60              | 0              | 0        | 10     | 5          | 0
+River       | 0       | 0              | 0              | 0              | 90              | 0              | 0        | 5      | 5          | 0
+Woods       | 0       | 45             | 40             | 0              | 0               | 0              | 5        | 5      | 5          | 0
+Forest      | 0       | 0              | 40             | 40             | 0               | 0              | 5        | 10     | 5          | 0
+Mountains   | 0       | 0              | 30             | 30             | 0               | 25             | 0        | 10     | 5          | 0
+```
+
+Required Behaviour
+
+* When a player lands on a normal environment square, select the event using the row for that environment.
+* Events with `0` chance should never be selected.
+* Events with non-zero chance should be selected according to their weighted chance.
+* The system should treat the values as percentages because each row totals 100.
+* The selected event should then resolve using the existing event behaviour.
+
+Affected Environments
+
+* Field
+* Hills
+* Gravel
+* Mud
+* Stream
+* River
+* Woods
+* Forest
+* Mountains
+
+Affected Events
+
+* Nothing
+* Level 1 Battle
+* Level 2 Battle
+* Level 3 Battle
+* River Mini Game
+* Cave Mini Game
+* Decision
+* Hazard
+* Loot Chest
+* Roll Again
+
+Implementation Direction
+
+* Update the central environment event chance data source.
+* Prefer a single structured object/table instead of duplicated hard-coded values.
+
+Suggested data direction:
+
+```js id="d40ax4"
+const environmentEventChances = {
+  field: {
+    nothing: 30,
+    level1Battle: 35,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 15,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 10
+  },
+  hills: {
+    nothing: 25,
+    level1Battle: 35,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 15,
+    decision: 10,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 5
+  },
+  gravel: {
+    nothing: 20,
+    level1Battle: 45,
+    level2Battle: 5,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 10,
+    hazard: 10,
+    lootChest: 5,
+    rollAgain: 5
+  },
+  mud: {
+    nothing: 20,
+    level1Battle: 45,
+    level2Battle: 5,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 10,
+    hazard: 10,
+    lootChest: 5,
+    rollAgain: 5
+  },
+  stream: {
+    nothing: 15,
+    level1Battle: 10,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 60,
+    caveMiniGame: 0,
+    decision: 0,
+    hazard: 10,
+    lootChest: 5,
+    rollAgain: 0
+  },
+  river: {
+    nothing: 0,
+    level1Battle: 0,
+    level2Battle: 0,
+    level3Battle: 0,
+    riverMiniGame: 90,
+    caveMiniGame: 0,
+    decision: 0,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 0
+  },
+  woods: {
+    nothing: 0,
+    level1Battle: 45,
+    level2Battle: 40,
+    level3Battle: 0,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 5,
+    hazard: 5,
+    lootChest: 5,
+    rollAgain: 0
+  },
+  forest: {
+    nothing: 0,
+    level1Battle: 0,
+    level2Battle: 40,
+    level3Battle: 40,
+    riverMiniGame: 0,
+    caveMiniGame: 0,
+    decision: 5,
+    hazard: 10,
+    lootChest: 5,
+    rollAgain: 0
+  },
+  mountains: {
+    nothing: 0,
+    level1Battle: 0,
+    level2Battle: 30,
+    level3Battle: 30,
+    riverMiniGame: 0,
+    caveMiniGame: 25,
+    decision: 0,
+    hazard: 10,
+    lootChest: 5,
+    rollAgain: 0
+  }
+};
+```
+
+Event Selection Requirement
+
+* The weighted selection helper should ignore `0` values.
+* The helper should not require every environment to have every event manually checked elsewhere.
+* If a row total is not 100 in future, the helper should still work as weighted selection, but this feature’s rows should total 100.
+
+Suggested weighted selection direction:
+
+```js id="fk8zre"
+function selectLandingEvent(environment) {
+  const chances = environmentEventChances[environment];
+
+  const entries = Object.entries(chances).filter(([, weight]) => weight > 0);
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  const roll = Math.random() * total;
+
+  let runningTotal = 0;
+
+  for (const [eventType, weight] of entries) {
+    runningTotal += weight;
+
+    if (roll < runningTotal) {
+      return eventType;
+    }
+  }
+
+  return entries[entries.length - 1][0];
+}
+```
+
+* Use the project’s actual event names and helper structure.
+* Do not introduce floating point edge-case crashes.
+
+Choose Event Mode Requirement
+
+* EPIC-016 Feature-009 Choose Event Mode should also use this updated table.
+* When Choose Event Mode is active, the modal should list only events with non-zero chance for the landed environment.
+* The non-zero list should come from this new source-of-truth table.
+
+Metal Detector Interaction
+
+* Metal Detector should still override normal event selection on non-feature squares by guaranteeing Loot Chest.
+* This feature does not change Metal Detector behaviour.
+* If Metal Detector is active, the event chance table should not be used for that landing unless existing Roll Again-specific logic requires it later.
+
+Smokescreen Interaction
+
+* Smokescreen should still remove random environment battles from the event selection pool for that turn.
+* When Smokescreen is active:
+
+  * exclude Level 1 Battle, Level 2 Battle, and Level 3 Battle from this updated table.
+  * reweight the remaining non-zero events.
+* Do not mutate the source-of-truth table.
+
+Roll Again Interaction
+
+* Roll Again chance should use the updated table.
+* If Roll Again is selected:
+
+  * current Roll Again behaviour remains unchanged.
+  * same player rolls again.
+  * board/battle potion allowance does not reset.
+  * next landing resolves normally using this updated event table.
+
+Nothing Event Interaction
+
+* Nothing event should use the existing Nothing event behaviour.
+* If EPIC-021 Feature-002 is implemented, Nothing events heal by random 5 or 10 HP.
+* This feature changes only the chance of Nothing being selected.
+
+Battle Selection Interaction
+
+* Level 1 Battle, Level 2 Battle, and Level 3 Battle should trigger existing random enemy selection for that level.
+* EPIC-021 Feature-018 should still prevent the same enemy appearing twice in a row for the same battle level.
+* This feature changes only the probability that each battle level is selected.
+
+Out Of Scope
+
+* No changes to hazard chance by hazard type.
+* No changes to battle enemy data.
+* No changes to battle rewards.
+* No changes to River Mini Game rules.
+* No changes to Cave Mini Game rules.
+* No changes to Decision outcome chances.
+* No changes to Loot Chest reward odds.
+* No changes to Roll Again behaviour.
+* No changes to feature squares such as villages, Elite Towers, or Boss Battle.
+
+Testing Checkpoints
+
+* Confirm the old EPIC-017 event chance table is no longer used.
+* Land on Field many times using debug/testing.
+* Confirm only Field events with non-zero chances can occur.
+* Confirm Field can produce Nothing, Level 1 Battle, Decision, Hazard, Loot Chest, and Roll Again.
+* Confirm Field cannot produce Level 2 Battle, Level 3 Battle, River Mini Game, or Cave Mini Game.
+* Land on Gravel many times.
+* Confirm Gravel uses 20/45/5/10/10/5/5 distribution categories.
+* Land on Stream many times.
+* Confirm Stream heavily favours River Mini Game.
+* Confirm Stream cannot produce Decision or Roll Again.
+* Land on River many times.
+* Confirm River can only produce River Mini Game, Hazard, or Loot Chest.
+* Land on Mountains many times.
+* Confirm Mountains can produce Level 2 Battle, Level 3 Battle, Cave Mini Game, Hazard, and Loot Chest.
+* Confirm Mountains cannot produce Decision.
+* Test Choose Event Mode.
+* Confirm it lists only non-zero events for each environment.
+* Test Smokescreen.
+* Confirm battle events are excluded and remaining events are reweighted.
+* Test Metal Detector.
+* Confirm it still guarantees Loot Chest on valid non-feature landings.
+* Confirm Roll Again still lets the same player continue.
+* Confirm feature squares still ignore this table and use their own feature logic.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-004: Show board square hover labels at all times and include Elite/Boss enemy names
+
+Status
+
+* done
+
+Completion Notes
+
+* Reused `BoardGrid` square hover state and the existing top/bottom label positioning so every board square now shows its label before and after rolling, regardless of movement highlighting.
+* Reused the game-start `eliteBossEnemyAssignments`, `getEliteBossEncounterType`, and `getEnemyById` sources so each Elite Tower and Boss Battle footprint shows its assigned localized enemy without recalculation.
+* Added the required two-line Elite/Boss hierarchy while preserving the existing brown/yellow, centred, non-interactive hover label style and normal single-line environment/village labels.
+* Preserved movement highlighting, keyboard selectability, square click handling, board generation, encounter assignment, and fallback rendering when assignments are unavailable.
+
+Related Feature(s)
+
+* EPIC-020 Feature-016: Show environment or feature name when hovering highlighted movement squares
+* EPIC-016 Feature-002: Multi-square board features landing/movement/highlighting
+* EPIC-016 Feature-003: Elite Tower battles, Boss Battle access, and win condition
+* EPIC-018 Feature-010: Pre-game story page
+* EPIC-022 Feature-003: Update environment landing event chances
+
+Goal
+
+* Update the board hover label behaviour.
+* Hover labels should appear over every board square at all times.
+* The player should not need to roll first.
+* The hovered square can be selectable or non-selectable.
+* Elite Tower and Boss Battle hover labels should also show the assigned enemy name.
+
+Current Behaviour
+
+* Hover labels currently only appear when:
+
+  * the player has rolled.
+  * valid/selectable movement squares are highlighted.
+  * the player hovers over one of those selectable squares.
+
+New Behaviour
+
+* Hover labels should appear whenever the user hovers over any square on the board.
+* This should work:
+
+  * before rolling.
+  * after rolling.
+  * while valid movement squares are highlighted.
+  * on selectable squares.
+  * on non-selectable squares.
+  * on normal environment squares.
+  * on multi-square feature squares.
+  * on villages.
+  * on Elite Towers.
+  * on Boss Battle.
+
+Positioning Requirement
+
+* Keep the existing top/bottom positioning rule.
+* If the hovered square is in the bottom half of the board:
+
+  * show the label at the top centre of the board.
+* If the hovered square is in the top half of the board:
+
+  * show the label at the bottom centre of the board.
+
+Required positioning behaviour:
+
+```txt id="vkrfvo"
+Hovered square in bottom half = label appears near top of board
+Hovered square in top half = label appears near bottom of board
+```
+
+* Preserve the existing offset from EPIC-020 Feature-016 unless it needs minor adjustment.
+
+Existing offset direction:
+
+```txt id="bq9pl0"
+50px from top when shown at top
+50px from bottom when shown at bottom
+```
+
+Normal Environment Label Requirement
+
+* Normal environment squares should continue to show the environment name.
+* Use the existing bilingual names:
+
+```txt id="zxwxnu"
+Field / 野原
+Hills / 丘陵
+Gravel / 砂利地
+Mud / 泥地
+Stream / 小川
+River / 川
+Woods / 林
+Forest / 森
+Mountains / 山岳
+```
+
+* These should display in the same size as the current environment hover label text.
+
+Feature Label Requirement
+
+* Feature squares should continue to show feature labels instead of the underlying environment.
+
+Feature labels:
+
+```txt id="rir13x"
+Village / 村
+Elite Tower / エリートタワー
+Boss Battle / ボスバトル
+```
+
+* Village hover labels do not need a second line unless a later feature adds village names.
+* Elite Tower and Boss Battle hover labels now require an enemy-name second line.
+
+Elite Tower Hover Label Requirement
+
+* When hovering over an Elite Tower square, show two lines:
+
+```txt id="xbp5w2"
+Elite Tower
+{assignedEnemyName}
+```
+
+Japanese:
+
+```txt id="txee31"
+エリートタワー
+{assignedEnemyJapaneseName}
+```
+
+* The first line should be the feature name.
+* The second line should be the assigned enemy name.
+* Use the enemy assigned at game start to that specific tower.
+
+Example English:
+
+```txt id="x7zk98"
+Elite Tower
+Crowned Lichlord
+```
+
+Example Japanese:
+
+```txt id="qn5j2h"
+エリートタワー
+冠のリッチ王
+```
+
+Boss Battle Hover Label Requirement
+
+* When hovering over the Boss Battle square, show two lines:
+
+```txt id="fm87ol"
+Boss Battle
+{assignedBossEnemyName}
+```
+
+Japanese:
+
+```txt id="wup2sz"
+ボスバトル
+{assignedBossEnemyJapaneseName}
+```
+
+Example English:
+
+```txt id="g4s7y9"
+Boss Battle
+Hellcrown Reaper
+```
+
+Example Japanese:
+
+```txt id="tob1vk"
+ボスバトル
+地獄冠の死神
+```
+
+Text Size Requirement
+
+* For Elite Tower and Boss Battle hover labels:
+
+  * the feature name line should be smaller.
+  * the enemy name line should be the same size as normal environment names in this hover label element.
+
+Required hierarchy:
+
+```txt id="l70goo"
+Feature name: smaller text
+Enemy name: normal hover label text size
+```
+
+Suggested CSS direction:
+
+```css id="b9xu2e"
+.board-hover-label-feature-name {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.board-hover-label-enemy-name {
+  font-size: var(--board-hover-label-main-size);
+  line-height: 1.2;
+}
+```
+
+* Use the actual current hover label size for `board-hover-label-enemy-name`.
+* Do not make the enemy name smaller than the environment names.
+
+Style Requirement
+
+* Keep the existing hover label visual style:
+
+  * brown background.
+  * yellow text.
+  * correct language font.
+  * centred text.
+  * positioned over the board.
+  * does not follow the cursor.
+* The label should remain readable over all board backgrounds.
+* The label should not block board click handling.
+
+Language Requirement
+
+* English UI should show English environment/feature/enemy names.
+* Japanese UI should show Japanese environment/feature/enemy names.
+* Numbers, if any are shown in future labels, should follow existing font rules.
+
+Multi-Square Feature Requirement
+
+* Hovering over any cell of a multi-square feature should show the feature label.
+
+* The label should not show the underlying environment of that cell.
+
+* This applies to:
+
+  * Field Village
+  * Forest Village
+  * Elite Tower Gravel
+  * Elite Tower Woods
+  * Boss Battle
+
+* For Elite Towers:
+
+  * any cell in that tower footprint should show that tower’s assigned enemy.
+
+* For Boss Battle:
+
+  * any cell in the boss footprint should show the assigned boss enemy.
+
+Data Requirement
+
+* Use the existing game-start Elite/Boss enemy assignments.
+* Do not randomly choose or recalculate enemy names on hover.
+* Hover labels should read from the same assignment source used for:
+
+  * Elite Tower battles.
+  * Boss Battle.
+  * pre-game story page.
+  * debug enemy assignment display.
+
+Fallback Requirement
+
+* If enemy assignments are not yet available, do not crash.
+* Show only the feature name until assignments exist.
+
+Fallback example:
+
+```txt id="r13ptd"
+Elite Tower
+```
+
+```txt id="e9j715"
+Boss Battle
+```
+
+* This should mostly matter during setup, loading, or defensive render states.
+
+Interaction With Movement Highlighting
+
+* Hover labels should work both before and after rolling.
+* Movement highlighting should still work exactly as before.
+* Clicking highlighted movement squares should still move the player.
+* Hovering a non-highlighted square after rolling should show its label but should not make it selectable.
+* The hover label should not imply that a square can be moved to.
+
+Interaction With Board Scaling
+
+* Hover label positioning should remain correct with EPIC-020 Feature-001 scaling.
+* Top/bottom placement should be based on the board grid position, not the scaled screen pixel position if that causes instability.
+* The label should remain aligned to the visible board.
+
+Suggested Implementation Direction
+
+* Move hover tracking from “highlighted/selectable square only” logic to general board-square hover logic.
+* Store the currently hovered square or hovered logical board item.
+
+Suggested state direction:
+
+```js id="yp1bfs"
+const [hoveredBoardSquare, setHoveredBoardSquare] = useState(null);
+```
+
+* Each board square should set hover state on mouse enter and clear it on mouse leave.
+
+Suggested direction:
+
+```jsx id="tn8aae"
+onMouseEnter={() => setHoveredBoardSquare(square)}
+onMouseLeave={() => setHoveredBoardSquare(null)}
+```
+
+* For touch/mobile, no new behaviour is required unless existing hover behaviour already supports it.
+
+Suggested Label Resolution Direction
+
+```js id="eadtu2"
+function getBoardHoverLabel(square, language, eliteBossEnemyAssignments) {
+  if (square.featureType === "eliteTower") {
+    const enemy = getAssignedEliteEnemyForFeature(square.featureId);
+
+    return {
+      type: "featureWithEnemy",
+      featureName: language === "jp" ? "エリートタワー" : "Elite Tower",
+      enemyName: language === "jp" ? enemy?.japaneseName : enemy?.englishName
+    };
+  }
+
+  if (square.featureType === "bossBattle") {
+    const enemy = eliteBossEnemyAssignments?.boss;
+
+    return {
+      type: "featureWithEnemy",
+      featureName: language === "jp" ? "ボスバトル" : "Boss Battle",
+      enemyName: language === "jp" ? enemy?.japaneseName : enemy?.englishName
+    };
+  }
+
+  if (square.featureType === "village") {
+    return {
+      type: "singleLine",
+      text: language === "jp" ? "村" : "Village"
+    };
+  }
+
+  return {
+    type: "singleLine",
+    text: getEnvironmentName(square.environment, language)
+  };
+}
+```
+
+* Use the actual project’s board square and assignment data structures.
+
+Out Of Scope
+
+* No change to movement rules.
+* No change to valid movement highlighting.
+* No change to board generation.
+* No change to Elite/Boss enemy assignment.
+* No change to feature battle triggering.
+* No change to event chances.
+* No village enemy/name second line.
+* No tooltip-following-cursor behaviour.
+* No mobile/touch-specific replacement.
+
+Testing Checkpoints
+
+* Open gameplay before rolling.
+* Hover over Field.
+* Confirm Field label appears.
+* Hover over Hills, Gravel, Mud, Stream, River, Woods, Forest, and Mountains.
+* Confirm each environment label appears correctly.
+* Confirm labels appear at the top when hovering bottom-half squares.
+* Confirm labels appear at the bottom when hovering top-half squares.
+* Roll dice.
+* Hover over highlighted/selectable squares.
+* Confirm labels still appear.
+* Hover over non-highlighted squares after rolling.
+* Confirm labels appear but the square is not selectable.
+* Hover over a Village.
+* Confirm label shows `Village` / `村`.
+* Hover over an Elite Tower.
+* Confirm first line shows `Elite Tower` / `エリートタワー`.
+* Confirm second line shows that tower’s assigned enemy.
+* Confirm feature name line is smaller.
+* Confirm enemy name line matches the normal environment label size.
+* Hover over all cells of a multi-square Elite Tower.
+* Confirm every cell shows the same tower/enemy label.
+* Hover over Boss Battle.
+* Confirm first line shows `Boss Battle` / `ボスバトル`.
+* Confirm second line shows assigned boss enemy.
+* Switch to Japanese.
+* Confirm environment, feature, and enemy names display in Japanese.
+* Confirm no hover label crashes before assignments are loaded.
+* Confirm movement clicks still work.
+* Confirm board scaling does not break label placement.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

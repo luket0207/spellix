@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { useState } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { POTION_DEFINITIONS } from '../data/potions';
+import { TOKEN_TYPES } from '../data/tokens';
 import { createPlayers } from '../features/gameSetup/gameSetup';
 import { GameSetupProvider, useGameSetup } from '../features/gameSetup/GameSetupContext';
 import GameplayPage from './GameplayPage';
@@ -12,11 +13,18 @@ const mockChooseVisualPositionForFeature = jest.fn();
 
 jest.mock(
   '../features/gameBoard/BoardGrid',
-  () => ({ currentPlayerId, language, onSquareClick, showHoverLabels }) => (
+  () => ({
+    currentPlayerId,
+    eliteBossEnemyAssignments,
+    language,
+    onSquareClick,
+  }) => (
     <div aria-label="game board">
       <p>{`Current board player: ${currentPlayerId}`}</p>
       <p>{`Board hover language: ${language}`}</p>
-      <p>{`Board hover labels enabled: ${showHoverLabels}`}</p>
+      <p>{`Board enemy assignments: ${JSON.stringify(
+        eliteBossEnemyAssignments
+      )}`}</p>
     <button type="button" onClick={() => onSquareClick({ x: 1, y: 28 })}>
       Move to square 1, 28
     </button>
@@ -2663,13 +2671,19 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     const rewardOptions = within(modal).getAllByRole('group', {
       name: /reward token option/i,
     });
+    const expectedRewardTokenTypes = [
+      TOKEN_TYPES[0],
+      TOKEN_TYPES[TOKEN_TYPES.length - 1],
+    ];
 
     expect(rewardOptions).toHaveLength(2);
     expect(
       rewardOptions.map((option) =>
         within(option).getByRole('img').getAttribute('aria-label')
       )
-    ).toEqual(['red reward token', 'grey reward token']);
+    ).toEqual(
+      expectedRewardTokenTypes.map((tokenType) => `${tokenType} reward token`)
+    );
     fireEvent.click(
       within(rewardOptions[1]).getByRole('button', { name: 'Choose' })
     );
@@ -2677,7 +2691,11 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(
       within(modal).getByText('The token was added to your token bag')
     ).toBeInTheDocument();
-    expect(screen.getByText('Test token bag: player-1-grey-1')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `Test token bag: player-1-${expectedRewardTokenTypes[1]}-1`
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText('Test board potion used: true')).toBeInTheDocument();
     expect(screen.getByText('Test active potion: none')).toBeInTheDocument();
     expect(
@@ -3141,7 +3159,9 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     });
 
     expect(screen.getByRole('img', { name: /dice face 4/i })).toBeInTheDocument();
-    expect(screen.getByText(/dice result: 4/i)).toHaveClass('dice-roll-result--visible');
+    expect(
+      within(diceDialog).getByText('4', { selector: '.dice-roll-result' })
+    ).toHaveClass('dice-roll-result--visible');
     expect(mockGetHighlightedNodeIds).toHaveBeenCalledWith(
       expect.any(Object),
       { x: 0, y: 29 },
@@ -3163,10 +3183,15 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(screen.queryByRole('dialog', { name: /dice result/i })).not.toBeInTheDocument();
   });
 
-  test('enables localized board hover labels only for active movement selection', () => {
+  test('passes localized always-on hover label data to the board', () => {
     const initialGameSetup = createCommittedGameplaySetup();
 
     initialGameSetup.players[0].language = 'jp';
+    initialGameSetup.eliteBossEnemyAssignments = {
+      bossBattle: 'hellcrown-reaper',
+      eliteTowerGravel: 'crowned-lichlord',
+      eliteTowerWoods: 'amethyst-ogre',
+    };
     render(
       <GameSetupProvider initialGameSetup={initialGameSetup}>
         <GameplayPage />
@@ -3175,34 +3200,11 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
 
     expect(screen.getByText('Board hover language: jp')).toBeInTheDocument();
     expect(
-      screen.getByText('Board hover labels enabled: false')
-    ).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: '\u30b5\u30a4\u30b3\u30ed\u3092\u632f\u308b',
-      })
-    );
-    act(() => {
-      jest.advanceTimersByTime(1500);
-    });
-
-    expect(screen.getByRole('dialog', { name: /dice result/i })).toBeInTheDocument();
-    expect(
-      screen.getByText('Board hover labels enabled: false')
-    ).toBeInTheDocument();
-
-    act(() => {
-      jest.advanceTimersByTime(1500);
-    });
-
-    expect(
-      screen.getByText('Board hover labels enabled: true')
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Move to square 1, 28' }));
-    expect(
-      screen.getByText('Board hover labels enabled: false')
+      screen.getByText(
+        `Board enemy assignments: ${JSON.stringify(
+          initialGameSetup.eliteBossEnemyAssignments
+        )}`
+      )
     ).toBeInTheDocument();
   });
 
@@ -3218,7 +3220,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(screen.getByLabelText(/current player piece/i)).not.toHaveClass('battle-player-piece');
     expect(screen.getByLabelText(/current player piece/i)).toHaveStyle({ height: '150px' });
     expect(screen.getByLabelText(/current player piece/i)).toHaveStyle({
-      alignSelf: 'flex-start',
+      alignSelf: 'center',
       width: 'auto',
     });
     expect(screen.getByRole('meter', { name: /health bar/i })).toHaveAttribute('aria-valuenow', '100');
@@ -3239,7 +3241,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
     expect(screen.getByLabelText(/turn change player piece/i)).not.toHaveClass(
       'battle-player-piece'
     );
-    expect(screen.getByLabelText(/turn change player piece/i)).toHaveStyle({ height: '150px' });
+    expect(screen.getByLabelText(/turn change player piece/i)).toHaveStyle({ height: '200px' });
 
     fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
@@ -3298,7 +3300,7 @@ describe('GameplayPage spell modal unsaved change behavior', () => {
       expect.stringContaining('m-red.png')
     );
     expect(screen.getByLabelText(/spell player piece/i)).not.toHaveClass('battle-player-piece');
-    expect(screen.getByLabelText(/spell player piece/i)).toHaveStyle({ height: '100px' });
+    expect(screen.getByLabelText(/spell player piece/i)).toHaveClass('spells-player-piece');
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));

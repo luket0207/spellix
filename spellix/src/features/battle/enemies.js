@@ -384,15 +384,27 @@ export function getEnemiesForLevel(level) {
   return ENEMIES.filter((enemy) => enemy.level === level);
 }
 
-export function selectRandomEnemyForLevel(level, randomFn = Math.random) {
+export function selectRandomEnemyForLevel(
+  level,
+  randomFn = Math.random,
+  previousEnemyId = null
+) {
   const enemies = getEnemiesForLevel(level);
 
   if (enemies.length === 0) {
     return null;
   }
 
-  const rawIndex = Math.floor(randomFn() * enemies.length);
-  const clampedIndex = Math.min(Math.max(rawIndex, 0), enemies.length - 1);
+  const eligibleEnemies =
+    enemies.length > 1
+      ? enemies.filter(({ id }) => id !== previousEnemyId)
+      : enemies;
 
-  return enemies[clampedIndex];
+  const rawIndex = Math.floor(randomFn() * eligibleEnemies.length);
+  const clampedIndex = Math.min(
+    Math.max(rawIndex, 0),
+    eligibleEnemies.length - 1
+  );
+
+  return eligibleEnemies[clampedIndex];
 }

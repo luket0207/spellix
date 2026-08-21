@@ -3146,7 +3146,7 @@ Feature-016: Add Shiny Buff rare token
 
 Status
 
-* not started
+* done
 
 Related Feature(s)
 
@@ -3395,3 +3395,701 @@ Testing Checkpoints
 * Confirm save/load recognises Shiny Buff if save/load is implemented.
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added Shiny Buff as the distinct rare `purple-yellow-outline` token with Purple fill, Yellow outline, and the required English and Japanese name and description data.
+* Included Shiny Buff through the shared rare-token data used by rare, Elite Tower, village, cave, decision, and debug reward surfaces while keeping it out of common and starting-token pools.
+* Shiny Buff grants 10 next-turn Buff to adjacent effective columns, stacks with common Buff to 15, and reuses merged-column adjacency and the existing single Buff animation.
+* Shared tooltip rendering and save/load handling recognise Shiny Buff without token-specific UI or persistence changes.
+* Focused token, reward, village, cave, debug, save/load, battle-calculation, BattlePage, and DecisionPage regressions cover the feature; scoped production lint and the production build pass.
+
+---
+
+Feature-017: Make Loot Chest final reward positions truly random after shuffle animation
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-011 Feature-001: Loot Chest page
+* EPIC-011 Bug-001: Loot Chest animation and reveal fixes
+* EPIC-011 Bug-003: Loot Chest Nothing icon and Continue layout fixes
+* EPIC-020 Feature-010: Expand to 4 villages and update village reward rules
+
+Goal
+
+* Prevent players from being able to follow the reward during the Loot Chest shuffle animation.
+* The shuffle animation should be visual only.
+* The final chest positions should be completely random after the animation.
+* The animation should have no bearing on where the rewards end up.
+
+Problem Summary
+
+* During the Loot Chest mix-up animation, it is currently possible to visually follow the desired reward.
+* This means a player can choose the correct chest every time.
+* That makes the Loot Chest choice predictable instead of random.
+* The intended behaviour is that the chest animation is only for flavour and suspense.
+
+Required Behaviour
+
+* The player should not be able to determine which chest contains which reward by watching the animation.
+* Rewards should be randomly assigned to chests after the shuffle animation completes.
+* The visual animation should not determine the final reward positions.
+* The final reward order should be independent from the animation path.
+
+Correct Flow
+
+```txt id="id5g30"
+1. Generate the Loot Chest rewards.
+2. Show the rewards briefly, as currently designed.
+3. Hide the rewards inside the chests.
+4. Play the chest shuffle animation for visual effect.
+5. After the animation completes, randomly assign rewards to chest positions.
+6. Player chooses a chest.
+7. Reveal the reward assigned after the animation.
+```
+
+Important Randomisation Rule
+
+* Randomise the final reward-to-chest mapping after the animation.
+* Do not preserve the animated chest identity as the reward identity.
+* Do not let the reward move with the chest during animation.
+* The animation should be decoupled from the final reward assignment.
+
+Incorrect Behaviour
+
+```txt id="wet58u"
+1. Reward A goes into Chest 1.
+2. Chest 1 visibly moves around.
+3. Player follows Chest 1.
+4. Chest 1 still contains Reward A at the end.
+```
+
+Correct Behaviour
+
+```txt id="but60i"
+1. Reward A is shown.
+2. Chests shuffle visually.
+3. After the shuffle ends, rewards are randomly assigned to chest positions.
+4. Following a chest during animation gives no advantage.
+```
+
+Suggested Implementation Direction
+
+* Treat the shuffle animation as visual-only.
+* Store generated rewards separately from displayed chest positions.
+* After the animation completes, create a random final mapping.
+
+Suggested state direction:
+
+```js id="qr75bz"
+const generatedRewards = [rewardA, rewardB, rewardC];
+
+const finalChestRewards = shuffleRewards(generatedRewards);
+```
+
+* `finalChestRewards[0]` belongs to the left chest.
+* `finalChestRewards[1]` belongs to the middle chest.
+* `finalChestRewards[2]` belongs to the right chest.
+* This final mapping should be created only after the shuffle animation has finished.
+
+Suggested Flow State
+
+```txt id="v0a6aq"
+previewRewards
+hideRewards
+shuffleAnimation
+assignFinalRewards
+awaitPlayerChoice
+revealChosenReward
+complete
+```
+
+* The final reward mapping should not be available from animated chest identity.
+* If the UI needs placeholder chest IDs during animation, keep them separate from reward IDs.
+
+Randomness Requirement
+
+* Every chest position should be equally likely to contain any generated reward.
+* For 3 chests, each reward should have a 1-in-3 chance of ending in each position.
+* The player’s visual tracking should not improve their odds.
+
+Reward Generation Requirement
+
+* This feature does not change which rewards are generated.
+* Continue using existing Loot Chest reward generation rules.
+* If Loot Chest currently generates:
+
+  * one Nothing.
+  * two real rewards.
+* keep that behaviour unchanged.
+* Only change final placement/randomisation after the animation.
+
+Reveal Requirement
+
+* When the player chooses a chest:
+
+  * reveal the reward assigned to that final chest position.
+  * do not recalculate the reward at reveal time.
+* Once assigned, the final mapping should remain stable for that Loot Chest sequence.
+* Changing language, rerendering, or animation state should not rerandomise after the player can choose.
+
+Anti-Cheating / Debug Note
+
+* The final reward assignment should not be visible in the UI before choice.
+* Developer debug logs should not reveal the final mapping in normal play.
+* Debug mode may show information only if intentionally designed, but normal players should not see it.
+
+Out Of Scope
+
+* No change to Loot Chest reward odds.
+* No change to Loot Chest reward types.
+* No change to chest art.
+* No change to reward reveal styling.
+* No change to village reward logic.
+* No change to cave/river reward routing.
+* No need for a more complex shuffle animation.
+
+Testing Checkpoints
+
+* Trigger a Loot Chest.
+* Watch the reward preview.
+* Follow one chest visually during the shuffle animation.
+* Choose the chest that should have contained the followed reward.
+* Confirm the followed reward is not guaranteed.
+* Repeat several times and confirm following animation gives no reliable advantage.
+* Confirm rewards are assigned only after shuffle animation completes.
+* Confirm each chest can contain each generated reward.
+* Confirm changing language during the sequence does not rerandomise the final mapping after choice is available.
+* Confirm the chosen chest reveals the assigned reward.
+* Confirm Loot Chest reward generation odds are unchanged.
+* Confirm Loot Chest still completes and returns to the correct previous flow.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Kept generated preview rewards separate from the final chest reward mapping, which is now created only when the existing shuffle animation timer completes.
+* Keyed the three animated chest wrappers by fixed position rather than reward ID, so visual chest identity no longer carries reward identity through the animation.
+* The chosen chest reads its already-assigned final reward; language rerenders and reveal/continue actions do not rerandomize that mapping.
+* Reused the existing unbiased reward shuffle, reward generation, animation phases, reveal UI, claim handling, and return flows without changing reward odds, types, styling, or routing.
+* Added focused timing, chest-identity, permutation, language-stability, reveal, and downstream state regressions.
+
+---
+
+Feature-018: Prevent same enemy appearing twice in a row for the same battle level
+
+Status
+
+* done
+
+Related Feature(s)
+
+* EPIC-016 Feature-008: Trigger events based on landed environment
+* EPIC-017 Feature-001: Rebalance board landing event probabilities
+* EPIC-018 Feature-014: Update enemy data source of truth for level 3 and level 4 balance
+* EPIC-020 Feature-002: Add 5 health to level 1, 2, and 3 enemies only
+
+Goal
+
+* Improve enemy variety.
+* Prevent the same enemy from appearing in two consecutive battles of the same level.
+* This should apply globally across all players.
+* Battles of other levels do not reset or override the previous enemy for a different level.
+
+Problem Summary
+
+* If a level 1 battle uses Enemy A, the next level 1 battle should not also use Enemy A.
+* This should remain true even if battles of other levels happen in between.
+* The rule is tracked by battle level, not by player and not by immediate overall battle order.
+
+Required Behaviour
+
+* Track the last enemy used for each battle level.
+* When selecting an enemy for a new battle:
+
+  * check the battle level.
+  * exclude the last enemy used for that same level.
+  * randomly choose from the remaining enemies of that level.
+  * update the last-used enemy for that level after selection.
+
+Example 1: Same Level Consecutive
+
+```txt id="x8gqmk"
+1. Player 1 gets a Level 1 battle.
+2. Enemy A is selected.
+3. Player 2 gets the next Level 1 battle.
+4. Enemy A cannot be selected.
+```
+
+Example 2: Different Level In Between
+
+```txt id="ojvs2m"
+1. Player 1 gets a Level 1 battle.
+2. Level 1 Enemy A is selected.
+3. Player 2 gets a Level 2 battle.
+4. Level 2 Enemy Z is selected.
+5. Player 3 gets a Level 1 battle.
+6. Level 1 Enemy A still cannot be selected.
+```
+
+Example 3: Level-Specific Tracking
+
+```txt id="rnlqbl"
+Last Level 1 enemy: Vilewhisker Rat
+Last Level 2 enemy: Hexmaw Hag
+Last Level 3 enemy: Gravechant Necromancer
+
+Next Level 1 battle cannot use Vilewhisker Rat.
+Next Level 2 battle cannot use Hexmaw Hag.
+Next Level 3 battle cannot use Gravechant Necromancer.
+```
+
+Global Tracking Requirement
+
+* This is not per player.
+* It should apply across all players in the game.
+* If Player 1 fought a level 1 enemy, Player 2’s next level 1 battle must respect that previous level 1 enemy.
+* Store this in shared game state, not in individual player state.
+
+Suggested State Direction
+
+```js id="p9399v"
+lastEnemyByLevel: {
+  1: null,
+  2: null,
+  3: null,
+  4: null
+}
+```
+
+* Level 4 inclusion is optional for normal random level 4 battles if they exist.
+* If level 4 random battles do not exist and level 4 is only used for fixed Elite/Boss assignment, do not apply this to Elite/Boss fixed enemies unless a future feature requires it.
+
+Enemy Selection Requirement
+
+* For random battles:
+
+  * select from enemy pool for the requested level.
+  * exclude `lastEnemyByLevel[level]`.
+  * randomly choose from remaining options.
+  * store the chosen enemy as the new `lastEnemyByLevel[level]`.
+
+Suggested helper:
+
+```js id="ftndbp"
+function selectEnemyForLevel(level, enemies, lastEnemyByLevel) {
+  const enemiesForLevel = enemies.filter((enemy) => enemy.level === level);
+  const previousEnemyId = lastEnemyByLevel[level];
+
+  const eligibleEnemies =
+    enemiesForLevel.length > 1
+      ? enemiesForLevel.filter((enemy) => enemy.id !== previousEnemyId)
+      : enemiesForLevel;
+
+  const selectedEnemy = randomChoice(eligibleEnemies);
+
+  return selectedEnemy;
+}
+```
+
+* Use stable enemy IDs rather than display names if possible.
+* If only one enemy exists for a level, allow it to repeat rather than crashing.
+
+Update Timing Requirement
+
+* Update `lastEnemyByLevel[level]` when the enemy is selected for battle.
+* Do not wait until the battle ends.
+* This prevents route changes or battle outcomes from leaving stale state.
+
+Battle Source Requirement
+
+* This rule should apply to random level battles generated from environment events.
+
+* This includes:
+
+  * Level 1 Battle.
+  * Level 2 Battle.
+  * Level 3 Battle.
+
+* If debug tools trigger a random level battle, they should also use the same rule.
+
+* If debug tools explicitly choose a specific enemy, they may bypass this rule if needed for testing.
+
+Elite Tower / Boss Exception
+
+* Elite Tower enemies are assigned at game start and are fixed.
+* Boss enemy is assigned at game start and is fixed.
+* Do not use this feature to reroll Elite Tower or Boss enemies.
+* Do not block a fixed Elite Tower battle because the same level 4 enemy was recently fought elsewhere.
+* If random level 4 battles are added later, the rule can apply to those random level 4 selections separately.
+
+Save / Load Requirement
+
+* Include `lastEnemyByLevel` in save data if save/load is implemented.
+* Loading a save should preserve the previous enemy history.
+* If loading an old save without this field:
+
+  * initialise missing values to `null`.
+  * do not crash.
+
+Out Of Scope
+
+* No changes to enemy health.
+* No changes to enemy spell slots.
+* No changes to enemy images.
+* No changes to battle event probability.
+* No guarantee that all enemies appear before repeat.
+* No weighted enemy selection.
+* No change to Elite Tower or Boss enemy assignment.
+* No change to battle rewards.
+
+Testing Checkpoints
+
+* Trigger a Level 1 battle.
+* Record selected enemy.
+* Trigger another Level 1 battle.
+* Confirm the same enemy is not selected.
+* Trigger a Level 1 battle, then Level 2 battle, then Level 1 battle.
+* Confirm the second Level 1 battle does not use the previous Level 1 enemy.
+* Trigger several Level 2 battles.
+* Confirm no Level 2 enemy repeats directly within level.
+* Trigger several Level 3 battles.
+* Confirm no Level 3 enemy repeats directly within level.
+* Confirm Level 1 history does not block Level 2 enemy selection.
+* Confirm Player 1’s battle affects Player 2’s next same-level battle.
+* Confirm debug random battle triggers use the same selection rule.
+* Confirm fixed Elite Tower enemies are not rerolled.
+* Confirm fixed Boss enemy is not rerolled.
+* Save and load if save/load is implemented.
+* Confirm last enemy history is preserved or safely initialised.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added shared `lastEnemyByLevel` game state for Levels 1-4, initialized to null values and normalized when legacy state without the field is restored.
+* Extended the existing random enemy selector to exclude the previous stable enemy ID for that level while retaining the existing single-option and empty-pool fallbacks.
+* Random Level 1-3 board events and debug level battles now select and record the enemy atomically inside `startBattle`, so history applies globally across players and survives intervening levels.
+* Explicit debug enemy selection and fixed Elite Tower/Boss calls continue supplying enemy IDs and bypass random history tracking.
+* Existing generic save serialization preserves enemy history without a save-version or format change.
+* Added focused selector, shared-state, cross-player, level-isolation, fixed-encounter, save, and legacy-load regressions; no enemy data, battle balance, rewards, event probabilities, or presentation changed.
+
+---
+
+Feature-019: Add global fullscreen toggle button under music button
+
+Status
+
+* done
+
+Related Feature(s)
+
+* Feature-001: Add persistent random background music with global floating toggle button
+* Feature-009: Standardise battle overlay icon width
+* EPIC-020 Feature-001: Make gameplay layout scale to fit screen height
+* Global floating controls / app shell
+
+Goal
+
+* Add a second global floating button in the top-left corner.
+* This button should sit directly below the music/sound button.
+* It should toggle browser fullscreen mode.
+* It should use the same visual styling as the music button.
+* The icon should always reflect the real fullscreen state of the browser.
+
+Required Behaviour
+
+* Add a fullscreen toggle button directly below the sound/music button.
+* The button should be visible globally, the same as the music button.
+* It should appear on every page.
+* Clicking it should:
+
+  * enter fullscreen if the browser is not currently fullscreen.
+  * exit fullscreen if the browser is currently fullscreen.
+
+Position Requirement
+
+* The music button remains:
+
+```txt id="r314gk"
+top: 10px
+left: 10px
+```
+
+* The fullscreen button should sit directly underneath it.
+* It should use the same left position.
+* Leave a small gap between the buttons.
+
+Suggested positioning:
+
+```css id="e8qlxe"
+.music-toggle-button {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+}
+
+.fullscreen-toggle-button {
+  position: fixed;
+  top: 70px;
+  left: 10px;
+}
+```
+
+* If the music button height/gap differs, calculate the fullscreen button position from the actual button size.
+* The button should not move when the gameplay page scales.
+
+Visual Styling Requirement
+
+* The fullscreen button should use the exact same visual style as the music button:
+
+  * brown background.
+  * yellow icon.
+  * same button size.
+  * same border.
+  * same border radius.
+  * same hover effect.
+  * same z-index approach.
+  * same icon size.
+
+Icon size:
+
+```txt id="tkwa7x"
+30px x 30px
+```
+
+* Use the shared `floating-icon-button` class from Feature-001 if available.
+
+Icon Requirement
+
+* When the browser is not fullscreen, show:
+
+```txt id="fwc5b8"
+faUpRightAndDownLeftFromCenter
+```
+
+* When the browser is fullscreen, show:
+
+```txt id="nby97g"
+faDownLeftAndUpRightToCenter
+```
+
+Meaning:
+
+```txt id="ck3gq2"
+Not fullscreen = show expand icon
+Fullscreen = show minimise icon
+```
+
+State Sync Requirement
+
+* The icon must reflect the browser’s actual fullscreen state.
+* Do not only toggle local state when the button is clicked.
+* The button must listen to fullscreen state changes from the page/browser.
+* This is required because the user may enter or exit fullscreen through browser controls, keyboard shortcuts, or system controls.
+
+Required Listener
+
+* Listen for the browser fullscreen change event.
+
+Suggested direction:
+
+```js id="c268wu"
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+```
+
+* `handleFullscreenChange` should check:
+
+```js id="lowkub"
+Boolean(document.fullscreenElement)
+```
+
+* Use this value to update the displayed icon.
+
+Suggested React Direction
+
+```jsx id="fkz9s3"
+useEffect(() => {
+  const handleFullscreenChange = () => {
+    setIsFullscreen(Boolean(document.fullscreenElement));
+  };
+
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+  handleFullscreenChange();
+
+  return () => {
+    document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  };
+}, []);
+```
+
+Fullscreen Toggle Requirement
+
+* When not fullscreen, clicking the button should request fullscreen.
+
+Suggested direction:
+
+```js id="n7kx45"
+document.documentElement.requestFullscreen();
+```
+
+* When fullscreen, clicking the button should exit fullscreen.
+
+Suggested direction:
+
+```js id="a5blcj"
+document.exitFullscreen();
+```
+
+* Handle promise rejection safely.
+* Do not crash if the browser blocks fullscreen.
+
+Suggested handler:
+
+```js id="j8jx6j"
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch (error) {
+    console.warn("Fullscreen toggle failed", error);
+  }
+}
+```
+
+Browser Compatibility Requirement
+
+* Use the standard Fullscreen API first.
+* If needed, add safe browser fallback checks for older browser prefixes.
+* Do not assume the icon state changed until the fullscreen change event or actual document state confirms it.
+
+Important State Rule
+
+* The button click may request fullscreen, but the icon should be driven by actual fullscreen state.
+* Correct source of truth:
+
+```txt id="dqkrha"
+document.fullscreenElement
+```
+
+* Incorrect source of truth:
+
+```txt id="m91klo"
+The last button clicked
+```
+
+Accessibility Requirement
+
+* Add an accessible label.
+* The label should change depending on fullscreen state.
+
+English examples:
+
+```txt id="niml8v"
+Enter fullscreen
+Exit fullscreen
+```
+
+Japanese examples:
+
+```txt id="mmq67w"
+全画面表示にする
+全画面表示を終了する
+```
+
+* Visible text is not required.
+* The button can remain icon-only.
+
+Global Visibility Requirement
+
+* The fullscreen button should be visible anywhere the music button is visible.
+* It should appear on:
+
+  * start page.
+  * game setup.
+  * story page.
+  * rules page.
+  * gameplay.
+  * battle.
+  * village.
+  * cave.
+  * river.
+  * decision.
+  * loot chest.
+  * winner page.
+  * settings modal.
+
+Z-Index Requirement
+
+* The button should appear above normal page content.
+* It should not be hidden behind:
+
+  * starry background.
+  * board.
+  * modal background.
+  * battle page.
+  * village page.
+* Use the same z-index strategy as the music button.
+
+Interaction With Modals
+
+* The fullscreen button may remain clickable while modals are open.
+* If modal overlays currently block all background controls, this button should still remain visible unless it causes interaction problems.
+* Default preference:
+
+  * music button remains clickable.
+  * fullscreen button remains clickable.
+  * settings button follows its existing visibility rules.
+
+Out Of Scope
+
+* No custom fullscreen page design.
+* No changing browser zoom.
+* No forcing fullscreen automatically.
+* No fullscreen prompt modal.
+* No keyboard shortcut handling beyond listening to actual fullscreen state.
+* No changes to responsive scaling.
+* No changes to music behaviour.
+* No changes to settings button visibility rules.
+
+Testing Checkpoints
+
+* Open the start page.
+* Confirm fullscreen button appears directly below the music button.
+* Confirm button has the same brown/yellow styling as the music button.
+* Confirm icon is 30px x 30px.
+* Confirm expand icon appears when not fullscreen.
+* Click fullscreen button.
+* Confirm browser enters fullscreen.
+* Confirm icon changes to minimise icon.
+* Click fullscreen button again.
+* Confirm browser exits fullscreen.
+* Confirm icon changes back to expand icon.
+* Enter fullscreen using browser controls or F11 if supported.
+* Confirm icon updates correctly.
+* Exit fullscreen using browser controls or Escape.
+* Confirm icon updates correctly.
+* Navigate between pages.
+* Confirm fullscreen button remains visible.
+* Open settings/modal pages.
+* Confirm fullscreen button remains visible and correctly positioned.
+* Confirm gameplay scaling still works in fullscreen.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+Completion Notes
+
+* Added one global `FullscreenToggle` beside the existing app-shell music player, so it remains mounted on every route and while settings or other modals are open.
+* Reused the existing `floating-icon-button` class for the exact brown/yellow size, border, hover, focus, 30px icon, and z-index behavior; added only the requested `top: 70px; left: 10px` position.
+* The control requests or exits fullscreen through the standard Fullscreen API with safe WebKit-prefixed fallbacks and catches rejected browser requests without crashing.
+* Expand/minimize icons and bilingual accessible labels are driven only by actual `fullscreenElement` state from standard or prefixed fullscreen-change events, including browser-initiated changes.
+* Existing music behavior, settings visibility, page routes, gameplay scaling, responsive behavior, and modal flows remain unchanged.
+* Added focused API, external-state, fallback, rejection, icon, localization, styling, all-route, modal, and unchanged-music regressions.

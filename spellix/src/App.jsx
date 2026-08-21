@@ -9,7 +9,8 @@ import { getNothingEventForEnvironment } from './data/nothingEvents';
 import { POTION_DEFINITIONS } from './data/potions';
 import { getBattleEnvironmentForBoardEnvironment } from './data/environmentEvents';
 import DebugModal from './features/debug/DebugModal';
-import { ENEMIES, getEnemyById, selectRandomEnemyForLevel } from './features/battle/enemies';
+import { ENEMIES, getEnemyById } from './features/battle/enemies';
+import FullscreenToggle from './features/fullscreen/FullscreenToggle';
 import { useGameSetup } from './features/gameSetup/GameSetupContext';
 import MusicPlayer from './features/music/MusicPlayer';
 import RulesBody from './features/rules/RulesBody';
@@ -363,14 +364,12 @@ function App() {
       return;
     }
 
-    const enemy = selectRandomEnemyForLevel(level);
-
-    if (!enemy) {
+    if (!ENEMIES.some((enemy) => enemy.level === level)) {
       setDebugMessage(`No enemy is available for battle level ${level}.`);
       return;
     }
 
-    startBattle(currentPlayer.id, level, enemy.id, selectedBattleEnvironment);
+    startBattle(currentPlayer.id, level, null, selectedBattleEnvironment);
     setIsDebugOpen(false);
     setIsSettingsOpen(false);
     resetDebugState();
@@ -534,12 +533,9 @@ function App() {
 
     if (/^level[1-3]Battle$/.test(eventType)) {
       const level = Number(eventType.slice(5, 6));
-      const enemy = selectRandomEnemyForLevel(level);
 
-      if (enemy) {
-        startBattle(playerId, level, enemy.id, battleEnvironment);
-        navigate('/battle');
-      }
+      startBattle(playerId, level, null, battleEnvironment);
+      navigate('/battle');
       return;
     }
 
@@ -601,6 +597,7 @@ function App() {
   return (
     <>
       <MusicPlayer language={settingsPlayerLanguage} />
+      <FullscreenToggle language={settingsPlayerLanguage} />
 
       {location.pathname === '/gameplay' &&
       !gameSetup.hasRolledMovementDice &&

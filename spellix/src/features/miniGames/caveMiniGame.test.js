@@ -118,12 +118,12 @@ test('generates exact token objects with 10 percent rare and 90 percent common o
   expect(commonToken).toHaveProperty('name.jp');
 });
 
-test('can award an outlined token from the rare cave token pool', () => {
+test('can award Shiny Buff from the rare cave token pool', () => {
   const rolls = [0.0999, 0.9999];
 
   expect(generateCaveTokenReward(() => rolls.shift())).toMatchObject({
     rarity: 'Rare',
-    type: 'light-green-yellow-outline',
+    type: 'purple-yellow-outline',
   });
 });
 

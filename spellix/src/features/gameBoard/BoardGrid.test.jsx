@@ -429,8 +429,8 @@ describe('BoardGrid feature images', () => {
 
 });
 
-describe('BoardGrid movement destination hover labels', () => {
-  test('shows a highlighted environment label opposite the hovered board half', () => {
+describe('BoardGrid square hover labels', () => {
+  test('shows environment labels on highlighted and non-highlighted squares opposite the hovered board half', () => {
     const board = {
       ...createBoard(),
       height: 10,
@@ -461,12 +461,20 @@ describe('BoardGrid movement destination hover labels', () => {
         language="en"
         onSquareClick={() => {}}
         players={[]}
-        showHoverLabels
       />
     );
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 4, 5' }));
-    expect(screen.queryByText('Hills')).not.toBeInTheDocument();
+    const nonHighlightedSquare = screen.getByRole('button', { name: 'Square 4, 5' });
+
+    expect(nonHighlightedSquare).toHaveAttribute('data-highlighted', 'false');
+    expect(nonHighlightedSquare).toHaveAttribute('tabindex', '-1');
+    fireEvent.mouseEnter(nonHighlightedSquare);
+    expect(screen.getByText('Hills')).toHaveClass(
+      'board-hover-label',
+      'board-hover-label--top',
+      'larger-text',
+      'language-en'
+    );
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 4, 4' }));
     expect(screen.getByText('Field')).toHaveClass(
@@ -490,7 +498,6 @@ describe('BoardGrid movement destination hover labels', () => {
         language="jp"
         onSquareClick={() => {}}
         players={[]}
-        showHoverLabels
       />
     );
 
@@ -505,22 +512,71 @@ describe('BoardGrid movement destination hover labels', () => {
     expect(screen.getAllByText('\u6751')).toHaveLength(1);
   });
 
-  test('hides the label when movement hover labels are disabled', () => {
+  test('shows the assigned enemy on every cell in an Elite Tower footprint', () => {
     render(
       <BoardGrid
         board={createBoardWithFeatureImages()}
         currentPlayerId=""
+        eliteBossEnemyAssignments={{
+          bossBattle: 'hellcrown-reaper',
+          eliteTowerGravel: 'crowned-lichlord',
+          eliteTowerWoods: 'amethyst-ogre',
+        }}
         highlightedColour="red"
-        highlightedNodeIds={['boss-battle']}
+        highlightedNodeIds={[]}
         language="en"
         onSquareClick={() => {}}
         players={[]}
-        showHoverLabels={false}
+      />
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 0, 0' }));
+    expect(screen.getByText('Elite Tower')).toHaveClass(
+      'board-hover-label-feature-name'
+    );
+    expect(screen.getByText('Crowned Lichlord')).toHaveClass(
+      'board-hover-label-enemy-name'
+    );
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 1, 1' }));
+    expect(screen.getAllByText('Elite Tower')).toHaveLength(1);
+    expect(screen.getAllByText('Crowned Lichlord')).toHaveLength(1);
+  });
+
+  test('localizes the assigned Boss enemy and falls back to the feature name', () => {
+    const board = createBoardWithFeatureImages();
+    const { rerender } = render(
+      <BoardGrid
+        board={board}
+        currentPlayerId=""
+        eliteBossEnemyAssignments={{ bossBattle: 'hellcrown-reaper' }}
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        language="jp"
+        onSquareClick={() => {}}
+        players={[]}
       />
     );
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 29, 0' }));
-    expect(screen.queryByText('Boss Battle')).not.toBeInTheDocument();
+    expect(screen.getByText('\u30dc\u30b9\u30d0\u30c8\u30eb')).toBeInTheDocument();
+    expect(screen.getByText('\u5730\u7344\u51a0\u306e\u6b7b\u795e')).toBeInTheDocument();
+
+    rerender(
+      <BoardGrid
+        board={board}
+        currentPlayerId=""
+        eliteBossEnemyAssignments={null}
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        language="en"
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Square 30, 1' }));
+    expect(screen.getByText('Boss Battle')).toBeInTheDocument();
+    expect(screen.queryByText('Hellcrown Reaper')).not.toBeInTheDocument();
   });
 
   test('positions the non-interactive label in the existing board color style', () => {
@@ -534,6 +590,12 @@ describe('BoardGrid movement destination hover labels', () => {
     );
     expect(stylesheet).toMatch(
       /\.board-hover-label--bottom\s*{[^}]*bottom:\s*50px;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.board-hover-label-feature-name\s*{[^}]*display:\s*block;[^}]*font-size:\s*16px;[^}]*line-height:\s*1\.2;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.board-hover-label-enemy-name\s*{[^}]*display:\s*block;[^}]*font-size:\s*inherit;[^}]*line-height:\s*1\.2;/s
     );
   });
 });

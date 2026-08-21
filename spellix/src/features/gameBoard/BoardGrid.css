@@ -76,6 +76,18 @@
   bottom: 50px;
 }
 
+.board-hover-label-feature-name {
+  display: block;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.board-hover-label-enemy-name {
+  display: block;
+  font-size: inherit;
+  line-height: 1.2;
+}
+
 .board-player-marker {
   position: absolute;
   z-index: 1;

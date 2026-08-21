@@ -587,6 +587,72 @@ test('stacks Purple into a pending next-turn buff without applying it immediatel
   });
 });
 
+test('grants 10 for Shiny Buff and stacks it with common Buff', () => {
+  const shinyOnlyActor = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([createToken('purple-yellow-outline', 1)])
+    ),
+  });
+  const stackedActor = createActor({
+    spellSlots: createSpellSlots(
+      createSlot([
+        createToken('purple', 1),
+        createToken('purple-yellow-outline', 1),
+      ])
+    ),
+  });
+
+  const shinyOnlyResult = calculateBattleTurn({
+    currentActor: shinyOnlyActor,
+    diceResult: 1,
+    opponent: createActor(),
+  });
+  const stackedResult = calculateBattleTurn({
+    currentActor: stackedActor,
+    diceResult: 1,
+    opponent: createActor(),
+  });
+
+  expect(shinyOnlyResult).toMatchObject({
+    effects: [],
+    isMiss: false,
+    purpleBuffGranted: 10,
+  });
+  expect(stackedResult).toMatchObject({
+    effects: [],
+    isMiss: false,
+    purpleBuffGranted: 15,
+  });
+  expect(
+    createAdjacentPurpleBuffs(1, stackedResult.purpleBuffGranted, stackedActor)
+  ).toEqual([0, 15, 0, 0, 0, 0]);
+});
+
+test.each([2, 3])(
+  'uses merged effective column adjacency when Shiny Buff is rolled as %i',
+  (diceResult) => {
+    const currentActor = createActor();
+
+    currentActor.mergedColumns = [
+      { activeColumn: 2, columns: [2, 3], removedColumn: 3 },
+    ];
+    currentActor.spellSlots[1] = createSlot([
+      createToken('purple-yellow-outline', 1),
+    ]);
+
+    const result = calculateBattleTurn({
+      currentActor,
+      diceResult,
+      opponent: createActor(),
+    });
+
+    expect(result.purpleBuffGranted).toBe(10);
+    expect(
+      createAdjacentPurpleBuffs(diceResult, result.purpleBuffGranted, currentActor)
+    ).toEqual([10, 0, 0, 10, 0, 0]);
+  }
+);
+
 test('treats Purple alone as a pending effect without creating an animation', () => {
   const currentActor = createActor({
     spellSlots: createSpellSlots(createSlot([createToken('purple', 1)])),

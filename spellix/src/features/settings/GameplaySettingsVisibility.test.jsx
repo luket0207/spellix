@@ -82,6 +82,17 @@ function renderApp(initialRoute, setupOptions) {
 }
 
 describe('gameplay-only settings visibility', () => {
+  test.each([...NON_GAMEPLAY_ROUTES, ['Gameplay', '/gameplay']])(
+    'shows the global fullscreen button on the %s route',
+    (_routeName, route) => {
+      renderApp(route);
+
+      expect(
+        screen.getByRole('button', { name: 'Enter fullscreen' })
+      ).toBeInTheDocument();
+    }
+  );
+
   test.each(NON_GAMEPLAY_ROUTES)(
     'hides the settings button on the %s route',
     (_routeName, route) => {
@@ -102,6 +113,9 @@ describe('gameplay-only settings visibility', () => {
     const actions = screen.getByRole('group', { name: 'Settings actions' });
     const settingsButtons = within(actions).getAllByRole('button');
 
+    expect(
+      screen.getByRole('button', { name: 'Enter fullscreen' })
+    ).toBeInTheDocument();
     expect(settingsDialog).toHaveClass('language-en');
     expect(title).toHaveClass('settings-title', 'larger-text', 'language-en');
     expect(settingsButtons).toHaveLength(5);
@@ -201,6 +215,11 @@ describe('gameplay-only settings visibility', () => {
     });
     const settingsButtons = within(actions).getAllByRole('button');
 
+    expect(
+      screen.getByRole('button', {
+        name: '\u5168\u753b\u9762\u8868\u793a\u306b\u3059\u308b',
+      })
+    ).toBeInTheDocument();
     expect(settingsDialog).toHaveClass('language-jp');
     expect(title).toHaveClass('settings-title', 'larger-text', 'language-jp');
     expect(settingsButtons).toHaveLength(5);

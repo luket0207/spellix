@@ -1,3 +1,5 @@
+import { getEnemyById } from '../battle/enemies';
+import { getEliteBossEncounterType } from './eliteBossEncounters';
 import { getMovementNodeIdFromSquare } from './movement';
 
 const BOARD_HOVER_LABELS = {
@@ -64,6 +66,29 @@ export function getBoardHoverLabel({ board, language, square }) {
   const currentLanguage = language === 'jp' ? 'jp' : 'en';
 
   return BOARD_HOVER_LABELS[labelKey]?.[currentLanguage] ?? '';
+}
+
+export function getBoardHoverEnemyName({
+  assignments,
+  board,
+  language,
+  square,
+}) {
+  if (!square) {
+    return '';
+  }
+
+  const encounterType = getEliteBossEncounterType(
+    board,
+    getMovementNodeIdFromSquare(square)
+  );
+  const enemy = getEnemyById(assignments?.[encounterType]);
+
+  if (!enemy) {
+    return '';
+  }
+
+  return language === 'jp' ? enemy.japaneseName : enemy.englishName;
 }
 
 export function getBoardHoverLabelPosition(board, square) {

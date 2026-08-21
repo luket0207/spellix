@@ -11,6 +11,7 @@ import Woods from './components/environments/woods/woods';
 import { getPieceImageSource } from '../gameSetup/pieceImages';
 import { getMovementNodeIdFromSquare } from './movement';
 import {
+  getBoardHoverEnemyName,
   getBoardHoverLabel,
   getBoardHoverLabelPosition,
 } from './boardHoverLabels';
@@ -59,12 +60,12 @@ function getSquareKey(x, y) {
 function BoardGrid({
   board,
   currentPlayerId = '',
+  eliteBossEnemyAssignments,
   highlightedColour,
   highlightedNodeIds,
   language = 'en',
   onSquareClick,
   players,
-  showHoverLabels = true,
 }) {
   const [hoveredSquare, setHoveredSquare] = useState(null);
   const playerLookup = new Map();
@@ -80,13 +81,17 @@ function BoardGrid({
     });
 
   const highlightedNodeIdSet = new Set(highlightedNodeIds);
-  const hoveredNodeId = hoveredSquare
-    ? getMovementNodeIdFromSquare(hoveredSquare)
+  const hoveredLabel = hoveredSquare
+    ? getBoardHoverLabel({ board, language, square: hoveredSquare })
     : '';
-  const hoveredLabel =
-    showHoverLabels && highlightedNodeIdSet.has(hoveredNodeId)
-      ? getBoardHoverLabel({ board, language, square: hoveredSquare })
-      : '';
+  const hoveredEnemyName = hoveredSquare
+    ? getBoardHoverEnemyName({
+        assignments: eliteBossEnemyAssignments,
+        board,
+        language,
+        square: hoveredSquare,
+      })
+    : '';
   const hoveredLabelPosition = hoveredLabel
     ? getBoardHoverLabelPosition(board, hoveredSquare)
     : '';
@@ -172,11 +177,7 @@ function BoardGrid({
               role="button"
               tabIndex={isHighlighted ? 0 : -1}
               onClick={() => onSquareClick(square)}
-              onMouseEnter={() => {
-                if (showHoverLabels && isHighlighted) {
-                  setHoveredSquare(square);
-                }
-              }}
+              onMouseEnter={() => setHoveredSquare(square)}
               onMouseLeave={() => setHoveredSquare(null)}
               onKeyDown={(event) => {
                 if (isHighlighted && (event.key === 'Enter' || event.key === ' ')) {
@@ -236,7 +237,14 @@ function BoardGrid({
               language === 'jp' ? 'jp' : 'en'
             }`}
           >
-            {hoveredLabel}
+            {hoveredEnemyName ? (
+              <>
+                <span className="board-hover-label-feature-name">{hoveredLabel}</span>
+                <span className="board-hover-label-enemy-name">{hoveredEnemyName}</span>
+              </>
+            ) : (
+              hoveredLabel
+            )}
           </div>
         ) : null}
       </div>

@@ -241,6 +241,33 @@ test('offers each Elite reward once regardless of village type', () => {
   });
 });
 
+test('can grant Shiny Buff as the second-Elite village rare token', () => {
+  const visit = createVillageVisit({
+    assignments,
+    player: createPlayer({
+      eliteProgress: {
+        eliteTowerGravel: true,
+        eliteTowerWoods: true,
+      },
+      villageProgress: createVillageProgress({
+        firstEliteVillageRewardClaimed: true,
+        forestVillageLootClaimed: true,
+      }),
+    }),
+    randomFn: () => 0.9999,
+    villageId: FOREST_VILLAGE,
+  });
+
+  expect(visit).toMatchObject({
+    rewardClaimKey: 'secondEliteVillageRewardClaimed',
+    rewardItem: {
+      rarity: 'Rare',
+      type: 'purple-yellow-outline',
+    },
+    rewardType: 'token',
+  });
+});
+
 test('advances queued rewards before the village action choice', () => {
   const visit = createVillageVisit({
     assignments,

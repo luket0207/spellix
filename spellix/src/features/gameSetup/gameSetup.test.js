@@ -14,6 +14,15 @@ describe('game setup player piece selection foundation', () => {
     expect(createInitialGameSetup().pendingPotionGrant).toBeNull();
   });
 
+  test('starts with empty shared enemy history for every battle level', () => {
+    expect(createInitialGameSetup().lastEnemyByLevel).toEqual({
+      1: null,
+      2: null,
+      3: null,
+      4: null,
+    });
+  });
+
   test('creates players with default boy piece-selection data', () => {
     const players = createPlayers(2);
 
@@ -124,6 +133,40 @@ describe('game setup player piece selection foundation', () => {
 
     expect(recreatedPlayers[0].language).toBe('jp');
     expect(recreatedPlayers[1].language).toBe('en');
+  });
+
+  test('assigns new players the first colour unused by shifted active players', () => {
+    const existingPlayers = createPlayers(5);
+    const shiftedPlayers = [
+      existingPlayers[0],
+      existingPlayers[1],
+      existingPlayers[4],
+    ];
+
+    const recreatedPlayers = createPlayers(5, shiftedPlayers);
+
+    expect(recreatedPlayers.map(({ colour }) => colour)).toEqual([
+      'red',
+      'blue',
+      'purple',
+      'green',
+      'yellow',
+    ]);
+    expect(new Set(recreatedPlayers.map(({ colour }) => colour)).size).toBe(5);
+  });
+
+  test('repairs duplicate existing colours without changing earlier unique players', () => {
+    const existingPlayers = createPlayers(3);
+
+    existingPlayers[1].colour = 'red';
+
+    const recreatedPlayers = createPlayers(3, existingPlayers);
+
+    expect(recreatedPlayers.map(({ colour }) => colour)).toEqual([
+      'red',
+      'blue',
+      'green',
+    ]);
   });
 
   test('preserves whether each player has unseen token bag additions', () => {

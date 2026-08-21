@@ -18,6 +18,19 @@ const STARTING_TOKEN_COUNTS = {
   red: STARTING_TOKEN_COUNT,
 };
 
+export function createLastEnemyByLevel(existingHistory = {}) {
+  return [1, 2, 3, 4].reduce(
+    (history, level) => ({
+      ...history,
+      [level]:
+        typeof existingHistory?.[level] === 'string'
+          ? existingHistory[level]
+          : null,
+    }),
+    {}
+  );
+}
+
 function createInitialTokenBag(playerId) {
   return Object.entries(STARTING_TOKEN_COUNTS).flatMap(([type, count]) =>
     Array.from({ length: count }, (_, index) => ({
@@ -60,11 +73,19 @@ export function clampPlayerCount(value) {
 }
 
 export function createPlayers(playerCount, existingPlayers = []) {
+  const usedColours = new Set();
+
   return Array.from({ length: playerCount }, (_, index) => {
     const playerId = `player-${index + 1}`;
     const existingPlayer = existingPlayers[index];
-    const colour = existingPlayer?.colour ?? PLAYER_COLOURS[index];
+    const existingColour = existingPlayer?.colour;
+    const colour =
+      existingColour && !usedColours.has(existingColour)
+        ? existingColour
+        : PLAYER_COLOURS.find((option) => !usedColours.has(option));
     const gender = existingPlayer?.gender ?? DEFAULT_PLAYER_GENDER;
+
+    usedColours.add(colour);
 
     const player = {
       activePotion: existingPlayer?.activePotion
@@ -137,6 +158,7 @@ export function createInitialGameSetup() {
     devineChanceResult: null,
     debugMode: false,
     hasRolledMovementDice: false,
+    lastEnemyByLevel: createLastEnemyByLevel(),
     miniGameResult: null,
     miniGameReturnNotice: null,
     pendingNextTurnModal: false,
