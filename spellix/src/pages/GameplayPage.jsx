@@ -166,6 +166,8 @@ function GameplayPage({
   const [showHealingPotionAnimation, setShowHealingPotionAnimation] = useState(false);
   const [pendingChooseEvent, setPendingChooseEvent] = useState(null);
   const [gameplayScale, setGameplayScale] = useState(getBrowserGameplayScale);
+  const [isObjectiveHighlightActive, setIsObjectiveHighlightActive] =
+    useState(false);
   const currentLanguage = getGameplayLanguage(currentPlayer?.language);
   const rollAgainPlayer = gameSetup.players.find(
     ({ id }) => id === activeRollAgainEvent?.playerId
@@ -203,6 +205,16 @@ function GameplayPage({
       ),
     },
   ];
+  const hasDefeatedBothEliteTowers = hasCompletedEliteTowers(currentPlayer);
+  const bossEnemy = getEnemyById(
+    gameSetup.eliteBossEnemyAssignments?.[BOSS_BATTLE]
+  );
+  const bossEnemyName = getEnemyDisplayName(currentLanguage, bossEnemy);
+  const objectiveHighlightMode = isObjectiveHighlightActive
+    ? hasDefeatedBothEliteTowers
+      ? 'bossBattle'
+      : 'eliteTowers'
+    : null;
   const requiresTurnRespawn = Boolean(
     pendingNextTurnModal && currentPlayer?.currentHealth === 0
   );
@@ -1147,6 +1159,7 @@ function GameplayPage({
                 highlightedNodeIds={highlightedNodeIds}
                 language={currentLanguage}
                 onSquareClick={handleSquareClick}
+                objectiveHighlightMode={objectiveHighlightMode}
                 players={gameSetup.players}
               />
             ) : null}
@@ -1231,41 +1244,59 @@ function GameplayPage({
         {currentPlayer ? (
           <div
             aria-label="Elite Tower progress"
-            className={`committed-spell-slot-display elite-progress-display ${languageClassName}`}
+            className={`committed-spell-slot-display elite-progress-display ${languageClassName}${
+              hasDefeatedBothEliteTowers
+                ? ' elite-progress-display--boss-goal'
+                : ''
+            }`}
+            onMouseEnter={() => setIsObjectiveHighlightActive(true)}
+            onMouseLeave={() => setIsObjectiveHighlightActive(false)}
           >
-            <p
-              className={`committed-spell-slot-display-title ${languageClassName}`}
-            >
-              {currentLanguage === 'jp' ? 'エリートタワー' : 'Elite Towers'}
-            </p>
-            <div className="elite-progress-list">
-              {eliteTowerEnemies.map(({ encounterType, enemy }) => {
-                const isComplete = Boolean(
-                  currentPlayer.eliteProgress?.[encounterType]
-                );
+            {hasDefeatedBothEliteTowers ? (
+              <p className={`elite-progress-boss-goal ${languageClassName}`}>
+                {currentLanguage === 'jp'
+                  ? `${bossEnemyName}\u306e\u30dc\u30b9\u30d0\u30c8\u30eb\u306b\u52dd\u5229\u3059\u308b`
+                  : `Defeat the ${bossEnemyName} Boss Battle`}
+              </p>
+            ) : (
+              <>
+                <p
+                  className={`committed-spell-slot-display-title ${languageClassName}`}
+                >
+                  {currentLanguage === 'jp'
+                    ? '\u73fe\u5728\u306e\u76ee\u6a19\uff1a\u30a8\u30ea\u30fc\u30c8\u30bf\u30ef\u30fc\u3092\u653b\u7565\u3059\u308b'
+                    : 'Current Goal: Defeat the Elite Towers'}
+                </p>
+                <div className="elite-progress-list">
+                  {eliteTowerEnemies.map(({ encounterType, enemy }) => {
+                    const isComplete = Boolean(
+                      currentPlayer.eliteProgress?.[encounterType]
+                    );
 
-                return (
-                  <div className="elite-progress-row" key={encounterType}>
-                    <span
-                      aria-label={
-                        isComplete
-                          ? 'Elite Tower defeated'
-                          : 'Elite Tower not defeated'
-                      }
-                      className={`elite-progress-checkbox${
-                        isComplete ? ' elite-progress-checkbox--complete' : ''
-                      }`}
-                      role="img"
-                    >
-                      {isComplete ? 'X' : ''}
-                    </span>
-                    <span className={languageClassName}>
-                      {getEnemyDisplayName(currentLanguage, enemy)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <div className="elite-progress-row" key={encounterType}>
+                        <span
+                          aria-label={
+                            isComplete
+                              ? 'Elite Tower defeated'
+                              : 'Elite Tower not defeated'
+                          }
+                          className={`elite-progress-checkbox${
+                            isComplete ? ' elite-progress-checkbox--complete' : ''
+                          }`}
+                          role="img"
+                        >
+                          {isComplete ? 'X' : ''}
+                        </span>
+                        <span className={`elite-progress-label ${languageClassName}`}>
+                          {getEnemyDisplayName(currentLanguage, enemy)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         ) : null}
 

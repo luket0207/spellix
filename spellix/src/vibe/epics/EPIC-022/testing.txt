@@ -257,3 +257,48 @@ Notes
 * No dedicated `npm run lint` script exists in this project. The React production build completed successfully.
 * Manual browser, scaling, and console checks are documented above but were not executed in a real browser during this automated pass.
 * No new component, route, dependency, assignment source, movement rule, board-generation rule, or mobile interaction was added.
+
+---
+
+Feature-005: Update elite-progress-display styling, goal text, and board highlight behaviour
+
+Test Status
+
+* passed
+
+Manual Test Steps
+
+1. Start a game with a current player who has not defeated both Elite Towers and inspect the progress display in English and Japanese.
+   Expected: The exact localized Elite Tower current-goal title and both progress rows appear; only Japanese enemy labels use 14px text, and the display sizes naturally without clipping.
+2. Hover anywhere over the unfinished Elite progress display.
+   Expected: Both complete 2x2 Elite Tower footprints glow behind their feature images; the Boss Battle footprint does not glow and board clicks remain available.
+3. Defeat one Elite Tower and hover the display again.
+   Expected: The Elite goal and both progress rows remain, and both Elite Tower footprints still glow.
+4. Complete both Elite Towers for the current player and inspect the display in English and Japanese.
+   Expected: The progress list is replaced by the centered localized goal naming the Boss enemy assigned to this game.
+5. Hover the completed-state display.
+   Expected: Only the complete 2x2 Boss Battle footprint glows; neither Elite Tower glows.
+6. Change to a player with different Elite completion progress.
+   Expected: The display text and hover target immediately reflect that current player's state.
+7. Roll for movement and use normal board-square hover labels while the objective glow is visible.
+   Expected: Movement highlighting, selection, and Feature-004 hover labels remain unchanged, with no console errors.
+
+Automated Tests Completed
+
+* `src/pages/GameplayEliteBoss.test.jsx` and `src/features/gameBoard/BoardGrid.test.jsx`: 34 tests passed across 2 suites.
+* Verified exact English and Japanese Elite and Boss goal text, assigned localized Boss naming, current-player independence, natural display height, and scoped Japanese label sizing.
+* Verified Elite and Boss objective modes target only their required 2x2 footprints, render expanded glow geometry behind feature images, and remain pointer-transparent.
+* Verified objective glow does not change movement-highlight state or destination selectability.
+* `src/features/gameBoard/boardHoverLabels.test.js`: all 23 tests passed, confirming existing localized environment, feature, assigned-enemy, and label-placement behavior remains intact.
+* `src/pages/GameplayPage.test.jsx`: all 75 tests passed, including existing movement, board-hover-label, dice, event, potion, and turn flows.
+* `npm run build`: passed with a successful production compilation.
+
+Automated Tests Still Needed
+
+* None for the automated Feature-005 scope.
+
+Notes
+
+* No dedicated `npm run lint` script exists in this project. The React production build completed successfully.
+* Manual visual and browser-console checks are documented above but were not executed in a real browser during this automated pass.
+* No Elite completion rule, Boss access rule, enemy assignment, board generation, battle trigger, reward, route, or dependency changed.

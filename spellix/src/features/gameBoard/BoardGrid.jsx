@@ -64,6 +64,7 @@ function BoardGrid({
   highlightedColour,
   highlightedNodeIds,
   language = 'en',
+  objectiveHighlightMode = null,
   onSquareClick,
   players,
 }) {
@@ -81,6 +82,13 @@ function BoardGrid({
     });
 
   const highlightedNodeIdSet = new Set(highlightedNodeIds);
+  const objectiveFeatureImages = (board.featureImages ?? []).filter(
+    ({ imageName }) =>
+      (objectiveHighlightMode === 'eliteTowers' &&
+        imageName.startsWith('elite-tower-')) ||
+      (objectiveHighlightMode === 'bossBattle' &&
+        imageName === 'boss-castle.png')
+  );
   const hoveredLabel = hoveredSquare
     ? getBoardHoverLabel({ board, language, square: hoveredSquare })
     : '';
@@ -213,6 +221,20 @@ function BoardGrid({
             zIndex: 1,
           }}
         >
+          {objectiveFeatureImages.map((featureImage) => (
+            <span
+              key={`objective-${featureImage.id}`}
+              aria-hidden="true"
+              className="board-feature-objective-glow"
+              data-testid={`board-objective-glow-${featureImage.id}`}
+              style={{
+                height: `${featureImage.height * board.squareSize + 12}px`,
+                left: `${featureImage.x * board.squareSize - 6}px`,
+                top: `${featureImage.y * board.squareSize - 6}px`,
+                width: `${featureImage.width * board.squareSize + 12}px`,
+              }}
+            />
+          ))}
           {(board.featureImages ?? []).map((featureImage) => (
             <img
               key={featureImage.id}

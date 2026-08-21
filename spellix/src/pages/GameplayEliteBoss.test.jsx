@@ -31,11 +31,17 @@ jest.mock('../components/dice/DiceRoll', () => ({
   </button>
 ));
 
-jest.mock('../features/gameBoard/BoardGrid', () => ({ onSquareClick }) => (
-  <button type="button" onClick={() => onSquareClick({ x: 0, y: 0 })}>
-    Land on Feature
-  </button>
-));
+jest.mock(
+  '../features/gameBoard/BoardGrid',
+  () => ({ objectiveHighlightMode, onSquareClick }) => (
+    <div>
+      <p>{`Objective highlight: ${objectiveHighlightMode ?? 'none'}`}</p>
+      <button type="button" onClick={() => onSquareClick({ x: 0, y: 0 })}>
+        Land on Feature
+      </button>
+    </div>
+  )
+);
 
 jest.mock('../features/gameBoard/movement', () => ({
   getAnywhereModeHighlightedNodeIds: () => [mockDestinationNodeId],
@@ -151,6 +157,9 @@ test('shows only the two assigned elite enemies with visual progress', () => {
   renderGameplay();
 
   expect(screen.getByLabelText('Elite Tower progress')).toHaveClass('language-en');
+  expect(
+    screen.getByText('Current Goal: Defeat the Elite Towers')
+  ).toHaveClass('committed-spell-slot-display-title', 'language-en');
   expect(screen.getByText('Crowned Lichlord')).toBeInTheDocument();
   expect(screen.getByText('Amethyst Ogre')).toBeInTheDocument();
   expect(screen.queryByText('Mossroot Elder')).not.toBeInTheDocument();
@@ -158,7 +167,7 @@ test('shows only the two assigned elite enemies with visual progress', () => {
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
 });
 
-test('limits the elite progress display to the required maximum height', () => {
+test('allows the elite progress display to use its natural height', () => {
   const cssSource = readFileSync(
     'src/pages/GameplayPage.css',
     'utf8'
@@ -167,16 +176,26 @@ test('limits the elite progress display to the required maximum height', () => {
     /\.elite-progress-display\s*\{([\s\S]*?)\}/
   )?.[1];
 
-  expect(progressRule).toMatch(/max-height:\s*100px/);
+  expect(progressRule).toMatch(/height:\s*auto/);
+  expect(progressRule).toMatch(/max-height:\s*none/);
 });
 
-test('adds ten pixels of bottom padding to the Japanese elite progress display', () => {
+test('uses the new Japanese goal title and reduces only its enemy labels', () => {
   const setup = createGameplaySetup();
 
   setup.players[0].language = 'jp';
   renderGameplay(setup);
 
   expect(screen.getByLabelText('Elite Tower progress')).toHaveClass('language-jp');
+  expect(
+    screen.getByText(
+      '\u73fe\u5728\u306e\u76ee\u6a19\uff1a\u30a8\u30ea\u30fc\u30c8\u30bf\u30ef\u30fc\u3092\u653b\u7565\u3059\u308b'
+    )
+  ).toHaveClass('committed-spell-slot-display-title', 'language-jp');
+  expect(screen.getByText('\u51a0\u306e\u30ea\u30c3\u30c1\u738b')).toHaveClass(
+    'elite-progress-label',
+    'language-jp'
+  );
 
   const cssSource = readFileSync('src/pages/GameplayPage.css', 'utf8');
   const japaneseProgressRule = cssSource.match(
@@ -184,6 +203,78 @@ test('adds ten pixels of bottom padding to the Japanese elite progress display',
   )?.[1];
 
   expect(japaneseProgressRule).toMatch(/padding-bottom:\s*10px/);
+  expect(cssSource).toMatch(
+    /\.elite-progress-display\.language-jp\s+\.elite-progress-label\s*{[^}]*font-size:\s*14px;/s
+  );
+});
+
+test('highlights both Elite Towers only while the unfinished goal is hovered', () => {
+  renderGameplay();
+
+  const progressDisplay = screen.getByLabelText('Elite Tower progress');
+
+  expect(screen.getByText('Objective highlight: none')).toBeInTheDocument();
+  fireEvent.mouseEnter(progressDisplay);
+  expect(screen.getByText('Objective highlight: eliteTowers')).toBeInTheDocument();
+  fireEvent.mouseLeave(progressDisplay);
+  expect(screen.getByText('Objective highlight: none')).toBeInTheDocument();
+});
+
+test('replaces completed Elite progress with the assigned English Boss goal', () => {
+  const setup = createGameplaySetup();
+
+  setup.players[0].eliteProgress = {
+    eliteTowerGravel: true,
+    eliteTowerWoods: true,
+  };
+  renderGameplay(setup);
+
+  const progressDisplay = screen.getByLabelText('Elite Tower progress');
+
+  expect(progressDisplay).toHaveClass('elite-progress-display--boss-goal');
+  expect(
+    screen.getByText('Defeat the Mossroot Elder Boss Battle')
+  ).toHaveClass('elite-progress-boss-goal', 'language-en');
+  expect(screen.queryByText('Crowned Lichlord')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: /Elite Tower/i })).not.toBeInTheDocument();
+
+  fireEvent.mouseEnter(progressDisplay);
+  expect(screen.getByText('Objective highlight: bossBattle')).toBeInTheDocument();
+});
+
+test('localizes the assigned Boss goal in Japanese', () => {
+  const setup = createGameplaySetup();
+
+  setup.players[0].language = 'jp';
+  setup.players[0].eliteProgress = {
+    eliteTowerGravel: true,
+    eliteTowerWoods: true,
+  };
+  renderGameplay(setup);
+
+  expect(
+    screen.getByText(
+      '\u82d4\u6839\u306e\u53e4\u8001\u306e\u30dc\u30b9\u30d0\u30c8\u30eb\u306b\u52dd\u5229\u3059\u308b'
+    )
+  ).toHaveClass('elite-progress-boss-goal', 'language-jp');
+});
+
+test("uses only the current player's Elite progress for the displayed goal", () => {
+  const setup = createGameplaySetup();
+
+  setup.players[0].eliteProgress = {
+    eliteTowerGravel: true,
+    eliteTowerWoods: true,
+  };
+  setup.currentTurnIndex = 1;
+  renderGameplay(setup);
+
+  expect(
+    screen.getByText('Current Goal: Defeat the Elite Towers')
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText('Defeat the Mossroot Elder Boss Battle')
+  ).not.toBeInTheDocument();
 });
 
 test('starts the assigned battle every time an elite tower is landed on', () => {

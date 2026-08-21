@@ -42,6 +42,21 @@
 .board-feature-image {
   display: block;
   object-fit: fill;
+  z-index: 1;
+}
+
+.board-feature-objective-glow {
+  position: absolute;
+  border-radius: 8px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 245, 180, 0.9) 0%,
+    rgba(255, 245, 180, 0.45) 50%,
+    rgba(255, 245, 180, 0) 75%
+  );
+  box-shadow: 0 0 18px 8px rgba(255, 245, 180, 0.85);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .board-square--highlighted {

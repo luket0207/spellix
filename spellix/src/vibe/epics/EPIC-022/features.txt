@@ -1426,3 +1426,318 @@ Testing Checkpoints
 * Confirm board scaling does not break label placement.
 * Confirm there are no console errors.
 * Update `implementation.txt` and `testing.txt` before marking this feature done.
+
+---
+
+Feature-005: Update elite-progress-display styling, goal text, and board highlight behaviour
+
+Status
+
+* done
+
+Completion Notes
+
+* Added the exact localized current-goal title and scoped the 14px Japanese sizing to Elite Tower enemy labels only.
+* Removed fixed height constraints from the progress display and replaced completed Elite progress with the assigned, localized Boss Battle goal for the current player.
+* Added whole-display hover state that glows both Elite Tower footprints before completion and only the Boss Battle footprint afterward.
+* Kept objective glows behind feature images and player pieces, pointer-transparent, and independent from movement highlighting and board hover labels.
+* Added focused display and board tests covering both languages, current-player independence, objective selection, layering, and unchanged movement highlights.
+
+Related Feature(s)
+
+* EPIC-016 Feature-003: Elite Tower battles, Boss Battle access, and win condition
+* EPIC-020 Feature-016: Show environment or feature name when hovering highlighted movement squares
+* EPIC-022 Feature-004: Show board square hover labels at all times and include Elite/Boss enemy names
+
+Goal
+
+* Clean up the `elite-progress-display` section.
+* Update the title text to clearly show the current goal.
+* Adjust Japanese label sizing inside the progress labels only.
+* Remove the section max-height and allow it to size naturally.
+* Add hover behaviour that highlights the relevant board objective.
+* When both Elite Towers are defeated, replace the Elite Tower progress display with the current Boss Battle goal.
+
+Required Title Text
+
+* The title should be changed to:
+
+English:
+
+```txt id="yrzq2e"
+Current Goal: Defeat the Elite Towers
+```
+
+Japanese:
+
+```txt id="zdzsh4"
+現在の目標：エリートタワーを攻略する
+```
+
+* This title should remain styled as the section title.
+* Do not apply the Japanese-only `14px` label rule to this title.
+
+Japanese Label Font Size Requirement
+
+* Inside `elite-progress-display`, Japanese text should be reduced to `14px` only for the span labels.
+* This should apply only to the Japanese version.
+* This should not affect:
+
+  * English labels.
+  * the title.
+  * checkbox/tick visuals.
+  * boss goal replacement text unless it uses the same span label structure intentionally.
+
+Required rule:
+
+```txt id="fxlmff"
+Japanese span labels inside elite-progress-display only: font-size 14px
+English span labels: unchanged
+Title: unchanged
+```
+
+Suggested CSS direction:
+
+```css id="kpxilp"
+.elite-progress-display.jp .elite-progress-label span {
+  font-size: 14px;
+}
+```
+
+* Use the actual project class names.
+* Scope this tightly so it does not affect other Japanese text elsewhere.
+
+Height Requirement
+
+* Remove the existing `max-height` from `elite-progress-display`.
+* Set the section to natural height instead.
+
+Required CSS direction:
+
+```css id="h0yqkg"
+.elite-progress-display {
+  height: auto;
+  max-height: none;
+}
+```
+
+* The section should no longer clip content because of max-height.
+* The layout should still remain neat and not create unnecessary empty space.
+
+Elite Tower Progress State
+
+* While the current player has not defeated both Elite Towers, the section should show:
+
+  * the title `Current Goal: Defeat the Elite Towers` / `現在の目標：エリートタワーを攻略する`.
+  * the two Elite Tower labels with their current tick/unticked progress.
+* Existing per-player Elite Tower completion state should remain unchanged.
+
+Hover Behaviour Before Both Elite Towers Are Defeated
+
+* When the user hovers over the `elite-progress-display` section while the current player still needs one or both Elite Towers:
+
+  * highlight both Elite Tower locations on the board.
+  * do not highlight the Boss Battle square.
+* The hover target should be the whole `elite-progress-display` section, not only the title or labels.
+
+Elite Tower Highlight Visual Requirement
+
+* The highlighted Elite Tower squares should use the same kind of glow as the current player turn glow.
+* The glow should be larger and more eye-catching than the normal player turn glow.
+* The glow should appear as if it is coming from behind the squares that contain the Elite Towers.
+* The glow should cover the full multi-square Elite Tower feature footprint.
+
+Suggested visual direction:
+
+```css id="o2lgnp"
+.board-feature-objective-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 8px;
+  box-shadow: 0 0 18px 8px currentColor;
+  pointer-events: none;
+  z-index: behind-board-content;
+}
+```
+
+* Use the existing player-turn glow style as the base.
+* Make it slightly larger/brighter.
+* Ensure the glow sits behind the Elite Tower feature cells, not over player pieces.
+* Do not block square hover/click events.
+
+Boss Goal State
+
+* When the current player has defeated both Elite Towers, replace the Elite Tower progress content with a Boss Battle goal.
+* The section should no longer show the two Elite Tower tick labels in this state.
+* The section should instead show centred goal text.
+
+English format:
+
+```txt id="yhs1pa"
+Defeat the {Enemy Name} Boss Battle
+```
+
+Japanese format:
+
+```txt id="ci6jsw"
+{Enemy Name}のボスバトルに勝利する
+```
+
+* `{Enemy Name}` should be the assigned Boss enemy for this game instance.
+* In English UI, use the boss enemy’s English name.
+* In Japanese UI, use the boss enemy’s Japanese name if available.
+* If the Japanese name is missing, fall back to the English name.
+* Do not hard-code a specific boss name.
+
+Boss Goal Example
+
+English:
+
+```txt id="b2fsp1"
+Defeat the Hellcrown Reaper Boss Battle
+```
+
+Japanese:
+
+```txt id="d3j29w"
+地獄冠の死神のボスバトルに勝利する
+```
+
+Boss Goal Alignment Requirement
+
+* The boss goal text should be centred inside the `elite-progress-display` section.
+* It should be horizontally centred.
+* It should be vertically centred.
+* It should feel placed in the middle of the section.
+* If CSS uses flex, use centre alignment.
+
+Suggested CSS direction:
+
+```css id="xt8s6k"
+.elite-progress-display.boss-goal-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+```
+
+Hover Behaviour After Both Elite Towers Are Defeated
+
+* When the user hovers over the `elite-progress-display` section in Boss Goal mode:
+
+  * highlight the Boss Battle square.
+  * do not highlight the Elite Tower squares.
+* The glow should appear behind the Boss Battle feature footprint.
+* If Boss Battle is a multi-square feature, the glow should cover the whole Boss Battle footprint.
+
+State Requirement
+
+* This display should be based on the current player’s own Elite Tower progress.
+* If Player 1 has defeated both Elite Towers but Player 2 has not:
+
+  * Player 1 should see the Boss Battle goal.
+  * Player 2 should still see the Elite Tower goal.
+* The hover highlight should also respect the current player’s state.
+
+Board Highlight State Direction
+
+* Add a temporary hover objective state when the `elite-progress-display` is hovered.
+
+Suggested state direction:
+
+```js id="hk5zgs"
+const [objectiveHighlightMode, setObjectiveHighlightMode] = useState(null);
+
+// possible values:
+// null
+// "eliteTowers"
+// "bossBattle"
+```
+
+Suggested hover direction:
+
+```jsx id="dzp5q0"
+onMouseEnter={() => {
+  setObjectiveHighlightMode(hasDefeatedBothEliteTowers ? "bossBattle" : "eliteTowers");
+}}
+
+onMouseLeave={() => {
+  setObjectiveHighlightMode(null);
+}}
+```
+
+* Use the actual existing state/component structure.
+* Clear the highlight when the mouse leaves the section.
+
+Board Rendering Direction
+
+* If `objectiveHighlightMode === "eliteTowers"`:
+
+  * render glow behind both Elite Tower feature footprints.
+* If `objectiveHighlightMode === "bossBattle"`:
+
+  * render glow behind the Boss Battle feature footprint.
+* If `objectiveHighlightMode === null`:
+
+  * render no objective glow.
+
+Interaction With Existing Hover Labels
+
+* This feature should not break EPIC-022 Feature-004.
+* Hovering over the board should still show environment/feature labels.
+* Hovering over the `elite-progress-display` should only add the objective glow.
+* It should not create a board hover label by itself.
+
+Interaction With Movement Highlighting
+
+* Objective glow should not replace movement highlighting.
+* If the player has rolled and movement squares are highlighted:
+
+  * movement highlighting remains visible.
+  * objective glow can appear behind the relevant feature squares.
+* Objective glow should not make those squares selectable.
+* Movement rules are unchanged.
+
+Out Of Scope
+
+* No change to Elite Tower progress logic.
+* No change to Boss Battle access rules.
+* No change to enemy assignment.
+* No change to board generation.
+* No change to player turn glow itself.
+* No change to battle triggering.
+* No change to rewards.
+* No change to hover labels from Feature-004 except ensuring the new glow does not interfere.
+
+Testing Checkpoints
+
+* Start a game where the current player has defeated no Elite Towers.
+* Confirm the section title says `Current Goal: Defeat the Elite Towers`.
+* Switch to Japanese.
+* Confirm the title says `現在の目標：エリートタワーを攻略する`.
+* Confirm Japanese span labels inside the progress section are `14px`.
+* Confirm the Japanese title is not reduced to `14px`.
+* Confirm English labels are not reduced.
+* Confirm `elite-progress-display` no longer has max-height clipping.
+* Hover over the progress section before defeating both towers.
+* Confirm both Elite Tower locations glow on the board.
+* Confirm the glow appears behind the tower squares.
+* Confirm the glow is larger/more eye-catching than the player turn glow.
+* Confirm the Boss Battle square does not glow.
+* Defeat one Elite Tower.
+* Confirm the section still shows the Elite Tower goal and progress labels.
+* Defeat both Elite Towers.
+* Confirm the section changes to `Defeat the {Enemy Name} Boss Battle`.
+* Switch to Japanese.
+* Confirm the section says `{Enemy Name}のボスバトルに勝利する`.
+* Confirm the boss name is the assigned boss for this game instance.
+* Confirm the boss goal text is centred in the section.
+* Hover over the section after both towers are defeated.
+* Confirm only the Boss Battle square glows.
+* Confirm Elite Tower squares do not glow in Boss Goal mode.
+* Confirm movement highlighting still works.
+* Confirm board hover labels still work.
+* Confirm no board clicks are blocked by the glow.
+* Confirm there are no console errors.
+* Update `implementation.txt` and `testing.txt` before marking this feature done.

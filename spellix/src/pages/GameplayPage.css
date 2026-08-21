@@ -69,11 +69,29 @@
 }
 
 .elite-progress-display {
-  max-height: 115px;
+  height: auto;
+  max-height: none;
 }
 
 .elite-progress-display.language-jp {
   padding-bottom: 10px;
+}
+
+.elite-progress-display.language-jp .elite-progress-label {
+  font-size: 14px;
+}
+
+.elite-progress-display--boss-goal {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  padding: 28px 20px;
+}
+
+.elite-progress-boss-goal {
+  margin: 0;
 }
 
 .elite-progress-list {

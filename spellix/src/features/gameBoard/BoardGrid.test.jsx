@@ -429,6 +429,97 @@ describe('BoardGrid feature images', () => {
 
 });
 
+describe('BoardGrid objective highlights', () => {
+  test('renders one expanded glow behind each Elite Tower without changing movement highlighting', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour="red"
+        highlightedNodeIds={['boss-battle']}
+        objectiveHighlightMode="eliteTowers"
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    const overlayLayer = screen.getByTestId('board-feature-overlay-layer');
+    const topLeftGlow = screen.getByTestId(
+      'board-objective-glow-elite-top-left'
+    );
+    const bottomRightGlow = screen.getByTestId(
+      'board-objective-glow-elite-bottom-right'
+    );
+
+    expect(overlayLayer).toContainElement(topLeftGlow);
+    expect(screen.getAllByTestId(/board-objective-glow-/)).toHaveLength(2);
+    expect(topLeftGlow).toHaveStyle({
+      height: '72px',
+      left: '-6px',
+      top: '-6px',
+      width: '72px',
+    });
+    expect(bottomRightGlow).toHaveStyle({
+      height: '72px',
+      left: '864px',
+      top: '864px',
+      width: '72px',
+    });
+    expect(
+      topLeftGlow.compareDocumentPosition(
+        screen.getByTestId('board-feature-elite-top-left')
+      )
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByTestId('board-objective-glow-boss')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Square 29, 0' })).toHaveAttribute(
+      'data-highlighted',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: 'Square 0, 0' })).toHaveAttribute(
+      'data-highlighted',
+      'false'
+    );
+  });
+
+  test('renders only the expanded Boss footprint glow in Boss goal mode', () => {
+    render(
+      <BoardGrid
+        board={createBoardWithFeatureImages()}
+        currentPlayerId=""
+        highlightedColour=""
+        highlightedNodeIds={[]}
+        objectiveHighlightMode="bossBattle"
+        onSquareClick={() => {}}
+        players={[]}
+      />
+    );
+
+    const bossGlow = screen.getByTestId('board-objective-glow-boss');
+
+    expect(screen.getAllByTestId(/board-objective-glow-/)).toHaveLength(1);
+    expect(bossGlow).toHaveStyle({
+      height: '72px',
+      left: '864px',
+      top: '-6px',
+      width: '72px',
+    });
+    expect(
+      screen.queryByTestId('board-objective-glow-elite-top-left')
+    ).not.toBeInTheDocument();
+  });
+
+  test('keeps objective glows non-interactive and behind feature images', () => {
+    const stylesheet = readFileSync(`${__dirname}/BoardGrid.css`, 'utf8');
+
+    expect(stylesheet).toMatch(
+      /\.board-feature-objective-glow\s*{[^}]*position:\s*absolute;[^}]*border-radius:\s*8px;[^}]*background:\s*radial-gradient\([^}]*box-shadow:\s*0 0 18px 8px[^}]*pointer-events:\s*none;[^}]*z-index:\s*0;/s
+    );
+    expect(stylesheet).toMatch(
+      /\.board-feature-image\s*{[^}]*z-index:\s*1;/s
+    );
+  });
+});
+
 describe('BoardGrid square hover labels', () => {
   test('shows environment labels on highlighted and non-highlighted squares opposite the hovered board half', () => {
     const board = {
