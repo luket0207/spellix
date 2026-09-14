@@ -27,7 +27,7 @@
   flex: 0 0 1320px;
   height: 940px;
   transform: scale(var(--gameplay-scale));
-  transform-origin: top center;
+  transform-origin: center center;
   width: 1320px;
 }
 
